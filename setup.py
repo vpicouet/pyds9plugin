@@ -3,9 +3,9 @@ from distutils.core import setup
 requires = ['numpy >=1.8', 
             'scipy >=0.14', 
             'matplotlib',
-            'astropy >=1.0'
-            'pyds9'
-	    'photutils'
+            'astropy >=1.0',
+            'pyds9',
+	        'photutils'
             ]
 
 setup(
