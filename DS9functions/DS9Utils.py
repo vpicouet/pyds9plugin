@@ -14,6 +14,7 @@ import os
 import  sys
 import json
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import numpy as np
 from astropy.io import fits
@@ -41,6 +42,13 @@ from focustest import Gaussian
 from focustest import Focus  
 from focustest import ConvolveSlit2D_PSF
 
+print(print_function)
+print(glob, os, sys, json)
+print(np, fits, namedtuple, curve_fit)
+print(DS9, interpolate, stats, ndimage)
+print(AnalyzeSpot,ConvolveBoxPSF,plot_rp2_convolved_wo_latex,radial_profile_normalized)
+print(ConvolveDiskGaus2D,twoD_Gaussian,estimateBackground,create_DS9regions2)
+print(stackImages,Gaussian,Focus,ConvolveSlit2D_PSF)
 
 #from __future__ import division
 #from __future__ import print_function
@@ -219,7 +227,10 @@ def getregion(win, debug=False):
 
     Returns a tuple with the data in the region.
     """
-    rows = win.get("regions selected")
+    win.set("regions format ds9")
+    win.set("regions system physical")
+    #rows = win.get("regions list")
+    rows = win.get("regions all")
     rows = [row for row in rows.split('\n') if row]
     if len(rows) < 3:
         print( "No regions found")
@@ -344,6 +355,8 @@ def DS9rp(xpapoint):#,filename = None,Internet =False, smooth=2, regions=True, c
         fibersize = sys.argv[3]
     except IndexError:
         print('No fibersize, Using point source object')
+        fibersize = 0
+    if fibersize == '':
         fibersize = 0
     filename = d.get("file ")
     a = getregion(d)
@@ -480,19 +493,43 @@ def DS9open(xpapoint, filename=None):
 #    return
 
 def Charge_path(xpapoint):
+    #'7739194-7741712'#''#sys.argv[3]#'7739194-7741712'#sys.argv[3]#'7738356-7742138  '#sys.argv[3]#'7738356-7742135  '#sys.argv[3]
+#    try:
+#        entry = sys.argv[3]#'7739194-7741712'#sys.argv[3]
+#        try:
+#            print(entry)
+#            n1, n2 = entry.split('-')
+#        except:
+#            n1=''
+#            n2=''
+#    except IndexError:
+#        n1=''
+#        n2=''
+#    print('N1 = {}, N2 = {}'.format(n1,n2))
+#    #print(type(n1))
+#    try:
+#        n1, n2 = int(n1), int(n2)
+#    except ValueError:
+#        pass
     try:
-        entry = sys.argv[3]#'7738356-7742138  '#sys.argv[3]#'7738356-7742135  '#sys.argv[3]
-        print(entry)
-        n1, n2 = entry.split('-')
-    except IndexError:
+        entry = sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
+        print('Entry 1 = ', entry)
+    except:
         n1=''
-        n2=''
-    print('N1 = {}, N2 = {}'.format(n1,n2))
-    print(type(n1))
-    try:
+        n2=''        
+    numbers = entry.split('-')
+#    if numbers in None:
+#        pass
+    if len(numbers) == 1:
+        numbers = None
+    elif len(numbers) == 2:
+        n1, n2 = entry.split('-')
         n1, n2 = int(n1), int(n2)
-    except ValueError:
-        pass
+        numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
+    print('Numbers used: {}'.format(numbers))           
+    
+
+
     d = DS9(xpapoint)
     filename = d.get("file")
     fitsimage = fits.open(filename)
@@ -503,41 +540,45 @@ def Charge_path(xpapoint):
     print ('Type = {}'.format(Type))
     path = []
     if Type == 'detector':
-        if (type(n1)==int) & (type(n2)==int):
+        if numbers is not None:
             print('Specified numbers are integers, opening corresponding files ...')
-            for number in np.arange(n1,n2+1):
+            for number in numbers:
                 #path = os.path.dirname(filename) + '/image%06d.fits' % (number)
-                path.append(os.path.dirname(filename) + '/image%06d.fits' % (number))
-                x = np.arange(n1,n2+1)
-        else:
+                path.append(os.path.dirname(filename) + '/image%06d.fits' % (int(number)))
+               # x = np.arange(n1,n2+1)
+        if numbers is None:
             print('Not numbers, taking all the .fits images from the current repository')
-            path = glob.glob(os.path.dirname(filename) + '/*.fits')
-            x = np.arange(len(path))
+            path = glob.glob(os.path.dirname(filename) + '/image*.fits')
+            #x = np.arange(len(path))
     if Type == 'guider':
-        if (type(n1)==int) & (type(n2)==int):
-            print('Specified numbers are integers, opening corresponding files ...')
+        files = glob.glob(os.path.dirname(filename) + '/stack*.fits')
+        im_numbers = []
+        for file in files:
+            name = os.path.basename(file)
+            im_numbers.append(int(name[5:12]))
+        im_numbers = np.array(im_numbers)
+        map
+        if numbers is None:
+            print('Not numbers, taking all the .fits images from the current repository')
+            path = glob.glob(os.path.dirname(filename) + '/stack*.fits')
+        elif len(numbers) == 2:
+            print('Two numbers given, opening files in range ...')
             #print(np.arange(n1,n2+1))
-            files = glob.glob(os.path.dirname(filename) + '/stack*.fits')
-            numbers = []
-            for file in files:
-                name = os.path.basename(file)
-                
-                #print(name[5:12])
-                numbers.append(int(name[5:12]))
-            numbers = np.array(numbers)
-            map
+
             path = []
-            for i, number in enumerate(numbers):
-                if (number >= n1) & (number <= n2):
+            for i, im_number in enumerate(im_numbers):
+                if (im_number >= n1) & (im_number <= n2):
                     path.append(files[i])
                     print(files[i])
-#                a = glob.glob(os.path.dirname(filename) + '/stack%i*.fits' % (number))
-#                if len(a) == 1:
-#                    path.append(a[0])
-#                    print('/stack%i*.fits' % (number))
-        else:
-            print('Not numbers, taking all the .fits images from the current repository')
-            path = glob.glob(os.path.dirname(filename) + '/*.fits')
+        elif len(numbers) > 2:
+            print('More than 2 numbers given, opening the corresponding files ...')
+            path = []
+            numbers = [int(number) for number in numbers]
+            #print (im_numbers)
+            #print (numbers)
+            for i, im_number in enumerate(im_numbers):
+                if im_number in numbers:
+                    path.append(files[i])
     for file in path:
         if 'table' in file:
             path.remove(file)
@@ -613,7 +654,8 @@ def DS9visualisation_throughfocus(xpapoint):
 #            path.remove(file)
 #    path = np.sort(path)
 #    print(path)    
-    a = getregion(d)
+
+        
     d.set('tile yes')
     d.set("cmap Cubehelix0")
     d.set("frame delete")
@@ -622,13 +664,16 @@ def DS9visualisation_throughfocus(xpapoint):
         #d.set("file {}".format(filen)) 
         d.set('frame new')
         d.set("fits {}".format(filen))        
-
+    try:
+        a = getregion(d)
+        d.set('pan to %i %i physical' % (a.xc,a.yc))
+    except:
+        pass
     d.set("lock frame physical")
     d.set("lock scalelimits yes") 
     d.set("lock smooth yes") 
     d.set("lock colorbar yes") 
     #d.set("lock crosshair %f %f"%(a.xc,a.yc))
-    d.set('pan to %i %i physical' % (a.xc,a.yc))
     d.set("scale mode 99.5")#vincent
     return
 
@@ -870,6 +915,16 @@ def DS9previous():
 def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
     """Create an image with subimages where are lya predicted lines and display it on DS9
     """
+    line = sys.argv[3]#'f3 names'#sys.argv[3]
+    if '202' in line:
+        w = 0.20255
+    if '206' in line:
+        w = 0.20619
+    if '213' in line:
+        w = 0.21382
+    if 'lya' in line:
+        w = None        
+        
     d = DS9(xpapoint)
     filename = d.get("file")
     fitsfile = fits.open(filename)
@@ -883,8 +938,11 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
         except IOError:
             print('No fits table found, Please run focustest')
             sys.exit() 
-
-    table = table [table['wavelength'] == w]
+    if w is None:
+        table = table [(table['wavelength'] != 0.20255) & (table['wavelength'] != 0.20619) & (table['wavelength'] != 0.21382)
+        & (table['wavelength'] != 0.0) & (table['wavelength'] != -1.0)]
+    else:
+        table = table [table['wavelength'] == w]
     x,y = table['X_IMAGE'], table['Y_IMAGE']
     n1, n2 = n, n
     if continuum:
@@ -921,6 +979,7 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
         new_image[:,0:-2:4*n] = np.max(np.array(imagettes))
     fitsfile[0].data = new_image[::-1, :]
     fitsfile.writeto('/tmp/imagettes.fits', overwrite=True)
+    d.set('frame new')
     d.set("file /tmp/imagettes.fits")
     d.set('scale mode 90')
     return
@@ -929,67 +988,213 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
 def DS9tsuite(xpapoint):
     """Create an image with subimages where are lya predicted lines and display it on DS9
     """
+    
     d = DS9(xpapoint)
     d.set('frame delete all')
     d.set('frame new')
-    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180612/Autocoll/Detector/2/image000394.fits')
+
+    print('''\n\n\n\n      TEST: Open    \n\n\n\n''')
+    DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
+
+    print('''\n\n\n\n      TEST: Setup   \n\n\n\n''')
     DS9setup2(xpapoint)
+
+    print('''\n\n\n\n      TEST: Back   \n\n\n\n''')
     back(xpapoint)
-    DS9next(xpapoint)
-    #create a circle center on a line
-    d.set('regions command "circle %i %i %0.1f # color=red"' % (1843.93,615.27,40))
-    d.set('regions select all')
-    DS9center(xpapoint)
-    DS9rp(xpapoint)
-    DS9throughfocus(xpapoint)
+
+    print('''\n\n\n\n      TEST: Visualization Detector   \n\n\n\n''')
+    print('''\n\n\n\n      TEST: Stacking Detector   \n\n\n\n''')
+    sys.argv.append('');sys.argv.append('');sys.argv.append('');sys.argv.append('')
+    sys.argv[3] = ''
     DS9visualisation_throughfocus(xpapoint)
     d.set('frame delete all')
     d.set('frame new')
-    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/FBGuider2018/stack8103716_pa+078_2018-06-11T06-21-24_new.fits')
-    DS9guider(xpapoint)
+    DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
+    sys.argv[3] = '402-404'
+    sys.argv[4] = '407-408'
+    DS9visualisation_throughfocus(xpapoint)
+    DS9stack(xpapoint)    
     d.set('frame delete all')
     d.set('frame new')
-    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180614/photon_counting/image000016.fits')
-    DS9photo_counting(xpapoint)
+    DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
+    sys.argv[3] = '402-404-406'    #sys.argv[4] = '403-401-407'
+    DS9visualisation_throughfocus(xpapoint)
+    DS9stack(xpapoint)    
+
+
+    print('''\n\n\n\n      TEST: Visualization Guider   \n\n\n\n''')
+    print('''\n\n\n\n      TEST: stacking Guider   \n\n\n\n''')
     d.set('frame delete all')
     d.set('frame new')
-    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180612/image-000025-000034-Zinc-with_dark-161-stack.fits')
+    DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
+    sys.argv[3] = ''
+    DS9visualisation_throughfocus(xpapoint)
+    d.set('frame delete all')
+    d.set('frame new')
+    DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
+    sys.argv[3] = '7662504-7662914'
+    DS9visualisation_throughfocus(xpapoint)
+    DS9stack(xpapoint)    
+    d.set('frame delete all')
+    d.set('frame new')
+    DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
+    sys.argv[3] = '7662505-7662913-7664160'
+    DS9visualisation_throughfocus(xpapoint)
+    DS9stack(xpapoint)    
+
+    print('''\n\n\n\n      TEST: Next Guider   \n\n\n\n''')
+    d.set('frame delete all')
+    d.set('frame new')
+    DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
+    print('''\n\n\n\n      TEST: Throughfocus Guider   \n\n\n\n''')
+    d.set('regions command "circle %i %i %0.1f # color=red"' % (812,783.2,40))
+    d.set('regions select all') 
+    sys.argv[3] = ''
+    DS9throughfocus(xpapoint)
+    sys.argv[3] = '7662505-7663744'
+    DS9throughfocus(xpapoint)    
+
+    print('''\n\n\n\n      TEST: Next detector   \n\n\n\n''')
+
+    d.set('frame delete all')
+    d.set('frame new')
+    DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
+    print('''\n\n\n\n      TEST: Throughfocus detector   \n\n\n\n''')
+
+    DS9next(xpapoint)
+    print('''\n\n\n\n      TEST: Throughfocus detector   \n\n\n\n''')
+    d.set('regions command "circle %i %i %0.1f # color=red"' % (1677,1266.2,40))
+    d.set('regions select all') 
+    sys.argv[3] = ''
+    DS9throughfocus(xpapoint)
+    sys.argv[3] = '404-408'
+    DS9throughfocus(xpapoint)  
+
+    print('''\n\n\n\n      TEST: Radial profile   \n\n\n\n''') 
+    d.set('frame delete all')
+    d.set('frame new')
+    DS9open(xpapoint,path + '/test/TestImage.fits')    
+    d.set('regions command "circle %i %i %0.1f # color=red"' % (1001,900.2,40))
+    d.set('regions select all') 
+    sys.argv[3] = '3'
+    DS9rp(xpapoint)  
+    sys.argv[3] = ''
+    DS9rp(xpapoint)  
+    print('''\n\n\n\n      TEST: Centering spot   \n\n\n\n''') 
+    DS9center(xpapoint)  
+
+    print('''\n\n\n\n      TEST: Centering slit   \n\n\n\n''') 
+ 
+    
+    d.set('regions delete all') 
+    d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (1502,901,20,10))
+    d.set('regions select all')
+    DS9center(xpapoint)      
+    
+    print('''\n\n\n\n      TEST: Show slit regions   \n\n\n\n''') 
+    d.set('frame delete all')
+    d.set('frame new')
+    DS9open(xpapoint,path + '/test/detector/image-000075-000084-Zinc-with_dark-121-stack.fits')    
+    sys.argv[3] = 'f3'
+    Field_regions(xpapoint)
+    d.set('regions delete all') 
+    sys.argv[3] = 'f4-lya'
+    Field_regions(xpapoint)
+    d.set('regions delete all') 
+    sys.argv[3] = 'f1-names'
+    Field_regions(xpapoint)
+    d.set('regions delete all') 
+    
+    print('''\n\n\n\n      TEST: diffuse focus test analysis   \n\n\n\n''') 
+    sys.argv[3] = 'f3'
+    DS9focus(xpapoint)
+
+    print('''\n\n\n\n      TEST: Imagette lya   \n\n\n\n''') 
+    sys.argv[3] = '206'
     create_multiImage(xpapoint)
-    print('Test completed: OK')
+
+    print('''\n\n\n\n      TEST: Photocounting   \n\n\n\n''') 
+    d.set('frame delete all')
+    d.set('frame new')
+    DS9open(xpapoint,path + '/test/detector/image-000075-000084-Zinc-with_dark-121-stack.fits')    
+    DS9photo_counting(xpapoint)
+    
+    print('''\n\n\n\n      TEST: Guider WCS   \n\n\n\n''') 
+    d.set('frame delete all')
+    d.set('frame new')
+    DS9open(xpapoint,path + '/test/guider/stack8103716_pa+078_2018-06-11T06-21-24_wcs.fits')    
+    DS9guider(xpapoint)  
+
+    print('''\n\n\n\n      END OF THE TEST: EXITED OK   \n\n\n\n''') 
+
+    return
+
+    
+    
+#    DS9next(xpapoint)
+#    #create a circle center on a line
+#    d.set('regions command "circle %i %i %0.1f # color=red"' % (1843.93,615.27,40))
+#    d.set('regions select all')
+#    DS9center(xpapoint)
+#    DS9rp(xpapoint)
+#    DS9throughfocus(xpapoint)
+#    DS9visualisation_throughfocus(xpapoint)
+#    d.set('frame delete all')
+#    d.set('frame new')
+#    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/FBGuider2018/stack8103716_pa+078_2018-06-11T06-21-24_new.fits')
+#    DS9guider(xpapoint)
+#    d.set('frame delete all')
+#    d.set('frame new')
+#    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180614/photon_counting/image000016.fits')
+#    DS9photo_counting(xpapoint)
+#    d.set('frame delete all')
+#    d.set('frame new')
+#    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180612/image-000025-000034-Zinc-with_dark-161-stack.fits')
+#    create_multiImage(xpapoint)
+#    print('Test completed: OK')
     return 
 
 def Field_regions(xpapoint):
     d = DS9(xpapoint)
     Imagename = d.get("file")
 
-    mask = sys.argv[3]
+    mask = sys.argv[3]#'f3 names'#sys.argv[3]
+    print (mask)
     mask = mask.lower()
     if ('f1' in mask):
         if ('lya' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_Lya.reg'
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Lya.reg'
         else:
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_Zn.reg'
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Zn.reg'
+        if ('names' in mask):
+            filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
     if ('f2' in mask):
         if ('lya' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_Lya.reg'
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Lya.reg'
         else:
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_Zn.reg'
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Zn.reg'
+        if ('names' in mask):
+            filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_names.reg'
     if ('f3' in mask):
         if ('lya' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_Lya.reg'
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Lya.reg'
         else:
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_Zn.reg'
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Zn.reg'
+        if ('names' in mask):
+            filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_names.reg'
     if ('f4' in mask):
         if ('lya' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_Lya.reg'
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Lya.reg'
         else:
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_Zn.reg'
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Zn.reg'
+        if ('names' in mask):
+            filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_names.reg'
     if ('grid' in mask):
         filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/grid_Zn.reg' 
     
     d.set("region {}".format(filename))
     try:
-        d.set('regions {}'.format(Imagename[:-5]+'names.reg'))
+        d.set('regions {}'.format(filename2))
     except:
         pass
     print('Test completed: OK')
@@ -998,39 +1203,71 @@ def Field_regions(xpapoint):
 
 def DS9stack(xpapoint):
     d = DS9(xpapoint)
-    entry = sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
-    print('Entry 1 = ', entry)
-    try:
-        number_dark = sys.argv[4] #''#sys.argv[4] #''#'sys.argv[4] #'365'#'365-374'#''#sys.argv[4] 
-    except:
-        number_dark = ''
-    print('Entry 2 = ', number_dark)
-    numbers = entry.split('-')
-
-    if len(numbers) == 2:
-        n1,n2 = entry.split('-')
-        numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
-    print('Numbers used: {}'.format(numbers))           
-
     filename = d.get("file")
-    path = os.path.dirname(filename)
-    try:
-        d1,d2 = number_dark.split('-') 
-        dark = stackImages(path,all=False, DS=0, function = 'mean', numbers=np.arange(int(d1),int(d2)), save=True, name="Dark")[0]
-        Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="Dark_{}-{}".format(int(d1),int(d2)))
-    except ValueError:
-        d1 = number_dark
-        if d1 == '':
-            dark = 0
-            Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="NoDark")
-        else:
-            dark = fits.open(path + '/image%06d.fits' % (int(d1)))[0].data
-            Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="Dark_{}".format(d1))
+    fitsimage = fits.open(filename)[0]
+    if fitsimage.header['BITPIX'] == -32:
+        Type = 'guider'  
+    else:
+        Type = 'detector' 
+    print('Type = ', Type)
+
+    if Type == 'guider':
+        files = Charge_path(xpapoint)
+        print(files)
+        n = len(files)
+        image = fitsimage
+        lx,ly = image.data.shape
+        stack = np.zeros((lx,ly,n))
+        print('\nReading fits files...')
+        numbers = []
+        for i,file in enumerate(files):
+            name = os.path.basename(file) 
+            numbers.append(int(name[5:12]))
+            with fits.open(file) as f:
+                stack[:,:,i] = f[0].data
+        image.data = np.mean(stack,axis=2)
+        fname = os.path.dirname(filename)                
+        filename = '{}/StackedImage_{}-{}.fits'.format(fname, np.array(numbers).min(), np.array(numbers).max())
+        image.writeto(filename ,overwrite=True)
+        print('Images stacked:',filename)            
+        
+    if Type == 'detector':
+        entry = sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
+        print('Entry 1 = ', entry)
+        try:
+            number_dark = sys.argv[4] #''#sys.argv[4] #''#'sys.argv[4] #'365'#'365-374'#''#sys.argv[4] 
+        except:
+            number_dark = ''
+        print('Entry 2 = ', number_dark)
+        numbers = entry.split('-')
+    
+        if len(numbers) == 2:
+            n1, n2 = entry.split('-')
+            n1, n2 = int(n1), int(n2)
+            numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
+        print('Numbers used: {}'.format(numbers))           
+    
+        filename = d.get("file")
+        path = os.path.dirname(filename)
+        try:
+            d1,d2 = number_dark.split('-') 
+            print(d1,d2)
+            dark = stackImages(path,all=False, DS=0, function = 'mean', numbers=np.arange(int(d1),int(d2)), save=True, name="Dark")[0]
+            Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=np.array([int(number) for number in numbers]), save=True, name="Dark_{}-{}".format(int(d1),int(d2)))
+        except ValueError:
+            d1 = number_dark
+            if d1 == '':
+                dark = 0
+                Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="NoDark")
+            else:
+                dark = fits.open(path + '/image%06d.fits' % (int(d1)))[0].data
+                Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="Dark_{}".format(d1))
+
     d.set('tile yes')
     d.set('frame new')
-    d.set("lock scalelimits yes") 
+    #d.set("lock scalelimits yes") 
     d.set("file {}".format(filename))   
-    d.set("scale mode 99.5")#vincent
+    #d.set("scale mode 99.5")#vincent
     d.set("lock frame physical")
     
     return
@@ -1432,10 +1669,15 @@ def DS9center(xpapoint):
 
 
 if __name__ == '__main__':
-    print (os.path.dirname(os.path.realpath(__file__)))
+    path = os.path.dirname(os.path.realpath(__file__))
+    print (path)
 #xpapoint = '935eed3e:51817'   
-    #xpapoint = '7f000001:63233'
-    #DS9throughfocus(xpapoint)
+    #xpapoint = '7f000001:49247'
+    #DS9tsuite(xpapoint)
+    #xpapoint = '7f000001:63861'
+    #DS9throughslit(xpapoint)
+    #xpapoint = '7f000001:59090'
+    #DS9stack(xpapoint)
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
                     'throughfocus':DS9throughfocus, 'open':DS9open,
                     'back':back, 'setup':DS9setup2,
