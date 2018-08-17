@@ -516,7 +516,9 @@ def Charge_path(xpapoint):
         print('Entry 1 = ', entry)
     except:
         n1=''
-        n2=''        
+        n2='' 
+        numbers = ['']
+        entry = ''
     numbers = entry.split('-')
 #    if numbers in None:
 #        pass
@@ -528,7 +530,6 @@ def Charge_path(xpapoint):
         numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
     print('Numbers used: {}'.format(numbers))           
     
-
 
     d = DS9(xpapoint)
     filename = d.get("file")
@@ -988,7 +989,7 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
 def DS9tsuite(xpapoint):
     """Create an image with subimages where are lya predicted lines and display it on DS9
     """
-    
+    path = os.path.dirname(os.path.realpath(__file__))    
     d = DS9(xpapoint)
     d.set('frame delete all')
     d.set('frame new')
@@ -1670,14 +1671,16 @@ def DS9center(xpapoint):
 
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
-    print (path)
-#xpapoint = '935eed3e:51817'   
-    #xpapoint = '7f000001:49247'
-    #DS9tsuite(xpapoint)
-    #xpapoint = '7f000001:63861'
-    #DS9throughslit(xpapoint)
-    #xpapoint = '7f000001:59090'
-    #DS9stack(xpapoint)
+#    print (path)
+#    xpapoint = '7f000001:55824'   
+#    function = 'throughfocus_visualisation'
+#    sys.argv.append(xpapoint)
+#    sys.argv.append(function)
+    #sys.argv.append('')
+    
+    print(sys.argv)
+    
+
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
                     'throughfocus':DS9throughfocus, 'open':DS9open,
                     'back':back, 'setup':DS9setup2,
