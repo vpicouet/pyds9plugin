@@ -1468,17 +1468,16 @@ def create_test_image():
     lx, ly = fitstest[0].data.shape
     x, y = np.arange(lx), np.arange(ly)
     xy = np.meshgrid(x,y)
-    new_image = fitstest[0].data
+    new_image = 0*fitstest[0].data
     for xi, ampi in zip((np.linspace(100,1900,10)),(np.linspace(10,1000,10))):
-        slit = (1/0.006)*ConvolveSlit2D_PSF(xy, ampi, 3, 9, int(xi), 1500, 10,10).reshape(ly,lx).T
-        #gaussian2 = twoD_Gaussian(xy, 500, 2000, 1000, 5, 5, 0).reshape(ly,lx).T
+        slit = (1/0.006)*ConvolveSlit2D_PSF(xy, ampi, 3, 9, int(xi), 1500, 3,3).reshape(ly,lx).T
         new_image = new_image + slit# + gaussian2
+        imshow(slit[int(xi)-n:int(xi)+n,1500-n:1500+n]);colorbar();plt.show()
         imshow(new_image[int(xi)-n:int(xi)+n,1500-n:1500+n]);colorbar();plt.show()
     for xi, ampi in zip((np.linspace(100,1900,10)),(np.linspace(10,1000,10))):
         gaussian = twoD_Gaussian(xy, ampi, int(xi), 1000, 5, 5, 0).reshape(ly,lx).T
-        #gaussian2 = twoD_Gaussian(xy, 500, 2000, 1000, 5, 5, 0).reshape(ly,lx).T
         new_image = new_image + gaussian# + gaussian2
-        imshow(new_image[int(xi)-n:int(xi)+n,1000-n:1000+n]);colorbar();plt.show()
+        #imshow(new_image[int(xi)-n:int(xi)+n,1000-n:1000+n]);colorbar();plt.show()
 
 #        
 #    imshow(fitstest[0].data);colorbar()
@@ -1492,7 +1491,7 @@ def create_test_image():
         fitstest[0].header.remove('NAXIS3')  
     except KeyError:
         pass
-    fitstest.writeto('/Users/Vincent/Documents/FireBallPipe/Calibration/TestImage.fits',overwrite = True)
+    fitstest.writeto('/Users/Vincent/Documents/FireBallPipe/Calibration/test/TestImage.fits',overwrite = True)
     #imshow(fits.open('/Users/Vincent/Documents/FireBallPipe/Calibration/TestImage.fits')[0].data)
 #    plt.figure()
 #    plt.plot(fitstest[0].data[1000-n:1000+n,2000])
@@ -1539,10 +1538,17 @@ def DS9center(xpapoint):
     filename = d.get("file")
     region = getregion(d)
     if hasattr(region, 'h'):
-        Xinf = int(region.yc - region.h/2)
-        Xsup = int(region.yc + region.h/2)
-        Yinf = int(region.xc - region.w/2)
-        Ysup = int(region.xc + region.w/2)
+        xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
+        print('W = ', w)
+        print('H = ', h)
+        if w <= 2:
+            w = 2
+        if h <= 2:
+            h = 2
+        Xinf = yc - h/2 -1
+        Xsup = yc + h/2 -1 
+        Yinf = xc - w/2 -1
+        Ysup = xc + w/2 -1
         imagex = fits.open(filename)[0].data[Xinf-15:Xsup+15,Yinf:Ysup].sum(axis=1)
         imagey = fits.open(filename)[0].data[Xinf:Xsup,Yinf-15:Ysup+15].sum(axis=0)
         #lx, ly = image.shape
@@ -1567,26 +1573,28 @@ def DS9center(xpapoint):
         axes[0].set_ylabel('Spatial direction');axes[1].set_ylabel('Spectral direction')
         axes[0].plot(x, Gaussian(x, imagex.max()-offsetx, x0x, sigma2x, offsetx), ':b',label='Deconvolved PSF') # Gaussian x, amplitude, xo, sigma_x, offset
         #axes[0].plot(x, Gaussian(x, ampx, x0x, sigma2x, offsetx), ':b',label='Deconvolved PSF') # Gaussian x, amplitude, xo, sigma_x, offset
-        xc = x - x0x
+        xcc = x - x0x
         #axes[0].plot(x, np.piecewise(x, [xc < -lx, (xc >=-lx) & (xc<=lx), xc>lx], [offsetx, ampx + offsetx, offsetx]), ':r', label='Slit size') # slit (UnitBox)
-        axes[0].plot(x, np.piecewise(x, [xc < -lx, (xc >=-lx) & (xc<=lx), xc>lx], [offsetx, imagex.max() , offsetx]), ':r', label='Slit size') # slit (UnitBox)
+        axes[0].plot(x, np.piecewise(x, [xcc < -lx, (xcc >=-lx) & (xcc<=lx), xcc>lx], [offsetx, imagex.max() , offsetx]), ':r', label='Slit size') # slit (UnitBox)
         axes[0].plot([x0x, x0x], [imagex.min(), imagex.max()])
         axes[1].plot(y, Gaussian(y, imagey.max() - offsety, x0y, sigma2y, offsety), ':b',label='Deconvolved PSF') # Gaussian x, amplitude, xo, sigma_x, offset
-        xc = x - x0y
-        axes[1].plot(x, np.piecewise(x, [xc < -ly, (xc >=-ly) & (xc<=ly), xc>ly], [offsety, imagey.max(), offsety]), ':r', label='Slit size') # slit (UnitBox)
+        xcc = x - x0y
+        axes[1].plot(x, np.piecewise(x, [xcc < -ly, (xcc >=-ly) & (xcc<=ly), xcc>ly], [offsety, imagey.max(), offsety]), ':r', label='Slit size') # slit (UnitBox)
         axes[1].plot([x0y, x0y], [imagey.min(), imagey.max()])
 
 
 
         plt.figtext(0.66,0.65,'Sigma = %0.1f +/- %0.1f pix\nSlitdim = %0.1f +/- %0.1f pix\ncenter = %0.1f +/- %0.1f' % ( np.sqrt(poptx[3]), np.sqrt(np.diag(pcovx)[3]/2.) , 2*poptx[1],2*np.sqrt(np.diag(pcovx)[1]), x0x, np.sqrt(np.diag(pcovx)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
         plt.figtext(0.67,0.25,'Sigma = %0.1f +/- %0.1f pix\nSlitdim = %0.1f +/- %0.1f pix\ncenter = %0.1f +/- %0.1f' % ( np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3]/2.) , 2*popty[1],2*np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])),bbox={'facecolor':'red', 'alpha':0.2, 'pad':10})
-        
-        newCenterx = region.xc + x0y#popty[2]
-        newCentery = region.yc + x0x#poptx[2]
+        plt.show()
+        newCenterx = xc + x0y#popty[2]
+        newCentery = yc + x0x#poptx[2]
 
         print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
+        #d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,region.w,region.h))
         d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (newCenterx,newCentery,region.w,region.h))
-        d.set('regions command "circle %0.3f %0.3f %0.1f # color=yellow"' % (newCenterx,newCentery,3))
+        #d.set('regions command "circle %i %i %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,2))
+        d.set('regions command "circle %0.3f %0.3f %0.1f # color=yellow"' % (newCenterx,newCentery,2))
 #        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
         try:
             os.remove('/tmp/centers.reg')
@@ -1597,14 +1605,13 @@ def DS9center(xpapoint):
                            text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
         d.set('regions /tmp/centers.reg')
         
-        plt.show()
         pass
     if hasattr(region, 'r'):
         xc, yc, r = int(region.xc), int(region.yc), int(region.r)
-        Xinf = yc - r#int(region.yc - region.r)
-        Xsup = yc + r#int(region.yc + region.r)
-        Yinf = xc - r#int(region.xc - region.r)
-        Ysup = xc + r#int(region.xc + region.r)
+        Xinf = yc - r -1#int(region.yc - region.r)
+        Xsup = yc + r -1#int(region.yc + region.r)
+        Yinf = xc - r -1#int(region.xc - region.r)
+        Ysup = xc + r -1#int(region.xc + region.r)
         data = fits.open(filename)[0].data
         image = data[Xinf:Xsup,Yinf:Ysup]
         print('2D fitting with 100 microns fibre, to be updated by allowing each fiber size')
@@ -1655,8 +1662,7 @@ def DS9center(xpapoint):
 #        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
 
 
-
-        d.set('regions command "circle %i %i %0.1f # color=yellow"' % (newCenterx,newCentery,15))
+        d.set('regions command "circle %i %i %0.1f # color=yellow"' % (newCenterx,newCentery,5))
         try:
             os.remove('/tmp/centers.reg')
         except OSError:
@@ -1665,18 +1671,17 @@ def DS9center(xpapoint):
                            save=True,color = 'yellow', savename='/tmp/centers',
                            text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
         d.set('regions /tmp/centers.reg')
-        
     return
 
 
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
-#    print (path)
-#    xpapoint = '7f000001:55824'   
-#    function = 'throughfocus_visualisation'
+    print (path)
+#    xpapoint = '7f000001:62470'   
+#    function = 'centering'
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)
-    #sys.argv.append('')
+#    sys.argv.append('')
     
     print(sys.argv)
     
