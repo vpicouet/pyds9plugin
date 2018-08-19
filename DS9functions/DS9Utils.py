@@ -5,50 +5,55 @@ Created on Wed Jul  4 10:35:13 2018
 
 @author: Vincent
 """
+
 from __future__ import print_function
-
-print('Importing packages ...')
-
+import timeit
 import glob
 import os
 import  sys
 import json
-
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-
 import numpy as np
-from astropy.io import fits
-from collections import namedtuple
-from scipy.optimize import curve_fit
+from pyds9 import DS9
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))     
 
-import matplotlib.pyplot as plt
-from astropy.table import Table
-from pyds9 import DS9#from pyds9 import *
 
-from scipy import interpolate
-from scipy import stats
-from scipy import ndimage
+#from collections import namedtuple
+#from pyds9 import *
 
-from focustest import AnalyzeSpot
-from focustest import ConvolveBoxPSF
-from focustest import plot_rp2_convolved_wo_latex
-from focustest import  radial_profile_normalized
-from focustest import ConvolveDiskGaus2D
-from focustest import twoD_Gaussian
-from focustest import  estimateBackground
-from focustest import create_DS9regions2
-from focustest import stackImages  
-from focustest import Gaussian  
-from focustest import Focus  
-from focustest import ConvolveSlit2D_PSF
+#from astropy.io import fits
 
-print(print_function)
-print(glob, os, sys, json)
-print(np, fits, namedtuple, curve_fit)
-print(DS9, interpolate, stats, ndimage)
-print(AnalyzeSpot,ConvolveBoxPSF,plot_rp2_convolved_wo_latex,radial_profile_normalized)
-print(ConvolveDiskGaus2D,twoD_Gaussian,estimateBackground,create_DS9regions2)
-print(stackImages,Gaussian,Focus,ConvolveSlit2D_PSF)
+#import matplotlib.pyplot as plt
+#from astropy.table import Table
+
+#from scipy.optimize import curve_fit
+#from scipy import interpolate
+#from scipy import stats
+#from scipy import ndimage
+
+#start = timeit.default_timer()
+#from focustest import ConvolveBoxPSF
+#from focustest import AnalyzeSpot
+#from focustest import plot_rp2_convolved_wo_latex
+#from focustest import  radial_profile_normalized
+#from focustest import stackImages  
+#from focustest import ConvolveDiskGaus2D
+#from focustest import twoD_Gaussian
+#from focustest import estimateBackground
+#from focustest import create_DS9regions2
+#from focustest import Gaussian  
+#from focustest import ConvolveSlit2D_PSF
+
+#stop = timeit.default_timer()
+#print('Packages imported...')
+#print('Import time = {}s'.format(stop-start))
+
+#print(print_function)
+#print(glob, os, sys, json)
+#print(np, fits, namedtuple, curve_fit)
+#print(DS9, interpolate, stats, ndimage)
+#print(AnalyzeSpot,ConvolveBoxPSF,plot_rp2_convolved_wo_latex,radial_profile_normalized)
+#print(ConvolveDiskGaus2D,twoD_Gaussian,estimateBackground,create_DS9regions2)
+#print(stackImages,Gaussian,Focus,ConvolveSlit2D_PSF)
 
 #from __future__ import division
 #from __future__ import print_function
@@ -59,12 +64,71 @@ print(stackImages,Gaussian,Focus,ConvolveSlit2D_PSF)
 #from past.utils import old_div
 #
 
+def rot_matrix(angle):
+    theta = np.radians(angle)
+    c, s = np.cos(theta), np.sin(theta)
+    R = np.array(((c,-s), (s, c)))
+    return R
+def warp_matix(angle,t1,t2):
+    rot_matrix(angle)
+    mat = np.hstack((rot_matrix(30),np.array([[t1],[t2]])))
+    return mat
+
+def Compute_transformation(path1,path2):
+    import imageio
+    from astropy.io import fits
+    import cv2
+#path1= '/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180612/image-000085-000094-Zinc-with_dark-117-stack.fits'
+#path1= '/Users/Vincent/Nextcloud/Work/MaskMoves/Sub12June/Tostack/StackedImage_8309957-8313557_Inverse.fits'
+#path2 = '/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180612/image-000075-000084-Zinc-with_dark-121-stack.fits'
+#path2= '/Users/Vincent/Nextcloud/Work/MaskMoves/SubAugust/StackedImage_1000700-9974457_Inverse.fits'
+    img1 = fits.open(path1)[0].data#[:,1100:2000]
+    img2 = fits.open(path2)[0].data#[:,1100:2000]
+    imageio.imwrite('/tmp/img1.jpg', img1)
+    imageio.imwrite('/tmp/img2.jpg', img2)
+    im1 =  cv2.imread('/tmp/img1.jpg');
+    im2 =  cv2.imread("/tmp/img2.jpg");
+    im1_gray = cv2.cvtColor(im1,cv2.COLOR_BGR2GRAY)
+    im2_gray = cv2.cvtColor(im2,cv2.COLOR_BGR2GRAY)
+
+    res = cv2.resize(im1,None,fx=2, fy=2, interpolation = cv2.INTER_CUBIC)
+    warp_mode = cv2.MOTION_EUCLIDEAN#MOTION_TRANSLATION
+    if warp_mode == cv2.MOTION_HOMOGRAPHY :
+        warp_matrix = np.eye(3, 3, dtype=np.float32)
+    else :
+        warp_matrix = np.eye(2, 3, dtype=np.float32)
+    # Specify the number of iterations.
+    number_of_iterations = 5000;
+     
+    # Specify the threshold of the increment
+    # in the correlation coefficient between two iterations
+    termination_eps = 1e-10;
+    
+    # Define termination criteria
+    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, number_of_iterations,  termination_eps)
+ 
+    # Run the ECC algorithm. The results are stored in warp_matrix.
+    (cc, warp_matrix) = cv2.findTransformECC (im1_gray,im2_gray,warp_matrix, warp_mode, criteria)
+    sz = im1.shape
+    if warp_mode == cv2.MOTION_HOMOGRAPHY :
+        # Use warpPerspective for Homography 
+        im2_aligned = cv2.warpPerspective (im2, warp_matrix, (sz[1],sz[0]), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
+    else :
+        # Use warpAffine for Translation, Euclidean and Affine
+        im2_aligned = cv2.warpAffine(im2, warp_matrix, (sz[1],sz[0]), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP);
+    return warp_matrix
+#    warp_matrix_test = warp_matix(30,30,100)
+ #   im2_aligned = cv2.warpAffine(im2, warp_matrix_test, (sz[1],sz[0]), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP); 
+ #   imshow(im1);show()
+ #   imshow(im2);show()
+ #   imshow(im2_aligned)    
 
 
 def DS9setup(xpapoint, filename=None, Internet=False, smooth=2, 
                  regions=True, centering=False, rot=0):
     '''Load an image
     '''
+    from astropy.io import fits
     d = DS9()
     if filename == None:
         filename = d.get("file")
@@ -104,13 +168,17 @@ def DS9setup(xpapoint, filename=None, Internet=False, smooth=2,
     if centering:
         d.set("region {}".format('/tmp/centers.reg'))  
     d.set("cmap Cubehelix0")
+    d.set("smooth yes")
     d.set("smooth radius {}".format(2))
+    d.set("smooth yes")
+    #print('test')
     return fitsimage
 
 
 def DS9guider(xpapoint):
     """
     """
+    from astropy.io import fits
     d = DS9()
     filename = d.get("file")
     header = fits.open(filename)[0].header
@@ -132,20 +200,30 @@ def DS9guider(xpapoint):
 def DS9setup2(xpapoint):
     """
     """
+    from astropy.io import fits
     d = DS9(xpapoint)#DS9(xpapoint)
     filename = d.get("file")
     fitsimage = fits.open(filename)
-#    if fitsimage[0].header['BITPIX'] == -32:
-#        Type = 'guider'  
-#    else:
-#        Type = 'detector'
-    d.set("grid no") 
-    d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
-          np.percentile(fitsimage[0].data,99.6)))
-    d.set("lock frame physical")
-    d.set("lock scalelimits yes")  
-    d.set("cmap Cubehelix0")
-    d.set("smooth sigma {}".format(1.0))
+    if d.get("lock bin") == 'no':
+        d.set("grid no") 
+        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
+              np.percentile(fitsimage[0].data,99.6)))
+        #d.set("lock frame physical")
+        #d.set("lock scalelimits yes")  
+        d.set("cmap Cubehelix0")
+        d.set("smooth yes")
+        #d.set("smooth sigma {}".format(1))
+        d.set("smooth radius {}".format(2))
+        d.set("smooth yes")
+        d.set("lock bin yes")
+    elif d.get("lock bin") == 'yes':
+        #d.set("regions delete all")
+        d.set("cmap grey")
+        d.set("scale linear")
+        d.set("scale mode minmax")
+        d.set("grid no")
+        d.set("smooth no")
+        d.set("lock bin no")
     return filename
 
 
@@ -173,6 +251,7 @@ def parse_data(data, nan=np.nan, map=map, float=float):
     return X.T, Y.T, arr.T
 
 def process_region(region, win):
+    from collections import namedtuple
     name, info = region.split('(')
     coords = [float(c) for c in info.split(')')[0].split(',')]
     if name == 'box':
@@ -250,6 +329,10 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
                  fibersize=100, center_type=None, SigmaMax= 4):
     """
     """
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
+    from focustest import AnalyzeSpot
+    from scipy.optimize import curve_fit
     fwhm = []
     EE50 = []
     EE80 = []    
@@ -271,16 +354,16 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     axes[0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
     axes[0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt1))],[min(fwhm),max(fwhm)])
     axes[0].set_ylabel('FWHM')
-    axes[0].set_xlabel('Best actuator = %0.3f' % (xtot[np.argmin(f(xtot,*opt1))]))
+    axes[0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt1))]))
     axes[1].plot(x,EE50, '-o')
     axes[1].plot(xtot,f(xtot,*opt2),linestyle='dotted')
     axes[1].set_ylabel('EE50')
-    axes[1].set_xlabel('Best actuator = %0.3f' % (xtot[np.argmin(f(xtot,*opt2))]))
+    axes[1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt2))]))
     axes[1].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt2))],[min(EE50),max(EE50)])
     axes[2].plot(x,EE80, '-o')
     axes[2].plot(xtot,f(xtot,*opt3),linestyle='dotted')
     axes[2].set_ylabel('EE80')
-    axes[2].set_xlabel('Best actuator = %0.3f' % (xtot[np.argmin(f(xtot,*opt3))]))
+    axes[2].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt3))]))
     axes[2].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt3))],[min(EE80),max(EE80)])
     fig.tight_layout()    
     plt.show()
@@ -289,6 +372,9 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
 def DS9throughfocus(xpapoint):
     """
     """
+    from astropy.io import fits
+    from focustest import AnalyzeSpot
+
     print('''\n\n\n\n      START THROUGHFOCUS \n\n\n\n''')
     d = DS9(xpapoint)
     filename = d.get("file ")
@@ -350,6 +436,8 @@ def back(xpapoint):#,filename = None,Internet =False, smooth=2, regions=True, ce
 def DS9rp(xpapoint):#,filename = None,Internet =False, smooth=2, regions=True, centering=False,rot=0):
     """
     """
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
     d = DS9(xpapoint)#DS9(xpapoint)
     try:
         fibersize = sys.argv[3]
@@ -371,6 +459,12 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, anisotrope=False, angle=3
   """Function used to plot the radial profile and the encircled energy of a spot,
   Latex is not necessary
   """
+  from focustest import  radial_profile_normalized
+  import matplotlib.pyplot as plt
+  from focustest import ConvolveDiskGaus2D
+  from focustest import gausexp
+  from scipy.optimize import curve_fit
+  from scipy import interpolate
   if anisotrope == True:
       spectral, spatial, EE_spectral, EE_spatial = radial_profile_normalized(data, center, anisotrope=anisotrope, angle=angle, radius=radius, n=n, center_type=center_type)
       spectral = spectral[~np.isnan(spectral)]
@@ -481,6 +575,7 @@ def DS9open(xpapoint, filename=None):
         print('Opening = ',filename)
         d = DS9(xpapoint)#DS9(xpapoint)
         d.set('grid no')
+        d.set('frame new')
         d.set("file {}".format(filename))#a = OpenFile(xpaname,filename = filename)
     else:
         print('File not found, please verify your path')
@@ -493,6 +588,7 @@ def DS9open(xpapoint, filename=None):
 #    return
 
 def Charge_path(xpapoint):
+    from astropy.io import fits
     #'7739194-7741712'#''#sys.argv[3]#'7739194-7741712'#sys.argv[3]#'7738356-7742138  '#sys.argv[3]#'7738356-7742135  '#sys.argv[3]
 #    try:
 #        entry = sys.argv[3]#'7739194-7741712'#sys.argv[3]
@@ -591,72 +687,7 @@ def DS9visualisation_throughfocus(xpapoint):
     """
     """
     d = DS9(xpapoint)
-    path = Charge_path(xpapoint)
-#    try:
-#        entry = sys.argv[3]
-#        print(entry)
-#        n1, n2 = entry.split('-')
-#    except IndexError:
-#        n1=''
-#        n2=''
-#    print('N1 = {}, N2 = {}'.format(n1,n2))
-#    print(type(n1))
-#    try:
-#        n1, n2 = int(n1), int(n2)
-#    except ValueError:
-#        pass
-#    d = DS9(xpapoint)
-#    filename = d.get("file")
-#    fitsimage = fits.open(filename)
-#    if fitsimage[0].header['BITPIX'] == -32:
-#        Type = 'guider'
-#    else:
-#        Type = 'detector'
-#    print ('Type = {}'.format(Type))
-#    path = []
-#    if Type == 'detector':
-#        if (type(n1)==int) & (type(n2)==int):
-#            print('Specified numbers are integers, opening corresponding files ...')
-#            for number in np.arange(n1,n2+1):
-#                #path = os.path.dirname(filename) + '/image%06d.fits' % (number)
-#                path.append(os.path.dirname(filename) + '/image%06d.fits' % (number))
-#                x = np.arange(n1,n2+1)
-#        else:
-#            print('Not numbers, taking all the .fits images from the current repository')
-#            path = glob.glob(os.path.dirname(filename) + '/*.fits')
-#            x = np.arange(len(path))
-#    if Type == 'guider':
-#        if (type(n1)==int) & (type(n2)==int):
-#            print('Specified numbers are integers, opening corresponding files ...')
-#            #print(np.arange(n1,n2+1))
-#            files = glob.glob(os.path.dirname(filename) + '/stack*.fits')
-#            numbers = []
-#            for file in files:
-#                name = os.path.basename(file)
-#                
-#                #print(name[5:12])
-#                numbers.append(int(name[5:12]))
-#            numbers = np.array(numbers)
-#            map
-#            path = []
-#            for i, number in enumerate(numbers):
-#                if (number > n1) & (number < n2):
-#                    path.append(files[i])
-#                    print(files[i])
-##                a = glob.glob(os.path.dirname(filename) + '/stack%i*.fits' % (number))
-##                if len(a) == 1:
-##                    path.append(a[0])
-##                    print('/stack%i*.fits' % (number))
-#        else:
-#            print('Not numbers, taking all the .fits images from the current repository')
-#            path = glob.glob(os.path.dirname(filename) + '/*.fits')
-#    for file in path:
-#        if 'table' in file:
-#            path.remove(file)
-#    path = np.sort(path)
-#    print(path)    
-
-        
+    path = Charge_path(xpapoint)        
     d.set('tile yes')
     d.set("cmap Cubehelix0")
     d.set("frame delete")
@@ -684,6 +715,7 @@ def DS9visualisation_throughfocus(xpapoint):
 
 def plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
                ygaussfit,n_bias,n_log,threshold0,threshold55,plot_flag=False):    
+    import matplotlib.pyplot as plt
     if plot_flag:    
         #plt.close("all")
         #plt.clf()
@@ -840,6 +872,7 @@ def apply_pc(image,output,area=0):
 def DS9photo_counting(xpapoint):
     """Calculate threshold of the image and apply phot counting
     """
+    from astropy.io import fits
     d = DS9(xpapoint)
     filename = d.get("file")
     image_area = [0,2069,1172,2145]
@@ -866,6 +899,7 @@ def gaussian(x, amp, x0, sigma):
     return amp*np.exp(-(x-x0)**2/(2*sigma**2))
 
 def gaussianFit(x, y, param):
+    from scipy.optimize import curve_fit
     popt, pcov = curve_fit(gaussian, x, y, p0=param)   
     amp, x0, sigma = popt   
     return (amp, x0, sigma) 
@@ -878,6 +912,7 @@ def linefit(x, A, B):
 def fitLine(x, y, param=None):
     """
     """
+    from scipy.optimize import curve_fit
     popt, pcov = curve_fit(linefit, x, y, p0 = param)
     a, b = popt
     return (a, b)
@@ -916,6 +951,8 @@ def DS9previous():
 def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
     """Create an image with subimages where are lya predicted lines and display it on DS9
     """
+    from astropy.table import Table
+    from astropy.io import fits
     line = sys.argv[3]#'f3 names'#sys.argv[3]
     if '202' in line:
         w = 0.20255
@@ -954,13 +991,13 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
     else:
         imagettes = [image[int(x)-n1:int(x) +n1,int(y)-n2:int(y) +n2] for y,x in zip(x,y)]
     v1,v2 = 6,14
-    fig, axes = plt.subplots(v1, v2, figsize=(v2,v1),sharex=True)
-    for i, ax in enumerate(axes.ravel()): 
-        try:
-            ax.imshow(imagettes[i][:, ::-1])
-            ax.get_yaxis().set_ticklabels([])
-        except IndexError:
-            pass
+#    fig, axes = plt.subplots(v1, v2, figsize=(v2,v1),sharex=True)
+#    for i, ax in enumerate(axes.ravel()): 
+#        try:
+#            ax.imshow(imagettes[i][:, ::-1])
+#            ax.get_yaxis().set_ticklabels([])
+#        except IndexError:
+#            pass
     #size = len(table)
     try:
         new_image = np.ones((v1*(2*n) + v1,v2*(2*n) + v2))*np.min(imagettes)
@@ -992,7 +1029,7 @@ def DS9tsuite(xpapoint):
     path = os.path.dirname(os.path.realpath(__file__))    
     d = DS9(xpapoint)
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
 
     print('''\n\n\n\n      TEST: Open    \n\n\n\n''')
     DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
@@ -1009,14 +1046,14 @@ def DS9tsuite(xpapoint):
     sys.argv[3] = ''
     DS9visualisation_throughfocus(xpapoint)
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
     sys.argv[3] = '402-404'
     sys.argv[4] = '407-408'
     DS9visualisation_throughfocus(xpapoint)
     DS9stack(xpapoint)    
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
     sys.argv[3] = '402-404-406'    #sys.argv[4] = '403-401-407'
     DS9visualisation_throughfocus(xpapoint)
@@ -1026,18 +1063,18 @@ def DS9tsuite(xpapoint):
     print('''\n\n\n\n      TEST: Visualization Guider   \n\n\n\n''')
     print('''\n\n\n\n      TEST: stacking Guider   \n\n\n\n''')
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
     sys.argv[3] = ''
     DS9visualisation_throughfocus(xpapoint)
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
     sys.argv[3] = '7662504-7662914'
     DS9visualisation_throughfocus(xpapoint)
     DS9stack(xpapoint)    
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
     sys.argv[3] = '7662505-7662913-7664160'
     DS9visualisation_throughfocus(xpapoint)
@@ -1045,7 +1082,7 @@ def DS9tsuite(xpapoint):
 
     print('''\n\n\n\n      TEST: Next Guider   \n\n\n\n''')
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
     print('''\n\n\n\n      TEST: Throughfocus Guider   \n\n\n\n''')
     d.set('regions command "circle %i %i %0.1f # color=red"' % (812,783.2,40))
@@ -1058,7 +1095,7 @@ def DS9tsuite(xpapoint):
     print('''\n\n\n\n      TEST: Next detector   \n\n\n\n''')
 
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
     print('''\n\n\n\n      TEST: Throughfocus detector   \n\n\n\n''')
 
@@ -1073,7 +1110,7 @@ def DS9tsuite(xpapoint):
 
     print('''\n\n\n\n      TEST: Radial profile   \n\n\n\n''') 
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/TestImage.fits')    
     d.set('regions command "circle %i %i %0.1f # color=red"' % (1001,900.2,40))
     d.set('regions select all') 
@@ -1094,7 +1131,7 @@ def DS9tsuite(xpapoint):
     
     print('''\n\n\n\n      TEST: Show slit regions   \n\n\n\n''') 
     d.set('frame delete all')
-    d.set('frame new')
+    #d.set('frame new')
     DS9open(xpapoint,path + '/test/detector/image-000075-000084-Zinc-with_dark-121-stack.fits')    
     sys.argv[3] = 'f3'
     Field_regions(xpapoint)
@@ -1157,7 +1194,7 @@ def DS9tsuite(xpapoint):
 
 def Field_regions(xpapoint):
     d = DS9(xpapoint)
-    Imagename = d.get("file")
+    #Imagename = d.get("file")
 
     mask = sys.argv[3]#'f3 names'#sys.argv[3]
     print (mask)
@@ -1203,6 +1240,8 @@ def Field_regions(xpapoint):
 
 
 def DS9stack(xpapoint):
+    from astropy.io import fits
+    from focustest import stackImages
     d = DS9(xpapoint)
     filename = d.get("file")
     fitsimage = fits.open(filename)[0]
@@ -1243,15 +1282,17 @@ def DS9stack(xpapoint):
         numbers = entry.split('-')
     
         if len(numbers) == 2:
+            print('2 numbers given for the stack')
             n1, n2 = entry.split('-')
             n1, n2 = int(n1), int(n2)
             numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
         print('Numbers used: {}'.format(numbers))           
     
-        filename = d.get("file")
+        #filename = d.get("file")
         path = os.path.dirname(filename)
         try:
             d1,d2 = number_dark.split('-') 
+            print('2 numbers given for the dark')
             print(d1,d2)
             dark = stackImages(path,all=False, DS=0, function = 'mean', numbers=np.arange(int(d1),int(d2)), save=True, name="Dark")[0]
             Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=np.array([int(number) for number in numbers]), save=True, name="Dark_{}-{}".format(int(d1),int(d2)))
@@ -1259,6 +1300,7 @@ def DS9stack(xpapoint):
             d1 = number_dark
             if d1 == '':
                 dark = 0
+                print('No dark')
                 Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="NoDark")
             else:
                 dark = fits.open(path + '/image%06d.fits' % (int(d1)))[0].data
@@ -1285,6 +1327,7 @@ def DS9focus(xpapoint):
 #        from FireBallIMO.PSFInterpoler.SkySlitMapping        import SkySlitMapping
 #    except:
 #        pass
+    from focustest import Focus  
     d = DS9(xpapoint)
     filename = d.get("file")
     #image = fitsfile[0].data
@@ -1307,6 +1350,9 @@ def DS9focus(xpapoint):
 
 
 def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,15), radius=15, center=[933, 1450], n_bg=1.3, sizefig=4):#, center_bg=[500,500]
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    from focustest import estimateBackground
     print('''\n\n\n\n      START THROUGHSLIT \n\n\n\n''')
     try:
         entry = sys.argv[3]#'2-15'#'2-7-8-9-11-14-15'#'2-15'#'2-4-6-8-9'#sys.argv[3]
@@ -1347,7 +1393,7 @@ def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,1
     radius = 15
     print('Sum pixel is used (another estimator may be prefarable)')
     fluxes=[]
-    n=radius
+    #n=radius
     
     for file in path:
         print (file)
@@ -1374,6 +1420,8 @@ def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,1
     return 
 
 def DS9snr(xpapoint):
+    from astropy.io import fits
+    from focustest import create_DS9regions2
     n1 = 1.2
     n2 = 1.8
     d = DS9(xpapoint)
@@ -1462,18 +1510,22 @@ def create_test_image():
     through focus
     throughlit
     """
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    from focustest import twoD_Gaussian
+    from focustest import ConvolveSlit2D_PSF
     n=20
     fitstest = fits.open('/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180612/image000365.fits')
     #fitstest[0].data *= 0`
     lx, ly = fitstest[0].data.shape
     x, y = np.arange(lx), np.arange(ly)
     xy = np.meshgrid(x,y)
-    new_image = 0*fitstest[0].data
+    new_image = fitstest[0].data
     for xi, ampi in zip((np.linspace(100,1900,10)),(np.linspace(10,1000,10))):
         slit = (1/0.006)*ConvolveSlit2D_PSF(xy, ampi, 3, 9, int(xi), 1500, 3,3).reshape(ly,lx).T
         new_image = new_image + slit# + gaussian2
-        imshow(slit[int(xi)-n:int(xi)+n,1500-n:1500+n]);colorbar();plt.show()
-        imshow(new_image[int(xi)-n:int(xi)+n,1500-n:1500+n]);colorbar();plt.show()
+        plt.imshow(slit[int(xi)-n:int(xi)+n,1500-n:1500+n]);plt.plt.colorbar();plt.show()
+        plt.imshow(new_image[int(xi)-n:int(xi)+n,1500-n:1500+n]);plt.colorbar();plt.show()
     for xi, ampi in zip((np.linspace(100,1900,10)),(np.linspace(10,1000,10))):
         gaussian = twoD_Gaussian(xy, ampi, int(xi), 1000, 5, 5, 0).reshape(ly,lx).T
         new_image = new_image + gaussian# + gaussian2
@@ -1493,7 +1545,7 @@ def create_test_image():
         pass
     fitstest.writeto('/Users/Vincent/Documents/FireBallPipe/Calibration/test/TestImage.fits',overwrite = True)
     #imshow(fits.open('/Users/Vincent/Documents/FireBallPipe/Calibration/TestImage.fits')[0].data)
-#    plt.figure()
+#    plt.figure()DS
 #    plt.plot(fitstest[0].data[1000-n:1000+n,2000])
 #    plt.plot(fitstest[0].data[1000,1000-n:1000+n])
 #    plt.show()
@@ -1506,6 +1558,8 @@ def create_test_image():
 def DS9meanvar(xpapoint):
     """
     """
+    from astropy.io import fits
+    from scipy import stats
     d = DS9(xpapoint)#DS9(xpapoint)
     filename = d.get("file")
     region = getregion(d)
@@ -1529,11 +1583,56 @@ def DS9meanvar(xpapoint):
     return
 
 
+def DS9lock(xpapoint):
+    """
+    """
+    d = DS9(xpapoint)#DS9(xpapoint)
+    lock = d.get("lock scalelimits")
+    if lock == 'yes':
+        d.set("lock frame no")
+        d.set("lock scalelimits no")
+        d.set("lock crosshair no")
+        d.set("lock smooth no")
+        d.set("lock colorbar noe")
+    if lock == 'no':
+        d.set("lock frame physical")
+        d.set("lock scalelimits yes")
+        d.set("crosshair lock physical")
+        d.set("lock crosshair physical")
+        d.set("lock smooth yes")
+        d.set("lock colorbar yes")
+    return
+
+
+def DS9inverse(xpapoint):
+    """
+    """
+    from astropy.io import fits
+    d = DS9(xpapoint)#DS9(xpapoint)
+    filename = d.get("file")
+    fitsfile = fits.open(filename)[0]
+
+    image = fitsfile.data
+    new_image = - image + image.max()
+    fitsfile.data = new_image
+    fitsfile.data = new_image
+    fitsfile.writeto(filename[:-5] + '_Inverse.fits',overwrite=True)
+    d.set('frame new')
+    d.set('file {}'.format(filename[:-5] + '_Inverse.fits'))
+    return
 
 
 def DS9center(xpapoint):
     """
     """
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    from focustest import ConvolveBoxPSF
+    from focustest import twoD_Gaussian
+    from focustest import create_DS9regions2
+    from focustest import estimateBackground
+    from scipy.optimize import curve_fit
+    from focustest import Gaussian
     d = DS9(xpapoint)#DS9(xpapoint)
     filename = d.get("file")
     region = getregion(d)
@@ -1652,11 +1751,13 @@ def DS9center(xpapoint):
         newCentery = yc - (ly/2 - popt[2])#region.yc - (ly/2 - popt[2])
         print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
 
+        print(np.diag(pcov))
         plt.plot(image[int(yo), :], 'bo',label='Spatial direction')
         plt.plot(fit[int(yo), :],color='b')#,label='Spatial direction')
         plt.plot(image[:,int(xo)], 'ro',label='Spatial direction')
         plt.plot(fit[:,int(xo)],color='r')#,label='Spatial direction')
         plt.ylabel('Fitted profiles')
+        plt.figtext(0.66,0.55,'Sigma = %0.1f +/- %0.1f pix\nXcenter = %0.1f +/- %0.1f\nYcenter = %0.1f +/- %0.1f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
         plt.legend()
         plt.show()
 #        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
@@ -1677,14 +1778,21 @@ def DS9center(xpapoint):
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
     print (path)
-#    xpapoint = '7f000001:62470'   
-#    function = 'centering'
+    #
+#    xpapoint = '7f000001:59470'  
+#    function = 'focus'
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)
+#    sys.argv.append('f3')
 #    sys.argv.append('')
+#    DS9inverse(xpapoint)
+    #function = 'centering'
+
     
-    print(sys.argv)
+   # print(sys.argv)
     
+
+    start = timeit.default_timer()
 
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
                     'throughfocus':DS9throughfocus, 'open':DS9open,
@@ -1693,8 +1801,8 @@ if __name__ == '__main__':
                     'WCS':DS9guider, 'test':DS9tsuite,
                     'photo_counting':DS9photo_counting, 'lya_multi_image':create_multiImage,
                     'next':DS9next, 'previous':DS9previous,
-                    'regions': Field_regions, 'stack': DS9stack,
-                    'snr': DS9snr, 'focus': DS9focus,
+                    'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
+                    'snr': DS9snr, 'focus': DS9focus,'inverse': DS9inverse,
                     'throughslit': DS9throughslit, 'meanvar': DS9meanvar}
     try:
         xpaname = sys.argv[1]
@@ -1709,14 +1817,27 @@ if __name__ == '__main__':
     
         DictFunction[function](xpaname)             
     
-    
+
+
+        stop = timeit.default_timer()
+
         print("""
             ********************************************************************
-                                           Exited OK            
+                                Exited OK, test duration = {}s      
             ********************************************************************
-            """) 
+            """.format(stop - start)) 
     except:
         pass
+
+#xpapoint='7f000001:57475'
+#d = DS9tsuite(xpapoint)
+#d.set('contour no')
+#
+#d.set('contour yes')
+#d.set('contour smooth 8')
+#d.set('contour smooth 5')
+#d.set('contour smooth 5')
+
 #        
 #        import numpy
 #        from scipy import optimize
