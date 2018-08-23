@@ -332,41 +332,93 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     from astropy.io import fits
     import matplotlib.pyplot as plt
     from focustest import AnalyzeSpot
+    from focustest import estimateBackground
     from scipy.optimize import curve_fit
     fwhm = []
     EE50 = []
-    EE80 = []    
+    EE80 = [] 
+    maxpix = []
+    sumpix = []
+    varpix = []
     for file in files:
         print (file)
-        image = fits.open(file)[0].data
+        filename = file
+        fitsfile = fits.open(file)[0]
+        image = fitsfile.data
+        background = 0*estimateBackground(image,center)
+        n = 25
+        subimage = (image-background)[int(center[1]) - n:int(center[1]) + n, int(center[0]) - n:int(center[0]) + n]
         d = AnalyzeSpot(image,center=center,fibersize=fibersize,
                         center_type=center_type, SigmaMax = SigmaMax)
+        max20 = subimage.flatten()
+        max20.sort()
         fwhm.append(d['FWHM'])
         EE50.append(d['EE50'])
         EE80.append(d['EE80'])
+        maxpix.append(max20[-20:].mean())
+        sumpix.append(subimage.sum())
+        varpix.append(subimage.var())
     f = lambda x,a,b,c: a * (x-b)**2 + c#a * np.square(x) + b * x + c
+
+    fig, axes = plt.subplots(3, 2, figsize=(10,6))
+    xtot = np.linspace(x.min(),x.max(),200)
+
     opt1,cov1 = curve_fit(f,x,fwhm)
     opt2,cov2 = curve_fit(f,x,EE50)
     opt3,cov3 = curve_fit(f,x,EE80)
-    xtot = np.linspace(x.min(),x.max(),200)
-    fig, axes = plt.subplots(3, 1, figsize=(8,8))
-    axes[0].plot(x,fwhm, '-o')
-    axes[0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
-    axes[0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt1))],[min(fwhm),max(fwhm)])
-    axes[0].set_ylabel('FWHM')
-    axes[0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt1))]))
-    axes[1].plot(x,EE50, '-o')
-    axes[1].plot(xtot,f(xtot,*opt2),linestyle='dotted')
-    axes[1].set_ylabel('EE50')
-    axes[1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt2))]))
-    axes[1].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt2))],[min(EE50),max(EE50)])
-    axes[2].plot(x,EE80, '-o')
-    axes[2].plot(xtot,f(xtot,*opt3),linestyle='dotted')
-    axes[2].set_ylabel('EE80')
-    axes[2].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt3))]))
-    axes[2].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt3))],[min(EE80),max(EE80)])
-    fig.tight_layout()    
+    try:
+        opt4,cov4 = curve_fit(f,x,maxpix)
+        axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
+        axes[0,1].plot(np.ones(2)*xtot[np.argmax(f(xtot,*opt4))],[min(maxpix),max(maxpix)])
+        axes[0,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmax(f(xtot,*opt4))]))
+    except RuntimeError:
+        pass            
+    try:
+        opt5,cov5 = curve_fit(f,x,sumpix)
+        axes[1,1].plot(xtot,f(xtot,*opt5),linestyle='dotted')
+        axes[1,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt5))]))
+        axes[1,1].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt5))],[min(sumpix),max(sumpix)])
+    except RuntimeError:
+        pass
+    try:
+        opt6,cov6 = curve_fit(f,x,varpix)
+        axes[2,1].plot(xtot,f(xtot,*opt6),linestyle='dotted')
+        axes[2,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmax(f(xtot,*opt6))]))
+        axes[2,1].plot(np.ones(2)*xtot[np.argmax(f(xtot,*opt6))],[min(varpix),max(varpix)])
+    except RuntimeError:
+        pass
+    axes[0,0].plot(x,fwhm, '-o')
+    axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
+    axes[0,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt1))],[min(fwhm),max(fwhm)])
+    axes[0,0].set_ylabel('FWHM')
+    axes[0,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt1))]))
+    axes[1,0].plot(x,EE50, '-o')
+    axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
+    axes[1,0].set_ylabel('EE50')
+    axes[1,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt2))]))
+    axes[1,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt2))],[min(EE50),max(EE50)])
+    axes[2,0].plot(x,EE80, '-o')
+    axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
+    axes[2,0].set_ylabel('EE80')
+    axes[2,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt3))]))
+    axes[2,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt3))],[min(EE80),max(EE80)])
+
+    axes[0,1].plot(x,maxpix, '-o')
+    axes[0,1].set_ylabel('Max pixel value (d=50)')
+
+    axes[1,1].plot(x,sumpix, '-o')
+    axes[1,1].set_ylabel('Sum of pixels (d=50)')
+    
+    axes[2,1].plot(x,varpix, '-o')
+    axes[2,1].set_ylabel('Var of pixels (d=50)')
+   
+
+    name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
+    fig.tight_layout()
+    fig.suptitle(name, y=1.)
+    fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
     plt.show()
+    print(name) 
     return fwhm, EE50, EE80
 
 def DS9throughfocus(xpapoint):
@@ -448,9 +500,12 @@ def DS9rp(xpapoint):#,filename = None,Internet =False, smooth=2, regions=True, c
         fibersize = 0
     filename = d.get("file ")
     a = getregion(d)
-    DS9plot_rp_convolved(data=fits.open(filename)[0].data,
+    fitsfile = fits.open(filename)[0]
+    DS9plot_rp_convolved(data=fitsfile.data,
                                 center = [np.int(a.xc),np.int(a.yc)],
                                 fibersize=fibersize)    
+    plt.title('{} - {} - {}'.format(os.path.basename(filename),[np.int(a.xc),np.int(a.yc)],fitsfile.header['DATE']))
+    #plt.savefig(os.path.basename(filename),[np))
     plt.show()
     return
 
@@ -689,7 +744,7 @@ def DS9visualisation_throughfocus(xpapoint):
     d = DS9(xpapoint)
     path = Charge_path(xpapoint)        
     d.set('tile yes')
-    d.set("cmap Cubehelix0")
+    #d.set("cmap Cubehelix0")
     d.set("frame delete")
     d.set("smooth no")
     for filen in path[:]:
@@ -706,7 +761,7 @@ def DS9visualisation_throughfocus(xpapoint):
     d.set("lock smooth yes") 
     d.set("lock colorbar yes") 
     #d.set("lock crosshair %f %f"%(a.xc,a.yc))
-    d.set("scale mode 99.5")#vincent
+    #d.set("scale mode 99.5")#vincent
     return
 
     
@@ -1194,6 +1249,8 @@ def DS9tsuite(xpapoint):
 
 def Field_regions(xpapoint):
     d = DS9(xpapoint)
+    #d.set("regions format ds9")
+    #d.set("regions system image")
     #Imagename = d.get("file")
 
     mask = sys.argv[3]#'f3 names'#sys.argv[3]
@@ -1204,28 +1261,28 @@ def Field_regions(xpapoint):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Lya.reg'
         else:
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Zn.reg'
-        if ('names' in mask):
+        if ('name' in mask):
             filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
     if ('f2' in mask):
         if ('lya' in mask):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Lya.reg'
         else:
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Zn.reg'
-        if ('names' in mask):
+        if ('name' in mask):
             filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_names.reg'
     if ('f3' in mask):
         if ('lya' in mask):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Lya.reg'
         else:
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Zn.reg'
-        if ('names' in mask):
+        if ('name' in mask):
             filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_names.reg'
     if ('f4' in mask):
         if ('lya' in mask):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Lya.reg'
         else:
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Zn.reg'
-        if ('names' in mask):
+        if ('name' in mask):
             filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_names.reg'
     if ('grid' in mask):
         filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/grid_Zn.reg' 
@@ -1397,7 +1454,8 @@ def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,1
     
     for file in path:
         print (file)
-        image = fits.open(file)[0].data
+        fitsfile = fits.open(file)[0]
+        image = fitsfile.data
         #plt.figure(figsize=(sizefig,sizefig))
         #plt.imshow(image[int(a.yc)-radius:int(a.yc)+radius, int(a.xc)-radius:int(a.xc)+radius])#;plt.colorbar();plt.show()
         #plt.show()
@@ -1416,6 +1474,9 @@ def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,1
     plt.xlabel('# image')
     plt.title('Best image : {}'.format(os.path.basename(path[maxf])))
     plt.ylabel('Sum pixel') 
+    name = '{} - {} - {}'.format(os.path.basename(filename),[int(a.xc),int(a.yc)],fitsfile.header['DATE'])
+    print(name) 
+    plt.title(name)
     plt.show()
     return 
 
@@ -1683,8 +1744,8 @@ def DS9center(xpapoint):
 
 
 
-        plt.figtext(0.66,0.65,'Sigma = %0.1f +/- %0.1f pix\nSlitdim = %0.1f +/- %0.1f pix\ncenter = %0.1f +/- %0.1f' % ( np.sqrt(poptx[3]), np.sqrt(np.diag(pcovx)[3]/2.) , 2*poptx[1],2*np.sqrt(np.diag(pcovx)[1]), x0x, np.sqrt(np.diag(pcovx)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
-        plt.figtext(0.67,0.25,'Sigma = %0.1f +/- %0.1f pix\nSlitdim = %0.1f +/- %0.1f pix\ncenter = %0.1f +/- %0.1f' % ( np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3]/2.) , 2*popty[1],2*np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])),bbox={'facecolor':'red', 'alpha':0.2, 'pad':10})
+        plt.figtext(0.66,0.65,'Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f' % ( np.sqrt(poptx[3]), np.sqrt(np.diag(pcovx)[3]/2.) , 2*poptx[1],2*np.sqrt(np.diag(pcovx)[1]), x0x, np.sqrt(np.diag(pcovx)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
+        plt.figtext(0.67,0.25,'Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f' % ( np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3]/2.) , 2*popty[1],2*np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])),bbox={'facecolor':'red', 'alpha':0.2, 'pad':10})
         plt.show()
         newCenterx = xc + x0y#popty[2]
         newCentery = yc + x0x#poptx[2]
@@ -1757,7 +1818,7 @@ def DS9center(xpapoint):
         plt.plot(image[:,int(xo)], 'ro',label='Spatial direction')
         plt.plot(fit[:,int(xo)],color='r')#,label='Spatial direction')
         plt.ylabel('Fitted profiles')
-        plt.figtext(0.66,0.55,'Sigma = %0.1f +/- %0.1f pix\nXcenter = %0.1f +/- %0.1f\nYcenter = %0.1f +/- %0.1f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
+        plt.figtext(0.66,0.55,'Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
         plt.legend()
         plt.show()
 #        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
@@ -1779,13 +1840,13 @@ if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
     print (path)
     #
-#    xpapoint = '7f000001:59470'  
-#    function = 'focus'
+#    xpapoint = '7f000001:51133'  
+#    function = 'throughfocus'
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)
-#    sys.argv.append('f3')
 #    sys.argv.append('')
-#    DS9inverse(xpapoint)
+#    sys.argv.append('')
+    #Field_regions(xpapoint)
     #function = 'centering'
 
     
@@ -1796,7 +1857,7 @@ if __name__ == '__main__':
 
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
                     'throughfocus':DS9throughfocus, 'open':DS9open,
-                    'back':back, 'setup':DS9setup2,
+                    'setup':DS9setup2,#'back':back,
                     'throughfocus_visualisation':DS9visualisation_throughfocus, 
                     'WCS':DS9guider, 'test':DS9tsuite,
                     'photo_counting':DS9photo_counting, 'lya_multi_image':create_multiImage,
@@ -1954,3 +2015,12 @@ if __name__ == '__main__':
 #
 #show()
 #           
+
+
+#plt.plot(1284.26, 662, 'o', label='Autocoll', markersize=20)
+#plt.plot(1208, 455.75,'o', label='Source', markersize=20)
+#plt.plot(1246.13, 558.875,'P',  label='Axis of the parabola', markersize=20)
+#plt.plot(1208, 514.3,'P',  label='Spectro axis', markersize=20)
+#plt.axis('equal')
+#plt.grid()
+#plt.legend()
