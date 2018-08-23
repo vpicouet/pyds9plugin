@@ -1261,8 +1261,8 @@ def Field_regions(xpapoint):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Lya.reg'
         else:
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Zn.reg'
-        if ('name' in mask):
-            filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
+        #if ('name' in mask):
+            #filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
     if ('f2' in mask):
         if ('lya' in mask):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Lya.reg'
@@ -1282,8 +1282,8 @@ def Field_regions(xpapoint):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Lya.reg'
         else:
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Zn.reg'
-        if ('name' in mask):
-            filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_names.reg'
+        #if ('name' in mask):
+            #filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_names.reg'
     if ('grid' in mask):
         filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/grid_Zn.reg' 
     
