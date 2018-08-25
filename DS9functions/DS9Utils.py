@@ -155,7 +155,7 @@ def DS9setup(xpapoint, filename=None, Internet=False, smooth=2,
     if Type == 'detector':
         d.set("file {}".format(filename))            
         d.set("grid no") 
-        d.set("rotate %i"%(rot)) 
+        d.set("rotate %0.2f"%(rot)) 
         d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
               np.percentile(fitsimage[0].data,99.6)))
         d.set("lock frame physical")
@@ -326,7 +326,7 @@ def getregion(win, debug=False):
 
 
 def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8], 
-                 fibersize=100, center_type=None, SigmaMax= 4):
+                 fibersize=0, center_type='barycentre', SigmaMax= 4):
     """
     """
     from astropy.io import fits
@@ -340,32 +340,55 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     maxpix = []
     sumpix = []
     varpix = []
+    xo = []
+    yo = []
     for file in files:
         print (file)
         filename = file
-        fitsfile = fits.open(file)[0]
-        image = fitsfile.data
-        background = 0*estimateBackground(image,center)
+        with fits.open(filename) as f:
+            #stack[:,:,i] = f[0].data
+            fitsfile = f[0]
+            image = fitsfile.data
+        background = 1*estimateBackground(image,center)
         n = 25
         subimage = (image-background)[int(center[1]) - n:int(center[1]) + n, int(center[0]) - n:int(center[0]) + n]
         d = AnalyzeSpot(image,center=center,fibersize=fibersize,
                         center_type=center_type, SigmaMax = SigmaMax)
         max20 = subimage.flatten()
         max20.sort()
-        fwhm.append(d['FWHM'])
+        fwhm.append(d['Sigma'])
         EE50.append(d['EE50'])
         EE80.append(d['EE80'])
+        xo.append(d['Center'][0])
+        yo.append(d['Center'][1])        
         maxpix.append(max20[-20:].mean())
-        sumpix.append(subimage.sum())
+        sumpix.append(d['Flux'])
         varpix.append(subimage.var())
     f = lambda x,a,b,c: a * (x-b)**2 + c#a * np.square(x) + b * x + c
 
-    fig, axes = plt.subplots(3, 2, figsize=(10,6))
+    fig, axes = plt.subplots(4, 2, figsize=(10,6))
     xtot = np.linspace(x.min(),x.max(),200)
-
-    opt1,cov1 = curve_fit(f,x,fwhm)
-    opt2,cov2 = curve_fit(f,x,EE50)
-    opt3,cov3 = curve_fit(f,x,EE80)
+    try:
+        opt1,cov1 = curve_fit(f,x,fwhm)
+        axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
+        axes[0,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt1))],[min(fwhm),max(fwhm)])
+        axes[0,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt1))]))
+    except RuntimeError:
+        pass 
+    try:
+        opt2,cov2 = curve_fit(f,x,EE50)
+        axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
+        axes[1,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt2))]))
+        axes[1,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt2))],[min(EE50),max(EE50)])
+    except RuntimeError:
+        pass     
+    try:
+        opt3,cov3 = curve_fit(f,x,EE80)
+        axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
+        axes[2,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt3))]))
+        axes[2,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt3))],[min(EE80),max(EE80)])
+    except RuntimeError:
+        pass     
     try:
         opt4,cov4 = curve_fit(f,x,maxpix)
         axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
@@ -388,29 +411,30 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     except RuntimeError:
         pass
     axes[0,0].plot(x,fwhm, '-o')
-    axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
-    axes[0,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt1))],[min(fwhm),max(fwhm)])
-    axes[0,0].set_ylabel('FWHM')
-    axes[0,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt1))]))
+    axes[0,0].set_ylabel('Sigma')
+
     axes[1,0].plot(x,EE50, '-o')
-    axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
     axes[1,0].set_ylabel('EE50')
-    axes[1,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt2))]))
-    axes[1,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt2))],[min(EE50),max(EE50)])
+
     axes[2,0].plot(x,EE80, '-o')
-    axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
     axes[2,0].set_ylabel('EE80')
-    axes[2,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt3))]))
-    axes[2,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt3))],[min(EE80),max(EE80)])
+
+    axes[3,0].plot(x,xo, '-o')
+    axes[3,0].set_ylabel('y center')
+    axes[3,0].grid()
 
     axes[0,1].plot(x,maxpix, '-o')
-    axes[0,1].set_ylabel('Max pixel value (d=50)')
+    axes[0,1].set_ylabel('Max pix')
 
     axes[1,1].plot(x,sumpix, '-o')
-    axes[1,1].set_ylabel('Sum of pixels (d=50)')
+    axes[1,1].set_ylabel('Flux')
     
     axes[2,1].plot(x,varpix, '-o')
-    axes[2,1].set_ylabel('Var of pixels (d=50)')
+    axes[2,1].set_ylabel('Var pix (d=50)')
+    axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
+    axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
+    axes[3,1].grid()
+    axes[3,1].set_ylabel('y center')
    
 
     name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
@@ -420,6 +444,152 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     plt.show()
     print(name) 
     return fwhm, EE50, EE80
+
+
+def throughfocus2(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8], 
+                 fibersize=100, center_type='barycentre', SigmaMax= 4):
+    """
+    """
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
+    from focustest import AnalyzeSpot
+    from focustest import estimateBackground
+    from scipy.optimize import curve_fit
+    from astropy.table import Table, vstack
+    fwhm = []
+    EE50 = []
+    EE80 = [] 
+    maxpix = []
+    sumpix = []
+    varpix = []
+    xo = []
+    yo = []
+    sec = []
+    t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
+    for file in files:
+        print (file)
+        filename = file
+        with fits.open(filename) as f:
+            #stack[:,:,i] = f[0].data
+            fitsfile = f[0]
+            image = fitsfile.data
+        time = fitsfile.header['DATE']
+        day,h, m, s = float(time[-11:-9]),float(time[-8:-6]), float(time[-5:-3]), float(time[-2:])
+        sec.append(t2s(h=h,m=m,s=s,d=day))
+        #image = fitsfile.data
+        background = 1*estimateBackground(image,center)
+        n = 25
+        subimage = (image-background)[int(center[1]) - n:int(center[1]) + n, int(center[0]) - n:int(center[0]) + n]
+        d = AnalyzeSpot(image,center=center,fibersize=fibersize,
+                        center_type=center_type, SigmaMax = SigmaMax)
+        max20 = subimage.flatten()
+        max20.sort()
+        fwhm.append(d['Sigma'])
+        EE50.append(d['EE50'])
+        EE80.append(d['EE80'])
+        xo.append(d['Center'][0])
+        yo.append(d['Center'][1])        
+        maxpix.append(max20[-20:].mean())
+        sumpix.append(d['Flux'])
+        varpix.append(subimage.var())
+        t.add_row((os.path.basename(filename),float(os.path.basename(filename)[-11:-4]), t2s(h=h,m=m,s=s,d=day), d['Center'][0],d['Center'][1],d['Sigma'],d['EE50'],d['EE80'],max20[-20:].mean(),subimage.sum(),subimage.var() ))
+    try:
+        print(os.path.dirname(filename) + '/Analysis.csv')
+        OldTable = Table.read(os.path.dirname(filename) + '/Analysis.csv')
+        print ('old',OldTable)
+    except IOError:
+        t.write(os.path.dirname(filename) + '/Analysis.csv')
+    else:
+        t = vstack((OldTable,t))
+        #print ('new',newTable)
+        t.write(os.path.dirname(filename) + '/Analysis.csv',overwrite=True)
+    sec = np.array(sec)
+    sec = (sec - sec.min())/60
+    xtot = np.linspace(sec.min(),sec.max(),200)
+    x = sec
+    f = lambda x,a,b,c: a * (x-b)**2 + c#a * np.square(x) + b * x + c
+
+    fig, axes = plt.subplots(4, 2, figsize=(10,6))
+
+
+    try:
+        opt1,cov1 = curve_fit(f,x,fwhm)
+        axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
+        axes[0,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt1))],[min(fwhm),max(fwhm)])
+        axes[0,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt1))]))
+    except RuntimeError:
+        pass 
+    try:
+        opt2,cov2 = curve_fit(f,x,EE50)
+        axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
+        axes[1,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt2))]))
+        axes[1,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt2))],[min(EE50),max(EE50)])
+    except RuntimeError:
+        pass     
+    try:
+        opt3,cov3 = curve_fit(f,x,EE80)
+        axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
+        axes[2,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt3))]))
+        axes[2,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt3))],[min(EE80),max(EE80)])
+    except RuntimeError:
+        pass     
+    try:
+        opt4,cov4 = curve_fit(f,x,maxpix)
+        axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
+        axes[0,1].plot(np.ones(2)*xtot[np.argmax(f(xtot,*opt4))],[min(maxpix),max(maxpix)])
+        axes[0,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmax(f(xtot,*opt4))]))
+    except RuntimeError:
+        pass            
+    try:
+        opt5,cov5 = curve_fit(f,x,sumpix)
+        axes[1,1].plot(xtot,f(xtot,*opt5),linestyle='dotted')
+        axes[1,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt5))]))
+        axes[1,1].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt5))],[min(sumpix),max(sumpix)])
+    except RuntimeError:
+        pass
+    try:
+        opt6,cov6 = curve_fit(f,x,varpix)
+        axes[2,1].plot(xtot,f(xtot,*opt6),linestyle='dotted')
+        axes[2,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmax(f(xtot,*opt6))]))
+        axes[2,1].plot(np.ones(2)*xtot[np.argmax(f(xtot,*opt6))],[min(varpix),max(varpix)])
+    except RuntimeError:
+        pass
+    axes[0,0].plot(x,fwhm, '-o')
+    axes[0,0].set_ylabel('Sigma')
+
+    axes[1,0].plot(x,EE50, '-o')
+    axes[1,0].set_ylabel('EE50')
+
+    axes[2,0].plot(x,EE80, '-o')
+    axes[2,0].set_ylabel('EE80')
+
+    axes[3,0].plot(x,xo, '-o')
+    axes[3,0].set_ylabel('y center')
+    axes[3,0].grid()
+
+    axes[0,1].plot(x,maxpix, '-o')
+    axes[0,1].set_ylabel('Max pix')
+
+    axes[1,1].plot(x,sumpix, '-o')
+    axes[1,1].set_ylabel('Flux')
+    
+    axes[2,1].plot(x,varpix, '-o')
+    axes[2,1].set_ylabel('Var pix (d=50)')
+    axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
+    axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
+    axes[3,1].grid()
+    axes[3,1].set_ylabel('y center')
+   
+
+    name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
+    fig.tight_layout()
+    fig.suptitle(name, y=1.)
+    fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
+    plt.show()
+    print(name) 
+    return t#fwhm, EE50, EE80
+
+
 
 def DS9throughfocus(xpapoint):
     """
@@ -432,42 +602,16 @@ def DS9throughfocus(xpapoint):
     filename = d.get("file ")
     path = Charge_path(xpapoint)
     x = np.arange(len(path))
-#                        try:
-#                            entry = sys.argv[3]
-#                            n1, n2 = entry.split('-')
-#                            n1, n2 = int(n1), int(n2)
-#                        except IndexError:
-#                            n1=''
-#                            n2=''
-#                        d = DS9(xpapoint)
-#                        filename = d.get("file")
-#                        path = []
-#                        if (type(n1)==int) & (type(n2)==int):
-#                            print('Specified numbers are integers, opening corresponding files ...')
-#                            for number in np.arange(n1,n2+1):
-#                                #path = os.path.dirname(filename) + '/image%06d.fits' % (number)
-#                                path.append(os.path.dirname(filename) + '/image%06d.fits' % (number))
-#                                x = np.arange(n1,n2+1)
-#                        else:
-#                            print('Not numbers, taking all the .fits images from the current repository')
-#                            path = glob.glob(os.path.dirname(filename) + '/*.fits')
-#                            x = np.arange(len(path))
-#                        #    with fits.open(path) as f:
-#                        #        files.append(f[0].data)        
-#                        #    os.path.dirname(filename)
-#                        path = np.sort(path)
-#                        print(path)
-                        
     
     a = getregion(d)
     rp = AnalyzeSpot(fits.open(filename)[0].data,center = [np.int(a.xc),
-                     np.int(a.yc)],fibersize=100)
+                     np.int(a.yc)],fibersize=0)
     print('\n\n\n\n     Centring on barycentre of the DS9 image '
           '(need to be close to best focus) : %0.1f, %0.1f'
           '--> %0.1f, %0.1f \n\n\n\n' % (a.xc,a.yc,rp['Center'][0],rp['Center'][1]))
     print('Applying throughfocus')
 
-    throughfocus(center = rp['Center'], files=path,x = x,fibersize=100,
+    throughfocus(center = rp['Center'], files=path,x = x,fibersize=0,
                  center_type=None,SigmaMax=6)
     return 
 
@@ -501,12 +645,14 @@ def DS9rp(xpapoint):#,filename = None,Internet =False, smooth=2, regions=True, c
     filename = d.get("file ")
     a = getregion(d)
     fitsfile = fits.open(filename)[0]
-    DS9plot_rp_convolved(data=fitsfile.data,
+    spot = DS9plot_rp_convolved(data=fitsfile.data,
                                 center = [np.int(a.xc),np.int(a.yc)],
                                 fibersize=fibersize)    
     plt.title('{} - {} - {}'.format(os.path.basename(filename),[np.int(a.xc),np.int(a.yc)],fitsfile.header['DATE']))
     #plt.savefig(os.path.basename(filename),[np))
     plt.show()
+    #d.set('regions delete select')
+    d.set('regions command "circle %0.3f %0.3f %0.3f # color=red"' % (spot['Center'][0]+1,spot['Center'][1]+1,10))#testvincent
     return
 
 
@@ -605,15 +751,16 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, anisotrope=False, angle=3
 #                  e_exp = np.sum(exp(np.linspace(0,size,100*size),*popt) * 2 * np.pi * np.linspace(0,size,100*size)**1)
       ax1.legend(loc = (0.54,0.05),fontsize=12)
       if fiber == 0:
-          plt.figtext(0.53,0.53,"Amp = %0.3f\nRadius = %0.3f pix \nSigmaPSF = %0.3f pix \nEE50-80 = %0.2f - %0.2f p" % (popt[0],0,popt[1],minb,mina), 
+          flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
+          plt.figtext(0.53,0.53,"Flux = %0.0f\nRadius = %0.3f pix \nSigmaPSF = %0.3f pix \nEE50-80 = %0.2f - %0.2f p" % (flux,0,abs(popt[1]),minb,mina), 
                       fontsize=14,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
-          d = {"SizeSource":0,"FWHM":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
-          print("SizeSource = {}\nFWHM = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(0,popt[1],minb,mina,platescale,NewCenter))
+          d = {"Flux":flux,"SizeSource":0,"Sigma":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+          print("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
       else:
           plt.figtext(0.53,0.53,"Amp = %0.3f\nRadius = %0.3f pix \nSigmaPSF = %0.3f pix \nEE50-80 = %0.2f - %0.2f p" % (popt[0],popt[1],popt[2],minb,mina), 
                       fontsize=14,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
-          d = {"SizeSource":popt[1],"FWHM":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
-          print("SizeSource = {}\nFWHM = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
+          d = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+          print("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
       return d
   #                plt.figtext(0.74,0.18,r'$\displaystyle\sigma =$ %0.3f pix \n$\displaystyle\lambda =$ %0.3f pix \n$\displaystyle pGaus = \%$%0.2f\n$\displaystyle\alpha = $%0.1f' % (popt[2],popt[3],100*e_gaus/(e_gaus + e_exp),popt[4]), fontsize=18,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
   #                plt.show()
@@ -753,7 +900,7 @@ def DS9visualisation_throughfocus(xpapoint):
         d.set("fits {}".format(filen))        
     try:
         a = getregion(d)
-        d.set('pan to %i %i physical' % (a.xc,a.yc))
+        d.set('pan to %0.3f %0.3f physical' % (a.xc,a.yc))
     except:
         pass
     d.set("lock frame physical")
@@ -1140,7 +1287,7 @@ def DS9tsuite(xpapoint):
     #d.set('frame new')
     DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
     print('''\n\n\n\n      TEST: Throughfocus Guider   \n\n\n\n''')
-    d.set('regions command "circle %i %i %0.1f # color=red"' % (812,783.2,40))
+    d.set('regions command "circle %0.3f %0.3f %0.1f # color=red"' % (812,783.2,40))
     d.set('regions select all') 
     sys.argv[3] = ''
     DS9throughfocus(xpapoint)
@@ -1156,7 +1303,7 @@ def DS9tsuite(xpapoint):
 
     DS9next(xpapoint)
     print('''\n\n\n\n      TEST: Throughfocus detector   \n\n\n\n''')
-    d.set('regions command "circle %i %i %0.1f # color=red"' % (1677,1266.2,40))
+    d.set('regions command "circle %0.3f %0.3f %0.1f # color=red"' % (1677,1266.2,40))
     d.set('regions select all') 
     sys.argv[3] = ''
     DS9throughfocus(xpapoint)
@@ -1167,7 +1314,7 @@ def DS9tsuite(xpapoint):
     d.set('frame delete all')
     #d.set('frame new')
     DS9open(xpapoint,path + '/test/TestImage.fits')    
-    d.set('regions command "circle %i %i %0.1f # color=red"' % (1001,900.2,40))
+    d.set('regions command "circle %0.3f %0.3f %0.1f # color=red"' % (1001,900.2,40))
     d.set('regions select all') 
     sys.argv[3] = '3'
     DS9rp(xpapoint)  
@@ -1262,7 +1409,7 @@ def Field_regions(xpapoint):
         else:
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Zn.reg'
         #if ('name' in mask):
-            #filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
+            #   filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
     if ('f2' in mask):
         if ('lya' in mask):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Lya.reg'
@@ -1388,28 +1535,37 @@ def DS9focus(xpapoint):
     d = DS9(xpapoint)
     filename = d.get("file")
     #image = fitsfile[0].data
-    entry = sys.argv[3] #f3 -121'#sys.argv[3] #''#sys.argv[4] #''#'sys.argv[4] #'365'#'365-374'#''#sys.argv[4] 
-    print ('Entry = ',entry)
     try:
-        mask, pa = entry.split(' ')
-        Focus(filename = filename, quick=False, threshold = [7], fwhm = [9,12.5],
-              HumanSupervision=False, reversex=False, plot=True, source='all',
-              shape='slits', windowing=True, mask=mask.capitalize(), pa=int(pa) ,MoreSources=0,peak_threshold=50)
-    except ValueError:
-        mask = entry
-        Focus(filename = filename, quick=False, threshold = [7], fwhm = [9,12.5],
-              HumanSupervision=False, reversex=False, plot=True, source='all',
-              shape='slits', windowing=True, mask=mask.capitalize(),MoreSources=0,peak_threshold=50)
+        entry = sys.argv[3] #f3 -121'#sys.argv[3] #''#sys.argv[4] #''#'sys.argv[4] #'365'#'365-374'#''#sys.argv[4] 
+    except:
+        F = Focus(filename = filename, HumanSupervision=False, source='Zn', shape='holes', windowing=False, peak_threshold=50,plot=False)
+        d.set('regions {}'.format(filename[:-5]+'detected.reg'))
 
-    d.set('regions {}'.format(filename[:-5]+'names.reg'))
+    #print ('Entry = ',entry)
+    else:
+        try:
+            mask, pa = entry.split(' ')
+            F = Focus(filename = filename, quick=False, threshold = [7], fwhm = [9,12.5],
+                  HumanSupervision=False, reversex=False, source='all',
+                  shape='slits', windowing=True, mask=mask.capitalize(), pa=int(pa) ,MoreSources=0,peak_threshold=50,plot=False)
+        except ValueError:
+            mask = entry
+            F = Focus(filename = filename, quick=False, threshold = [7], fwhm = [9,12.5],
+                  HumanSupervision=False, reversex=False, source='all',
+                  shape='slits', windowing=True, mask=mask.capitalize(),MoreSources=0,peak_threshold=50,plot=False)
+    
+        d.set('regions {}'.format(filename[:-5]+'detected.reg'))
 
-    return
+    return F
 
 
 def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,15), radius=15, center=[933, 1450], n_bg=1.3, sizefig=4):#, center_bg=[500,500]
     import matplotlib.pyplot as plt
     from astropy.io import fits
     from focustest import estimateBackground
+    from focustest import Gaussian
+    from scipy.optimize import curve_fit
+
     print('''\n\n\n\n      START THROUGHSLIT \n\n\n\n''')
     try:
         entry = sys.argv[3]#'2-15'#'2-7-8-9-11-14-15'#'2-15'#'2-4-6-8-9'#sys.argv[3]
@@ -1466,17 +1622,24 @@ def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,1
         fluxes.append(flux)
     fluxesn = (fluxes - min(fluxes)) / max(fluxes - min(fluxes))
 #    maxf = x[np.where(fluxes==np.max(fluxes))[0][0]]#[0]
-    maxf = np.arange(len(numbers))[np.where(fluxes==np.max(fluxes))[0][0]]#[0]
+    
+    x = np.arange(len(numbers))+1
+    popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(),3,0])#,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
+    xl = np.linspace(x.min(),x.max(),100)
+    maxf = xl[np.where(Gaussian(xl,*popt)==np.max(Gaussian(xl,*popt)))[0][0]]#[0]
     plt.figure()
-    plt.plot(np.arange(len(numbers)), fluxesn,'--*')
+    plt.plot(x, fluxesn,'o')
+    plt.plot(xl, Gaussian(xl,*popt),'--')
     plt.plot(np.linspace(maxf, maxf, len(fluxes)), fluxesn/max(fluxesn))
     plt.grid()
     plt.xlabel('# image')
-    plt.title('Best image : {}'.format(os.path.basename(path[maxf])))
+    #plt.title('Best image : {}'.format(os.path.basename(path[maxf])))
+    plt.title('Best image : {}'.format(maxf))
     plt.ylabel('Sum pixel') 
-    name = '{} - {} - {}'.format(os.path.basename(filename),[int(a.xc),int(a.yc)],fitsfile.header['DATE'])
+    name = '%0.3f - %s - %s'%(maxf,[int(a.xc),int(a.yc)],fitsfile.header['DATE'])
     print(name) 
     plt.title(name)
+    plt.savefig(os.path.dirname(file) + '/' + name + '.jpg')
     plt.show()
     return 
 
@@ -1541,8 +1704,8 @@ def DS9snr(xpapoint):
                        save=True,color = 'yellow', savename='/tmp/centers',
                        text = ['SNR = %0.2f' % (SNR)])
     d.set('regions /tmp/centers.reg')
-    d.set('regions command "circle %i %i %0.1f # color=yellow"' % (region.xc,region.yc,n1 * region.r))
-    d.set('regions command "circle %i %i %0.1f # color=yellow"' % (region.xc,region.yc,n2 * region.r))
+    d.set('regions command "circle %0.3f %0.3f %0.3f # color=yellow"' % (region.xc,region.yc,n1 * region.r))
+    d.set('regions command "circle %0.3f %0.3f %0.3f # color=yellow"' % (region.xc,region.yc,n2 * region.r))
     return
     
 #
@@ -1752,9 +1915,9 @@ def DS9center(xpapoint):
 
         print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
         #d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,region.w,region.h))
-        d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (newCenterx,newCentery,region.w,region.h))
+        d.set('regions command "box %0.3f %0.3f %0.2f %0.2f # color=yellow"' % (newCenterx,newCentery,region.w,region.h))
         #d.set('regions command "circle %i %i %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,2))
-        d.set('regions command "circle %0.3f %0.3f %0.1f # color=yellow"' % (newCenterx,newCentery,2))
+        d.set('regions command "circle %0.3f %0.3f %0.2f # color=yellow"' % (newCenterx,newCentery,2))
 #        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
         try:
             os.remove('/tmp/centers.reg')
@@ -1824,7 +1987,7 @@ def DS9center(xpapoint):
 #        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
 
 
-        d.set('regions command "circle %i %i %0.1f # color=yellow"' % (newCenterx,newCentery,5))
+        d.set('regions command "circle %0.2f %0.2f %0.2f # color=yellow"' % (newCenterx,newCentery,5))
         try:
             os.remove('/tmp/centers.reg')
         except OSError:
@@ -1833,25 +1996,23 @@ def DS9center(xpapoint):
                            save=True,color = 'yellow', savename='/tmp/centers',
                            text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
         d.set('regions /tmp/centers.reg')
-    return
+    return 
 
+def t2s(h,m,s,d=0):
+    return 3600 * h + 60 * m + s + d*24*3600
 
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
     print (path)
     #
-#    xpapoint = '7f000001:51133'  
+
+#    xpaname = '7f000001:57084'  
 #    function = 'throughfocus'
-#    sys.argv.append(xpapoint)
+#    sys.argv.append(xpaname)
 #    sys.argv.append(function)
 #    sys.argv.append('')
 #    sys.argv.append('')
-    #Field_regions(xpapoint)
-    #function = 'centering'
 
-    
-   # print(sys.argv)
-    
 
     start = timeit.default_timer()
 
@@ -1865,30 +2026,31 @@ if __name__ == '__main__':
                     'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
                     'snr': DS9snr, 'focus': DS9focus,'inverse': DS9inverse,
                     'throughslit': DS9throughslit, 'meanvar': DS9meanvar}
-    try:
-        xpaname = sys.argv[1]
-        function = sys.argv[2]
-    
-        print("""
-            ********************************************************************
-                                         Function = %s         
-            ********************************************************************
-            """%(function)) 
-    
-    
-        DictFunction[function](xpaname)             
-    
+#    try:
+    xpaname = sys.argv[1]
+    function = sys.argv[2]
+
+    print("""
+        ********************************************************************
+                                     Function = %s         
+        ********************************************************************
+        """%(function)) 
 
 
-        stop = timeit.default_timer()
+    DictFunction[function](xpaname)             
 
-        print("""
-            ********************************************************************
-                                Exited OK, test duration = {}s      
-            ********************************************************************
-            """.format(stop - start)) 
-    except:
-        pass
+
+
+    stop = timeit.default_timer()
+
+    print("""
+        ********************************************************************
+                            Exited OK, test duration = {}s      
+        ********************************************************************
+        """.format(stop - start)) 
+#    except Exception as e:
+#        print(e)
+#        pass
 
 #xpapoint='7f000001:57475'
 #d = DS9tsuite(xpapoint)
