@@ -14,6 +14,7 @@ import  sys
 import json
 import numpy as np
 from pyds9 import DS9
+import datetime
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))     
 
 
@@ -182,7 +183,7 @@ def DS9guider(xpapoint):
     d = DS9()
     filename = d.get("file")
     header = fits.open(filename)[0].header
-    if header['WCSAXES'] == 2:
+    if ('WCSAXES' in header):
         print('WCS header existing, checking Image servers')
         d.set("grid")
         d.set("scale mode 99.5")#vincent
@@ -192,10 +193,41 @@ def DS9guider(xpapoint):
             pass
         d.set("lock scalelimits no")
         d.set("lock frame wcs")
+    else:
+        print ('Nop header WCS - Applying lost in space algorithm: Internet needed!')
+        print ('Processing might take a few minutes ~5-10')
+        PathExec = os.path.dirname(os.path.realpath(__file__)) + '/astrometry-net.py'
+        Newfilename = filename[:-5] + '_wcs.fits'
+        CreateWCS(PathExec, filename, Newfilename)
+        filename = d.set("file {}".format(Newfilename))
+        filename = d.get("file")
+        header = fits.open(filename)[0].header
+        if header['WCSAXES'] == 2:
+            print('WCS header existing, checking Image servers')
+            d.set("grid")
+            d.set("scale mode 99.5")#vincent
+            try:# if urllib.request.urlopen("http://google.com",timeout=1):#Internet == True:
+                d.set("dsssao")
+            except:
+                pass
+            d.set("lock scalelimits no")
+            d.set("lock frame wcs")        
     return
 
-
-
+def CreateWCS(PathExec, filename, Newfilename):
+    import subprocess
+    print(filename)
+    start = timeit.default_timer()
+    print('''\n\n\n\n      Start lost in space algorithm - might take a few minutes \n\n\n\n''')
+    subprocess.check_output("python " + PathExec + " --apikey apfqmasixxbqxngm --newfits --wait --upload " + filename,shell=True)
+    try:
+        os.rename(os.path.dirname(PathExec) + "/--wait", Newfilename)
+    except OSError:
+        os.rename(os.path.dirname(PathExec) + "/--wait.fits", Newfilename)
+    stop = timeit.default_timer()
+    print('File created')
+    print('Lost in space duration = {} seconds'.format(stop-start))
+    return
 
 def DS9setup2(xpapoint):
     """
@@ -254,12 +286,19 @@ def process_region(region, win):
     from collections import namedtuple
     name, info = region.split('(')
     coords = [float(c) for c in info.split(')')[0].split(',')]
+    print(coords)
     if name == 'box':
         xc,yc,w,h,angle = coords
         dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))
         X,Y,arr = parse_data(dat)
         box = namedtuple('Box', 'data xc yc w h angle')
         return box(arr, xc, yc, w, h, angle)
+    elif name == 'bpanda':
+        xc, yc, a1, a2, a3, a4,a5, w, h,a6,a7 = coords
+        dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))
+        X,Y,arr = parse_data(dat)
+        box = namedtuple('Box', 'data xc yc w h angle')
+        return box(arr, xc, yc, w, h, 0)
     elif name == 'circle':
         xc,yc,r = coords
         dat = win.get("data physical %s %s %s %s no" % (xc - r, yc - r, 2*r, 2*r))
@@ -323,13 +362,25 @@ def getregion(win, debug=False):
     return process_region(rows[-1], win)
 
 
+def create_PA(A=15.45,B=13.75,C=14.95,pas=0.15,nombre=11):
+    a = np.linspace(A-int(nombre/2)*pas, A+int(nombre/2)*pas, nombre)
+    b = np.linspace(B-int(nombre/2)*pas, B+int(nombre/2)*pas, nombre)
+    c = np.linspace(C-int(nombre/2)*pas, C+int(nombre/2)*pas, nombre)
+    return a[::-1],b[::-1],c[::-1]
+#ENCa, ENCb, ENCc = create_PA()
 
+def ENC(x,ENCa):
+    a = (ENCa[-1]-ENCa[0])/(len(ENCa)-1) * x + ENCa[0]
+    #b = (ENCb[10]-ENCb[0])/(10) * x + ENCb[0]
+    #c = (ENCc[10]-ENCc[0])/(10) * x + ENCc[0]
+    return a#, b, c
 
-def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8], 
-                 fibersize=0, center_type='barycentre', SigmaMax= 4):
+def throughfocus(center, files,x=None, 
+                 fibersize=0, center_type='barycentre', SigmaMax= 4,Plot=True, Type=None, ENCa_center=None, pas=None, WCS=False):
     """
     """
     from astropy.io import fits
+    from astropy.table import Table, vstack
     import matplotlib.pyplot as plt
     from focustest import AnalyzeSpot
     from focustest import estimateBackground
@@ -342,6 +393,9 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     varpix = []
     xo = []
     yo = []
+    sec=[]
+    images=[]
+    ENCa = []
     for file in files:
         print (file)
         filename = file
@@ -349,9 +403,23 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
             #stack[:,:,i] = f[0].data
             fitsfile = f[0]
             image = fitsfile.data
+        time = fitsfile.header['DATE']
+        if Type == 'guider':    
+            ENCa.append(fitsfile.header['LINAENC'])
+        else:
+            nombre = 5
+            if ENCa_center is not None:
+                print('Actuator given: Center = {} , PAS = {}'.format(ENCa_center,pas))
+                ENCa = np.linspace(ENCa_center-nombre*pas, ENCa_center+nombre*pas, 2*nombre+1)[::-1]
+#            else:
+#                ENCa = np.linspace(100,100, 2*nombre+1)[::-1]
+        day,h, m, s = float(time[-11:-9]),float(time[-8:-6]), float(time[-5:-3]), float(time[-2:])
+        sec.append(t2s(h=h,m=m,s=s,d=day))
+
         background = 1*estimateBackground(image,center)
         n = 25
         subimage = (image-background)[int(center[1]) - n:int(center[1]) + n, int(center[0]) - n:int(center[0]) + n]
+        images.append(subimage)
         d = AnalyzeSpot(image,center=center,fibersize=fibersize,
                         center_type=center_type, SigmaMax = SigmaMax)
         max20 = subimage.flatten()
@@ -365,50 +433,93 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
         sumpix.append(d['Flux'])
         varpix.append(subimage.var())
     f = lambda x,a,b,c: a * (x-b)**2 + c#a * np.square(x) + b * x + c
-
-    fig, axes = plt.subplots(4, 2, figsize=(10,6))
+    x = np.arange(len(files))
+    fig, axes = plt.subplots(4, 2, figsize=(10,6),sharex=True)
     xtot = np.linspace(x.min(),x.max(),200)
+#    if ENCa_center is not None:
+#        axes2 = axes[0,0].twinx()
+#        X2tick_location= axes[0,0].xaxis.get_ticklocs() #Get the tick locations in data coordinates as a numpy array
+#        axes2.set_xticks(X2tick_location)
+#        axes2.set_xticklabels(ENCa)
+    print(ENCa)
     try:
         opt1,cov1 = curve_fit(f,x,fwhm)
         axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
-        axes[0,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt1))],[min(fwhm),max(fwhm)])
-        axes[0,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt1))]))
+        bestx1 = xtot[np.argmin(f(xtot,*opt1))]
+        axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)])
+        if len(ENCa) > 0:
+            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx1,ENC(bestx1,ENCa)))
+        else:
+            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx1))
+            
     except RuntimeError:
+        opt1 = [0,0,0]
+        bestx1 = np.nan
         pass 
     try:
         opt2,cov2 = curve_fit(f,x,EE50)
         axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
-        axes[1,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt2))]))
-        axes[1,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt2))],[min(EE50),max(EE50)])
+        bestx2 = xtot[np.argmin(f(xtot,*opt2))]
+        if len(ENCa) > 0:
+            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx2,ENC(bestx2,ENCa)))
+        else:
+            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx2))
+        axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)])
     except RuntimeError:
+        opt2 = [0,0,0]
+        bestx2 = np.nan
         pass     
     try:
         opt3,cov3 = curve_fit(f,x,EE80)
         axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
-        axes[2,0].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt3))]))
-        axes[2,0].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt3))],[min(EE80),max(EE80)])
+        bestx3 = xtot[np.argmin(f(xtot,*opt3))]
+        if len(ENCa) > 0:
+            axes[2,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx3,ENC(bestx3,ENCa)))
+        else:
+            axes[2,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx3))
+        axes[2,0].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)])
     except RuntimeError:
+        opt3 = [0,0,0]
+        bestx3 = np.nan
         pass     
     try:
         opt4,cov4 = curve_fit(f,x,maxpix)
         axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
-        axes[0,1].plot(np.ones(2)*xtot[np.argmax(f(xtot,*opt4))],[min(maxpix),max(maxpix)])
-        axes[0,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmax(f(xtot,*opt4))]))
+        bestx4 = xtot[np.argmax(f(xtot,*opt4))]
+        axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)])
+        if len(ENCa) > 0:
+            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx4,ENC(bestx4,ENCa)))
+        else:
+            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx4))
     except RuntimeError:
+        opt4 = [0,0,0]
+        bestx4 = np.nan
         pass            
     try:
         opt5,cov5 = curve_fit(f,x,sumpix)
         axes[1,1].plot(xtot,f(xtot,*opt5),linestyle='dotted')
-        axes[1,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmin(f(xtot,*opt5))]))
-        axes[1,1].plot(np.ones(2)*xtot[np.argmin(f(xtot,*opt5))],[min(sumpix),max(sumpix)])
+        bestx5 = xtot[np.argmax(f(xtot,*opt5))]
+        if len(ENCa) > 0:
+            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx5,ENC(bestx5,ENCa)))
+        else:
+            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx5))
+        axes[1,1].plot(np.ones(2)*bestx5,[min(sumpix),max(sumpix)])
     except RuntimeError:
+        opt5 = [0,0,0]
+        bestx5 = np.nan
         pass
     try:
         opt6,cov6 = curve_fit(f,x,varpix)
         axes[2,1].plot(xtot,f(xtot,*opt6),linestyle='dotted')
-        axes[2,1].set_xlabel('Best Image index = %0.3f' % (xtot[np.argmax(f(xtot,*opt6))]))
-        axes[2,1].plot(np.ones(2)*xtot[np.argmax(f(xtot,*opt6))],[min(varpix),max(varpix)])
+        bestx6 = xtot[np.argmax(f(xtot,*opt6))]
+        if len(ENCa) > 0:
+            axes[2,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx6,ENC(bestx6,ENCa)))
+        else:
+            axes[2,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx6))
+        axes[2,1].plot(np.ones(2)*bestx6,[min(varpix),max(varpix)])
     except RuntimeError:
+        opt6 = [0,0,0]
+        bestx6 = np.nan
         pass
     axes[0,0].plot(x,fwhm, '-o')
     axes[0,0].set_ylabel('Sigma')
@@ -433,21 +544,305 @@ def throughfocus(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     axes[2,1].set_ylabel('Var pix (d=50)')
     axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
     axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
-    axes[3,1].grid()
+    #axes[3,1].grid()
     axes[3,1].set_ylabel('y center')
    
 
     name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
     fig.tight_layout()
-    fig.suptitle(name, y=1.)
+    fig.suptitle(name, y=1.01)
     fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
     plt.show()
     print(name) 
+    t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
+    t.add_row((os.path.basename(filename),float(os.path.basename(filename)[-11:-4]),
+               t2s(h=h,m=m,s=s,d=day), d['Center'][0],d['Center'][1],min(fwhm),
+               min(EE50),min(EE80),min(maxpix),min(sumpix),max(varpix),
+               ENC(bestx1,ENCa),ENC(bestx2,ENCa),
+               ENC(bestx3,ENCa),ENC(bestx4,ENCa),
+               ENC(bestx6,ENCa)))
+    try:
+        print(os.path.dirname(filename) + '/Throughfocus.csv')
+        OldTable = Table.read(os.path.dirname(filename) + '/Throughfocus.csv')
+        print ('old',OldTable)
+    except IOError:
+        t.write(os.path.dirname(filename) + '/Throughfocus.csv')
+    else:
+        t = vstack((OldTable,t))
+        #print ('new',newTable)
+        t.write(os.path.dirname(filename) + '/Throughfocus.csv',overwrite=True)
+    if Plot:        
+        fig, axes = plt.subplots(1, 11,figsize=(24,3),sharey=True)
+        for i in range(len(images)):
+            axes[i].imshow(images[i])
+            axes[i].axis('equal')
+            subname = os.path.basename(files[i])[6:-5] 
+            try:
+                axes[i].set_xlabel('%i - %0.2f'%(int(subname),float(ENCa[i])))
+                #axes[i].set_title(float(ENCa[i]))
+            except:
+                axes[i].set_xlabel(int(subname))
+                pass
+        fig.suptitle(name)
+        fig.subplots_adjust(top=0.88)   
+        fig.tight_layout()
+        #plt.axis('equal')
+        fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
+        #fig.show()
+    return fwhm, EE50, EE80
+#throughfocus(center = [F.table['X_IMAGE'][i],F.table['Y_IMAGE'][i]], 
+#             files=path,x = x,fibersize=0,
+#             center_type=None,SigmaMax=6,Plot=True)
+def throughfocusWCS(center, files,x=None, 
+                 fibersize=0, center_type='barycentre', SigmaMax= 4,Plot=True, Type=None, ENCa_center=None, pas=None, WCS=False):
+    """
+    """
+    from astropy.io import fits
+    from astropy.table import Table, vstack
+    import matplotlib.pyplot as plt
+    from focustest import AnalyzeSpot
+    from focustest import estimateBackground
+    from scipy.optimize import curve_fit
+    fwhm = []
+    EE50 = []
+    EE80 = [] 
+    maxpix = []
+    sumpix = []
+    varpix = []
+    xo = []
+    yo = []
+    sec=[]
+    images=[]
+    ENCa = []
+    for file in files:
+        print (file)
+        filename = file
+        with fits.open(filename) as f:
+            #stack[:,:,i] = f[0].data
+            fitsfile = f[0]
+            image = fitsfile.data
+        header = fitsfile.header
+        time = header['DATE']
+        if Type == 'guider':    
+            ENCa.append(header['LINAENC'])
+        else:
+            nombre = 5
+            if ENCa_center is not None:
+                print('Actuator given: Center = {} , PAS = {}'.format(ENCa_center,pas))
+                ENCa = np.linspace(ENCa_center-nombre*pas, ENCa_center+nombre*pas, 2*nombre+1)[::-1]
+#            else:
+#                ENCa = np.linspace(100,100, 2*nombre+1)[::-1]
+        day,h, m, s = float(time[-11:-9]),float(time[-8:-6]), float(time[-5:-3]), float(time[-2:])
+        sec.append(t2s(h=h,m=m,s=s,d=day))
+        if WCS:
+            from astropy import units as u
+            from astropy import wcs
+
+            print ('Using WCS')
+            w = wcs.WCS(header)
+            center_wcs = center
+            center_pix = w.all_world2pix(center_wcs[0]*u.deg, center_wcs[1]*u.deg,0, )
+            center_pix = [int(center_pix[0]), int(center_pix[1])]
+            print('CENTER PIX= ' , center_pix)
+        else:
+            center_pix = center
+        d = AnalyzeSpot(image,center=center_pix,fibersize=fibersize,
+                        center_type=center_type, SigmaMax = SigmaMax)
+#        else:
+#            d = AnalyzeSpot(image,center=center,fibersize=fibersize,
+#                            center_type=center_type, SigmaMax = SigmaMax)
+        background = 1*estimateBackground(image,center)
+        n = 25
+        subimage = (image-background)[int(center_pix[1]) - n:int(center_pix[1]) + n, int(center_pix[0]) - n:int(center_pix[0]) + n]
+        images.append(subimage)
+
+        max20 = subimage.flatten()
+        max20.sort()
+        fwhm.append(d['Sigma'])
+        EE50.append(d['EE50'])
+        EE80.append(d['EE80'])
+        xo.append(d['Center'][0])
+        yo.append(d['Center'][1])        
+        maxpix.append(max20[-20:].mean())
+        sumpix.append(d['Flux'])
+        varpix.append(subimage.var())
+    f = lambda x,a,b,c: a * (x-b)**2 + c     #a * np.square(x) + b * x + c
+    if Type == 'guider':
+        x = np.array(ENCa)
+        xtot = np.linspace(x.min(),x.max(),200)
+        ENC = lambda x,a : x
+    if Type == 'detector':
+        x = np.arange(len(files))
+        xtot = np.linspace(x.min(),x.max(),200)
+        ENC = lambda x,a : (ENCa[-1]-ENCa[0])/(len(ENCa)-1) * x + ENCa[0]
+        
+    #x = np.array(ENCa)
+    fig, axes = plt.subplots(4, 2, figsize=(10,6),sharex=True)
+    
+#    if ENCa_center is not None:
+#        axes2 = axes[0,0].twinx()
+#        X2tick_location= axes[0,0].xaxis.get_ticklocs() #Get the tick locations in data coordinates as a numpy array
+#        axes2.set_xticks(X2tick_location)
+#        axes2.set_xticklabels(ENCa)
+    #print(ENCa)
+    #print(ENC(,ENCa))
+    try:
+        opt1,cov1 = curve_fit(f,x,fwhm)
+        axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
+        bestx1 = xtot[np.argmin(f(xtot,*opt1))]
+        axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)])
+        if len(ENCa) > 0:
+            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx1,ENC(bestx1,ENCa)))
+        else:
+            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx1))
+            
+    except RuntimeError:
+        opt1 = [0,0,0]
+        bestx1 = np.nan
+        pass 
+    try:
+        opt2,cov2 = curve_fit(f,x,EE50)
+        axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
+        bestx2 = xtot[np.argmin(f(xtot,*opt2))]
+        if len(ENCa) > 0:
+            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx2,ENC(bestx2,ENCa)))
+        else:
+            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx2))
+        axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)])
+    except RuntimeError:
+        opt2 = [0,0,0]
+        bestx2 = np.nan
+        pass     
+    try:
+        opt3,cov3 = curve_fit(f,x,EE80)
+        axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
+        bestx3 = xtot[np.argmin(f(xtot,*opt3))]
+        if len(ENCa) > 0:
+            axes[2,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx3,ENC(bestx3,ENCa)))
+        else:
+            axes[2,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx3))
+        axes[2,0].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)])
+    except RuntimeError:
+        opt3 = [0,0,0]
+        bestx3 = np.nan
+        pass     
+    try:
+        opt4,cov4 = curve_fit(f,x,maxpix)
+        axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
+        bestx4 = xtot[np.argmax(f(xtot,*opt4))]
+        axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)])
+        if len(ENCa) > 0:
+            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx4,ENC(bestx4,ENCa)))
+        else:
+            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx4))
+    except RuntimeError:
+        opt4 = [0,0,0]
+        bestx4 = np.nan
+        pass            
+    try:
+        opt5,cov5 = curve_fit(f,x,sumpix)
+        axes[1,1].plot(xtot,f(xtot,*opt5),linestyle='dotted')
+        bestx5 = xtot[np.argmax(f(xtot,*opt5))]
+        if len(ENCa) > 0:
+            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx5,ENC(bestx5,ENCa)))
+        else:
+            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx5))
+        axes[1,1].plot(np.ones(2)*bestx5,[min(sumpix),max(sumpix)])
+    except RuntimeError:
+        opt5 = [0,0,0]
+        bestx5 = np.nan
+        pass
+    try:
+        opt6,cov6 = curve_fit(f,x,varpix)
+        axes[2,1].plot(xtot,f(xtot,*opt6),linestyle='dotted')
+        bestx6 = xtot[np.argmax(f(xtot,*opt6))]
+        if len(ENCa) > 0:
+            axes[2,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx6,ENC(bestx6,ENCa)))
+        else:
+            axes[2,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx6))
+        axes[2,1].plot(np.ones(2)*bestx6,[min(varpix),max(varpix)])
+    except RuntimeError:
+        opt6 = [0,0,0]
+        bestx6 = np.nan
+        pass
+    axes[0,0].plot(x,fwhm, '-o')
+    axes[0,0].set_ylabel('Sigma')
+
+    axes[1,0].plot(x,EE50, '-o')
+    axes[1,0].set_ylabel('EE50')
+
+    axes[2,0].plot(x,EE80, '-o')
+    axes[2,0].set_ylabel('EE80')
+
+    axes[3,0].plot(x,xo, '-o')
+    axes[3,0].set_ylabel('y center')
+    axes[3,0].grid()
+
+    axes[0,1].plot(x,maxpix, '-o')
+    axes[0,1].set_ylabel('Max pix')
+
+    axes[1,1].plot(x,sumpix, '-o')
+    axes[1,1].set_ylabel('Flux')
+    
+    axes[2,1].plot(x,varpix, '-o')
+    axes[2,1].set_ylabel('Var pix (d=50)')
+    axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
+    axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
+    #axes[3,1].grid()
+    axes[3,1].set_ylabel('y center')
+   
+
+    fig.tight_layout()
+
+    t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
+    t.add_row((os.path.basename(filename),os.path.basename(filename)[5:11],
+               t2s(h=h,m=m,s=s,d=day), d['Center'][0],d['Center'][1],min(fwhm),
+               min(EE50),min(EE80),min(maxpix),min(sumpix),max(varpix),
+               ENC(bestx1,ENCa),ENC(bestx2,ENCa),
+               ENC(bestx3,ENCa),ENC(bestx4,ENCa),
+               ENC(bestx6,ENCa)))
+    mean = np.nanmean(np.array([ENC(bestx1,ENCa),ENC(bestx2,ENCa),
+               ENC(bestx3,ENCa),ENC(bestx4,ENCa),
+               ENC(bestx6,ENCa)]))
+    print(mean)
+    name = '%s - %i - %i - %s - %0.3f'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
+    #name = '%s - %i - %i'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
+    print(name) 
+    fig.suptitle(name, y=0.99)
+    fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
+    plt.show()
+    try:
+        print(os.path.dirname(filename) + '/Throughfocus.csv')
+        OldTable = Table.read(os.path.dirname(filename) + '/Throughfocus.csv')
+        print ('old',OldTable)
+    except IOError:
+        t.write(os.path.dirname(filename) + '/Throughfocus.csv')
+    else:
+        t = vstack((OldTable,t))
+        #print ('new',newTable)
+        t.write(os.path.dirname(filename) + '/Throughfocus.csv',overwrite=True)
+    if Plot:        
+        fig, axes = plt.subplots(1, 11,figsize=(24,3),sharey=True)
+        for i in range(len(images)):
+            axes[i].imshow(images[i])
+            axes[i].axis('equal')
+            subname = os.path.basename(files[i])[6:11] 
+            try:
+                axes[i].set_xlabel('%i - %0.2f'%(int(subname),float(ENCa[i])))
+                #axes[i].set_title(float(ENCa[i]))
+            except:
+                axes[i].set_xlabel(int(subname))
+                pass
+        fig.suptitle(name)
+        fig.subplots_adjust(top=0.88)   
+        fig.tight_layout()
+        #plt.axis('equal')
+        fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
+        #fig.show()
     return fwhm, EE50, EE80
 
-
 def throughfocus2(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8], 
-                 fibersize=100, center_type='barycentre', SigmaMax= 4):
+                 fibersize=100, center_type='barycentre', SigmaMax= 4, box=25):
     """
     """
     from astropy.io import fits
@@ -466,6 +861,7 @@ def throughfocus2(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     yo = []
     sec = []
     t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
+    n = box
     for file in files:
         print (file)
         filename = file
@@ -478,7 +874,6 @@ def throughfocus2(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
         sec.append(t2s(h=h,m=m,s=s,d=day))
         #image = fitsfile.data
         background = 1*estimateBackground(image,center)
-        n = 25
         subimage = (image-background)[int(center[1]) - n:int(center[1]) + n, int(center[0]) - n:int(center[0]) + n]
         d = AnalyzeSpot(image,center=center,fibersize=fibersize,
                         center_type=center_type, SigmaMax = SigmaMax)
@@ -601,18 +996,50 @@ def DS9throughfocus(xpapoint):
     d = DS9(xpapoint)
     filename = d.get("file ")
     path = Charge_path(xpapoint)
+    try:
+        ENCa_center, pas = sys.argv[4].split('-')
+        ENCa_center, pas = float(ENCa_center), float(pas)
+    except ValueError:
+        print('No actuator given, taking header ones for guider images, none for detector images')
+        ENCa_center, pas = None, None
+    except IndexError :
+        print('No actuator given, taking header ones for guider images, none for detector images')
+        ENCa_center, pas = None, None        
     x = np.arange(len(path))
     
     a = getregion(d)
-    rp = AnalyzeSpot(fits.open(filename)[0].data,center = [np.int(a.xc),
+    image = fits.open(filename)[0]
+    rp = AnalyzeSpot(image.data,center = [np.int(a.xc),
                      np.int(a.yc)],fibersize=0)
+    x,y = rp['Center']    
+    #d.set('regions delete all')#testvincent
+    d.set('regions system image')
+    #d.set('regions command "circle %0.3f %0.3f %0.3f # color=red"' % (x,y,10))#testvincent
     print('\n\n\n\n     Centring on barycentre of the DS9 image '
           '(need to be close to best focus) : %0.1f, %0.1f'
           '--> %0.1f, %0.1f \n\n\n\n' % (a.xc,a.yc,rp['Center'][0],rp['Center'][1]))
     print('Applying throughfocus')
+    if image.header['BITPIX'] == -32:
+        Type = 'guider'
+    else:
+        Type = 'detector'        
+    if d.get('wcs lock frame') == 'wcs':
+        from astropy import wcs
+        print ('Using WCS')
+        w = wcs.WCS(image.header)
+        center_wcs = w.all_pix2world(x, y,0)
+                #d.set('crosshair {} {} physical'.format(x,y))
+        alpha, delta = float(center_wcs[0]), float(center_wcs[1])
+        print('alpha, delta = ',alpha, delta)
+        
+        #alpha, delta = float(alpha), float(delta)
+        throughfocusWCS(center = [alpha,delta], files=path,x = x,fibersize=0,
+                     center_type=None,SigmaMax=6, Plot=True, Type=Type,ENCa_center=ENCa_center, pas=pas,WCS=True)
+        
+    else:
+        throughfocus(center = rp['Center'], files=path,x = x,fibersize=0,
+                     center_type=None,SigmaMax=6, Plot=True, Type=Type,ENCa_center=ENCa_center, pas=pas)
 
-    throughfocus(center = rp['Center'], files=path,x = x,fibersize=0,
-                 center_type=None,SigmaMax=6)
     return 
 
 
@@ -852,10 +1279,13 @@ def Charge_path(xpapoint):
     if Type == 'guider':
         files = glob.glob(os.path.dirname(filename) + '/stack*.fits')
         im_numbers = []
-        for file in files:
-            name = os.path.basename(file)
-            im_numbers.append(int(name[5:12]))
-        im_numbers = np.array(im_numbers)
+        try:
+            for file in files:
+                name = os.path.basename(file)
+                im_numbers.append(int(name[5:12]))
+            im_numbers = np.array(im_numbers)
+        except:
+            pass
         map
         if numbers is None:
             print('Not numbers, taking all the .fits images from the current repository')
@@ -1394,53 +1824,146 @@ def DS9tsuite(xpapoint):
 #    print('Test completed: OK')
     return 
 
-def Field_regions(xpapoint):
+def Field_regions(xpapoint, mask=''):
+    from astropy.io import fits
     d = DS9(xpapoint)
     #d.set("regions format ds9")
     #d.set("regions system image")
-    #Imagename = d.get("file")
-
-    mask = sys.argv[3]#'f3 names'#sys.argv[3]
+    path = d.get("file")
+    ImageName = os.path.basename(path)
+    if ImageName[:5] == 'image':
+        Type = 'detector'
+    if ImageName[:5] == 'stack':
+        Type = 'guider'
+    print('Type = ', Type)
+    if mask is None:
+        try:
+            mask = sys.argv[3]#'f3 names'#sys.argv[3]
+        except:
+            mask = ''
     print (mask)
     mask = mask.lower()
-    if ('f1' in mask):
-        if ('lya' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Lya.reg'
+    if Type == 'detector':
+        if ('f1' in mask):
+            if ('lya' in mask):
+                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Lya.reg'
+            else:
+                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Zn.reg'
+            #if ('name' in mask):
+                #   filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
+        if ('f2' in mask):
+            if ('lya' in mask):
+                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Lya.reg'
+            else:
+                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Zn.reg'
+            if ('name' in mask):
+                filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_names.reg'
+        if ('f3' in mask):
+            if ('lya' in mask):
+                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Lya.reg'
+            else:
+                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Zn.reg'
+            if ('name' in mask):
+                filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_names.reg'
+        if ('f4' in mask):
+            if ('lya' in mask):
+                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Lya.reg'
+            else:
+                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Zn.reg'
+            #if ('name' in mask):
+                #filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_names.reg'
+        if ('grid' in mask):
+            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/grid_Zn.reg' 
+        d.set("region {}".format(filename))
+        d.set('frame last')
+        for i in range(int(d.get('frame'))-1):
+            d.set('frame next')
+            d.set('regions ' + filename)
+
+
+
+    if ('d' in mask):
+        filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/DetectorFrame.reg' 
+    if ('g' in mask):
+        filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/GuiderFrame.reg' 
+    if Type == 'guider':
+        if mask == 'no':
+            d.set('frame last')
+            for i in range(int(d.get('frame'))-1):
+                d.set('frame next')
+                d.set('contour clear')
+                
         else:
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Zn.reg'
-        #if ('name' in mask):
-            #   filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
-    if ('f2' in mask):
-        if ('lya' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Lya.reg'
-        else:
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Zn.reg'
-        if ('name' in mask):
-            filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_names.reg'
-    if ('f3' in mask):
-        if ('lya' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Lya.reg'
-        else:
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Zn.reg'
-        if ('name' in mask):
-            filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_names.reg'
-    if ('f4' in mask):
-        if ('lya' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Lya.reg'
-        else:
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Zn.reg'
-        #if ('name' in mask):
-            #filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_names.reg'
-    if ('grid' in mask):
-        filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/grid_Zn.reg' 
-    
-    d.set("region {}".format(filename))
+            d.set('contour clear')
+            #d.set('contour yes')
+            pa = int(fits.open(path)[0].header['ROTENC'])
+            print('Position angle = ',pa)
+            if (pa>117) & (pa<121):
+                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF1.reg'
+                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F1.ctr'
+    #            d.set('regions /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF1.reg')
+    #            d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F1.ctr')
+            if (pa>-163) & (pa<-159):
+                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF2.reg'
+                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F2.ctr'
+            if (pa>-123) & (pa<-119):
+                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF3.reg'
+                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F3.ctr'
+            if (pa>157) & (pa<161):
+                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF4.reg'
+                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F4.ctr'
+            d.set('regions ' + name1)
+            d.set('contour load ' + name2)
+            d.set('frame last')
+            for i in range(int(d.get('frame'))-1):
+                d.set('frame next')
+                d.set('regions ' + name1)
+                d.set('contour load ' + name2)
+
+
+
+
+            
+    #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F4.ctr')
+
+        
+        
     try:
         d.set('regions {}'.format(filename2))
     except:
         pass
     print('Test completed: OK')
     return
+
+def DS9XYAnalysis(xpapoint):
+    d = DS9(xpapoint)    
+    d.set('frame last')
+    n = int(d.get('frame'))
+    print('Number of frame = ',n)
+    d.set('frame first')
+    Centers = np.zeros((n,2))
+    mask = 'f2'#sys.argv[3]
+    for frame in range(n):
+        x, y = d.get('pan image').split(' ')
+        xc, yc = int(float(x)), int(float(y))
+        d.set('regions delete all')
+        d.set('regions command "circle %0.3f %0.3f %0.3f # color=yellow"' % (xc,yc,30))
+        d.set('regions select all')
+        xnew, ynew = DS9center(xpapoint)#;plt.show()
+        Centers[frame,:] = xnew, ynew
+        d.set('frame next')
+    print(repr(Centers))
+    d.set('frame last')
+    Field_regions(xpapoint, mask = mask)
+    return Centers
+
+#d.set('regions select all')
+#regions = d.get('regions').split('\n')
+#for region in regions[5:-1]:
+#    a, reg, b = region.replace('(',')').split(')')
+#    x,y,a1,a1,a1,a1,a1,a1,a1,a1,a1 = reg.split(',')
+#    
+#    
 
 
 def DS9stack(xpapoint):
@@ -1853,6 +2376,7 @@ def DS9center(xpapoint):
     from astropy.io import fits
     from focustest import ConvolveBoxPSF
     from focustest import twoD_Gaussian
+    from focustest import create_DS9regions
     from focustest import create_DS9regions2
     from focustest import estimateBackground
     from scipy.optimize import curve_fit
@@ -1887,6 +2411,28 @@ def DS9center(xpapoint):
             print('Optimal parameters not found: Number of calls to function has reached maxfev = 1400.')
         print('Poptx = ', poptx)
         print('Popty = ', popty)
+        
+        newCenterx = xc + x0y#popty[2]
+        newCentery = yc + x0x#poptx[2]
+        d.set('regions delete select')
+        print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
+        #d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,region.w,region.h))
+        d.set('regions command "box %0.3f %0.3f %0.2f %0.2f # color=yellow"' % (newCenterx,newCentery,region.w,region.h))
+        #d.set('regions command "circle %i %i %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,2))
+        #d.set('regions command "circle %0.3f %0.3f %0.2f # color=yellow"' % (newCenterx,newCentery,2))
+
+        try:
+            os.remove('/tmp/centers.reg')
+        except OSError:
+            pass
+        #create_DS9regions([newCenterx],[newCentery], radius=2, save=True, savename="/tmp/centers", form=['circle'], color=['yellow'], ID='test')
+        create_DS9regions2([newCenterx],[newCentery-15], form = '# text',
+                           save=True,color = 'yellow', savename='/tmp/centers',
+                           text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
+#        create_DS9regions([newCenterx-1],[newCentery-1], radius=2, save=True, savename="/tmp/centers", form=['circle'], color=['yellow'], ID=[['%0.2f - %0.2f' % (newCenterx,newCentery)]])
+
+        d.set('regions /tmp/centers.reg')
+        
         fig, axes = plt.subplots(2, 1, sharex=True, figsize=(6,6))
         axes[0].plot(x,imagex, 'bo', label='Spatial direction')
         axes[1].plot(y,imagey, 'ro', label='Spectral direction')
@@ -1910,23 +2456,7 @@ def DS9center(xpapoint):
         plt.figtext(0.66,0.65,'Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f' % ( np.sqrt(poptx[3]), np.sqrt(np.diag(pcovx)[3]/2.) , 2*poptx[1],2*np.sqrt(np.diag(pcovx)[1]), x0x, np.sqrt(np.diag(pcovx)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
         plt.figtext(0.67,0.25,'Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f' % ( np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3]/2.) , 2*popty[1],2*np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])),bbox={'facecolor':'red', 'alpha':0.2, 'pad':10})
         plt.show()
-        newCenterx = xc + x0y#popty[2]
-        newCentery = yc + x0x#poptx[2]
 
-        print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
-        #d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,region.w,region.h))
-        d.set('regions command "box %0.3f %0.3f %0.2f %0.2f # color=yellow"' % (newCenterx,newCentery,region.w,region.h))
-        #d.set('regions command "circle %i %i %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,2))
-        d.set('regions command "circle %0.3f %0.3f %0.2f # color=yellow"' % (newCenterx,newCentery,2))
-#        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
-        try:
-            os.remove('/tmp/centers.reg')
-        except OSError:
-            pass
-        create_DS9regions2([newCenterx],[newCentery-10], form = '# text',
-                           save=True,color = 'yellow', savename='/tmp/centers',
-                           text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
-        d.set('regions /tmp/centers.reg')
         
         pass
     if hasattr(region, 'r'):
@@ -1976,6 +2506,23 @@ def DS9center(xpapoint):
         print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
 
         print(np.diag(pcov))
+
+        #plt.show()
+#        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
+
+        d.set('regions delete select')
+
+        #d.set('regions command "circle %0.2f %0.2f %0.2f # color=yellow"' % (newCenterx,newCentery,5))
+        try:
+            os.remove('/tmp/centers.reg')
+        except OSError:
+            pass
+#        create_DS9regions2([newCenterx],[newCentery-10], form = '# text',
+#                           save=True,color = 'yellow', savename='/tmp/centers',
+#                           text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
+        create_DS9regions([newCenterx-1],[newCentery-1], radius=5, save=True, savename="/tmp/centers", form=['circle'], color=['yellow'], ID=[['%0.2f - %0.2f' % (newCenterx,newCentery)]])
+        
+        d.set('regions /tmp/centers.reg')
         plt.plot(image[int(yo), :], 'bo',label='Spatial direction')
         plt.plot(fit[int(yo), :],color='b')#,label='Spatial direction')
         plt.plot(image[:,int(xo)], 'ro',label='Spatial direction')
@@ -1983,36 +2530,27 @@ def DS9center(xpapoint):
         plt.ylabel('Fitted profiles')
         plt.figtext(0.66,0.55,'Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
         plt.legend()
-        plt.show()
-#        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
-
-
-        d.set('regions command "circle %0.2f %0.2f %0.2f # color=yellow"' % (newCenterx,newCentery,5))
-        try:
-            os.remove('/tmp/centers.reg')
-        except OSError:
-            pass
-        create_DS9regions2([newCenterx],[newCentery-10], form = '# text',
-                           save=True,color = 'yellow', savename='/tmp/centers',
-                           text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
-        d.set('regions /tmp/centers.reg')
-    return 
+    return newCenterx, newCentery
 
 def t2s(h,m,s,d=0):
     return 3600 * h + 60 * m + s + d*24*3600
 
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
+    print(datetime.datetime.now())
     print (path)
     #
 
-#    xpaname = '7f000001:57084'  
-#    function = 'throughfocus'
+#    xpaname = '7f000001:53069'
+#    function = 'centering'
 #    sys.argv.append(xpaname)
 #    sys.argv.append(function)
-#    sys.argv.append('')
-#    sys.argv.append('')
-
+#    
+    
+    #sys.argv.append('14-24')
+    #sys.argv.append('10.49-0.25')#16.45-0.15
+#d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
+#d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
 
     start = timeit.default_timer()
 
@@ -2025,7 +2563,8 @@ if __name__ == '__main__':
                     'next':DS9next, 'previous':DS9previous,
                     'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
                     'snr': DS9snr, 'focus': DS9focus,'inverse': DS9inverse,
-                    'throughslit': DS9throughslit, 'meanvar': DS9meanvar}
+                    'throughslit': DS9throughslit, 'meanvar': DS9meanvar,
+                    'xy_calib': DS9XYAnalysis}
 #    try:
     xpaname = sys.argv[1]
     function = sys.argv[2]
