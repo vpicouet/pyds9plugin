@@ -2449,7 +2449,7 @@ def create_test_image():
         fitstest[0].header.remove('NAXIS3')  
     except KeyError:
         pass
-    fitstest.writeto('/Users/Vincent/Documents/FireBallPipe/Calibration/test/TestImage.fits',overwrite = True)
+    fitstest.writeto(os.path.dirname(os.path.realpath(__file__)) + '/test/TestImage.fits',overwrite = True)
     #imshow(fits.open('/Users/Vincent/Documents/FireBallPipe/Calibration/TestImage.fits')[0].data)
 #    plt.figure()DS
 #    plt.plot(fitstest[0].data[1000-n:1000+n,2000])
@@ -2499,7 +2499,7 @@ def DS9lock(xpapoint):
         d.set("lock scalelimits no")
         d.set("lock crosshair no")
         d.set("lock smooth no")
-        d.set("lock colorbar noe")
+        d.set("lock colorbar no")
     if lock == 'no':
         d.set("lock frame physical")
         d.set("lock scalelimits yes")
