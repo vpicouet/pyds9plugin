@@ -15,6 +15,8 @@ import json
 import numpy as np
 from pyds9 import DS9
 import datetime
+from  pkg_resources  import resource_filename
+
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))     
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
@@ -1847,6 +1849,12 @@ def Field_regions(xpapoint, mask=''):
         Type = 'detector'
     if ImageName[:5].lower() == 'stack':
         Type = 'guider'
+        
+    try:
+        slit_dir = resource_filename('DS9functions', 'Slits')
+    except:
+        slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
+        
     print('Type = ', Type)
     if mask == '':
         try:
@@ -1858,34 +1866,34 @@ def Field_regions(xpapoint, mask=''):
     if Type == 'detector':
         if ('f1' in mask):
             if ('lya' in mask):
-                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Lya.reg'
+                filename = os.path.join(slit_dir, 'F1_119_Lya.reg')
             else:
-                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_Zn.reg'
+                filename = os.path.join(slit_dir, 'F1_119_Zn.reg')
             #if ('name' in mask):
                 #   filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1_119_names.reg'        
         if ('f2' in mask):
             if ('lya' in mask):
-                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Lya.reg'
+                filename = os.path.join(slit_dir, 'F2_-161_Lya.reg')
             else:
-                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_Zn.reg'
+                filename = os.path.join(slit_dir, 'F2_-161_Zn.reg')
             if ('name' in mask):
-                filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2_-161_names.reg'
+                filename2 = os.path.join(slit_dir, 'F2_-161_names.reg')
         if ('f3' in mask):
             if ('lya' in mask):
-                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Lya.reg'
+                filename = os.path.join(slit_dir, 'F3_-121_Lya.reg')
             else:
-                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_Zn.reg'
+                filename = os.path.join(slit_dir, 'F3_-121_Zn.reg')
             if ('name' in mask):
-                filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3_-121_names.reg'
+                filename2 = os.path.join(slit_dir, '3_-121_names.reg')
         if ('f4' in mask):
             if ('lya' in mask):
-                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Lya.reg'
+                filename = os.path.join(slit_dir, 'F4_159_Lya.reg')
             else:
-                filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_Zn.reg'
+                filename = os.path.join(slit_dir, 'F4_159_Zn.reg')
             #if ('name' in mask):
-                #filename2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4_159_names.reg'
+                #filename2 = os.path.join(slit_dir, 'F4_159_names.reg')
         if ('grid' in mask):
-            filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/grid_Zn.reg' 
+            filename = os.path.join(slit_dir, 'grid_Zn.reg' )
         d.set("region {}".format(filename))
         if d.get('tile')=='yes':
             d.set('frame last')
@@ -1896,9 +1904,9 @@ def Field_regions(xpapoint, mask=''):
 
 
     if ('d' in mask):
-        filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/DetectorFrame.reg' 
+        filename = os.path.join(slit_dir, 'DetectorFrame.reg' )
     if ('g' in mask):
-        filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/GuiderFrame.reg' 
+        filename = os.path.join(slit_dir, 'GuiderFrame.reg' )
     if Type == 'guider':
         if mask == 'no':
             d.set('contour clear')
@@ -1914,19 +1922,19 @@ def Field_regions(xpapoint, mask=''):
             pa = int(fits.open(path)[0].header['ROTENC'])
             print('Position angle = ',pa)
             if (pa>117) & (pa<121):
-                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF1.reg'
-                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F1.ctr'
+                name1 = os.path.join(slit_dir, 'GSF1.reg')
+                name2 = os.path.join(slit_dir, 'F1.ctr')
     #            d.set('regions /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF1.reg')
     #            d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F1.ctr')
             if (pa>-163) & (pa<-159):
-                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF2.reg'
-                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F2.ctr'
+                name1 = os.path.join(slit_dir, 'GSF2.reg')
+                name2 = os.path.join(slit_dir, 'F2.ctr')
             if (pa>-123) & (pa<-119):
-                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF3.reg'
-                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F3.ctr'
+                name1 = os.path.join(slit_dir, 'GSF3.reg')
+                name2 = os.path.join(slit_dir, 'F3.ctr')
             if (pa>157) & (pa<161):
-                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF4.reg'
-                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F4.ctr'
+                name1 = os.path.join(slit_dir, 'GSF4.reg')
+                name2 = os.path.join(slit_dir, 'F4.ctr')
             d.set('regions ' + name1)
             d.set('contour load ' + name2)
             if d.get('tile')=='yes':
@@ -2684,7 +2692,9 @@ def DS9center(xpapoint,Plot=True):
 def t2s(h,m,s,d=0):
     return 3600 * h + 60 * m + s + d*24*3600
 
-if __name__ == '__main__':
+
+def main():
+
     path = os.path.dirname(os.path.realpath(__file__))
     print(datetime.datetime.now())
     print (path)
@@ -2739,7 +2749,10 @@ if __name__ == '__main__':
 #    except Exception as e:
 #        print(e)
 #        pass
-
+   
+if __name__ == '__main__':
+    main()
+    
 #xpapoint='7f000001:57475'
 #d = DS9tsuite(xpapoint)
 #d.set('contour no')
