@@ -1914,19 +1914,17 @@ def Field_regions(xpapoint, mask=''):
             pa = int(fits.open(path)[0].header['ROTENC'])
             print('Position angle = ',pa)
             if (pa>117) & (pa<121):
-                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF1.reg'
-                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F1.ctr'
-    #            d.set('regions /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF1.reg')
-    #            d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F1.ctr')
+                name1 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/GSF1.reg'
+                name2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F1.ctr'
             if (pa>-163) & (pa<-159):
-                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF2.reg'
-                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F2.ctr'
+                name1 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/GSF2.reg'
+                name2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F2.ctr'
             if (pa>-123) & (pa<-119):
-                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF3.reg'
-                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F3.ctr'
+                name1 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/GSF3.reg'
+                name2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F3.ctr'
             if (pa>157) & (pa<161):
-                name1 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/GSF4.reg'
-                name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F4.ctr'
+                name1 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/GSF4.reg'
+                name2 = os.path.dirname(os.path.realpath(__file__)) + '/Slits/F4.ctr'
             d.set('regions ' + name1)
             d.set('contour load ' + name2)
             if d.get('tile')=='yes':
@@ -2441,7 +2439,7 @@ def create_test_image():
         fitstest[0].header.remove('NAXIS3')  
     except KeyError:
         pass
-    fitstest.writeto('/Users/Vincent/Documents/FireBallPipe/Calibration/test/TestImage.fits',overwrite = True)
+    fitstest.writeto(os.path.dirname(os.path.realpath(__file__)) + '/test/TestImage.fits',overwrite = True)
     #imshow(fits.open('/Users/Vincent/Documents/FireBallPipe/Calibration/TestImage.fits')[0].data)
 #    plt.figure()DS
 #    plt.plot(fitstest[0].data[1000-n:1000+n,2000])
@@ -2491,7 +2489,7 @@ def DS9lock(xpapoint):
         d.set("lock scalelimits no")
         d.set("lock crosshair no")
         d.set("lock smooth no")
-        d.set("lock colorbar noe")
+        d.set("lock colorbar no")
     if lock == 'no':
         d.set("lock frame physical")
         d.set("lock scalelimits yes")
