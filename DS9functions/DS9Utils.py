@@ -16,8 +16,9 @@ import numpy as np
 from pyds9 import DS9
 import datetime
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))     
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-
+#print(sys.path)
 #from collections import namedtuple
 #from pyds9 import *
 
@@ -238,15 +239,16 @@ def DS9setup2(xpapoint):
     fitsimage = fits.open(filename)
     if d.get("lock bin") == 'no':
         d.set("grid no") 
-        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
-              np.percentile(fitsimage[0].data,99.6)))
-        #d.set("lock frame physical")
-        #d.set("lock scalelimits yes")  
-        d.set("cmap Cubehelix0")
-        d.set("smooth yes")
-        #d.set("smooth sigma {}".format(1))
-        d.set("smooth radius {}".format(2))
-        d.set("smooth yes")
+#        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
+#              np.percentile(fitsimage[0].data,99.6)))
+        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,50),
+              np.percentile(fitsimage[0].data,99.95)))
+        d.set("scale asinh")
+        d.set("cmap bb")
+#        d.set("smooth yes")
+        #sd.set("cmap Cubehelix0")
+#        d.set("smooth radius {}".format(2))
+#        d.set("smooth yes")
         d.set("lock bin yes")
     elif d.get("lock bin") == 'yes':
         #d.set("regions delete all")
@@ -674,8 +676,12 @@ def throughfocusWCS(center, files,x=None,
     if Type == 'detector':
         x = np.arange(len(files))
         xtot = np.linspace(x.min(),x.max(),200)
-        ENC = lambda x,a : (ENCa[-1]-ENCa[0])/(len(ENCa)-1) * x + ENCa[0]
-        
+        if len(ENCa)==0:
+            ENC = lambda x,a : 0
+        else :
+            ENC = lambda x,a : (ENCa[-1]-ENCa[0])/(len(ENCa)-1) * x + ENCa[0]
+
+   
     #x = np.array(ENCa)
     fig, axes = plt.subplots(4, 2, figsize=(10,6),sharex=True)
     
@@ -1836,12 +1842,12 @@ def Field_regions(xpapoint, mask=''):
     if ImageName[:5] == 'stack':
         Type = 'guider'
     print('Type = ', Type)
-    if mask is None:
+    if mask == '':
         try:
             mask = sys.argv[3]#'f3 names'#sys.argv[3]
         except:
             mask = ''
-    print (mask)
+    print ('Masks = ', mask)
     mask = mask.lower()
     if Type == 'detector':
         if ('f1' in mask):
@@ -1922,7 +1928,7 @@ def Field_regions(xpapoint, mask=''):
 
 
 
-
+    print('Putting regions, filename = ', filename)
             
     #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F4.ctr')
 
@@ -1936,33 +1942,167 @@ def Field_regions(xpapoint, mask=''):
     return
 
 def DS9XYAnalysis(xpapoint):
+    from matplotlib import pyplot as plt
     d = DS9(xpapoint)    
+    filename = d.get('file')
+    d.set('frame first')
+    n1 = int(d.get('frame'))
+    
     d.set('frame last')
-    n = int(d.get('frame'))
+    n2 = int(d.get('frame'))
+    n=n2-n1+1
     print('Number of frame = ',n)
     d.set('frame first')
     Centers = np.zeros((n,2))
-    mask = 'f2'#sys.argv[3]
+    SlitPos = np.zeros((n,2))
+    SlitDetectedPos = np.zeros((n,2))
+    DetectedRegFile = glob.glob(os.path.dirname(filename) + '/*detected.reg')
+
+    mask = sys.argv[3]
+    print(n)
     for frame in range(n):
         x, y = d.get('pan image').split(' ')
         xc, yc = int(float(x)), int(float(y))
         d.set('regions delete all')
         d.set('regions command "circle %0.3f %0.3f %0.3f # color=yellow"' % (xc,yc,30))
         d.set('regions select all')
-        xnew, ynew = DS9center(xpapoint)#;plt.show()
+        xnew, ynew = DS9center(xpapoint,Plot=False)#;plt.show()
         Centers[frame,:] = xnew, ynew
+        if len(DetectedRegFile) == 1:
+            d.set('regions file ' + DetectedRegFile[0])
         d.set('frame next')
-    print(repr(Centers))
     d.set('frame last')
     Field_regions(xpapoint, mask = mask)
+        
+
+    d.set('frame first')
+    slitnames = []
+    MappedRegions = []
+    for frame in range(n):    
+        d.set('regions select all')
+        regions = d.get('regions').split('\n')
+        SlitsOnImage = []
+        for region in regions:
+            if 'bpanda' in region:
+                MappedRegions.append(region)
+        regionsxy = np.zeros((len(MappedRegions),2))
+
+        for i,region in enumerate(MappedRegions):
+            a, reg, b = region.replace('(',')').split(')')
+            a,name,b = b.replace('{','}').split('}')
+            x,y,a1,a1,a1,a1,a1,a1,a1,a1,a1 = reg.split(',')
+            x,y = float(x), float(y)
+            regionsxy[i,:] = x, y
+            SlitsOnImage.append(name)            
+        distance = np.sqrt(np.square((Centers[frame,:] - regionsxy)).sum(axis=1))
+        index = np.argmin(distance)
+        SlitPos[frame] = regionsxy[index]
+        slitnames.append(SlitsOnImage[index])
+
+
+    detectedregions = []
+    if len(DetectedRegFile) == 1:
+        d.set('frame first')
+        for frame in range(n):    
+            d.set('regions file ' + DetectedRegFile[0])
+            d.set('regions select all')
+            regions = d.get('regions').split('\n')
+            for region in regions:
+                if 'circle' in region:
+                    detectedregions.append(region)
+            regions_detected_xy = np.zeros((len(detectedregions[1:-1]),2))
+            SlitsOnImage = []
+            for i,region in enumerate(detectedregions[1:-1]):
+                a, reg, b = region.replace('(',')').split(')')
+                #a,name,b = b.replace('{','}').split('}')
+                x,y,r = reg.split(',')
+                x,y,r = float(x), float(y), float(r)
+                regions_detected_xy[i,:] = x, y
+                #SlitsOnImage.append(name)
+
+            
+            distance = np.sqrt(np.square((Centers[frame,:] - regions_detected_xy)).sum(axis=1))
+            index = np.argmin(distance)
+            SlitDetectedPos[frame] = regions_detected_xy[index]
+            
+        print('Slit Detected positions are :')
+        print(repr(SlitDetectedPos))    
+
+
+
+    print('Slit predicted positions are :')
+    print(repr(SlitPos))
+
+    print('Centers of the spots are :')
+    print(repr(Centers))
+    
+    plt.figure(figsize=(5,7))
+    plt.title('Distances to slit')
+    plt.xlabel('x pixel detector')
+    plt.ylabel('y pixel detector')
+    Q = plt.quiver(Centers[:,0],Centers[:,1],SlitPos[:,0] - Centers[:,0],SlitPos[:,1] - Centers[:,1],scale=30,label='Dist to mapped mask')
+    try:
+        Q = plt.quiver(Centers[:,0],Centers[:,1],SlitDetectedPos[:,0] - Centers[:,0],SlitDetectedPos[:,1] - Centers[:,1],scale=30,color='blue',label='Dist to detected slit')
+    except:
+        pass
+    #Q = plt.quiver(SlitPos[:,0],SlitPos[:,1],SlitPos[:,0] - Centers[:,0],0,color='blue',scale=30)#, width=0.003)#, scale=Q)
+    #Q = plt.quiver(SlitPos[:,0],SlitPos[:,1],0,SlitPos[:,1] - Centers[:,1],color='blue',scale=30)#, width=0.003)#, units='x')
+    plt.quiverkey(Q, 0.2, 0.2, 2, '2 pixels', color='r', labelpos='E',coordinates='figure')
+    plt.axis('equal')
+    plt.gca().set_xlim(900,2300)
+    plt.gca().set_ylim(-150,2300)
+    #plt.xlim((1000,2000))
+    plt.ylim((0,2000))
+    plt.figtext(.15, .65,'Xmean =  %0.1f\nYmean = %0.1f \nstd(X) =  %0.1f\nstd(y) = %0.1f\nMax(X) =  %0.1f\nMax(y) = %0.1f' % ((SlitPos[:,0] - Centers[:,0]).mean(), (SlitPos[:,1] - Centers[:,1]).mean(),(SlitPos[:,0] - Centers[:,0]).std(), (SlitPos[:,1] - Centers[:,1]).std(), max((SlitPos[:,0] - Centers[:,0]), key=abs), max((SlitPos[:,1] - Centers[:,1]), key=abs)), fontsize=12, color = 'black')
+    plt.figtext(.15, .35,'Xmean =  %0.1f\nYmean = %0.1f \nstd(X) =  %0.1f\nstd(y) = %0.1f\nMax(X) =  %0.1f\nMax(y) = %0.1f' % ((SlitDetectedPos[:,0] - Centers[:,0]).mean(), (SlitDetectedPos[:,1] - Centers[:,1]).mean(),(SlitDetectedPos[:,0] - Centers[:,0]).std(), (SlitDetectedPos[:,1] - Centers[:,1]).std(), max((SlitDetectedPos[:,0] - Centers[:,0]), key=abs), max((SlitDetectedPos[:,1] - Centers[:,1]), key=abs)), fontsize=12, color = 'blue')
+    for i in range(len(slitnames)):
+        plt.text(SlitPos[i,0],SlitPos[i,1], slitnames[i], color='red',fontsize=14)
+    plt.grid(linestyle='dotted')
+    plt.legend()
+    plt.savefig(os.path.dirname(filename) + '/XYCalibration.png')
+    plt.show()
+    
+    
+#    fig, ax = plt.subplots(1,2,figsize=(8, 8), sharex = True, sharey=True)
+#    fig.suptitle('Distances to slit')
+#    ax[0].set_xlabel('x pixel detector')
+#    ax[0].set_ylabel('y pixel detector')
+#    Q = ax[0].quiver(SlitPos[:,0],SlitPos[:,1],SlitPos[:,0] - Centers[:,0],SlitPos[:,1] - Centers[:,1],scale=30)
+#    #Q = plt.quiver(SlitPos[:,0],SlitPos[:,1],SlitPos[:,0] - Centers[:,0],0,color='blue',scale=30)#, width=0.003)#, scale=Q)
+#    #Q = plt.quiver(SlitPos[:,0],SlitPos[:,1],0,SlitPos[:,1] - Centers[:,1],color='blue',scale=30)#, width=0.003)#, units='x')
+#    ax[0].quiverkey(Q, 0.2, 0.2, 2, '2 pixels', color='r', labelpos='E',coordinates='figure')
+#    ax[0].axis('equal')
+#    ax[0].set_xlim(1000,2000)
+#    ax[0].set_ylim(0,2000)
+#    #plt.xlim((1000,2000))
+#    #ax[0].ylim((0,2000))
+#    plt.figtext(.15, .65,'Xmean =  %0.1f\nYmean = %0.1f \nstd(X) =  %0.1f\nstd(y) = %0.1f\nMax(X) =  %0.1f\nMax(y) = %0.1f' % ((SlitPos[:,0] - Centers[:,0]).mean(), (SlitPos[:,1] - Centers[:,1]).mean(),(SlitPos[:,0] - Centers[:,0]).std(), (SlitPos[:,1] - Centers[:,1]).std(), max((SlitPos[:,0] - Centers[:,0]), key=abs), max((SlitPos[:,1] - Centers[:,1]), key=abs)), fontsize=12, color = 'blue')
+#    for i in range(len(slitnames)):
+#        ax[0].text(SlitPos[i,0],SlitPos[i,1], slitnames[i], color='red',fontsize=14)
+#    ax[0].grid(linestyle='dotted')
+#
+#
+#    Q = ax[1].quiver(SlitPos[:,0],SlitPos[:,1],SlitPos[:,0] - SlitDetectedPos[:,0],SlitPos[:,1] - SlitDetectedPos[:,1],scale=30)
+#    ax[1].quiverkey(Q, 0.2, 0.2, 2, '2 pixels', color='r', labelpos='E',coordinates='figure')
+#    ax[1].axis('equal')
+#    ax[1].set_xlim(1000,2000)
+#    ax[1].set_ylim(0,2000)
+#    #plt.xlim((1000,2000))
+#    #ax[0].ylim((0,2000))
+#    plt.figtext(.15, .65,'Xmean =  %0.1f\nYmean = %0.1f \nstd(X) =  %0.1f\nstd(y) = %0.1f\nMax(X) =  %0.1f\nMax(y) = %0.1f' % ((SlitPos[:,0] - Centers[:,0]).mean(), (SlitPos[:,1] - Centers[:,1]).mean(),(SlitPos[:,0] - Centers[:,0]).std(), (SlitPos[:,1] - Centers[:,1]).std(), max((SlitPos[:,0] - Centers[:,0]), key=abs), max((SlitPos[:,1] - Centers[:,1]), key=abs)), fontsize=12, color = 'blue')
+#    for i in range(len(slitnames)):
+#        ax[1].text(SlitPos[i,0],SlitPos[i,1], slitnames[i], color='red',fontsize=14)
+#    ax[1].grid(linestyle='dotted')
+#
+#
+#    plt.savefig(os.path.dirname(filename) + '/XYCalibration.png')
+#    plt.show()
+    
+    
+    
     return Centers
 
-#d.set('regions select all')
-#regions = d.get('regions').split('\n')
-#for region in regions[5:-1]:
-#    a, reg, b = region.replace('(',')').split(')')
-#    x,y,a1,a1,a1,a1,a1,a1,a1,a1,a1 = reg.split(',')
-#    
+
 #    
 
 
@@ -2369,7 +2509,7 @@ def DS9inverse(xpapoint):
     return
 
 
-def DS9center(xpapoint):
+def DS9center(xpapoint,Plot=True):
     """
     """
     import matplotlib.pyplot as plt
@@ -2450,9 +2590,6 @@ def DS9center(xpapoint):
         xcc = x - x0y
         axes[1].plot(x, np.piecewise(x, [xcc < -ly, (xcc >=-ly) & (xcc<=ly), xcc>ly], [offsety, imagey.max(), offsety]), ':r', label='Slit size') # slit (UnitBox)
         axes[1].plot([x0y, x0y], [imagey.min(), imagey.max()])
-
-
-
         plt.figtext(0.66,0.65,'Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f' % ( np.sqrt(poptx[3]), np.sqrt(np.diag(pcovx)[3]/2.) , 2*poptx[1],2*np.sqrt(np.diag(pcovx)[1]), x0x, np.sqrt(np.diag(pcovx)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
         plt.figtext(0.67,0.25,'Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f' % ( np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3]/2.) , 2*popty[1],2*np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])),bbox={'facecolor':'red', 'alpha':0.2, 'pad':10})
         plt.show()
@@ -2520,16 +2657,17 @@ def DS9center(xpapoint):
 #        create_DS9regions2([newCenterx],[newCentery-10], form = '# text',
 #                           save=True,color = 'yellow', savename='/tmp/centers',
 #                           text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
-        create_DS9regions([newCenterx-1],[newCentery-1], radius=5, save=True, savename="/tmp/centers", form=['circle'], color=['yellow'], ID=[['%0.2f - %0.2f' % (newCenterx,newCentery)]])
+        create_DS9regions([newCenterx-1],[newCentery-1], radius=5, save=True, savename="/tmp/centers", form=['circle'], color=['white'], ID=[['%0.2f - %0.2f' % (newCenterx,newCentery)]])
         
         d.set('regions /tmp/centers.reg')
-        plt.plot(image[int(yo), :], 'bo',label='Spatial direction')
-        plt.plot(fit[int(yo), :],color='b')#,label='Spatial direction')
-        plt.plot(image[:,int(xo)], 'ro',label='Spatial direction')
-        plt.plot(fit[:,int(xo)],color='r')#,label='Spatial direction')
-        plt.ylabel('Fitted profiles')
-        plt.figtext(0.66,0.55,'Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
-        plt.legend()
+        if Plot:
+            plt.plot(image[int(yo), :], 'bo',label='Spatial direction')
+            plt.plot(fit[int(yo), :],color='b')#,label='Spatial direction')
+            plt.plot(image[:,int(xo)], 'ro',label='Spatial direction')
+            plt.plot(fit[:,int(xo)],color='r')#,label='Spatial direction')
+            plt.ylabel('Fitted profiles')
+            plt.figtext(0.66,0.55,'Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
+            plt.legend()
     return newCenterx, newCentery
 
 def t2s(h,m,s,d=0):
@@ -2541,13 +2679,13 @@ if __name__ == '__main__':
     print (path)
     #
 
-#    xpaname = '7f000001:53069'
-#    function = 'centering'
-#    sys.argv.append(xpaname)
+#    xpapoint = '7f000001:63777'
+#    function = 'xy_calib'
+#    sys.argv.append(xpapoint)
 #    sys.argv.append(function)
-#    
-    
-    #sys.argv.append('14-24')
+###    
+##    
+#    sys.argv.append('f3')
     #sys.argv.append('10.49-0.25')#16.45-0.15
 #d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
 #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
@@ -2555,7 +2693,7 @@ if __name__ == '__main__':
     start = timeit.default_timer()
 
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
-                    'throughfocus':DS9throughfocus, 'open':DS9open,
+                    'throughfocuss':DS9throughfocus, 'open':DS9open,
                     'setup':DS9setup2,#'back':back,
                     'throughfocus_visualisation':DS9visualisation_throughfocus, 
                     'WCS':DS9guider, 'test':DS9tsuite,
@@ -2566,7 +2704,7 @@ if __name__ == '__main__':
                     'throughslit': DS9throughslit, 'meanvar': DS9meanvar,
                     'xy_calib': DS9XYAnalysis}
 #    try:
-    xpaname = sys.argv[1]
+    xpapoint = sys.argv[1]
     function = sys.argv[2]
 
     print("""
@@ -2576,7 +2714,7 @@ if __name__ == '__main__':
         """%(function)) 
 
 
-    DictFunction[function](xpaname)             
+    DictFunction[function](xpapoint)             
 
 
 
