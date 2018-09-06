@@ -10,13 +10,13 @@ requires = ['numpy >=1.8',
             ]
 
 entry_points = {}
-entry_points['console_scripts'] = ['DS9Utils.py = DS9functions.DS9Utils:main']
+entry_points['console_scripts'] = ['DS9Utils.py = DS9FireBall.DS9Utils:main']
 
-data = { "DS9functions": ["Setup.ds9.ans", "Slits/*"]}
+data = { "DS9FireBall": ["FireBall.ds9.ans", "Slits/*"]}
 
 
 setup(
-    name='DS9functions',
+    name='DS9FireBall',
     version='0.1dev',
     license='Creative Commons Attribution-Noncommercial-Share Alike license',
     install_requires = requires,
