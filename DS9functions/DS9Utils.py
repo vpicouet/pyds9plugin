@@ -145,9 +145,7 @@ def DS9setup(xpapoint, filename=None, Internet=False, smooth=2,
               np.percentile(fitsimage[0].data,99.4)))
         d.set("rotate 0") 
         try:
-#            d.set("file {}".format(filename[:-5]+ '_wcs.fits'))   
             d.set("grid")
-#            if urllib.request.urlopen("http://google.com",timeout=1):#Internet == True:
             d.set("lock scalelimits no")
             d.set("dsssao")
             d.set("lock frame wcs")
@@ -194,6 +192,9 @@ def DS9guider(xpapoint):
             pass
         d.set("lock scalelimits no")
         d.set("lock frame wcs")
+        d.set("frame last")
+        d.set("scale squared")
+        
     else:
         print ('Nop header WCS - Applying lost in space algorithm: Internet needed!')
         print ('Processing might take a few minutes ~5-10')
@@ -782,7 +783,6 @@ def throughfocusWCS(center, files,x=None,
 
     axes[3,0].plot(x,xo, '-o')
     axes[3,0].set_ylabel('y center')
-    axes[3,0].grid()
 
     axes[0,1].plot(x,maxpix, '-o')
     axes[0,1].set_ylabel('Max pix')
@@ -794,7 +794,6 @@ def throughfocusWCS(center, files,x=None,
     axes[2,1].set_ylabel('Var pix (d=50)')
     axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
     axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
-    #axes[3,1].grid()
     axes[3,1].set_ylabel('y center')
    
 
@@ -1075,13 +1074,14 @@ def DS9rp(xpapoint):#,filename = None,Internet =False, smooth=2, regions=True, c
         fibersize = 0
     if fibersize == '':
         fibersize = 0
+    #fibersize = 1
     filename = d.get("file ")
     a = getregion(d)
     fitsfile = fits.open(filename)[0]
     spot = DS9plot_rp_convolved(data=fitsfile.data,
                                 center = [np.int(a.xc),np.int(a.yc)],
                                 fibersize=fibersize)    
-    plt.title('{} - {} - {}'.format(os.path.basename(filename),[np.int(a.xc),np.int(a.yc)],fitsfile.header['DATE']))
+    plt.title('{} - {} - {}'.format(os.path.basename(filename),[np.int(a.xc),np.int(a.yc)],fitsfile.header['DATE']),y=0.99)
     #plt.savefig(os.path.basename(filename),[np))
     plt.show()
     #d.set('regions delete select')
@@ -1134,7 +1134,10 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, anisotrope=False, angle=3
                            profile + 1.5*np.abs(profile - gaus(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
           
       else:
-          popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[1,fiber,2, np.mean(profile)],bounds=([0,0.95*fiber-1e-5,1,-1],[2,1.05*fiber+1e-5,SigmaMax,1]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
+          #profile /= profile.max()
+          #SigmaMax = 10
+          #popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[profile.max(),fiber,2, np.mean(profile)],bounds=([0,0.95*fiber,1,-1],[2,1.05*fiber,SigmaMax,1]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
+          popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[profile.max(),fiber,2, np.mean(profile)],bounds=([1e-3*profile.max(),0.95*fiber,1,1e-1*profile.mean()],[1e3*profile.max(),1.05*fiber,SigmaMax,1e1*profile.mean()]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
           ax1.plot(np.linspace(0,size,10*size), ConvolveDiskGaus2D(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
           ax1.fill_between(rmean[:size], profile - 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), 
                            profile + 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
@@ -1327,24 +1330,27 @@ def DS9visualisation_throughfocus(xpapoint):
     d = DS9(xpapoint)
     path = Charge_path(xpapoint)        
     d.set('tile yes')
-    #d.set("cmap Cubehelix0")
+    try:
+        a = getregion(d)
+        print('Region found')
+    except:
+        print('Region not found')
+        pass
     d.set("frame delete")
     d.set("smooth no")
     for filen in path[:]:
         #d.set("file {}".format(filen)) 
         d.set('frame new')
         d.set("fits {}".format(filen))        
-    try:
-        a = getregion(d)
-        d.set('pan to %0.3f %0.3f physical' % (a.xc,a.yc))
-    except:
-        pass
     d.set("lock frame physical")
     d.set("lock scalelimits yes") 
     d.set("lock smooth yes") 
     d.set("lock colorbar yes") 
-    #d.set("lock crosshair %f %f"%(a.xc,a.yc))
-    #d.set("scale mode 99.5")#vincent
+
+    try:
+        d.set('pan to %0.3f %0.3f physical' % (a.xc,a.yc))
+    except:
+        pass
     return
 
     
@@ -1369,7 +1375,7 @@ def plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
         fig = plt.plot(np.ones(len(n_log))*threshold0,n_log, "b--", label="Bias")
         fig = plt.plot(np.ones(len(n_log))*threshold55, n_log, "k--", label="5.5 Sigma")
         fig = plt.plot(xlinefit,ylinefit, "g--", label="EM gain fit")
-        plt.figtext(.43, .70, 'Bias value = %0.3f DN \nSigma = %0.3f DN \n '
+        plt.figtext(.43, .70, 'Bias value = %0.3f DN\nSigma = %0.3f DN\n '
                     'EM gain = %0.3f e/e' % (bias, sigma, emgain),
                     fontsize=15,bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
         plt.legend(loc="upper right",fontsize=15)   
@@ -1657,7 +1663,7 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
     fitsfile.writeto('/tmp/imagettes.fits', overwrite=True)
     d.set('frame new')
     d.set("file /tmp/imagettes.fits")
-    d.set('scale mode 90')
+    d.set('scale mode minmax')
     return
 #createMultiImage(filename,continuum=False,w=0.20619)
 
@@ -1753,7 +1759,7 @@ def DS9tsuite(xpapoint):
     d.set('regions command "circle %0.3f %0.3f %0.1f # color=red"' % (1001,900.2,40))
     d.set('regions select all') 
     sys.argv[3] = '3'
-    DS9rp(xpapoint)  
+    #DS9rp(xpapoint)  
     sys.argv[3] = ''
     DS9rp(xpapoint)  
     print('''\n\n\n\n      TEST: Centering spot   \n\n\n\n''') 
@@ -1837,9 +1843,9 @@ def Field_regions(xpapoint, mask=''):
     #d.set("regions system image")
     path = d.get("file")
     ImageName = os.path.basename(path)
-    if ImageName[:5] == 'image':
+    if ImageName[:5].lower() == 'image':
         Type = 'detector'
-    if ImageName[:5] == 'stack':
+    if ImageName[:5].lower() == 'stack':
         Type = 'guider'
     print('Type = ', Type)
     if mask == '':
@@ -1881,10 +1887,11 @@ def Field_regions(xpapoint, mask=''):
         if ('grid' in mask):
             filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/grid_Zn.reg' 
         d.set("region {}".format(filename))
-        d.set('frame last')
-        for i in range(int(d.get('frame'))-1):
-            d.set('frame next')
-            d.set('regions ' + filename)
+        if d.get('tile')=='yes':
+            d.set('frame last')
+            for i in range(int(d.get('frame'))-1):
+                d.set('frame next')
+                d.set('regions ' + filename)
 
 
 
@@ -1894,10 +1901,12 @@ def Field_regions(xpapoint, mask=''):
         filename = os.path.dirname(os.path.realpath(__file__)) + '/Slits/GuiderFrame.reg' 
     if Type == 'guider':
         if mask == 'no':
-            d.set('frame last')
-            for i in range(int(d.get('frame'))-1):
-                d.set('frame next')
-                d.set('contour clear')
+            d.set('contour clear')
+            if d.get('tile')=='yes':
+                d.set('frame last')
+                for i in range(int(d.get('frame'))-1):
+                    d.set('frame next')
+                    d.set('contour clear')
                 
         else:
             d.set('contour clear')
@@ -1920,11 +1929,12 @@ def Field_regions(xpapoint, mask=''):
                 name2 = '/Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F4.ctr'
             d.set('regions ' + name1)
             d.set('contour load ' + name2)
-            d.set('frame last')
-            for i in range(int(d.get('frame'))-1):
-                d.set('frame next')
-                d.set('regions ' + name1)
-                d.set('contour load ' + name2)
+            if d.get('tile')=='yes':
+                d.set('frame last')
+                for i in range(int(d.get('frame'))-1):
+                    d.set('frame next')
+                    d.set('regions ' + name1)
+                    d.set('contour load ' + name2)
 
 
 
@@ -2242,6 +2252,7 @@ def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,1
     except IndexError:
         n1=''
         n2=''
+        numbers=None
     d = DS9(xpapoint)
     filename = d.get("file")
     path = []
@@ -2286,7 +2297,7 @@ def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,1
     fluxesn = (fluxes - min(fluxes)) / max(fluxes - min(fluxes))
 #    maxf = x[np.where(fluxes==np.max(fluxes))[0][0]]#[0]
     
-    x = np.arange(len(numbers))+1
+    x = np.arange(len(path))+1
     popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(),3,0])#,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
     xl = np.linspace(x.min(),x.max(),100)
     maxf = xl[np.where(Gaussian(xl,*popt)==np.max(Gaussian(xl,*popt)))[0][0]]#[0]
@@ -2679,11 +2690,11 @@ if __name__ == '__main__':
     print (path)
     #
 
-#    xpapoint = '7f000001:63777'
-#    function = 'xy_calib'
+#    xpapoint = '7f000001:56637'
+#    function = 'throughslit'
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)
-###    
+#    
 ##    
 #    sys.argv.append('f3')
     #sys.argv.append('10.49-0.25')#16.45-0.15
@@ -2693,7 +2704,7 @@ if __name__ == '__main__':
     start = timeit.default_timer()
 
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
-                    'throughfocuss':DS9throughfocus, 'open':DS9open,
+                    'throughfocus':DS9throughfocus, 'open':DS9open,
                     'setup':DS9setup2,#'back':back,
                     'throughfocus_visualisation':DS9visualisation_throughfocus, 
                     'WCS':DS9guider, 'test':DS9tsuite,
