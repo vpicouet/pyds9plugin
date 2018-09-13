@@ -17,8 +17,8 @@ from pyds9 import DS9
 import datetime
 from  pkg_resources  import resource_filename
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))     
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+#sys.path.append(os.path.dirname(os.path.realpath(__file__)))     
+#sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 #print(sys.path)
 #from collections import namedtuple
@@ -379,6 +379,247 @@ def ENC(x,ENCa):
     #b = (ENCb[10]-ENCb[0])/(10) * x + ENCb[0]
     #c = (ENCc[10]-ENCc[0])/(10) * x + ENCc[0]
     return a#, b, c
+
+
+#def DS9SpectraTF(center, files,x=None, 
+#                 fibersize=0, center_type='barycentre', SigmaMax= 4,Plot=True, Type=None, ENCa_center=None, pas=None, WCS=False):
+#    from astropy.io import fits
+#    from astropy.table import Table, vstack
+#    import matplotlib.pyplot as plt
+#    from focustest import AnalyzeSpot
+#    from focustest import estimateBackground
+#    from scipy.optimize import curve_fit
+#
+#    print('''\n\n\n\n      START THROUGHFOCUS \n\n\n\n''')
+#    d = DS9(xpapoint)
+#    filename = d.get("file ")
+#    path = Charge_path(xpapoint)
+#    try:
+#        ENCa_center, pas = sys.argv[4].split('-')
+#        ENCa_center, pas = float(ENCa_center), float(pas)
+#    except ValueError:
+#        print('No actuator given, taking header ones for guider images, none for detector images')
+#        ENCa_center, pas = None, None
+#    except IndexError :
+#        print('No actuator given, taking header ones for guider images, none for detector images')
+#        ENCa_center, pas = None, None        
+#    x = np.arange(len(path))
+#    
+#    a = getregion(d)
+##    image = fits.open(filename)[0]
+#     
+#
+##    throughfocus(center = [x,y], files=path,x = x,fibersize=0,
+##                 center_type=None,SigmaMax=6, Plot=True, Type=Type,ENCa_center=ENCa_center, pas=pas)
+##
+##
+#
+#
+#    files=path
+#    center = [a.xc,a.yc]
+#    fwhm = []
+#    EE50 = []
+#    EE80 = [] 
+#    maxpix = []
+#    sumpix = []
+#    varpix = []
+#    xo = []
+#    yo = []
+#    sec=[]
+#    images=[]
+#    ENCa = []
+#    for file in files:
+#        print (file)
+#        filename = file
+#        with fits.open(filename) as f:
+#            #stack[:,:,i] = f[0].data
+#            fitsfile = f[0]
+#            image = fitsfile.data
+#        time = fitsfile.header['DATE']
+#        nombre = 5
+#        if ENCa_center is not None:
+#            print('Actuator given: Center = {} , PAS = {}'.format(ENCa_center,pas))
+#            ENCa = np.linspace(ENCa_center-nombre*pas, ENCa_center+nombre*pas, 2*nombre+1)[::-1]
+##            else:
+##                ENCa = np.linspace(100,100, 2*nombre+1)[::-1]
+#        day,h, m, s = float(time[-11:-9]),float(time[-8:-6]), float(time[-5:-3]), float(time[-2:])
+#        sec.append(t2s(h=h,m=m,s=s,d=day))
+#
+#        background = 1*estimateBackground(image,center)
+#        n = 25
+#        subimage = (image-background)[int(center[1]) - n:int(center[1]) + n, int(center[0]) - n:int(center[0]) + n]
+#        images.append(subimage)
+#        d = AnalyzeSpectra(image,center=center,fibersize=fibersize,
+#                        center_type=center_type, SigmaMax = SigmaMax)
+#        max20 = subimage.flatten()
+#        max20.sort()
+#        fwhm.append(d['Sigma'])
+#        EE50.append(d['EE50'])
+#        EE80.append(d['EE80'])
+#        xo.append(d['Center'][0])
+#        yo.append(d['Center'][1])        
+#        maxpix.append(max20[-20:].mean())
+#        sumpix.append(d['Flux'])
+#        varpix.append(subimage.var())
+#    f = lambda x,a,b,c: a * (x-b)**2 + c#a * np.square(x) + b * x + c
+#    x = np.arange(len(files))
+#    fig, axes = plt.subplots(4, 2, figsize=(10,6),sharex=True)
+#    xtot = np.linspace(x.min(),x.max(),200)
+##    if ENCa_center is not None:
+##        axes2 = axes[0,0].twinx()
+##        X2tick_location= axes[0,0].xaxis.get_ticklocs() #Get the tick locations in data coordinates as a numpy array
+##        axes2.set_xticks(X2tick_location)
+##        axes2.set_xticklabels(ENCa)
+#    print(ENCa)
+#    try:
+#        opt1,cov1 = curve_fit(f,x,fwhm)
+#        axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
+#        bestx1 = xtot[np.argmin(f(xtot,*opt1))]
+#        axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)])
+#        if len(ENCa) > 0:
+#            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx1,ENC(bestx1,ENCa)))
+#        else:
+#            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx1))
+#            
+#    except RuntimeError:
+#        opt1 = [0,0,0]
+#        bestx1 = np.nan
+#        pass 
+#    try:
+#        opt2,cov2 = curve_fit(f,x,EE50)
+#        axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
+#        bestx2 = xtot[np.argmin(f(xtot,*opt2))]
+#        if len(ENCa) > 0:
+#            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx2,ENC(bestx2,ENCa)))
+#        else:
+#            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx2))
+#        axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)])
+#    except RuntimeError:
+#        opt2 = [0,0,0]
+#        bestx2 = np.nan
+#        pass     
+#    try:
+#        opt3,cov3 = curve_fit(f,x,EE80)
+#        axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
+#        bestx3 = xtot[np.argmin(f(xtot,*opt3))]
+#        if len(ENCa) > 0:
+#            axes[2,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx3,ENC(bestx3,ENCa)))
+#        else:
+#            axes[2,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx3))
+#        axes[2,0].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)])
+#    except RuntimeError:
+#        opt3 = [0,0,0]
+#        bestx3 = np.nan
+#        pass     
+#    try:
+#        opt4,cov4 = curve_fit(f,x,maxpix)
+#        axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
+#        bestx4 = xtot[np.argmax(f(xtot,*opt4))]
+#        axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)])
+#        if len(ENCa) > 0:
+#            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx4,ENC(bestx4,ENCa)))
+#        else:
+#            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx4))
+#    except RuntimeError:
+#        opt4 = [0,0,0]
+#        bestx4 = np.nan
+#        pass            
+#    try:
+#        opt5,cov5 = curve_fit(f,x,sumpix)
+#        axes[1,1].plot(xtot,f(xtot,*opt5),linestyle='dotted')
+#        bestx5 = xtot[np.argmax(f(xtot,*opt5))]
+#        if len(ENCa) > 0:
+#            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx5,ENC(bestx5,ENCa)))
+#        else:
+#            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx5))
+#        axes[1,1].plot(np.ones(2)*bestx5,[min(sumpix),max(sumpix)])
+#    except RuntimeError:
+#        opt5 = [0,0,0]
+#        bestx5 = np.nan
+#        pass
+#    try:
+#        opt6,cov6 = curve_fit(f,x,varpix)
+#        axes[2,1].plot(xtot,f(xtot,*opt6),linestyle='dotted')
+#        bestx6 = xtot[np.argmax(f(xtot,*opt6))]
+#        if len(ENCa) > 0:
+#            axes[2,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx6,ENC(bestx6,ENCa)))
+#        else:
+#            axes[2,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx6))
+#        axes[2,1].plot(np.ones(2)*bestx6,[min(varpix),max(varpix)])
+#    except RuntimeError:
+#        opt6 = [0,0,0]
+#        bestx6 = np.nan
+#        pass
+#    axes[0,0].plot(x,fwhm, '-o')
+#    axes[0,0].set_ylabel('Sigma')
+#
+#    axes[1,0].plot(x,EE50, '-o')
+#    axes[1,0].set_ylabel('EE50')
+#
+#    axes[2,0].plot(x,EE80, '-o')
+#    axes[2,0].set_ylabel('EE80')
+#
+#    axes[3,0].plot(x,xo, '-o')
+#    axes[3,0].set_ylabel('y center')
+#    axes[3,0].grid()
+#
+#    axes[0,1].plot(x,maxpix, '-o')
+#    axes[0,1].set_ylabel('Max pix')
+#
+#    axes[1,1].plot(x,sumpix, '-o')
+#    axes[1,1].set_ylabel('Flux')
+#    
+#    axes[2,1].plot(x,varpix, '-o')
+#    axes[2,1].set_ylabel('Var pix (d=50)')
+#    axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
+#    axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
+#    #axes[3,1].grid()
+#    axes[3,1].set_ylabel('y center')
+#   
+#
+#    name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
+#    fig.tight_layout()
+#    fig.suptitle(name, y=1.01)
+#    fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
+#    plt.show()
+#    print(name) 
+#    t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
+#    t.add_row((os.path.basename(filename),float(os.path.basename(filename)[-11:-4]),
+#               t2s(h=h,m=m,s=s,d=day), d['Center'][0],d['Center'][1],min(fwhm),
+#               min(EE50),min(EE80),min(maxpix),min(sumpix),max(varpix),
+#               ENC(bestx1,ENCa),ENC(bestx2,ENCa),
+#               ENC(bestx3,ENCa),ENC(bestx4,ENCa),
+#               ENC(bestx6,ENCa)))
+#    try:
+#        print(os.path.dirname(filename) + '/Throughfocus.csv')
+#        OldTable = Table.read(os.path.dirname(filename) + '/Throughfocus.csv')
+#        print ('old',OldTable)
+#    except IOError:
+#        t.write(os.path.dirname(filename) + '/Throughfocus.csv')
+#    else:
+#        t = vstack((OldTable,t))
+#        #print ('new',newTable)
+#        t.write(os.path.dirname(filename) + '/Throughfocus.csv',overwrite=True)
+#    if Plot:        
+#        fig, axes = plt.subplots(1, 11,figsize=(24,3),sharey=True)
+#        for i in range(len(images)):
+#            axes[i].imshow(images[i])
+#            axes[i].axis('equal')
+#            subname = os.path.basename(files[i])[6:-5] 
+#            try:
+#                axes[i].set_xlabel('%i - %0.2f'%(int(subname),float(ENCa[i])))
+#                #axes[i].set_title(float(ENCa[i]))
+#            except:
+#                axes[i].set_xlabel(int(subname))
+#                pass
+#        fig.suptitle(name)
+#        fig.subplots_adjust(top=0.88)   
+#        fig.tight_layout()
+#        #plt.axis('equal')
+#        fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
+#        #fig.show()
+#    return fwhm, EE50, EE80
+#    
 
 def throughfocus(center, files,x=None, 
                  fibersize=0, center_type='barycentre', SigmaMax= 4,Plot=True, Type=None, ENCa_center=None, pas=None, WCS=False):
@@ -1228,6 +1469,8 @@ def DS9open(xpapoint, filename=None):
 #    return
 
 def Charge_path(xpapoint):
+    #print('salut')
+    #sys.quit()
     from astropy.io import fits
     #'7739194-7741712'#''#sys.argv[3]#'7739194-7741712'#sys.argv[3]#'7738356-7742138  '#sys.argv[3]#'7738356-7742135  '#sys.argv[3]
 #    try:
@@ -1247,6 +1490,15 @@ def Charge_path(xpapoint):
 #        n1, n2 = int(n1), int(n2)
 #    except ValueError:
 #        pass
+    d = DS9(xpapoint)
+    filename = d.get("file")
+    fitsimage = fits.open(filename)
+    if fitsimage[0].header['BITPIX'] == -32:
+        Type = 'guider'
+    else:
+        Type = 'detector'
+    print ('Type = {}'.format(Type))
+    
     try:
         entry = sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
         print('Entry 1 = ', entry)
@@ -1263,18 +1515,10 @@ def Charge_path(xpapoint):
     elif len(numbers) == 2:
         n1, n2 = entry.split('-')
         n1, n2 = int(n1), int(n2)
+        #if Type == 'detector':            
         numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
-    print('Numbers used: {}'.format(numbers))           
+    print('Numbers used: {}'.format(numbers))               
     
-
-    d = DS9(xpapoint)
-    filename = d.get("file")
-    fitsimage = fits.open(filename)
-    if fitsimage[0].header['BITPIX'] == -32:
-        Type = 'guider'
-    else:
-        Type = 'detector'
-    print ('Type = {}'.format(Type))
     path = []
     if Type == 'detector':
         if numbers is not None:
@@ -1287,14 +1531,16 @@ def Charge_path(xpapoint):
             print('Not numbers, taking all the .fits images from the current repository')
             path = glob.glob(os.path.dirname(filename) + '/image*.fits')
             #x = np.arange(len(path))
+    
     if Type == 'guider':
         files = glob.glob(os.path.dirname(filename) + '/stack*.fits')
         im_numbers = []
         try:
             for file in files:
                 name = os.path.basename(file)
-                im_numbers.append(int(name[5:12]))
+                im_numbers.append(int(name[5:13]))
             im_numbers = np.array(im_numbers)
+            print('Files in folder : ', im_numbers)
         except:
             pass
         map
@@ -1304,10 +1550,11 @@ def Charge_path(xpapoint):
         elif len(numbers) == 2:
             print('Two numbers given, opening files in range ...')
             #print(np.arange(n1,n2+1))
-
             path = []
             for i, im_number in enumerate(im_numbers):
+                print('ok',n1,n2,im_number)
                 if (im_number >= n1) & (im_number <= n2):
+                    print('yes')
                     path.append(files[i])
                     print(files[i])
         elif len(numbers) > 2:
@@ -1401,24 +1648,7 @@ def plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
 #plot(bin_center,n_log);xlim((np.percentile(bin_center[a],0.1),np.percentile(bin_center[a],80)))
 def calc_emgain(image, area,plot_flag=True):
     """
-    """
-	# Read data from FITS image
-#    try:
-#        img_data = fits.open(image)[0].data
-#    except IOError:
-#        raise IOError("Unable to open FITS image %s" %(image))	
-#    if np.ndim(img_data) == 3:
-#		# Image dimension
-#        zsize, ysize, xsize = img_data.shape
-#        img_section = img_data[:,area[0]:area[1],area[2]:area[3]]
-#        stddev = np.std(img_data[:,area[0]:area[1],area[2]:area[3]])
-#        img_size = img_section.size
-#    else:
-#		# Image dimension
-#        ysize, xsize = img_data.shape  
-#        img_section = img_data[area[0]:area[1],area[2]:area[3]]
-#        stddev = np.std(img_data[area[0]:area[1],area[2]:area[3]]	)	
-#        img_size = img_section.size    
+    """  
     img_data = image
     ysize, xsize = img_data.shape  
     img_section = img_data[area[0]:area[1], area[2]:area[3]]
@@ -1851,7 +2081,7 @@ def Field_regions(xpapoint, mask=''):
         Type = 'guider'
         
     try:
-        slit_dir = resource_filename('DS9functions', 'Slits')
+        slit_dir = resource_filename('DS9FireBall', 'Slits')
     except:
         slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
         
@@ -1919,7 +2149,27 @@ def Field_regions(xpapoint, mask=''):
         else:
             d.set('contour clear')
             #d.set('contour yes')
-            pa = int(fits.open(path)[0].header['ROTENC'])
+            guidingstars = np.zeros((8,3))
+            header = fits.open(path)[0].header
+            for i in range(8):
+                guidingstars[i] = header['CY%i'%(i)],header['CX%i'%(i)],header['USE%i'%(i)]
+                if (int(guidingstars[i,2]) ==  257) or (int(guidingstars[i,2]) ==  1):
+                    d.set('regions command "box %0.3f %0.3f 8 8  # color=yellow"' % (guidingstars[i,1],guidingstars[i,0]))
+
+            print('guiding stars = ',guidingstars)
+#            guidingstars[0] = header['CX0','CX0','USE0']
+#            guidingstars[0] = header['CX0','CX0','USE0']
+#            guidingstars[0] = header['CX0','CX0','USE0']
+#            guidingstars[0] = header['CX0','CX0','USE0']
+#            guidingstars[0] = header['CX0','CX0','USE0']
+#            guidingstars[0] = header['CX0','CX0','USE0']
+#            guidingstars[0] = header['CX0','CX0','USE0']
+
+#            for line in header:                
+#                if line in ['USE0','USE1','USE2','USE3','USE4','USE5','USE6','USE7']:
+#                    print(line)
+            pa = int(header['ROTENC'])
+            DS9
             print('Position angle = ',pa)
             if (pa>117) & (pa<121):
                 name1 = os.path.join(slit_dir, 'GSF1.reg')
@@ -1945,9 +2195,10 @@ def Field_regions(xpapoint, mask=''):
                     d.set('contour load ' + name2)
 
 
-
-    print('Putting regions, filename = ', filename)
-            
+    try:
+        print('Putting regions, filename = ', filename)
+    except UnboundLocalError:
+        pass            
     #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/Slits/F4.ctr')
 
         
@@ -2001,14 +2252,17 @@ def DS9XYAnalysis(xpapoint):
         regions = d.get('regions').split('\n')
         SlitsOnImage = []
         for region in regions:
-            if 'bpanda' in region:
+            if 'circle' in region:
                 MappedRegions.append(region)
         regionsxy = np.zeros((len(MappedRegions),2))
 
         for i,region in enumerate(MappedRegions):
             a, reg, b = region.replace('(',')').split(')')
             a,name,b = b.replace('{','}').split('}')
-            x,y,a1,a1,a1,a1,a1,a1,a1,a1,a1 = reg.split(',')
+            try:
+                x,y,a1,a1,a1,a1,a1,a1,a1,a1,a1 = reg.split(',')
+            except ValueError:
+                x,y,r = reg.split(',')
             x,y = float(x), float(y)
             regionsxy[i,:] = x, y
             SlitsOnImage.append(name)            
@@ -2018,31 +2272,31 @@ def DS9XYAnalysis(xpapoint):
         slitnames.append(SlitsOnImage[index])
 
 
-    detectedregions = []
-    if len(DetectedRegFile) == 1:
-        d.set('frame first')
-        for frame in range(n):    
-            d.set('regions file ' + DetectedRegFile[0])
-            d.set('regions select all')
-            regions = d.get('regions').split('\n')
-            for region in regions:
-                if 'circle' in region:
-                    detectedregions.append(region)
-            regions_detected_xy = np.zeros((len(detectedregions[1:-1]),2))
-            SlitsOnImage = []
-            for i,region in enumerate(detectedregions[1:-1]):
-                a, reg, b = region.replace('(',')').split(')')
-                #a,name,b = b.replace('{','}').split('}')
-                x,y,r = reg.split(',')
-                x,y,r = float(x), float(y), float(r)
-                regions_detected_xy[i,:] = x, y
-                #SlitsOnImage.append(name)
-
-            
-            distance = np.sqrt(np.square((Centers[frame,:] - regions_detected_xy)).sum(axis=1))
-            index = np.argmin(distance)
-            SlitDetectedPos[frame] = regions_detected_xy[index]
-            
+#    detectedregions = []
+#    if len(DetectedRegFile) == 1:
+#        d.set('frame first')
+#        for frame in range(n):    
+#            d.set('regions file ' + DetectedRegFile[0])
+#            d.set('regions select all')
+#            regions = d.get('regions').split('\n')
+#            for region in regions:
+#                if 'circle' in region:
+#                    detectedregions.append(region)
+#            regions_detected_xy = np.zeros((len(detectedregions[1:-1]),2))
+#            SlitsOnImage = []
+#            for i,region in enumerate(detectedregions[1:-1]):
+#                a, reg, b = region.replace('(',')').split(')')
+#                #a,name,b = b.replace('{','}').split('}')
+#                x,y,r = reg.split(',')
+#                x,y,r = float(x), float(y), float(r)
+#                regions_detected_xy[i,:] = x, y
+#                #SlitsOnImage.append(name)
+#
+#            
+#            distance = np.sqrt(np.square((Centers[frame,:] - regions_detected_xy)).sum(axis=1))
+#            index = np.argmin(distance)
+#            SlitDetectedPos[frame] = regions_detected_xy[index]
+#            
         print('Slit Detected positions are :')
         print(repr(SlitDetectedPos))    
 
@@ -2059,18 +2313,15 @@ def DS9XYAnalysis(xpapoint):
     plt.xlabel('x pixel detector')
     plt.ylabel('y pixel detector')
     Q = plt.quiver(Centers[:,0],Centers[:,1],SlitPos[:,0] - Centers[:,0],SlitPos[:,1] - Centers[:,1],scale=30,label='Dist to mapped mask')
-    try:
-        Q = plt.quiver(Centers[:,0],Centers[:,1],SlitDetectedPos[:,0] - Centers[:,0],SlitDetectedPos[:,1] - Centers[:,1],scale=30,color='blue',label='Dist to detected slit')
-    except:
-        pass
-    #Q = plt.quiver(SlitPos[:,0],SlitPos[:,1],SlitPos[:,0] - Centers[:,0],0,color='blue',scale=30)#, width=0.003)#, scale=Q)
-    #Q = plt.quiver(SlitPos[:,0],SlitPos[:,1],0,SlitPos[:,1] - Centers[:,1],color='blue',scale=30)#, width=0.003)#, units='x')
+#    try:
+#        Q = plt.quiver(Centers[:,0],Centers[:,1],SlitDetectedPos[:,0] - Centers[:,0],SlitDetectedPos[:,1] - Centers[:,1],scale=30,color='blue',label='Dist to detected slit')
+#    except:
+#        pass
     plt.quiverkey(Q, 0.2, 0.2, 2, '2 pixels', color='r', labelpos='E',coordinates='figure')
     plt.axis('equal')
-    plt.gca().set_xlim(900,2300)
-    plt.gca().set_ylim(-150,2300)
-    #plt.xlim((1000,2000))
-    plt.ylim((0,2000))
+    #plt.gca().set_xlim(900,2300)
+    #plt.gca().set_ylim(-150,2300)
+    #plt.ylim((0,2000))
     plt.figtext(.15, .65,'Xmean =  %0.1f\nYmean = %0.1f \nstd(X) =  %0.1f\nstd(y) = %0.1f\nMax(X) =  %0.1f\nMax(y) = %0.1f' % ((SlitPos[:,0] - Centers[:,0]).mean(), (SlitPos[:,1] - Centers[:,1]).mean(),(SlitPos[:,0] - Centers[:,0]).std(), (SlitPos[:,1] - Centers[:,1]).std(), max((SlitPos[:,0] - Centers[:,0]), key=abs), max((SlitPos[:,1] - Centers[:,1]), key=abs)), fontsize=12, color = 'black')
     plt.figtext(.15, .35,'Xmean =  %0.1f\nYmean = %0.1f \nstd(X) =  %0.1f\nstd(y) = %0.1f\nMax(X) =  %0.1f\nMax(y) = %0.1f' % ((SlitDetectedPos[:,0] - Centers[:,0]).mean(), (SlitDetectedPos[:,1] - Centers[:,1]).mean(),(SlitDetectedPos[:,0] - Centers[:,0]).std(), (SlitDetectedPos[:,1] - Centers[:,1]).std(), max((SlitDetectedPos[:,0] - Centers[:,0]), key=abs), max((SlitDetectedPos[:,1] - Centers[:,1]), key=abs)), fontsize=12, color = 'blue')
     for i in range(len(slitnames)):
@@ -2693,24 +2944,443 @@ def t2s(h,m,s,d=0):
     return 3600 * h + 60 * m + s + d*24*3600
 
 
+def calc_emgainGillian(image, area):
+        from astropy.io import fits
+        gain =  1.78
+
+        try:
+                img_data = fits.open(image)[0].data
+        except IOError:
+                raise IOError("Unable to open FITS image %s" %(image))
+
+
+        if np.ndim(img_data) == 3:
+                # Image dimension
+                zsize, ysize, xsize = img_data.shape
+                img_section = img_data[:,area[0]:area[1],area[2]:area[3]]
+                stddev = np.std(img_data[:,area[0]:area[1],area[2]:area[3]])
+                img_size = img_section.size
+
+        else:
+                # Image dimension
+                ysize, xsize = img_data.shape
+                img_section = img_data[area[0]:area[1],area[2]:area[3]]
+                stddev = np.std(img_data[area[0]:area[1],area[2]:area[3]])
+                img_size = img_section.size
+
+        nbins = 1000
+        readnoise = 60
+        #gain = float(gain)
+
+        # Histogram of the pixel values
+        n, bins = np.histogram(np.array(img_section), bins = nbins)
+        bin_center = 0.5 * (bins[:-1] + bins[1:])
+        y0 = np.min(n)
+
+        n_log = np.log10(n)
+
+        # What is the mean bias value?
+        idx = np.where(n == n.max())
+        bias = bin_center[idx][0]
+        n_bias = n[idx][0]
+    
+        # Range of data in which to fit the Gaussian to calculate sigma
+        bias_lower = bias - float(1.5) * readnoise
+        bias_upper = bias + float(2.0) * readnoise
+   
+        idx_lower = np.where(bin_center >= bias_lower)[0][0]
+        idx_upper = np.where(bin_center >= bias_upper)[0][0]
+   
+        gauss_range = np.where(bin_center >= bias_lower)[0][0]
+    
+        valid_idx = np.where(n[idx_lower:idx_upper] > 0)
+
+        amp, x0, sigma = gaussianFit(bin_center[idx_lower:idx_upper][valid_idx], n[idx_lower:idx_upper][valid_idx], [n_bias, bias, readnoise])
+
+        #plt.figure()
+        #plt.plot(bin_center[idx_lower:idx_upper], n[idx_lower:idx_upper], 'r.')
+        #plt.show()
+
+        # Fitted frequency values
+        xgaussfit = np.linspace(bin_center[idx_lower], bin_center[idx_upper], 1000)
+        #print xgaussfit
+        ygaussfit = gaussian(xgaussfit, amp, x0, sigma)
+        #print ygaussfit
+
+        # Define index of "linear" part of the curve
+        threshold_min = bias + (float(5.5) * sigma)
+        threshold_max = bias + (float(20.0) * sigma)
+        threshold_55 = bias + (float(5.5) * sigma)
+
+        #print threshold_max
+
+        # Lines for bias, 5.5*sigma line
+
+        n_line = n_log.size
+        zeroline = np.zeros([n_line], dtype = np.float32)
+        threshold0 = zeroline + int(bias)
+        threshold55 = zeroline + int(bias + 5.5*sigma)
+        thresholdmin = zeroline + int(threshold_min)
+        thresholdmax = zeroline + int(threshold_max)
+
+        idx_threshmin = np.array(np.where(bin_center >= threshold_min))[0,0]
+        idx_threshmax = np.array(np.where(bin_center >= threshold_max))[0,0]
+
+        valid_idx = np.where(n[idx_threshmin:idx_threshmax] > 0)
+
+        slope, intercept = fitLine(bin_center[idx_threshmin:idx_threshmax][valid_idx], n_log[idx_threshmin:idx_threshmax][valid_idx])
+
+        # Fit line
+        xlinefit = np.linspace(bias-20*sigma, bin_center[idx_threshmax], 1000)
+        ylinefit = linefit(xlinefit, slope, intercept)
+
+
+        emgain = (-1./slope) * (gain)
+
+        #print xlinefit
+        embias_idx = np.where(xlinefit >= bias)
+        #print embias_idx
+        embias_y1 = ylinefit[embias_idx[0][0]]
+        #print embias_y1
+        em5_idx = np.where(xlinefit >= bias+(5.5*sigma))
+        #print em5_idx
+        em5_y1 = ylinefit[em5_idx[0][0]]
+        #print em5_y1
+
+        total_counts = 0.5*(threshold_max-bias)*(embias_y1)
+        thres_counts = 0.5*(threshold_max-threshold_55)*(em5_y1)
+        #print total_counts, thres_counts
+        frac_lost = (total_counts-thres_counts)/thres_counts
+        print(frac_lost)
+
+        plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,ygaussfit,n_bias,n_log,threshold0,threshold55)
+
+        return (emgain,bias,sigma,frac_lost)
+
+
+
+
+def DS9removeCRtails(xpapoint):
+        from astropy.io import fits
+        d=DS9(xpapoint)
+        data_dir = d.get('file')
+        image,area = d.get('file'),[0,-1,0,-1]#0#indata
+
+        hist_output = calc_emgainGillian(image,area)
+        #np.savetxt(data_dir + 'hist_output',hist_output,fmt='%d')
+
+        print("Image #: ", image)
+
+        fitsfile = fits.open(image)[0]
+        img_data = fitsfile.data
+        # Image dimension
+        #zsize, ysize, xsize = img_data.shape
+        # Image dimension
+        ysize, xsize = img_data.shape
+
+        cutoff = int(hist_output[1]) + 3000
+        print(cutoff)
+
+        cleaned_img_data = img_data.copy()
+
+        img_data_mask = np.zeros([img_data.shape[0], img_data.shape[1]], dtype = np.int16)
+        CR_data_mask = np.zeros([img_data.shape[0], img_data.shape[1]], dtype = np.int16)
+
+        prandom_array = np.random.normal(int(hist_output[1]),int(hist_output[2]), size=(img_data.shape[0],img_data.shape[1]))
+        cleaned_img_data[:,3205:3217] = prandom_array[:,3205:3217]
+        #print prandom_array[:,3205:3217]
+
+        CR_check = 5
+        CRcounter = 0
+        zeroCR = 0
+        HPcounter = 0
+
+        zero_img_data = np.array(np.where(cleaned_img_data == 0))
+
+
+        for i in range(0,zero_img_data.shape[1]):
+
+           xzero = zero_img_data[1,i]
+           yzero = zero_img_data[0,i]
+
+           topcounter = 0
+           botcounter = 0
+
+           if xzero > 1 and xzero < img_data.shape[1] - 1 and yzero >= 0 and yzero < img_data.shape[0] - 1:
+               #Top pixel CR
+               yval = yzero
+               while cleaned_img_data[yval,xzero+1] > cutoff:
+                   #right pixels
+                   xval = xzero+1
+                   counter = 0
+                   while cleaned_img_data[yval,xval+1] > cutoff:
+
+                       xval = xval + 1
+                       counter = counter + 1
+                       if xzero == img_data_mask.shape[1]-1:
+                           break
+
+                   trpix = counter
+
+                   #left pixels
+                   counter = 0
+                   xval = xzero-1
+                   while cleaned_img_data[yval,xval] > cutoff:
+
+                       xval = xval - 1
+                       counter = counter + 1
+                       if xval < 1:
+                           break
+
+                   tlpix = counter
+
+                   topcounter = topcounter + trpix + tlpix
+                   CR_data_mask[yval,xzero-tlpix:xzero+trpix+1] = -1
+    
+                   yval = yval + 1
+
+                   if yval == img_data_mask.shape[0]-1:
+                       break
+
+               #Bottom pixel CR
+               #right pixels
+               yval = yzero-1
+               while cleaned_img_data[yval,xzero+1] > cutoff and yzero >= 0:
+                   counter = 0
+                   xval = xzero+1
+                   while cleaned_img_data[yval,xval+1] > cutoff:
+
+                       xval = xval + 1
+                       counter = counter + 1
+                       if xval == img_data_mask.shape[1]-1:
+                           break
+
+                   brpix = counter
+
+                   #left pixels
+                   counter = 0
+                   xval = xzero-1
+                   while cleaned_img_data[yval,xval] > cutoff:
+
+                       xval = xval - 1
+                       counter = counter + 1
+                       if xval < 1:
+                           break
+
+                   blpix = counter
+
+                   botcounter = botcounter + brpix + blpix
+                   CR_data_mask[yval,xzero-blpix:xzero+brpix+1] = -1
+
+                   yval = yval - 1
+
+                   if yval <= 0:
+                       break
+
+           if (topcounter+botcounter) >= CR_check:
+               zero_mask_idx = CR_data_mask < 0
+               zeroCR = zeroCR + 1
+               clean_mask_idx = CR_data_mask < 0
+               cleaned_img_data[clean_mask_idx] = prandom_array[clean_mask_idx]
+        maxvalue = np.max(cleaned_img_data)
+        max_img_data = np.array(np.where(cleaned_img_data == maxvalue))
+
+        xind = max_img_data[1,0]
+        yind = max_img_data[0,0]
+
+        #print "\t  ZeroCR counted in image : %s " %(zeroCR)
+
+        while maxvalue > cutoff and img_data_mask[yind,xind] == 0 and CR_data_mask[yind,xind] == 0:
+
+            #CR_data_mask[yind,xind] = -1
+            img_data_mask[yind,xind] = -1
+            topcounter = 0
+            botcounter = 0
+
+            if xind > 1 and xind < img_data.shape[1] - 1 and yind >= 0 and yind < img_data.shape[0] - 1:
+
+                #Top pixel CR
+                yval = yind
+                while cleaned_img_data[yval,xind] > cutoff:
+
+                    #right pixels
+
+                    xval = xind
+                    counter = 0
+
+                    while cleaned_img_data[yval,xval] > cutoff:
+
+                        xval = xval + 1
+                        counter = counter + 1
+                        if xind == img_data_mask.shape[1]-1:
+                            break
+
+                    trpix = counter
+
+                    #left pixels
+                    xval = xind-1
+                    counter = 0
+
+                    while cleaned_img_data[yval,xval] > cutoff:
+
+                        xval = xval - 1
+                        counter = counter + 1
+                        if xval < 1:
+                            break
+
+                    tlpix = counter
+
+                    topcounter = trpix + tlpix
+                    #print 'first ' + str(topcounter)
+
+                    #if topcounter >= CR_check:
+                    #    CR_data_mask[yval,:] = -1
+                    if topcounter >= 3:
+                        #print 'second ' + str(topcounter)
+                        #CR_data_mask[yval,xind-tlpix:xind+trpix+1] = -1
+                        #CR_data_mask[yval,:] = -1
+                        CR_data_mask[yval:yval+35,:] = -1
+                    if topcounter <= 2:
+                        #print 'third ' + str(topcounter)
+                        #CR_data_mask[yval,xind-tlpix:xind+trpix+1] = -1
+                        CR_data_mask[yval,xind-tlpix:xind+trpix+1] = -1
+
+                    yval = yval + 1
+
+                    if yval == img_data_mask.shape[0]-1:
+                        break
+
+    
+                #Bottom pixel CR
+                #right pixels
+                yval = yind-1
+                while cleaned_img_data[yval,xind] > cutoff and yind >= 0:
+                    counter = 0
+                    xval = xind + 1
+
+                    while cleaned_img_data[yval,xval] > cutoff:
+
+                        xval = xval + 1
+                        counter = counter + 1
+                        if xval == img_data_mask.shape[1]-1:
+                            break
+
+                    brpix = counter
+
+                    #left pixels
+                    counter = 0
+                    xval = xind - 1
+
+                    while cleaned_img_data[yval,xval] > cutoff:
+
+                        xval = xval - 1
+                        counter = counter + 1
+                        if xval < 1:
+                            break
+
+                    blpix = counter
+
+                    botcounter = botcounter + brpix + blpix
+                    #CR_data_mask[yval,xind-blpix:xind+brpix+1] = -1
+
+                    #if topcounter >= CR_check:
+                    #    CR_data_mask[yval,:] = -1
+                    if botcounter >= 3:
+                        #print 'second ' + str(botcounter)
+                        #CR_data_mask[yval,xind-tlpix:xind+trpix+1] = -1
+                        CR_data_mask[yval-3:yval,:] = -1
+                    if botcounter <= 2:
+                        #print 'third ' + str(botcounter)
+                        #CR_data_mask[yval,xind-tlpix:xind+trpix+1] = -1
+                        CR_data_mask[yval,xind-blpix:xind+brpix+1] = -1
+
+                    yval = yval - 1
+
+                    if yval <= 0:
+                        break
+
+                        
+            if (topcounter+botcounter) >= CR_check:
+                CR_mask_idx = CR_data_mask < 0
+                CRcounter = CRcounter + 1
+            else:
+                HPcounter = HPcounter + 1
+
+            clean_mask_idx = CR_data_mask < 0
+            cleaned_img_data[clean_mask_idx] = prandom_array[clean_mask_idx]
+
+            maxvalue = np.max(cleaned_img_data)
+            max_img_data = np.array(np.where(cleaned_img_data == maxvalue))
+            xind = max_img_data[1,0]
+            yind = max_img_data[0,0]
+
+        new_image_fname = image.replace(".fits", ".CR.fits")
+        if os.path.exists(new_image_fname):
+            os.remove(new_image_fname)
+        fitsfile.data = cleaned_img_data#hdu = pyfits.PrimaryHDU(cleaned_img_data)
+        if 'NAXIS3' in fitsfile.header:
+            fitsfile.header.remove('NAXIS3') 
+#fits.delval(image,'NAXIS3')    
+        fitsfile.writeto(new_image_fname)
+        print ("\t  CR corrected image : %s" %(new_image_fname))
+        print ("\t  CR counted in image : %s " %(zeroCR+CRcounter))
+        print ("\t  Hot pixels counted in image : %s " %(HPcounter))
+
+
+        # Generate mask FITS image
+        mask_fname = image.replace(".fits", ".mask.CR.fits")
+        if os.path.exists(mask_fname):
+            os.remove(mask_fname)
+ #   hdu = pyfits.PrimaryHDU(CR_data_mask)
+        fitsfile.data = cleaned_img_data#hdu = pyfits.PrimaryHDU(cleaned_img_data)
+        if 'NAXIS3' in fitsfile.header:
+            fitsfile.header.remove('NAXIS3') 
+        fitsfile.writeto(mask_fname)
+        print ("\t  Corrected Mask : %s" %(mask_fname))
+
+        imageout = image.replace(data_dir,'')
+        imageout = imageout.replace('.fits','').replace('image','')
+
+        output = np.array([imageout,image.replace(data_dir,''),(zeroCR+CRcounter),(HPcounter)])
+        print (output)
+        d.set('frame new')
+        d.set('file '+ new_image_fname)
+        DS9lock(xpapoint)
+        return(output)
+
+
+
+
+
+
 def main():
-
     path = os.path.dirname(os.path.realpath(__file__))
-    print(datetime.datetime.now())
-    print (path)
-    #
 
-#    xpapoint = '7f000001:56637'
-#    function = 'throughslit'
+    if len(sys.argv)==1:
+        try:
+            AnsDS9path= resource_filename('DS9FireBall','FireBall.ds9.ans')
+        except:
+            pass
+        else:
+            print('To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path)
+            print('And switch on Autoreload')
+        sys.exit()
+#    #
+#
+#    xpapoint = '7f000001:62305'
+#    function = 'test'
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)
-#    
-##    
-#    sys.argv.append('f3')
+####    
+###    
+#    sys.argv.append('*')
     #sys.argv.append('10.49-0.25')#16.45-0.15
 #d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
 #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
-
+    
+    
+    print(datetime.datetime.now())
+    print (path)
     start = timeit.default_timer()
 
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
@@ -2723,7 +3393,7 @@ def main():
                     'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
                     'snr': DS9snr, 'focus': DS9focus,'inverse': DS9inverse,
                     'throughslit': DS9throughslit, 'meanvar': DS9meanvar,
-                    'xy_calib': DS9XYAnalysis}
+                    'xy_calib': DS9XYAnalysis,'Remove_Cosmics': DS9removeCRtails}
 #    try:
     xpapoint = sys.argv[1]
     function = sys.argv[2]
