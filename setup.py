@@ -13,7 +13,7 @@ requires = ['numpy >=1.8',
 entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils.py = DS9FireBall.DS9Utils:main']
 
-data = { "DS9FireBall": ["FireBall.ds9.ans", "Slits/*","Targets/*","Mappings/*"]}
+data = { "DS9FireBall": ["../FireBall.ds9.ans", "Slits/*","Targets/*","Mappings/*"]}
 
 
 

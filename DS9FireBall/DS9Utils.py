@@ -37,7 +37,7 @@ from  pkg_resources  import resource_filename
 #start = timeit.default_timer()
 #from focustest import ConvolveBoxPSF
 #from focustest import AnalyzeSpot
-#from focustest import plot_rp2_convolved_wo_latex
+#from 18405298def DS9test import plot_rp2_convolved_wo_latex
 #from focustest import  radial_profile_normalized
 #from focustest import stackImages  
 #from focustest import ConvolveDiskGaus2D
@@ -628,8 +628,8 @@ def throughfocus(center, files,x=None,
     from astropy.io import fits
     from astropy.table import Table, vstack
     import matplotlib.pyplot as plt
-    from focustest import AnalyzeSpot
-    from focustest import estimateBackground
+    from .focustest import AnalyzeSpot
+    from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     fwhm = []
     EE50 = []
@@ -846,8 +846,8 @@ def throughfocusWCS(center, files,x=None,
     from astropy.io import fits
     from astropy.table import Table, vstack
     import matplotlib.pyplot as plt
-    from focustest import AnalyzeSpot
-    from focustest import estimateBackground
+    from .focustest import AnalyzeSpot
+    from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     fwhm = []
     EE50 = []
@@ -1095,8 +1095,8 @@ def throughfocus2(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     """
     from astropy.io import fits
     import matplotlib.pyplot as plt
-    from focustest import AnalyzeSpot
-    from focustest import estimateBackground
+    from .focustest import AnalyzeSpot
+    from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     from astropy.table import Table, vstack
     fwhm = []
@@ -1238,7 +1238,7 @@ def DS9throughfocus(xpapoint):
     """
     """
     from astropy.io import fits
-    from focustest import AnalyzeSpot
+    from .focustest import AnalyzeSpot
 
     print('''\n\n\n\n      START THROUGHFOCUS \n\n\n\n''')
     d = DS9(xpapoint)
@@ -1336,10 +1336,10 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, anisotrope=False, angle=3
   """Function used to plot the radial profile and the encircled energy of a spot,
   Latex is not necessary
   """
-  from focustest import  radial_profile_normalized
+  from .focustest import  radial_profile_normalized
   import matplotlib.pyplot as plt
-  from focustest import ConvolveDiskGaus2D
-  from focustest import gausexp
+  from .focustest import ConvolveDiskGaus2D
+  from .focustest import gausexp
   from scipy.optimize import curve_fit
   from scipy import interpolate
   if anisotrope == True:
@@ -1940,32 +1940,32 @@ def DS9tsuite(xpapoint):
     print('''\n\n\n\n      TEST: stacking Guider   \n\n\n\n''')
     d.set('frame delete all')
     #d.set('frame new')
-    DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
+    DS9open(xpapoint,path + '/test/guider/images/stack18405298.fits')
     sys.argv[3] = ''
     DS9visualisation_throughfocus(xpapoint)
     d.set('frame delete all')
     #d.set('frame new')
-    DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
-    sys.argv[3] = '7662504-7662914'
+    DS9open(xpapoint,path + '/test/guider/images/stack18405298.fits')
+    sys.argv[3] = '18405298-18407298'
     DS9visualisation_throughfocus(xpapoint)
     DS9stack(xpapoint)    
     d.set('frame delete all')
     #d.set('frame new')
-    DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
-    sys.argv[3] = '7662505-7662913-7664160'
+    DS9open(xpapoint,path + '/test/guider/images/stack18405298.fits')
+    sys.argv[3] = '18405298-18405946-18407582'
     DS9visualisation_throughfocus(xpapoint)
     DS9stack(xpapoint)    
 
     print('''\n\n\n\n      TEST: Next Guider   \n\n\n\n''')
     d.set('frame delete all')
     #d.set('frame new')
-    DS9open(xpapoint,path + '/test/guider/images/stack7662505_pa+119_2018-06-10T18-34-51.fits')
+    DS9open(xpapoint,path + '/test/guider/images/stack18405298.fits')
     print('''\n\n\n\n      TEST: Throughfocus Guider   \n\n\n\n''')
     d.set('regions command "circle %0.3f %0.3f %0.1f # color=red"' % (812,783.2,40))
     d.set('regions select all') 
     sys.argv[3] = ''
     DS9throughfocus(xpapoint)
-    sys.argv[3] = '7662505-7663744'
+    sys.argv[3] = '18405298-18407298'
     DS9throughfocus(xpapoint)    
 
     print('''\n\n\n\n      TEST: Next detector   \n\n\n\n''')
@@ -2377,7 +2377,7 @@ def DS9XYAnalysis(xpapoint):
 
 def DS9stack(xpapoint):
     from astropy.io import fits
-    from focustest import stackImages
+    from .focustest import stackImages
     d = DS9(xpapoint)
     filename = d.get("file")
     fitsimage = fits.open(filename)[0]
@@ -2463,7 +2463,7 @@ def DS9focus(xpapoint):
 #        from FireBallIMO.PSFInterpoler.SkySlitMapping        import SkySlitMapping
 #    except:
 #        pass
-    from focustest import Focus  
+    from .focustest import Focus  
     d = DS9(xpapoint)
     filename = d.get("file")
     #image = fitsfile[0].data
@@ -2494,8 +2494,8 @@ def DS9focus(xpapoint):
 def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,15), radius=15, center=[933, 1450], n_bg=1.3, sizefig=4):#, center_bg=[500,500]
     import matplotlib.pyplot as plt
     from astropy.io import fits
-    from focustest import estimateBackground
-    from focustest import Gaussian
+    from .focustest import estimateBackground
+    from .focustest import Gaussian
     from scipy.optimize import curve_fit
 
     print('''\n\n\n\n      START THROUGHSLIT \n\n\n\n''')
@@ -2578,7 +2578,7 @@ def DS9throughslit(xpapoint):#, nimages=np.arange(2,15), pos_image=np.arange(2,1
 
 def DS9snr(xpapoint):
     from astropy.io import fits
-    from focustest import create_DS9regions2
+    from .focustest import create_DS9regions2
     n1 = 1.2
     n2 = 1.8
     d = DS9(xpapoint)
@@ -2669,8 +2669,8 @@ def create_test_image():
     """
     import matplotlib.pyplot as plt
     from astropy.io import fits
-    from focustest import twoD_Gaussian
-    from focustest import ConvolveSlit2D_PSF
+    from .focustest import twoD_Gaussian
+    from .focustest import ConvolveSlit2D_PSF
     n=20
     fitstest = fits.open('/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180612/image000365.fits')
     #fitstest[0].data *= 0`
@@ -2784,13 +2784,13 @@ def DS9center(xpapoint,Plot=True):
     """
     import matplotlib.pyplot as plt
     from astropy.io import fits
-    from focustest import ConvolveBoxPSF
-    from focustest import twoD_Gaussian
-    from focustest import create_DS9regions
-    from focustest import create_DS9regions2
-    from focustest import estimateBackground
+    from .focustest import ConvolveBoxPSF
+    from .focustest import twoD_Gaussian
+    from .focustest import create_DS9regions
+    from .focustest import create_DS9regions2
+    from .focustest import estimateBackground
     from scipy.optimize import curve_fit
-    from focustest import Gaussian
+    from .focustest import Gaussian
     d = DS9(xpapoint)#DS9(xpapoint)
     filename = d.get("file")
     region = getregion(d)
