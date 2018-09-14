@@ -1830,6 +1830,8 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
     from astropy.table import Table
     from astropy.io import fits
     line = sys.argv[3]#'f3 names'#sys.argv[3]
+    print('Entry = ', line)
+    line = line.lower()
     if '202' in line:
         w = 0.20255
     if '206' in line:
@@ -1838,17 +1840,35 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
         w = 0.21382
     if 'lya' in line:
         w = None        
+    print('Selected Line is : ', w)
+
+    try:
+        slit_dir = resource_filename('DS9FireBall', 'Slits')
+    except:
+        slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
+        
+
+    if ('f1' in line) or ('119' in line):
+        csvfile = os.path.join(slit_dir,'F1_119.csv')
+    if ('f2' in line) or ('161' in line):
+        csvfile = os.path.join(slit_dir,'F2_-161.csv')
+    if ('f3' in line) or ('121' in line):
+        csvfile = os.path.join(slit_dir,'F3_-121.csv')
+    if ('f4' in line) or ('159' in line):
+        csvfile = os.path.join(slit_dir,'F4_159.csv')
+    print('Selected field in : ', csvfile)
         
     d = DS9(xpapoint)
     filename = d.get("file")
     fitsfile = fits.open(filename)
     image = fitsfile[0].data
     try:
-        table = Table.read(filename[:-5] + '_table.csv')
+        table = Table.read(csvfile)
     except IOError:
         print('No csv table found, Trying fits table')
         try:
-            table = Table.read(filename[:-5] + '_table.fits')
+#            table = Table.read(filename[:-5] + '_table.fits')
+            table = Table.read(csvfile)
         except IOError:
             print('No fits table found, Please run focustest')
             sys.exit() 
@@ -1902,11 +1922,19 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
 def DS9tsuite(xpapoint):
     """Create an image with subimages where are lya predicted lines and display it on DS9
     """
+
     path = os.path.dirname(os.path.realpath(__file__))    
     d = DS9(xpapoint)
     d.set('frame delete all')
     #d.set('frame new')
+    print('''\n\n\n\n      TEST: diffuse focus test analysis   \n\n\n\n''') 
+    d.set('frame delete all')
+    sys.argv.append('');sys.argv.append('');sys.argv.append('');sys.argv.append('')
 
+    DS9open(xpapoint,path + '/test/detector/image000075-000084-Zinc-with_dark-121-stack.fits')    
+    sys.argv[3] = 'f3'
+    DS9focus(xpapoint)
+    
     print('''\n\n\n\n      TEST: Open    \n\n\n\n''')
     DS9open(xpapoint,path + '/test/detector/images/image000404.fits')
 
@@ -2008,7 +2036,7 @@ def DS9tsuite(xpapoint):
     print('''\n\n\n\n      TEST: Show slit regions   \n\n\n\n''') 
     d.set('frame delete all')
     #d.set('frame new')
-    DS9open(xpapoint,path + '/test/detector/image-000075-000084-Zinc-with_dark-121-stack.fits')    
+    DS9open(xpapoint,path + '/test/detector/image000075-000084-Zinc-with_dark-121-stack.fits')    
     sys.argv[3] = 'f3'
     Field_regions(xpapoint)
     d.set('regions delete all') 
@@ -2020,6 +2048,8 @@ def DS9tsuite(xpapoint):
     d.set('regions delete all') 
     
     print('''\n\n\n\n      TEST: diffuse focus test analysis   \n\n\n\n''') 
+    d.set('frame delete all')
+    DS9open(xpapoint,path + '/test/detector/image000075-000084-Zinc-with_dark-121-stack.fits')    
     sys.argv[3] = 'f3'
     DS9focus(xpapoint)
 
@@ -2030,7 +2060,7 @@ def DS9tsuite(xpapoint):
     print('''\n\n\n\n      TEST: Photocounting   \n\n\n\n''') 
     d.set('frame delete all')
     d.set('frame new')
-    DS9open(xpapoint,path + '/test/detector/image-000075-000084-Zinc-with_dark-121-stack.fits')    
+    DS9open(xpapoint,path + '/test/detector/image000075-000084-Zinc-with_dark-121-stack.fits')    
     DS9photo_counting(xpapoint)
     
     print('''\n\n\n\n      TEST: Guider WCS   \n\n\n\n''') 
@@ -2149,14 +2179,7 @@ def Field_regions(xpapoint, mask=''):
         else:
             d.set('contour clear')
             #d.set('contour yes')
-            guidingstars = np.zeros((8,3))
-            header = fits.open(path)[0].header
-            for i in range(8):
-                guidingstars[i] = header['CY%i'%(i)],header['CX%i'%(i)],header['USE%i'%(i)]
-                if (int(guidingstars[i,2]) ==  257) or (int(guidingstars[i,2]) ==  1):
-                    d.set('regions command "box %0.3f %0.3f 8 8  # color=yellow"' % (guidingstars[i,1],guidingstars[i,0]))
 
-            print('guiding stars = ',guidingstars)
 #            guidingstars[0] = header['CX0','CX0','USE0']
 #            guidingstars[0] = header['CX0','CX0','USE0']
 #            guidingstars[0] = header['CX0','CX0','USE0']
@@ -2168,6 +2191,7 @@ def Field_regions(xpapoint, mask=''):
 #            for line in header:                
 #                if line in ['USE0','USE1','USE2','USE3','USE4','USE5','USE6','USE7']:
 #                    print(line)
+            header = fits.open(path)[0].header
             pa = int(header['ROTENC'])
             DS9
             print('Position angle = ',pa)
@@ -2194,6 +2218,21 @@ def Field_regions(xpapoint, mask=''):
                     d.set('regions ' + name1)
                     d.set('contour load ' + name2)
 
+                    guidingstars = np.zeros((8,3))
+                    header = fits.open(d.get('file'))[0].header
+                    for i in range(8):
+                        guidingstars[i] = header['CY%i'%(i)],header['CX%i'%(i)],header['USE%i'%(i)]
+                        if (int(guidingstars[i,2]) ==  257) or (int(guidingstars[i,2]) ==  1):
+                            d.set('regions command "box %0.3f %0.3f 8 8  # color=yellow"' % (guidingstars[i,1],guidingstars[i,0]))
+                    print('guiding stars = ',guidingstars)
+            else:
+                guidingstars = np.zeros((8,3))
+                header = fits.open(path)[0].header
+                for i in range(8):
+                    guidingstars[i] = header['CY%i'%(i)],header['CX%i'%(i)],header['USE%i'%(i)]
+                    if (int(guidingstars[i,2]) ==  257) or (int(guidingstars[i,2]) ==  1):
+                        d.set('regions command "box %0.3f %0.3f 8 8  # color=yellow"' % (guidingstars[i,1],guidingstars[i,0]))
+                print('guiding stars = ',guidingstars)
 
     try:
         print('Putting regions, filename = ', filename)
@@ -3355,25 +3394,29 @@ def DS9removeCRtails(xpapoint):
 
 def main():
     path = os.path.dirname(os.path.realpath(__file__))
-
+    print(__file__)
+    print(__package__)
+    
     if len(sys.argv)==1:
         try:
             AnsDS9path= resource_filename('DS9FireBall','FireBall.ds9.ans')
         except:
+            #sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+            print(__file__)
             pass
         else:
             print('To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path)
             print('And switch on Autoreload')
-        sys.exit()
+            sys.exit()
 #    #
-#
-#    xpapoint = '7f000001:62305'
-#    function = 'test'
+##
+#    xpapoint = '7f000001:50763'
+#    function = 'lya_multi_image'
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)
 ####    
-###    
-#    sys.argv.append('*')
+####    
+#    sys.argv.append('f2-202')
     #sys.argv.append('10.49-0.25')#16.45-0.15
 #d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
 #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
@@ -3392,7 +3435,7 @@ def main():
                     'next':DS9next, 'previous':DS9previous,
                     'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
                     'snr': DS9snr, 'focus': DS9focus,'inverse': DS9inverse,
-                    'throughslit': DS9throughslit, 'meanvar': DS9meanvar,
+                    'throughuslit': DS9throughslit, 'meanvar': DS9meanvar,
                     'xy_calib': DS9XYAnalysis,'Remove_Cosmics': DS9removeCRtails}
 #    try:
     xpapoint = sys.argv[1]
