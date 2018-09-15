@@ -1824,7 +1824,7 @@ def DS9next(xpapoint):
 def DS9previous():
     return                         
                          
-def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
+def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     """Create an image with subimages where are lya predicted lines and display it on DS9
     """
     from astropy.table import Table
@@ -1896,18 +1896,21 @@ def create_multiImage(xpapoint, w=0.20619, n=30, rapport=1.8, continuum=False):
 #            pass
     #size = len(table)
     try:
-        new_image = np.ones((v1*(2*n) + v1,v2*(2*n) + v2))*np.min(imagettes)
+        new_image = np.ones((v1*(2*n) + v1,v2*(2*n) + v2))*np.min(imagettes[0])
     except ValueError:
         print ('No matching in the catalog, please run focustest before using this function')
-        sys.exit()
+        #sys.exit()
     for index,imagette in enumerate(imagettes):
         j,i = index%v2,index//v2
         centrei, centrej = 1 + (2*i+1) * n,1 + (2*j+1) * n
         print (i,j)
         print (centrei,centrej)
-        new_image[centrei-n:centrei+n,centrej-n:centrej+n] = imagette
-    new_image[1:-1:2*n, :] = np.max(np.array(imagettes))
-    new_image[:,1:-1:2*n] = np.max(np.array(imagettes))
+        try:
+            new_image[centrei-n:centrei+n,centrej-n:centrej+n] = imagette
+        except:
+            pass
+    new_image[1:-1:2*n, :] = np.max(np.array(imagettes[0]))
+    new_image[:,1:-1:2*n] = np.max(np.array(imagettes[0]))
     if continuum:
         new_image[0:-2:2*n, :] = np.max(np.array(imagettes))
         new_image[:,0:-2:4*n] = np.max(np.array(imagettes))
@@ -3414,9 +3417,9 @@ def main():
 #    function = 'lya_multi_image'
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)
-####    
-####    
-#    sys.argv.append('f2-202')
+#####    
+#####    
+#    sys.argv.append('f4-213')
     #sys.argv.append('10.49-0.25')#16.45-0.15
 #d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
 #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
