@@ -1915,6 +1915,8 @@ def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
         new_image[0:-2:2*n, :] = np.max(np.array(imagettes))
         new_image[:,0:-2:4*n] = np.max(np.array(imagettes))
     fitsfile[0].data = new_image[::-1, :]
+    if 'NAXIS3' in fitsfile[0].header:
+        fitsfile[0].header.remove('NAXIS3')    
     fitsfile.writeto('/tmp/imagettes.fits', overwrite=True)
     d.set('frame new')
     d.set("file /tmp/imagettes.fits")
