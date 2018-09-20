@@ -6,7 +6,7 @@ Created on Wed Jul  4 10:35:13 2018
 @author: Vincent
 """
 
-from __future__ import print_function
+from __future__ import print_function, division
 import timeit
 import glob
 import os
@@ -1829,6 +1829,7 @@ def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     """
     from astropy.table import Table
     from astropy.io import fits
+    from Calibration.mapping import Mapping
     line = sys.argv[3]#'f3 names'#sys.argv[3]
     print('Entry = ', line)
     line = line.lower()
@@ -1844,26 +1845,41 @@ def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
 
     try:
         slit_dir = resource_filename('DS9FireBall', 'Slits')
+        Target_dir = resource_filename('DS9FireBall', 'Slits')
+        Mapping_dir = resource_filename('DS9FireBall', 'Mappings')
     except:
         slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
+        Target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Targets')
+        Mapping_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Mappings')
         
-
+        
     if ('f1' in line) or ('119' in line):
         csvfile = os.path.join(slit_dir,'F1_119.csv')
+        targetfile = os.path.join(Target_dir,'targets_F1.txt')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F1_p2.pkl')
     if ('f2' in line) or ('161' in line):
         csvfile = os.path.join(slit_dir,'F2_-161.csv')
+        targetfile = os.path.join(Target_dir,'targets_F2.txt')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F2_p2.pkl')
     if ('f3' in line) or ('121' in line):
         csvfile = os.path.join(slit_dir,'F3_-121.csv')
+        targetfile = os.path.join(Target_dir,'targets_F3.txt')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F3_p2.pkl')
     if ('f4' in line) or ('159' in line):
         csvfile = os.path.join(slit_dir,'F4_159.csv')
+        targetfile = os.path.join(Target_dir,'targets_F4.txt')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F4_p2.pkl')
     print('Selected field in : ', csvfile)
         
+    mapping = Mapping(filename=mappingfile)
     d = DS9(xpapoint)
     filename = d.get("file")
     fitsfile = fits.open(filename)
     image = fitsfile[0].data
     try:
         table = Table.read(csvfile)
+        taget_table = Table.read(targetfile, format='ascii')#, delimiter='\t'
+        #print(taget_table)
     except IOError:
         print('No csv table found, Trying fits table')
         try:
@@ -1877,15 +1893,30 @@ def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
         & (table['wavelength'] != 0.0) & (table['wavelength'] != -1.0)]
     else:
         table = table [table['wavelength'] == w]
-    x,y = table['X_IMAGE'], table['Y_IMAGE']
-    n1, n2 = n, n
-    if continuum:
-        imagettes=[]
-        for y,x in zip(x,y):
-            imagettes.append(image[int(x)-n1:int(x) +n1,int(y)-n2:int(y) +n2])
-            imagettes.append(image[int(x)-n1+80:int(x) +n1+80,int(y)-n2:int(y) +n2])
+    
+    xm, ym, redshift, slit = taget_table['xmask'], taget_table['ymask'], taget_table['Z'], taget_table['Internal-count']
+    #print()#0.20619, 0.21382
+    if w is None:
+        print(1e-4*(1+redshift[redshift<0.8])*1215.67, xm, ym)
+        y,x = mapping.map(1e-4*(1+redshift[redshift<0.8])*1215.67, xm[redshift<0.8], ym[redshift<0.8], inverse=False)
     else:
-        imagettes = [image[int(x)-n1:int(x) +n1,int(y)-n2:int(y) +n2] for y,x in zip(x,y)]
+        y,x = mapping.map(w, xm, ym, inverse=False)
+    #x, y, slit = table['X_IMAGE'], table['Y_IMAGE'], table['Internal-count']
+    n1, n2 = n, n 
+    print('n1,n2 = ',n1,n2)
+    redshift = redshift.tolist()
+    sliti=[]
+    redshifti=[]
+    imagettes=[]
+    xi=[]
+    yi=[]
+    for i in range(len(x)):
+        if (y[i]>1053) & (y[i]<2133) & (x[i]>0) & (x[i]<2070):
+            imagettes.append(image[int(x[i])-n1:int(x[i]) +n1,int(y[i])-n2:int(y[i]) +n2])
+            redshifti.append(redshift[i])
+            sliti.append(slit[i])
+            xi.append(x[i]);yi.append(y[i])
+            print(y[i],x[i])
     v1,v2 = 6,14
 #    fig, axes = plt.subplots(v1, v2, figsize=(v2,v1),sharex=True)
 #    for i, ax in enumerate(axes.ravel()): 
@@ -1903,8 +1934,8 @@ def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     for index,imagette in enumerate(imagettes):
         j,i = index%v2,index//v2
         centrei, centrej = 1 + (2*i+1) * n,1 + (2*j+1) * n
-        print (i,j)
-        print (centrei,centrej)
+        #print (i,j)
+        #print (centrei,centrej)
         try:
             new_image[centrei-n:centrei+n,centrej-n:centrej+n] = imagette
         except:
@@ -1922,6 +1953,178 @@ def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     d.set("file /tmp/imagettes.fits")
     d.set('scale mode minmax')
     return
+
+
+
+import matplotlib.pyplot as plt;from PyQt5 import QtWidgets;from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas;from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+class ScrollableWindow(QtWidgets.QMainWindow):
+    import matplotlib
+    # Make sure that we are using QT5
+    matplotlib.use('Qt5Agg')
+    def __init__(self, fig):
+        self.qapp = QtWidgets.QApplication([])
+        QtWidgets.QMainWindow.__init__(self)
+        self.widget = QtWidgets.QWidget()
+        self.setCentralWidget(self.widget)
+        self.widget.setLayout(QtWidgets.QVBoxLayout())
+        self.widget.layout().setContentsMargins(0,0,0,0)
+        self.widget.layout().setSpacing(0)
+
+        self.fig = fig
+        self.canvas = FigureCanvas(self.fig)
+        self.canvas.draw()
+        self.scroll = QtWidgets.QScrollArea(self.widget)
+        self.scroll.setWidget(self.canvas)
+
+        self.nav = NavigationToolbar(self.canvas, self.widget)
+        self.widget.layout().addWidget(self.nav)
+        self.widget.layout().addWidget(self.scroll)
+
+        self.resize(2000, 1000)
+
+
+        self.show()
+        self.qapp.exec_()#exit(self.qapp.exec_()) 
+
+
+
+
+
+def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
+    """Plot spectra
+    """
+    import matplotlib.pyplot as plt
+    from astropy.table import Table
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
+    from Calibration.mapping import Mapping
+    line = sys.argv[3]#'f3 names'#sys.argv[3]
+    print('Entry = ', line)
+    line = line.lower()
+    if '202' in line:
+        w = 0.20255
+    if '206' in line:
+        w = 0.20619
+    if '213' in line:
+        w = 0.21382
+    if 'lya' in line:
+        w = None        
+    print('Selected Line is : ', w)
+
+    try:
+        slit_dir = resource_filename('DS9FireBall', 'Slits')
+        Target_dir = resource_filename('DS9FireBall', 'Slits')
+        Mapping_dir = resource_filename('DS9FireBall', 'Mappings')
+    except:
+        slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
+        Target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Targets')
+        Mapping_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Mappings')
+        
+        
+    if ('f1' in line) or ('119' in line):
+        csvfile = os.path.join(slit_dir,'F1_119.csv')
+        targetfile = os.path.join(Target_dir,'targets_F1.txt')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F1.pkl')
+    if ('f2' in line) or ('161' in line):
+        csvfile = os.path.join(slit_dir,'F2_-161.csv')
+        targetfile = os.path.join(Target_dir,'targets_F2.txt')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F2.pkl')
+    if ('f3' in line) or ('121' in line):
+        csvfile = os.path.join(slit_dir,'F3_-121.csv')
+        targetfile = os.path.join(Target_dir,'targets_F3.txt')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F3.pkl')
+    if ('f4' in line) or ('159' in line):
+        csvfile = os.path.join(slit_dir,'F4_159.csv')
+        targetfile = os.path.join(Target_dir,'targets_F4.txt')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F4.pkl')
+    print('Selected field in : ', csvfile)
+        
+    mapping = Mapping(filename=mappingfile)
+    d = DS9(xpapoint)
+    filename = d.get("file")
+    fitsfile = fits.open(filename)
+    image = fitsfile[0].data
+    try:
+        table = Table.read(csvfile)
+        target_table = Table.read(targetfile, format='ascii')
+    except IOError:
+        print('No csv table found, Trying fits table')
+        try:
+#            table = Table.read(filename[:-5] + '_table.fits')
+            table = Table.read(csvfile)
+        except IOError:
+            print('No fits table found, Please run focustest')
+            sys.exit() 
+    if w is None:
+        table = table [(table['wavelength'] != 0.20255) & (table['wavelength'] != 0.20619) & (table['wavelength'] != 0.21382)
+        & (table['wavelength'] != 0.0) & (table['wavelength'] != -1.0)]
+    else:
+        table = table[table['wavelength'] == w]
+
+    if 'f1' in line:
+        idok = (target_table['slit_length_right'] != 0) &  (target_table['slit_length_left'] !=0)
+        target_table = target_table[idok]
+        xmask = target_table['xmask'] + (target_table['slit_length_right'] - target_table['slit_length_left'])/2.
+        ymask = target_table['ymask'] + target_table['offset']
+        z = target_table['z'] 
+        internalCount = target_table['Internal-count']
+
+    else:
+        xmask = target_table['xmm']
+        ymask = target_table['ymm']
+        internalCount = target_table['Internal-count']
+        z = target_table['Z'] 
+    redshift = z
+    slit = internalCount
+    #xm, ym, redshift, slit = taget_table['xmask'], taget_table['ymask'], taget_table['Z'], taget_table['Internal-count']
+    #print()#0.20619, 0.21382
+    
+    
+    if 'lya' in line:
+        print('Lya given' )
+        y,x = mapping.map(0.20255, xmask, ymask, inverse=False)
+        print(x)
+        w = 1216
+        y += (2139 - 2025.5 )*46.6/10#((1 + redshift) * w) 
+    else:
+        y,x = mapping.map(w, xmask, ymask, inverse=False)
+    print(x)
+    
+    #x, y, slit = table['X_IMAGE'], table['Y_IMAGE'], table['Internal-count']
+    n1, n2 = int(n/4), n 
+    print('n1,n2 = ',n1,n2)
+    redshift = redshift.tolist()
+    sliti=[]
+    redshifti=[]
+    imagettes=[]
+    xi=[]
+    yi=[]
+    for i in range(len(x)):
+        if (y[i]>1053) & (y[i]<2133) & (x[i]>0) & (x[i]<2070):
+            imagettes.append(image[int(x[i])-n1:int(x[i]) +n1,int(y[i])-n2:int(y[i]) +n2])
+            redshifti.append(redshift[i])
+            sliti.append(slit[i])
+            xi.append(x[i]);yi.append(y[i])
+    #imagettes = [image[int(x)-n1:int(x) +n1,int(y)-n2:int(y) +n2] for y,x in zip(x,y)]
+    v1,v2 = int(len(xi)/2+1),2
+    print('v1,v2=',v1,v2)
+    fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
+    fig.suptitle('Spectra centered on given wavelength')
+    for i, ax in enumerate(axes.ravel()): 
+        try:
+            ax.plot(imagettes[i][:, ::-1].sum(axis=0),label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
+            ax.legend()
+            ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
+            ax.set_xticks([0,n/3,2*n/3,n,4*n/3,5*n/3,2*n]) # choose which x locations to have ticks
+            ax.set_xticklabels(np.linspace(1e4*w-n*(10./46),1e4*w+n*(10./46),7,dtype=int))
+        except IndexError:
+            pass
+    ScrollableWindow(fig)
+
+    return
+
+
+
 #createMultiImage(filename,continuum=False,w=0.20619)
 
 def DS9tsuite(xpapoint):
@@ -2823,6 +3026,30 @@ def DS9inverse(xpapoint):
     return
 
 
+def DS9Update(xpapoint,Plot=True):
+    """
+    """
+    import time
+    d = DS9(xpapoint)#DS9(xpapoint)
+    filename = d.get("file")
+    flag=0
+    while flag<1: 
+        files = glob.glob(os.path.dirname(filename)+ '/*.fits')
+        latest_file = max(files, key=os.path.getctime)
+        if os.path.getctime(latest_file)>os.path.getctime(filename):
+            filename = latest_file
+            d.set('file ' + filename)
+            print('New file!\nDisplaying : ' + latest_file)
+        else:
+            print('No file more recent top display')
+            print('Waiting ...')
+        time.sleep(5)
+    return
+        
+        
+    
+
+
 def DS9center(xpapoint,Plot=True):
     """
     """
@@ -2846,10 +3073,10 @@ def DS9center(xpapoint,Plot=True):
             w = 2
         if h <= 2:
             h = 2
-        Xinf = yc - h/2 -1
-        Xsup = yc + h/2 -1 
-        Yinf = xc - w/2 -1
-        Ysup = xc + w/2 -1
+        Xinf = int(np.floor(yc - h/2 -1))
+        Xsup = int(np.ceil(yc + h/2 -1))
+        Yinf = int(np.floor(xc - w/2 -1))
+        Ysup = int(np.ceil(xc + w/2 -1))
         imagex = fits.open(filename)[0].data[Xinf-15:Xsup+15,Yinf:Ysup].sum(axis=1)
         imagey = fits.open(filename)[0].data[Xinf:Xsup,Yinf-15:Ysup+15].sum(axis=0)
         #lx, ly = image.shape
@@ -3413,15 +3640,14 @@ def main():
             print('To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path)
             print('And switch on Autoreload')
             sys.exit()
-#    #
-##
-#    xpapoint = '7f000001:50763'
-#    function = 'lya_multi_image'
+    #
+
+#
+#    xpapoint = '7f000001:61517'
+#    function = 'plot_spectra'#plot_spectra
 #    sys.argv.append(xpapoint)
-#    sys.argv.append(function)
-#####    
-#####    
-#    sys.argv.append('f4-213')
+#    sys.argv.append(function)   
+#    sys.argv.append('f2-202')
     #sys.argv.append('10.49-0.25')#16.45-0.15
 #d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
 #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
@@ -3433,9 +3659,9 @@ def main():
 
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
                     'throughfocus':DS9throughfocus, 'open':DS9open,
-                    'setup':DS9setup2,#'back':back,
+                    'setup':DS9setup2,'Update':DS9Update,
                     'throughfocus_visualisation':DS9visualisation_throughfocus, 
-                    'WCS':DS9guider, 'test':DS9tsuite,
+                    'WCS':DS9guider, 'test':DS9tsuite, 'plot_spectra':DS9plot_spectra,
                     'photo_counting':DS9photo_counting, 'lya_multi_image':create_multiImage,
                     'next':DS9next, 'previous':DS9previous,
                     'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
