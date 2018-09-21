@@ -2056,7 +2056,7 @@ class ScrollableWindow(QtWidgets.QMainWindow):
 
 
 
-def returnXY(line, w = 0.20255):
+def returnXY(line, w = 0.206):
     from astropy.table import Table
     from Calibration.mapping import Mapping
     line = line.lower()
@@ -2081,44 +2081,44 @@ def returnXY(line, w = 0.20255):
         
         
     if ('f1' in line) or ('119' in line):
-        csvfile = os.path.join(slit_dir,'F1_119.csv')
+        #csvfile = os.path.join(slit_dir,'F1_119.csv')
         targetfile = os.path.join(Target_dir,'targets_F1.txt')
         mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-w-1806012-F1.pkl')#mapping-mask-det-180612-F1.pkl
     if ('f2' in line) or ('161' in line):
-        csvfile = os.path.join(slit_dir,'F2_-161.csv')
+        #csvfile = os.path.join(slit_dir,'F2_-161.csv')
         targetfile = os.path.join(Target_dir,'targets_F2.txt')
         mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-w-1806012-F2.pkl')
     if ('f3' in line) or ('121' in line):
-        csvfile = os.path.join(slit_dir,'F3_-121.csv')
+        #csvfile = os.path.join(slit_dir,'F3_-121.csv')
         targetfile = os.path.join(Target_dir,'targets_F3.txt')
         mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-w-1806012-F3.pkl')
     if ('f4' in line) or ('159' in line):
-        csvfile = os.path.join(slit_dir,'F4_159.csv')
+        #csvfile = os.path.join(slit_dir,'F4_159.csv')
         targetfile = os.path.join(Target_dir,'targets_F4.txt')
         mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-w-1806012-F4.pkl')
-    print('Selected field in : ', csvfile)
+    #print('Selected field in : ', csvfile)
         
     mapping = Mapping(filename=mappingfile)
 
     try:
-        table = Table.read(csvfile)
+        print('ok')#table = Table.read(csvfile)
         try:
             target_table = Table.read(targetfile, format='ascii')
         except:
             target_table = Table.read(targetfile, format='ascii', delimiter='\t')
     except IOError:
         print('No csv table found, Trying fits table')
-        try:
-#            table = Table.read(filename[:-5] + '_table.fits')
-            table = Table.read(csvfile)
-        except IOError:
-            print('No fits table found, Please run focustest')
-            sys.exit() 
-    if w is None:
-        table = table [(table['wavelength'] != 0.20255) & (table['wavelength'] != 0.20619) & (table['wavelength'] != 0.21382)
-        & (table['wavelength'] != 0.0) & (table['wavelength'] != -1.0)]
-    else:
-        table = table[table['wavelength'] == w]
+#        try:
+##            table = Table.read(filename[:-5] + '_table.fits')
+#            table = Table.read(csvfile)
+#        except IOError:
+#            print('No fits table found, Please run focustest')
+#            sys.exit() 
+#    if w is None:
+#        table = table [(table['wavelength'] != 0.20255) & (table['wavelength'] != 0.20619) & (table['wavelength'] != 0.21382)
+#        & (table['wavelength'] != 0.0) & (table['wavelength'] != -1.0)]
+#    else:
+#        table = table[table['wavelength'] == w]
 
     if 'f1' in line:
         idok = (target_table['slit_length_right'] != 0) &  (target_table['slit_length_left'] !=0)
@@ -2141,14 +2141,14 @@ def returnXY(line, w = 0.20255):
     
     if 'lya' in line:
         print('Lya given' )
-        y,x = mapping.map(0.20255, xmask, ymask, inverse=False)
-        print(x[0],y[0])
+#        y,x = mapping.map(0.20255, xmask, ymask, inverse=False)
+#        print(x[0],y[0])
+#        w = 1215.67
+#        y -= ((1 + redshift) * w - 2025.5 )*46.6/10   #((1 + redshift) * w) 
+#        print(x[0],y[0])
         w = 1215.67
-        y -= ((1 + redshift) * w - 2025.5 )*46.6/10   #((1 + redshift) * w) 
-        print(x[0],y[0])
-        
-#        wavelength = (1 + redshift) * w * 1e-4
-#        y,x = mapping.map(wavelength, xmask, ymask, inverse=False)
+        wavelength = (1 + redshift) * w * 1e-4
+        y,x = mapping.map(wavelength, xmask, ymask, inverse=False)
     else:
         y,x = mapping.map(w, xmask, ymask, inverse=False)
         w *= 1e4
@@ -2189,9 +2189,13 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     v1,v2 = int(len(xi)/2+1),2
     print('v1,v2=',v1,v2)
     #fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
-    fig, axes = plt.subplots(v1, v2, figsize=(17,70))
+    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70),sharey=True)
     fig.suptitle('Spectra centered on given wavelength',y=1)
-    xaxis = np.linspace(w-n*(10./46), w+n*(10./46), 2*n2)
+    xaxis = np.linspace(w-n2*(10./46), w+n2*(10./46), 2*n2)
+    if w==1215.67:
+        fig.suptitle('Spectra lambda-rest frame ',y=1)
+    else:
+        fig.suptitle('Spectra observed lambda',y=1)
     for i, ax in enumerate(axes.ravel()[1:]): 
         try:
             ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
@@ -2202,7 +2206,7 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
             #ax.set_xticklabels(np.linspace(1e4*w-n*(10./46),1e4*w+n*(10./46),7,dtype=int))
         except IndexError:
             pass
-    stack = np.array(imagettes).sum(axis=0)
+    stack = np.array(imagettes).mean(axis=0)
     axes.ravel()[0].step(xaxis,stack.sum(axis=0),label = 'Stack',c='orange')  
     axes.ravel()[0].legend()
     fig.tight_layout()
@@ -2210,6 +2214,94 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     ScrollableWindow(fig)
 
     return imagettes
+
+
+def DS9plot_spectra_big_range(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
+    """Plot spectra
+    """
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    line = sys.argv[3]#'f3 names'#sys.argv[3]
+    print('Entry = ', line)
+    d = DS9(xpapoint)
+    filename = d.get("file")
+    fitsfile = fits.open(filename)
+    image = fitsfile[0].data    
+    #x, y, slit = table['X_IMAGE'], table['Y_IMAGE'], table['Internal-count']
+    
+    x, y, redshift, slit, w = returnXY(line)  
+    
+    
+    n1, n2 = int(n/4), 700 
+    print('n1,n2 = ',n1,n2)
+    redshift = redshift.tolist()
+
+    lambdasup = []
+    lambdainf = []
+    sup = 2133
+    inf = 1053
+    x2w = 10./46
+    flag_visible = (y>inf) & (y<sup) & (x>0) & (x<2070)
+
+    sliti = np.array(slit)[flag_visible]
+    redshifti = np.array(redshift)[flag_visible]
+    xi=np.array(x)[flag_visible]
+    yi=np.array(y)[flag_visible]
+    #wi=np.array(w)[flag_visible]
+    imagettes = []
+    #imagettes = [image[int(x)-n1:int(x) +n1,int(y)-n2:int(y) +n2] for x,y in zip(x[flag_visible],y[flag_visible]) ]
+    for i in range(len(xi)):
+        imagettes.append(image[int(xi[i])-n1:int(xi[i]) +n1,int(yi[i])-n2:int(yi[i]) +n2])
+        lambdainf.append(  - (sup - yi[i]) * x2w + w)
+        lambdasup.append( - (inf - yi[i]) * x2w + w)
+    #print(np.array(lambdainf)-np.array(lambdasup))
+        
+#    for i in range(len(x)):
+#        if (y[i]>inf) & (y[i]<sup) & (x[i]>0) & (x[i]<2070):
+#            imagettes.append(image[int(x[i])-n1:int(x[i]) +n1,int(y[i])-n2:int(y[i]) +n2])
+#            redshifti.append(redshift[i])
+#            sliti.append(slit[i])
+#            xi.append(x[i]);yi.append(y[i])
+#            lambdainf.append(  (inf - xi) * x2w + w)
+#            lambdasup.append(  (sup - xi) * x2w + w)
+            #boundsup.append()
+    #imagettes = [image[int(x)-n1:int(x) +n1,int(y)-n2:int(y) +n2] for y,x in zip(x,y)]
+    v1,v2 = int(len(xi)/2+1),2
+    print('v1,v2=',v1,v2)
+    #fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
+    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70),sharey=True)
+    
+    xaxis = np.linspace(w-n2*x2w, w+n2*x2w, 2*n2)
+    xinf = np.searchsorted(xaxis,lambdainf)
+    xsup = np.searchsorted(xaxis,lambdasup)
+    if w==1215.67:
+        fig.suptitle('Spectra lambda-rest frame ',y=1)
+    else:
+        fig.suptitle('Spectra observed lambda',y=1)
+    for i, ax in enumerate(axes.ravel()[1:len(imagettes)+1]): 
+#        ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
+#                label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshifti[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
+        ax.step(xaxis[xinf[i]:xsup[i]],imagettes[i][:, ::-1].sum(axis=0)[xinf[i]:xsup[i]],
+                label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshifti[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
+        #if (lambdainf[i]>xaxis[0]) & (lambdainf[i]<xaxis[-1]):
+        ax.axvline(x=lambdainf[i],color='black',linestyle='dotted')
+        #if (lambdasup[i]>xaxis[0]) & (lambdasup[i]<xaxis[-1]):
+        ax.axvline(x=lambdasup[i],color='black',linestyle='dotted')
+        
+        
+        
+        ax.legend()
+        ax.set_xlim(xaxis[[0,-1]])
+    stack = np.array(imagettes).mean(axis=0)
+    axes.ravel()[0].step(xaxis,stack[:, ::-1].sum(axis=0),label = 'Stack',c='orange')  
+    axes.ravel()[0].legend()
+    axes.ravel()[0].set_xlim(xaxis[[0,-1]])
+    fig.tight_layout()
+    ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
+    ScrollableWindow(fig)
+
+    return imagettes
+
 
 def DS9plot_all_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     """Plot spectra
@@ -2242,24 +2334,23 @@ def DS9plot_all_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
 #            redshifti.append(redshift[i])
 #            sliti.append(slit[i])
 #            xi.append(x[i]);yi.append(y[i])
-    imagettes = [image[int(x)-n1:int(x) +n1,1500-n2:1500 +n2] for x,y in zip(x,y)]
+    imagettes = [image[int(xi)-n1:int(xi) +n1,1500-n2:1500 +n2] for xi,yi in zip(x,y)]
     
 
-    v1,v2 = int(len(x)/2+1),2
+    v1,v2 = int(len(redshift)/2+1),2
     print('v1,v2=',v1,v2)
     #fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
-    fig, axes = plt.subplots(v1, v2, figsize=(17,70))
+    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70))
     fig.suptitle("Slits' spectra",y=1)
     #xaxis = np.linspace(w-n2*(10./46), w+n2*(10./46), 2*n2)
     xaxis = np.arange(1500-n2,1500+n2)
+    print(len(imagettes),len(x),len(redshift))
     for i, ax in enumerate(axes.ravel()): 
         try:
+            #print(i)
             ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
-                    label = 'Slit: ' + slit[i] +'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(1500,x[i]))
+                    label = 'Slit: ' + slit[i] )#+'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(1500,x[i]))
             ax.legend()
-            #ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
-            #ax.set_xticks([0,n/3,2*n/3,n,4*n/3,5*n/3,2*n]) # choose which x locations to have ticks
-            #ax.set_xticklabels(np.linspace(1e4*w-n*(10./46),1e4*w+n*(10./46),7,dtype=int))
         except IndexError:
             pass
     fig.tight_layout()
@@ -3785,13 +3876,13 @@ def main():
             sys.exit()
     #
 
-
-#    xpapoint = '7f000001:64523'
-#    function = 'plot_spectra'#plot_spectra
+    
+#    xpapoint = '7f000001:50830'
+#    function = 'plot_spectra'#'plot_spectra_big_range'#'plot_spectra_big_range'#plot_spectra
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)   
-#    sys.argv.append('f4-lya')
-    #sys.argv.append('10.49-0.25')#16.45-0.15
+#    sys.argv.append('f3-202')#202')
+#    sys.argv.append('10.49-0.25')#16.45-0.15
 #d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
 #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
     
@@ -3806,7 +3897,7 @@ def main():
                     'throughfocus_visualisation':DS9visualisation_throughfocus, 
                     'WCS':DS9guider, 'test':DS9tsuite, 'plot_spectra':DS9plot_spectra,
                     'photo_counting':DS9photo_counting, 'lya_multi_image':create_multiImage,
-                    'next':DS9next, 'previous':DS9previous,
+                    'next':DS9next, 'previous':DS9previous, 'plot_spectra_big_range':DS9plot_spectra_big_range,
                     'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
                     'snr': DS9snr, 'focus': DS9focus,'inverse': DS9inverse,
                     'throughuslit': DS9throughslit, 'meanvar': DS9meanvar,
