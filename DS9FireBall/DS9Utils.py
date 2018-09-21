@@ -1824,7 +1824,7 @@ def DS9next(xpapoint):
 def DS9previous():
     return                         
                          
-def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
+def create_multiImage_old(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     """Create an image with subimages where are lya predicted lines and display it on DS9
     """
     from astropy.table import Table
@@ -1955,6 +1955,74 @@ def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     return
 
 
+def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
+    """Create an image with subimages where are lya predicted lines and display it on DS9
+    """
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    line = sys.argv[3]#'f3 names'#sys.argv[3]
+    print('Entry = ', line)
+    d = DS9(xpapoint)
+    filename = d.get("file")
+    fitsfile = fits.open(filename)
+    image = fitsfile[0].data    
+    #x, y, slit = table['X_IMAGE'], table['Y_IMAGE'], table['Internal-count']
+    
+    x, y, redshift, slit, w = returnXY(line)  
+    
+    n1, n2 = n, n 
+    print('n1,n2 = ',n1,n2)
+    redshift = redshift.tolist()
+    sliti=[]
+    redshifti=[]
+    imagettes=[]
+    xi=[]
+    yi=[]
+    for i in range(len(x)):
+        if (y[i]>1053) & (y[i]<2133) & (x[i]>0+n1) & (x[i]<2070-n1):
+            imagettes.append(image[int(x[i])-n1:int(x[i]) +n1,int(y[i])-n2:int(y[i]) +n2])
+            redshifti.append(redshift[i])
+            sliti.append(slit[i])
+            xi.append(x[i]);yi.append(y[i])
+            print(y[i],x[i])
+    v1,v2 = 6,14
+#    fig, axes = plt.subplots(v1, v2, figsize=(v2,v1),sharex=True)
+#    for i, ax in enumerate(axes.ravel()): 
+#        try:
+#            ax.imshow(imagettes[i][:, ::-1])
+#            ax.get_yaxis().set_ticklabels([])
+#        except IndexError:
+#            pass
+    #size = len(table)
+    try:
+        new_image = np.ones((v1*(2*n) + v1,v2*(2*n) + v2))*np.min(imagettes[0])
+    except ValueError:
+        print ('No matching in the catalog, please run focustest before using this function')
+        #sys.exit()
+    for index,imagette in enumerate(imagettes):
+        j,i = index%v2,index//v2
+        centrei, centrej = 1 + (2*i+1) * n,1 + (2*j+1) * n
+        #print (i,j)
+        #print (centrei,centrej)
+        try:
+            new_image[centrei-n:centrei+n,centrej-n:centrej+n] = imagette
+        except:
+            pass
+    new_image[1:-1:2*n, :] = np.max(np.array(imagettes[0]))
+    new_image[:,1:-1:2*n] = np.max(np.array(imagettes[0]))
+    if continuum:
+        new_image[0:-2:2*n, :] = np.max(np.array(imagettes))
+        new_image[:,0:-2:4*n] = np.max(np.array(imagettes))
+    fitsfile[0].data = new_image[::-1, :]
+    if 'NAXIS3' in fitsfile[0].header:
+        fitsfile[0].header.remove('NAXIS3')    
+    fitsfile.writeto('/tmp/imagettes.fits', overwrite=True)
+    d.set('frame new')
+    d.set("file /tmp/imagettes.fits")
+    d.set('scale mode minmax')
+    return
+
+
 
 import matplotlib.pyplot as plt;from PyQt5 import QtWidgets;from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas;from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 class ScrollableWindow(QtWidgets.QMainWindow):
@@ -1988,18 +2056,9 @@ class ScrollableWindow(QtWidgets.QMainWindow):
 
 
 
-
-
-def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
-    """Plot spectra
-    """
-    import matplotlib.pyplot as plt
+def returnXY(line, w = 0.20255):
     from astropy.table import Table
-    from astropy.io import fits
-    import matplotlib.pyplot as plt
     from Calibration.mapping import Mapping
-    line = sys.argv[3]#'f3 names'#sys.argv[3]
-    print('Entry = ', line)
     line = line.lower()
     if '202' in line:
         w = 0.20255
@@ -2024,29 +2083,29 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     if ('f1' in line) or ('119' in line):
         csvfile = os.path.join(slit_dir,'F1_119.csv')
         targetfile = os.path.join(Target_dir,'targets_F1.txt')
-        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F1.pkl')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-w-1806012-F1.pkl')#mapping-mask-det-180612-F1.pkl
     if ('f2' in line) or ('161' in line):
         csvfile = os.path.join(slit_dir,'F2_-161.csv')
         targetfile = os.path.join(Target_dir,'targets_F2.txt')
-        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F2.pkl')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-w-1806012-F2.pkl')
     if ('f3' in line) or ('121' in line):
         csvfile = os.path.join(slit_dir,'F3_-121.csv')
         targetfile = os.path.join(Target_dir,'targets_F3.txt')
-        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F3.pkl')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-w-1806012-F3.pkl')
     if ('f4' in line) or ('159' in line):
         csvfile = os.path.join(slit_dir,'F4_159.csv')
         targetfile = os.path.join(Target_dir,'targets_F4.txt')
-        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-180612-F4.pkl')
+        mappingfile = os.path.join(Mapping_dir,'mapping-mask-det-w-1806012-F4.pkl')
     print('Selected field in : ', csvfile)
         
     mapping = Mapping(filename=mappingfile)
-    d = DS9(xpapoint)
-    filename = d.get("file")
-    fitsfile = fits.open(filename)
-    image = fitsfile[0].data
+
     try:
         table = Table.read(csvfile)
-        target_table = Table.read(targetfile, format='ascii')
+        try:
+            target_table = Table.read(targetfile, format='ascii')
+        except:
+            target_table = Table.read(targetfile, format='ascii', delimiter='\t')
     except IOError:
         print('No csv table found, Trying fits table')
         try:
@@ -2083,14 +2142,35 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     if 'lya' in line:
         print('Lya given' )
         y,x = mapping.map(0.20255, xmask, ymask, inverse=False)
-        print(x)
-        w = 1216
-        y += (2139 - 2025.5 )*46.6/10#((1 + redshift) * w) 
+        print(x[0],y[0])
+        w = 1215.67
+        y -= ((1 + redshift) * w - 2025.5 )*46.6/10   #((1 + redshift) * w) 
+        print(x[0],y[0])
+        
+#        wavelength = (1 + redshift) * w * 1e-4
+#        y,x = mapping.map(wavelength, xmask, ymask, inverse=False)
     else:
         y,x = mapping.map(w, xmask, ymask, inverse=False)
-    print(x)
-    
+        w *= 1e4
+    print(x[0],y[0])
+    return x, y, redshift, slit, w    
+
+def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
+    """Plot spectra
+    """
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    line = sys.argv[3]#'f3 names'#sys.argv[3]
+    print('Entry = ', line)
+    d = DS9(xpapoint)
+    filename = d.get("file")
+    fitsfile = fits.open(filename)
+    image = fitsfile[0].data    
     #x, y, slit = table['X_IMAGE'], table['Y_IMAGE'], table['Internal-count']
+    
+    x, y, redshift, slit, w = returnXY(line)  
+    
+    
     n1, n2 = int(n/4), n 
     print('n1,n2 = ',n1,n2)
     redshift = redshift.tolist()
@@ -2108,22 +2188,85 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     #imagettes = [image[int(x)-n1:int(x) +n1,int(y)-n2:int(y) +n2] for y,x in zip(x,y)]
     v1,v2 = int(len(xi)/2+1),2
     print('v1,v2=',v1,v2)
-    fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
-    fig.suptitle('Spectra centered on given wavelength')
-    for i, ax in enumerate(axes.ravel()): 
+    #fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
+    fig, axes = plt.subplots(v1, v2, figsize=(17,70))
+    fig.suptitle('Spectra centered on given wavelength',y=1)
+    xaxis = np.linspace(w-n*(10./46), w+n*(10./46), 2*n2)
+    for i, ax in enumerate(axes.ravel()[1:]): 
         try:
-            ax.plot(imagettes[i][:, ::-1].sum(axis=0),label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
+            ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
+                    label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
             ax.legend()
-            ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
-            ax.set_xticks([0,n/3,2*n/3,n,4*n/3,5*n/3,2*n]) # choose which x locations to have ticks
-            ax.set_xticklabels(np.linspace(1e4*w-n*(10./46),1e4*w+n*(10./46),7,dtype=int))
+            #ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
+            #ax.set_xticks([0,n/3,2*n/3,n,4*n/3,5*n/3,2*n]) # choose which x locations to have ticks
+            #ax.set_xticklabels(np.linspace(1e4*w-n*(10./46),1e4*w+n*(10./46),7,dtype=int))
         except IndexError:
             pass
+    stack = np.array(imagettes).sum(axis=0)
+    axes.ravel()[0].step(xaxis,stack.sum(axis=0),label = 'Stack',c='orange')  
+    axes.ravel()[0].legend()
+    fig.tight_layout()
+    ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
     ScrollableWindow(fig)
 
-    return
+    return imagettes
 
+def DS9plot_all_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
+    """Plot spectra
+    """
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    line = sys.argv[3]#'f3 names'#sys.argv[3]
+    print('Entry = ', line)
+    d = DS9(xpapoint)
+    filename = d.get("file")
+    fitsfile = fits.open(filename)
+    image = fitsfile[0].data    
+    #x, y, slit = table['X_IMAGE'], table['Y_IMAGE'], table['Internal-count']
+    
+    x, y, redshift, slit, w = returnXY(line)  
+    
+    
+    n1, n2 = 1, 500 
+    print('n1,n2 = ',n1,n2)
+    redshift = redshift.tolist()
+    
+#    sliti=[]
+#    redshifti=[]
+#    imagettes=[]
+#    xi=[]
+#    yi=[]
+#    for i in range(len(x)):
+#        if (y[i]>1053) & (y[i]<2133) & (x[i]>0) & (x[i]<2070):
+#            imagettes.append(image[int(x[i])-n1:int(x[i]) +n1,int(y[i])-n2:int(y[i]) +n2])
+#            redshifti.append(redshift[i])
+#            sliti.append(slit[i])
+#            xi.append(x[i]);yi.append(y[i])
+    imagettes = [image[int(x)-n1:int(x) +n1,1500-n2:1500 +n2] for x,y in zip(x,y)]
+    
 
+    v1,v2 = int(len(x)/2+1),2
+    print('v1,v2=',v1,v2)
+    #fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
+    fig, axes = plt.subplots(v1, v2, figsize=(17,70))
+    fig.suptitle("Slits' spectra",y=1)
+    #xaxis = np.linspace(w-n2*(10./46), w+n2*(10./46), 2*n2)
+    xaxis = np.arange(1500-n2,1500+n2)
+    for i, ax in enumerate(axes.ravel()): 
+        try:
+            ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
+                    label = 'Slit: ' + slit[i] +'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(1500,x[i]))
+            ax.legend()
+            #ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
+            #ax.set_xticks([0,n/3,2*n/3,n,4*n/3,5*n/3,2*n]) # choose which x locations to have ticks
+            #ax.set_xticklabels(np.linspace(1e4*w-n*(10./46),1e4*w+n*(10./46),7,dtype=int))
+        except IndexError:
+            pass
+    fig.tight_layout()
+    ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
+    ScrollableWindow(fig)
+    print(len(imagettes))
+    return imagettes
 
 #createMultiImage(filename,continuum=False,w=0.20619)
 
@@ -3642,12 +3785,12 @@ def main():
             sys.exit()
     #
 
-#
-#    xpapoint = '7f000001:61517'
+
+#    xpapoint = '7f000001:64523'
 #    function = 'plot_spectra'#plot_spectra
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)   
-#    sys.argv.append('f2-202')
+#    sys.argv.append('f4-lya')
     #sys.argv.append('10.49-0.25')#16.45-0.15
 #d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
 #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
@@ -3659,7 +3802,7 @@ def main():
 
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
                     'throughfocus':DS9throughfocus, 'open':DS9open,
-                    'setup':DS9setup2,'Update':DS9Update,
+                    'setup':DS9setup2,'Update':DS9Update, 'plot_all_spectra':DS9plot_all_spectra,
                     'throughfocus_visualisation':DS9visualisation_throughfocus, 
                     'WCS':DS9guider, 'test':DS9tsuite, 'plot_spectra':DS9plot_spectra,
                     'photo_counting':DS9photo_counting, 'lya_multi_image':create_multiImage,
@@ -3679,7 +3822,7 @@ def main():
         """%(function)) 
 
 
-    DictFunction[function](xpapoint)             
+    a = DictFunction[function](xpapoint)             
 
 
 
@@ -3693,9 +3836,10 @@ def main():
 #    except Exception as e:
 #        print(e)
 #        pass
+    return a
    
 if __name__ == '__main__':
-    main()
+    a = main()
     
 #xpapoint='7f000001:57475'
 #d = DS9tsuite(xpapoint)
