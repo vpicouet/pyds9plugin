@@ -1829,7 +1829,7 @@ def create_multiImage_old(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     """
     from astropy.table import Table
     from astropy.io import fits
-    from Calibration.mapping import Mapping
+    from .mapping import Mapping
     line = sys.argv[3]#'f3 names'#sys.argv[3]
     print('Entry = ', line)
     line = line.lower()
@@ -2058,7 +2058,7 @@ class ScrollableWindow(QtWidgets.QMainWindow):
 
 def returnXY(line, w = 0.206):
     from astropy.table import Table
-    from Calibration.mapping import Mapping
+    from .mapping import Mapping
     line = line.lower()
     if '202' in line:
         w = 0.20255
