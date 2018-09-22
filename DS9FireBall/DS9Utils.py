@@ -2072,7 +2072,7 @@ def returnXY(line, w = 0.206):
 
     try:
         slit_dir = resource_filename('DS9FireBall', 'Slits')
-        Target_dir = resource_filename('DS9FireBall', 'Slits')
+        Target_dir = resource_filename('DS9FireBall', 'Targets')
         Mapping_dir = resource_filename('DS9FireBall', 'Mappings')
     except:
         slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
@@ -2101,13 +2101,10 @@ def returnXY(line, w = 0.206):
     mapping = Mapping(filename=mappingfile)
 
     try:
-        print('ok')#table = Table.read(csvfile)
-        try:
-            target_table = Table.read(targetfile, format='ascii')
-        except:
-            target_table = Table.read(targetfile, format='ascii', delimiter='\t')
-    except IOError:
-        print('No csv table found, Trying fits table')
+        target_table = Table.read(targetfile, format='ascii')
+    except:
+        target_table = Table.read(targetfile, format='ascii', delimiter='\t')
+
 #        try:
 ##            table = Table.read(filename[:-5] + '_table.fits')
 #            table = Table.read(csvfile)
@@ -2155,6 +2152,7 @@ def returnXY(line, w = 0.206):
     print(x[0],y[0])
     return x, y, redshift, slit, w    
 
+
 def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     """Plot spectra
     """
@@ -2189,28 +2187,33 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     v1,v2 = int(len(xi)/2+1),2
     print('v1,v2=',v1,v2)
     #fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
-    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70),sharey=True)
-    fig.suptitle('Spectra centered on given wavelength',y=1)
+    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70),sharey=True, sharex=True)
+    #fig.suptitle('Spectra centered on given wavelength',y=1)
     xaxis = np.linspace(w-n2*(10./46), w+n2*(10./46), 2*n2)
     if w==1215.67:
-        fig.suptitle('Spectra lambda-rest frame ',y=1)
+        lambda_frame = 'rest-frame'
     else:
-        fig.suptitle('Spectra observed lambda',y=1)
+        lambda_frame = 'observed-frame'
+    fig.suptitle('Spectra, lambda in ' + lambda_frame,y=1)
     for i, ax in enumerate(axes.ravel()[1:]): 
         try:
             ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
                     label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
             ax.legend()
+            ax.tick_params(labelbottom=True)
             #ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
             #ax.set_xticks([0,n/3,2*n/3,n,4*n/3,5*n/3,2*n]) # choose which x locations to have ticks
             #ax.set_xticklabels(np.linspace(1e4*w-n*(10./46),1e4*w+n*(10./46),7,dtype=int))
         except IndexError:
             pass
     stack = np.array(imagettes).mean(axis=0)
-    axes.ravel()[0].step(xaxis,stack.sum(axis=0),label = 'Stack',c='orange')  
-    axes.ravel()[0].legend()
+    ax = axes.ravel()[0]
+    ax.step(xaxis,stack.sum(axis=0),label = 'Stack',c='orange')  
+    ax.legend()
+    ax.tick_params(labelbottom=True)
+    for ax in axes[-1,:]:
+        ax.set_xlabel('Wavelength [A] ' + lambda_frame)
     fig.tight_layout()
-    ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
     ScrollableWindow(fig)
 
     return imagettes
@@ -2269,15 +2272,16 @@ def DS9plot_spectra_big_range(xpapoint, w=None, n=30, rapport=1.8, continuum=Fal
     v1,v2 = int(len(xi)/2+1),2
     print('v1,v2=',v1,v2)
     #fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
-    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70),sharey=True)
+    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70),sharex=True, sharey=True)
     
     xaxis = np.linspace(w-n2*x2w, w+n2*x2w, 2*n2)
     xinf = np.searchsorted(xaxis,lambdainf)
     xsup = np.searchsorted(xaxis,lambdasup)
     if w==1215.67:
-        fig.suptitle('Spectra lambda-rest frame ',y=1)
+        lambda_frame = 'rest-frame'
     else:
-        fig.suptitle('Spectra observed lambda',y=1)
+        lambda_frame = 'observed-frame'
+    fig.suptitle('Spectra, lambda in ' + lambda_frame,y=1)
     for i, ax in enumerate(axes.ravel()[1:len(imagettes)+1]): 
 #        ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
 #                label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshifti[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
@@ -2287,17 +2291,18 @@ def DS9plot_spectra_big_range(xpapoint, w=None, n=30, rapport=1.8, continuum=Fal
         ax.axvline(x=lambdainf[i],color='black',linestyle='dotted')
         #if (lambdasup[i]>xaxis[0]) & (lambdasup[i]<xaxis[-1]):
         ax.axvline(x=lambdasup[i],color='black',linestyle='dotted')
-        
-        
-        
         ax.legend()
         ax.set_xlim(xaxis[[0,-1]])
+        ax.tick_params(labelbottom=True)
     stack = np.array(imagettes).mean(axis=0)
-    axes.ravel()[0].step(xaxis,stack[:, ::-1].sum(axis=0),label = 'Stack',c='orange')  
-    axes.ravel()[0].legend()
-    axes.ravel()[0].set_xlim(xaxis[[0,-1]])
+    ax = axes.ravel()[0]
+    ax.step(xaxis,stack[:, ::-1].sum(axis=0),label = 'Stack',c='orange')  
+    ax.legend()
+    ax.set_xlim(xaxis[[0,-1]])
+    ax.tick_params(labelbottom=True)
+    for ax in axes[-1,:]:
+        ax.set_xlabel('Wavelength [A] ' + lambda_frame)
     fig.tight_layout()
-    ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
     ScrollableWindow(fig)
 
     return imagettes
@@ -2340,8 +2345,8 @@ def DS9plot_all_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     v1,v2 = int(len(redshift)/2+1),2
     print('v1,v2=',v1,v2)
     #fig, axes = plt.subplots(v1, v2, figsize=(18,50),sharex=True)
-    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70))
-    fig.suptitle("Slits' spectra",y=1)
+    fig, axes = plt.subplots(v1, v2, figsize=(12.8,70), sharex=True, sharey=True)
+    fig.suptitle("Spectra",y=1)
     #xaxis = np.linspace(w-n2*(10./46), w+n2*(10./46), 2*n2)
     xaxis = np.arange(1500-n2,1500+n2)
     print(len(imagettes),len(x),len(redshift))
@@ -2351,10 +2356,12 @@ def DS9plot_all_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
             ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
                     label = 'Slit: ' + slit[i] )#+'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(1500,x[i]))
             ax.legend()
+            ax.tick_params(labelbottom=True)
         except IndexError:
             pass
+    for ax in axes[-1,:]:
+        ax.set_xlabel('Wavelength [pixels] ({:.2f} A/pix)'.format(10./46))
     fig.tight_layout()
-    ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
     ScrollableWindow(fig)
     print(len(imagettes))
     return imagettes
