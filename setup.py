@@ -21,7 +21,7 @@ data = { "DS9FireBall": ["FireBall.ds9.ans", "Slits/*","Targets/*","Mappings/*"]
 
 setup(
     name='DS9FireBall',
-    version='1.0dev',
+    version='1.1dev',
     license='Creative Commons Attribution-Noncommercial-Share Alike license',
     install_requires = requires,
     packages = find_packages(),
