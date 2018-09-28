@@ -143,7 +143,7 @@ def DS9setup(xpapoint, filename=None, Internet=False, smooth=2,
         Type = 'detector'
     print (Type)   
     if Type == 'guider':
-        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,1),
+        d.set("scale limits {} {} ".format(np.nanpercentile(fitsimage[0].data,1),
               np.percentile(fitsimage[0].data,99.4)))
         d.set("rotate 0") 
         try:
@@ -158,8 +158,8 @@ def DS9setup(xpapoint, filename=None, Internet=False, smooth=2,
         d.set("file {}".format(filename))            
         d.set("grid no") 
         d.set("rotate %0.2f"%(rot)) 
-        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
-              np.percentile(fitsimage[0].data,99.6)))
+        d.set("scale limits {} {} ".format(np.nanpercentile(fitsimage[0].data,9),
+              np.nanpercentile(fitsimage[0].data,99.6)))
         d.set("lock frame physical")
         d.set("lock scalelimits yes") 
     if regions:
@@ -244,8 +244,8 @@ def DS9setup2(xpapoint):
         d.set("grid no") 
 #        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
 #              np.percentile(fitsimage[0].data,99.6)))
-        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,50),
-              np.percentile(fitsimage[0].data,99.95)))
+        d.set("scale limits {} {} ".format(np.nanpercentile(fitsimage[0].data,50),
+              np.nanpercentile(fitsimage[0].data,99.95)))
         d.set("scale asinh")
         d.set("cmap bb")
 #        d.set("smooth yes")
@@ -1635,7 +1635,7 @@ def plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
         axes = plt.gca()
         axes.set_ylim([0,np.log10(n_bias) +0.1])
         a = np.isfinite(n_log)
-        axes.set_xlim((np.percentile(bin_center[a],0.1),np.percentile(bin_center[a],80)))#([10**4,10**4.3])    
+        axes.set_xlim((np.nanpercentile(bin_center[a],0.1),np.nanpercentile(bin_center[a],80)))#([10**4,10**4.3])    
         #fn =  directory + 'figures/'
         #fig_dir = os.path.dirname(fn) 
         #print(fn)
@@ -2197,8 +2197,8 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     fig.suptitle('Spectra, lambda in ' + lambda_frame,y=1)
     for i, ax in enumerate(axes.ravel()[1:]): 
         try:
-            ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
-                    label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
+            ax.step(xaxis,imagettes[i][:, ::-1].mean(axis=0),
+                    label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshifti[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
             ax.legend()
             ax.tick_params(labelbottom=True)
             #ax.set_xlabel('Wavelength [A] \n(boxes are 60pix wide)')
@@ -2208,14 +2208,20 @@ def DS9plot_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
             pass
     stack = np.array(imagettes).mean(axis=0)
     ax = axes.ravel()[0]
-    ax.step(xaxis,stack.sum(axis=0),label = 'Stack',c='orange')  
+    ax.step(xaxis,stack.mean(axis=0),label = 'Stack',c='orange')  
     ax.legend()
     ax.tick_params(labelbottom=True)
+    print (xaxis)
+    print(imagettes[-1][:, ::-1].mean(axis=0))
+    a = np.array([xaxis,imagettes[-1][:, ::-1].mean(axis=0)])
+    print(repr(a))
     for ax in axes[-1,:]:
         ax.set_xlabel('Wavelength [A] ' + lambda_frame)
     fig.tight_layout()
-    ScrollableWindow(fig)
-
+    try:
+        ScrollableWindow(fig)
+    except:
+        print ('Impossible to run ScrollableWindow')
     return imagettes
 
 
@@ -2285,7 +2291,7 @@ def DS9plot_spectra_big_range(xpapoint, w=None, n=30, rapport=1.8, continuum=Fal
     for i, ax in enumerate(axes.ravel()[1:len(imagettes)+1]): 
 #        ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
 #                label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshifti[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
-        ax.step(xaxis[xinf[i]:xsup[i]],imagettes[i][:, ::-1].sum(axis=0)[xinf[i]:xsup[i]],
+        ax.step(xaxis[xinf[i]:xsup[i]],imagettes[i][:, ::-1].mean(axis=0)[xinf[i]:xsup[i]],
                 label = 'Slit: ' + sliti[i] +'\nz = %0.2f'%(redshifti[i])+'\nx,y = %i - %i'%(yi[i],xi[i]))
         #if (lambdainf[i]>xaxis[0]) & (lambdainf[i]<xaxis[-1]):
         ax.axvline(x=lambdainf[i],color='black',linestyle='dotted')
@@ -2296,15 +2302,17 @@ def DS9plot_spectra_big_range(xpapoint, w=None, n=30, rapport=1.8, continuum=Fal
         ax.tick_params(labelbottom=True)
     stack = np.array(imagettes).mean(axis=0)
     ax = axes.ravel()[0]
-    ax.step(xaxis,stack[:, ::-1].sum(axis=0),label = 'Stack',c='orange')  
+    ax.step(xaxis,stack[:, ::-1].mean(axis=0),label = 'Stack',c='orange')  
     ax.legend()
     ax.set_xlim(xaxis[[0,-1]])
     ax.tick_params(labelbottom=True)
     for ax in axes[-1,:]:
         ax.set_xlabel('Wavelength [A] ' + lambda_frame)
     fig.tight_layout()
-    ScrollableWindow(fig)
-
+    try:
+        ScrollableWindow(fig)
+    except:
+        print ('Impossible to run ScrollableWindow')
     return imagettes
 
 
@@ -2353,7 +2361,7 @@ def DS9plot_all_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     for i, ax in enumerate(axes.ravel()): 
         try:
             #print(i)
-            ax.step(xaxis,imagettes[i][:, ::-1].sum(axis=0),
+            ax.step(xaxis,imagettes[i][:, ::-1].mean(axis=0),
                     label = 'Slit: ' + slit[i] )#+'\nz = %0.2f'%(redshift[i])+'\nx,y = %i - %i'%(1500,x[i]))
             ax.legend()
             ax.tick_params(labelbottom=True)
@@ -2362,7 +2370,10 @@ def DS9plot_all_spectra(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     for ax in axes[-1,:]:
         ax.set_xlabel('Wavelength [pixels] ({:.2f} A/pix)'.format(10./46))
     fig.tight_layout()
-    ScrollableWindow(fig)
+    try:
+        ScrollableWindow(fig)
+    except:
+        print ('Impossible to run ScrollableWindow')    
     print(len(imagettes))
     return imagettes
 
@@ -2554,11 +2565,11 @@ def Field_regions(xpapoint, mask=''):
     #d.set("regions system image")
     path = d.get("file")
     ImageName = os.path.basename(path)
-    if ImageName[:5].lower() == 'image':
+    if (ImageName[:5].lower() == 'image') or (ImageName[:5]== 'Stack'):
         Type = 'detector'
-    if ImageName[:5].lower() == 'stack':
+    if ImageName[:5] == 'stack':
         Type = 'guider'
-        
+    print ('Type = ', Type)
     try:
         slit_dir = resource_filename('DS9FireBall', 'Slits')
     except:
@@ -2642,7 +2653,7 @@ def Field_regions(xpapoint, mask=''):
 #                    print(line)
             header = fits.open(path)[0].header
             pa = int(header['ROTENC'])
-            DS9
+            #DS9
             print('Position angle = ',pa)
             if (pa>117) & (pa<121):
                 name1 = os.path.join(slit_dir, 'GSF1.reg')
@@ -3108,7 +3119,7 @@ def DS9snr(xpapoint):
         maskBackground = (r >= n1 * region.r) & (r <= n2 * region.r)
     else:
         print('Need to be a circular region')
-    signal_max = np.percentile(signal,95)
+    signal_max = np.nanpercentile(signal,95)
     noise = np.sqrt(np.nanvar(image[maskBackground]))
     background = np.nanmean(image[maskBackground])
     SNR = (signal_max - background) / noise
@@ -3568,9 +3579,186 @@ def calc_emgainGillian(image, area):
         plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,ygaussfit,n_bias,n_log,threshold0,threshold55)
 
         return (emgain,bias,sigma,frac_lost)
+def create_DS9regions(xim, yim, radius=20, save=True, savename="test", form=['circle'], color=['green'], ID=None):#of boxe
+    """Returns and possibly save DS9 region (circles) around sources with a given radius
+    """
+    
+    regions = """# Region file format: DS9 version 4.1
+global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+image
+"""
+    r = radius    
+    for i in range(len(xim)):
+        if form[i] == 'box':
+            rest = '{:.2f},{:.2f})'.format(600, r)
+        elif form[i]=='circle':
+            rest = '{:.2f})'.format(r)
+        elif form[i] == 'bpanda':
+            rest = '0,360,4,0.1,0.1,{:.2f},{:.2f},1,0)'.format(r, 2*r)
+        elif form[i] == 'annulus':
+            rtab = np.linspace(0, r, 10)
+            rest = '{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f})'.format(*list(rtab))  
+        rest += ' # color={}'.format(color[i])
+        for j, (x, y) in enumerate(np.nditer([xim[i], yim[i]])):
+            regions += '{}({:f},{:f},'.format(form[i], x+1, y+1) + rest
+            if ID is not None:
+                regions += ' text={{{}}}'.format(ID[i][j])
+            regions +=  '\n'   
+
+    if save:
+        with open(savename+'.reg', "w") as text_file:
+            text_file.write(regions)        
+        print(('region file saved at: ' +  savename + '.reg'))
+        return 
 
 
+def DS9removeCRtails2(xpapoint,filen=None):
+        from astropy.io import fits
+        if filen is None:
+            d=DS9(xpapoint)
+            data_dir = d.get('file')
+            filename,area = d.get('file'),[0,-1,0,-1]#0#indata
+        else:
+            filename,area = filen,[0,-1,0,-1]#0#indata
+        fitsimage =  fits.open(filename)[0] 
+        image = fitsimage.data
+        cosmicRays = detectCosmics(image)
+        cosmicRays = delete_doublons_CR(cosmicRays,dist=3)
+        cosmicRays = assign_CR(cosmicRays,dist=50)
+#        plot(cosmicRays[cosmicRays['id']==-1]['xcentroid'],cosmicRays[cosmicRays['id']==-1]['ycentroid'],'.')
+        cosmicRays = Determine_front(cosmicRays)
+        a=cosmicRays[cosmicRays['front']==1]
+            
 
+        create_DS9regions([list(a['xcentroid'])],[list(a['ycentroid'])], form=['circle'], radius=10, save=True, 
+                   savename='/tmp/cr', color = ['yellow'],ID=None)
+        if filen is None:    
+            d.set('region delete all')
+            d.set('region {}'.format('/tmp/cr.reg'))
+        maskedimage = MaskCosmicRays(image, cosmics=cosmicRays,all=False, cols=1)
+#        for run in range(3):
+#            cosmicRays = detectCosmics(maskedimage)
+#            cosmicRays= delete_doublons_CR(cosmicRays,dist=1.1) 
+#            maskedimage = MaskCosmicRays(maskedimage, cosmics=cosmicRays,cols=None)
+        fitsimage.data = maskedimage
+        if 'NAXIS3' in fitsimage.header:
+            fitsimage.header.remove('NAXIS3') 
+        name = os.path.dirname(filename)+'/'+os.path.basename(filename)[:-5]+'.CRv.fits'
+        fitsimage.header['N_CR'] = cosmicRays['id'].max()
+        fitsimage.header['MASK'] = len(np.where(maskedimage==np.nan)[0])
+        fitsimage.writeto(name,overwrite=True)
+        print('File saved : ',name)
+        #fitsimage.writeto('/Users/Vincent/test.fits',overwrite=True)
+        if filen is None:    
+            d.set('frame new')
+            d.set('tile yes')
+            d.set('lock frame physical')
+            d.set('file ' + name)
+        return 
+            #vpicouet
+        
+def detectCosmics(image,T=2*1e4):
+    from astropy.table import Table
+    y,x = np.where(image>T)
+    cosmicRays = Table([x,y],names=('xcentroid','ycentroid'))
+    print(len(cosmicRays), ' Comsic rays detected, youpi!')
+    return cosmicRays
+
+def delete_doublons_CR(sources, dist=4):
+    """Function that delete doublons detected in a table, 
+    the initial table and the minimal distance must be specifies
+    """
+    sources['doublons']=0
+    for i in range(len(sources)):
+        a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) >= dist
+        #a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
+        #a = distance2(sources[sources['doublons']==0]['xcentroid','ycentroid'],sources['xcentroid','ycentroid'][i]) > dist
+        a = list(1*a)
+        a.remove(0)
+        if np.mean(a)<1:
+            sources['doublons'][i]=1
+    #y, x = np.indices((image.shape))
+    #mask1 = (sources['xcentroid']<1053) 
+    #mask2 = (sources['xcentroid']>2133)
+    #sources['doublons'][~mask1]=1
+    #sources['doublons'][~mask2]=1
+    print(len(sources[sources['doublons']==0]), ' Comsic rays detected, youpi!')
+    return sources
+
+def assign_CR(sources, dist=7):
+    sources['id'] = -1
+    groups = sources[sources['doublons']==0]
+    for i, cr in enumerate(groups):
+        x,y = cr['xcentroid'],cr['ycentroid']
+        index = (sources['xcentroid']>x-dist) & (sources['xcentroid']<x+dist) & (sources['ycentroid']>y-dist) & (sources['ycentroid']<y+dist)
+        sources['id'][index]=i
+    return sources
+#plot(sources[sources['id']==-1]['xcentroid'],sources[sources['id']==-1]['ycentroid'],'.')          
+def delete_doublons_CR1(sources, dist=10):
+    """Function that delete doublons detected in a table, 
+    the initial table and the minimal distance must be specifies
+    """
+    sources['doublons']=0
+    for i in range(len(sources)):
+        a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
+        #a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
+        #a = distance2(sources[sources['doublons']==0]['xcentroid','ycentroid'],sources['xcentroid','ycentroid'][i]) > dist
+        a = list(1*a)
+        a.remove(0)
+        if np.mean(a)<1:
+            sources['doublons'][i]=1
+    y, x = np.indices((image.shape))
+    #mask1 = (sources['xcentroid']<1053) 
+    #mask2 = (sources['xcentroid']>2133)
+    #sources['doublons'][~mask1]=1
+    #sources['doublons'][~mask2]=1
+    print(len(sources[sources['doublons']==0]), ' Comsic rays detected, youpi!')
+    return sources
+
+def Determine_front(sources):
+    """Function that delete doublons detected in a table, 
+    the initial table and the minimal distance must be specifies
+    """
+    sources['front'] = 0
+    a = sources[sources['doublons']==0]
+    for id in range(len(a)):
+        print('Id = ',id)
+        index = sources['id']==id
+        print('Number of high value pixel in cosmic: ', len(sources[index]))
+        for pixel in sources[index]:
+            x, y = pixel['xcentroid'], pixel['ycentroid']
+            line = sources['ycentroid']==y
+            frontmask = index & line  & (sources['xcentroid']==sources[line&index]['xcentroid'].max())
+            sources['front'][frontmask]=1
+            #sources[frontmask]#=1
+        print('Front pixels: ', sources[sources['id']==id]['front'].sum())
+    print(len(sources[sources['front']==1]), ' Front Comsic ray pixels detected, youpi!')
+    return sources
+
+def MaskCosmicRays(image, cosmics,cols=None,all=False):
+    #subimage = image[:,1053:2133]
+    #threshold = subimage.mean() + 1 * subimage.std()
+    #mask_high_values = image > threshold
+    y, x = np.indices((image.shape))
+    image = image.astype(float)
+    if all is False:   
+        cosmics = cosmics[cosmics['front']==1]
+    if cols is None:
+        for i, cosmic in enumerate(cosmics):#range(len(cosmics)):
+            print(i)
+            image[(y==cosmic['ycentroid']) & (x<cosmic['xcentroid']+4) & (x>-200 + cosmic['xcentroid'])] = np.nan
+    else:
+        for i, cosmic in enumerate(cosmics):#range(len(cosmics)):
+            print(i)
+            image[(y>cosmic['ycentroid']-cols-0.1) & (y<cosmic['ycentroid']+cols+0.1) & (x<cosmic['xcentroid']+4) & (x>-200 + cosmic['xcentroid'])] = np.nan
+        
+    return image
+
+def distance(x1,y1,x2,y2):
+    """
+    Compute distance between 2 points in an euclidian 2D space
+    """
+    return np.sqrt(np.square(x1-x2)+np.square(y1-y2))
 
 def DS9removeCRtails(xpapoint):
         from astropy.io import fits
@@ -3884,11 +4072,11 @@ def main():
     #
 
     
-#    xpapoint = '7f000001:50830'
-#    function = 'plot_spectra'#'plot_spectra_big_range'#'plot_spectra_big_range'#plot_spectra
+#    xpapoint = '7f000001:50352'
+#    function = 'Remove_Cosmics'#'plot_spectra_big_range'#'plot_spectra_big_range'#plot_spectra
 #    sys.argv.append(xpapoint)
 #    sys.argv.append(function)   
-#    sys.argv.append('f3-202')#202')
+#    sys.argv.append('f2-lya')#202')
 #    sys.argv.append('10.49-0.25')#16.45-0.15
 #d.set('contour save /Users/Vincent/Documents/FireBallPipe/Calibration/F4.ctr image')
 #d.set('contour load /Users/Vincent/Documents/FireBallPipe/Calibration/F2.ctr')
@@ -3908,7 +4096,7 @@ def main():
                     'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
                     'snr': DS9snr, 'focus': DS9focus,'inverse': DS9inverse,
                     'throughuslit': DS9throughslit, 'meanvar': DS9meanvar,
-                    'xy_calib': DS9XYAnalysis,'Remove_Cosmics': DS9removeCRtails}
+                    'xy_calib': DS9XYAnalysis,'Remove_Cosmics': DS9removeCRtails2}
 #    try:
     xpapoint = sys.argv[1]
     function = sys.argv[2]
