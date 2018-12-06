@@ -11,12 +11,17 @@ import timeit
 import glob
 import os
 import  sys
-import json
+#import json
 import numpy as np
 from pyds9 import DS9
 import datetime
 from  pkg_resources  import resource_filename
-
+try:
+    import IPython.core.ultratb
+except ImportError:
+    pass
+else:
+    sys.excepthook = IPython.core.ultratb.ColorTB()
 
 
 
@@ -70,14 +75,15 @@ def CreateWCS(PathExec, filename, Newfilename):
     Processing might take a few minutes
     """
     import subprocess
-    print(filename)
+    print(filename, Newfilename)
+    print(os.path.dirname(filename) + "/--wait.fits")
     start = timeit.default_timer()
     print('''\n\n\n\n      Start lost in space algorithm - might take a few minutes \n\n\n\n''')
-    subprocess.check_output("python " + PathExec + " --apikey apfqmasixxbqxngm --newfits --wait --upload " + filename,shell=True)
-    try:
-        os.rename(os.path.dirname(PathExec) + "/--wait", Newfilename)
-    except OSError:
-        os.rename(os.path.dirname(PathExec) + "/--wait.fits", Newfilename)
+    subprocess.check_output("python " + PathExec + " --apikey apfqmasixxbqxngm --newfits " + Newfilename + " --upload " + filename,shell=True)
+#    try:
+#        os.rename(os.path.dirname(PathExec) + "/--wait", Newfilename)
+#    except OSError:
+#        os.rename(os.path.dirname(PathExec) + "/--wait.fits", Newfilename)
     stop = timeit.default_timer()
     print('File created')
     print('Lost in space duration = {} seconds'.format(stop-start))
@@ -96,29 +102,41 @@ def DS9setup2(xpapoint):
     d = DS9(xpapoint)#DS9(xpapoint)
     filename = d.get("file")
     fitsimage = fits.open(filename)
-    if d.get("lock bin") == 'no':
-        d.set("grid no") 
+#    if d.get("lock bin") == 'no':
+    d.set("grid no") 
 #        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
 #              np.percentile(fitsimage[0].data,99.6)))
-        d.set("scale limits {} {} ".format(np.nanpercentile(fitsimage[0].data,50),
-              np.nanpercentile(fitsimage[0].data,99.95)))
-        d.set("scale asinh")
-        d.set("cmap bb")
+    d.set("scale limits {} {} ".format(np.nanpercentile(fitsimage[0].data,50),
+          np.nanpercentile(fitsimage[0].data,99.95)))
+    d.set("scale asinh")
+    d.set("cmap bb")
 #        d.set("smooth yes")
-        #sd.set("cmap Cubehelix0")
+#        d.set("cmap Cubehelix0")
 #        d.set("smooth radius {}".format(2))
 #        d.set("smooth yes")
-        d.set("lock bin yes")
-    elif d.get("lock bin") == 'yes':
-        #d.set("regions delete all")
-        d.set("cmap grey")
-        d.set("scale linear")
-        d.set("scale mode minmax")
-        d.set("grid no")
-        d.set("smooth no")
-        d.set("lock bin no")
+    d.set("lock bin yes")
+#    elif d.get("lock bin") == 'yes':
+#       
+#        d.set("cmap grey") #d.set("regions delete all")
+#        d.set("scale linear")
+#        d.set("scale mode minmax")
+#        d.set("grid no")
+#        d.set("smooth no")
+#        d.set("lock bin no")
     return filename
 
+
+def DS9originalSettings(xpapoint):
+    """DS9 original settings
+    """
+    d = DS9(xpapoint)
+    d.set("cmap grey") #d.set("regions delete all")
+    d.set("scale linear")
+    d.set("scale mode minmax")
+    d.set("grid no")
+    d.set("smooth no")
+    d.set("lock bin no")
+    return d
 
 
 def parse_data(data, nan=np.nan, map=map, float=float):
@@ -960,6 +978,10 @@ def DS9throughfocus(xpapoint):
 
     return 
 
+def hasNumbers(inputString):
+    """Tcheck if number in the string
+    """
+    return any(char.isdigit() for char in inputString)
 
 def DS9rp(xpapoint):
     """How to use: Click on region and select Circle shape (default one). Then click precisely on what you think is
@@ -974,30 +996,46 @@ def DS9rp(xpapoint):
     """
     from astropy.io import fits
     import matplotlib.pyplot as plt
+    import re
     d = DS9(xpapoint)#DS9(xpapoint)
     try:
-        fibersize = sys.argv[3]
+        entry = sys.argv[3]
     except IndexError:
-        print('No fibersize, Using point source object')
+        entry = ''
+    
+    if hasNumbers(entry):
+        fibersize = float(re.findall(r'\d+','456')[0])
+    else:
         fibersize = 0
-    if fibersize == '':
-        fibersize = 0
+
+#    try:
+#        fibersize = entry
+#    except IndexError:
+#        print('No fibersize, Using point source object')
+#        fibersize = 0
+#    if fibersize == '':
+#        fibersize = 0
     #fibersize = 1
     filename = d.get("file ")
     a = getregion(d)
     fitsfile = fits.open(filename)[0]
+    if 'b' in entry.lower():
+        center_type = 'barycentre'
+    if 'm' in entry.lower():
+        center_type = 'maximum'        
+    else:
+        center_type = None
+    center_type
     spot = DS9plot_rp_convolved(data=fitsfile.data,
                                 center = [np.int(a.xc),np.int(a.yc)],
-                                fibersize=fibersize)    
+                                fibersize=fibersize, center_type=center_type)    
     try:
         plt.title('{} - {} - {}'.format(os.path.basename(filename),[np.int(a.xc),np.int(a.yc)],fitsfile.header['DATE']),y=0.99)
     except KeyError:
         print('No date in header')
         
-    #plt.savefig(os.path.basename(filename),[np))
     plt.show()
-    #d.set('regions delete select')
-    d.set('regions command "circle %0.3f %0.3f %0.3f # color=red"' % (spot['Center'][0]+1,spot['Center'][1]+1,10))#testvincent
+    d.set('regions command "circle %0.3f %0.3f %0.3f # color=red"' % (spot['Center'][0]+1,spot['Center'][1]+1,40))#testvincent
     return
 
 
@@ -1122,11 +1160,11 @@ def DS9open(xpapoint, filename=None):
         d.set('frame new')
         d.set("file {}".format(filename))#a = OpenFile(xpaname,filename = filename)
     else:
-        print('File not found, please verify your path')
+        print(bcolors.BLACK_RED + 'File not found, please verify your path' + bcolors.end)
         sys.exit()
     return
 
-def Charge_path(xpapoint):
+def Charge_path(xpapoint, entry_point = 3):
     """From the entry gave in DS9 (either nothing numbers or beginning-end),
     reuturns the path of the images to take into account in the asked analysis
     """
@@ -1161,18 +1199,25 @@ def Charge_path(xpapoint):
     print ('Type = {}'.format(Type))
     
     try:
-        entry = sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
+        entry = sys.argv[entry_point]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
         print('Entry 1 = ', entry)
-    except:
+    except IndexError:
         n1=''
         n2='' 
         numbers = ['']
         entry = ''
+    if entry == 'all':
+        path = glob.glob(os.path.dirname(filename) + '/*.fits')
+        print(path)
+        return path
     numbers = entry.split('-')
 #    if numbers in None:
 #        pass
     if len(numbers) == 1:
-        numbers = None
+        try:
+            numbers = int(numbers[0])#None
+        except ValueError:
+            numbers = None
     elif len(numbers) == 2:
         n1, n2 = entry.split('-')
         n1, n2 = int(n1), int(n2)
@@ -1182,16 +1227,19 @@ def Charge_path(xpapoint):
     
     path = []
     if Type == 'detector':
-        if numbers is not None:
-            print('Specified numbers are integers, opening corresponding files ...')
-            for number in numbers:
-                #path = os.path.dirname(filename) + '/image%06d.fits' % (number)
-                path.append(os.path.dirname(filename) + '/image%06d.fits' % (int(number)))
-               # x = np.arange(n1,n2+1)
         if numbers is None:
             print('Not numbers, taking all the .fits images from the current repository')
-            path = glob.glob(os.path.dirname(filename) + '/image*.fits')
-            #x = np.arange(len(path))
+            #path = glob.glob(os.path.dirname(filename) + '/image*.fits')
+            path = [filename]
+        elif type(numbers) == int:
+            print('Single number given, using this image.')
+            #path = glob.glob(os.path.dirname(filename) + '/image*.fits')
+            path = [os.path.dirname(filename) + '/%s%06d%s' % (os.path.basename(filename)[:5],int(numbers),os.path.basename(filename)[11:])]
+        elif numbers is not None:
+            print('Specified numbers are integers, opening corresponding files ...')
+            for number in numbers:
+                path.append(os.path.dirname(filename) + '/%s%06d%s' % (os.path.basename(filename)[:5],int(number),os.path.basename(filename)[11:]))
+
     
     if Type == 'guider':
         files = glob.glob(os.path.dirname(filename) + '/stack*.fits')
@@ -1207,10 +1255,14 @@ def Charge_path(xpapoint):
         map
         if numbers is None:
             print('Not numbers, taking all the .fits images from the current repository')
-            path = glob.glob(os.path.dirname(filename) + '/stack*.fits')
+            #path = glob.glob(os.path.dirname(filename) + '/stack*.fits')
+            path = [os.path.dirname(filename) + '/%s%06d%s' % (os.path.basename(filename)[:5],int(number),os.path.basename(filename)[11:])]
+        elif type(numbers) == int:
+            print('Only one number given, running analysis on this image')
+            #path = glob.glob(os.path.dirname(filename) + '/stack*.fits')
+            path = [filename]
         elif len(numbers) == 2:
             print('Two numbers given, opening files in range ...')
-            #print(np.arange(n1,n2+1))
             path = []
             for i, im_number in enumerate(im_numbers):
                 print('ok',n1,n2,im_number)
@@ -1222,8 +1274,6 @@ def Charge_path(xpapoint):
             print('More than 2 numbers given, opening the corresponding files ...')
             path = []
             numbers = [int(number) for number in numbers]
-            #print (im_numbers)
-            #print (numbers)
             for i, im_number in enumerate(im_numbers):
                 if im_number in numbers:
                     path.append(files[i])
@@ -1264,214 +1314,177 @@ def DS9visualisation_throughfocus(xpapoint):
 
 
 def plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
-               ygaussfit,n_bias,n_log,threshold0,threshold55,exposure, gain,
-               temp, plot_flag=False):    
+               ygaussfit,n_bias,n_log,threshold0,threshold55,exposure, gain,temp, 
+               plot_flag=False, ax=None):    
     """Plot the log histogram of the image used to apply thresholding photocounting
     process
     """
     import matplotlib.pyplot as plt
-    #plt.close("all")
-    #plt.clf()
-    fig = plt.figure(figsize=(12,4.5))
-    fig.add_subplot(111)
-    #plt.rc('text', usetex=True)
-    #plt.rc('font',**{'family':'sans-serif', 'sans-serif':['Times']})
-    plt.xlabel("Pixel Value [ADU]",fontsize=15)
-    plt.ylabel("Log10(\# Pixels)",fontsize=15)
-    #plt.axis([0,np.max(n_log),0,bins[bins.size-1]])
-    fig = plt.plot(bin_center, n_log, "rx", label="Histogram")
-    fig = plt.plot(xgaussfit,np.log10(ygaussfit), "b-", label="Gaussian")
-    fig = plt.plot(np.ones(len(n_log))*threshold0,n_log, "b--", label="Bias")
-    fig = plt.plot(np.ones(len(n_log))*threshold55, n_log, "k--", label="5.5 Sigma")
-    fig = plt.plot(xlinefit,ylinefit, "g--", label="EM gain fit")
-    plt.figtext(.43, .70, 'Bias value = %0.3f DN\nSigma = %0.3f DN\n '
-                'EM gain = %0.3f e/e' % (bias, sigma, emgain),
-                fontsize=15,bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
-    print(temp)
-    plt.figtext(.72, .30, 'Exposure = %i sec\nGain = %i \n '
-                'T det = %0.2f C' % (exposure, gain, float(temp)),
-                fontsize=15,bbox={'facecolor':'blue', 'alpha':0.5, 'pad':10})
-    plt.legend(loc="upper right",fontsize=15)   
-    plt.grid(b=True, which='major', color='0.75', linestyle='--')
-    plt.grid(b=True, which='minor', color='0.75', linestyle='--')
-    plt.tick_params(axis='x', labelsize=13)
-    plt.tick_params(axis='y', labelsize=13)
-    axes = plt.gca()
-    axes.set_ylim([0,np.log10(n_bias) +0.1])
-    a = np.isfinite(n_log)
-    axes.set_xlim((np.nanpercentile(bin_center[a],0.1),np.nanpercentile(bin_center[a],80)))#([10**4,10**4.3])    
-    plt.title(os.path.basename(image))
-    if not os.path.exists(os.path.dirname(image) +'/Histograms'):
-        os.makedirs(os.path.dirname(image) +'/Histograms')
-    plt.savefig(os.path.dirname(image) +'/Histograms/'+ os.path.basename(image).replace('.fits', '.hist.png'), dpi = 100, bbox_inches = 'tight')
-    if plot_flag:    
-        plt.show()
-    return
-
-def calc_emgain(image, area,plot_flag=True):
-    """Compute biais, RON and EM-gain to apply photo-counting thresholding process
-    """  
-    img_data = image
-    ysize, xsize = img_data.shape  
-    img_section = img_data[area[0]:area[1], area[2]:area[3]]
-    #stddev = np.std(img_data[area[0]:area[1], area[2]:area[3]])	
-    #img_size = img_section.size 
-    nbins = 1000
-    readnoise = 60
-    gain=1.78#1.3 gillian FS 2018 august
-
-	# Histogram of the pixel values
+    from  scipy import stats
+    if ax is None:
+        fig = plt.figure(figsize=(12,4.5))
+        ax = fig.add_subplot(111)
+        save = True
+    ax.set_xlabel("Pixel Value [ADU]",fontsize=12)
+    ax.set_ylabel("Log10(\# Pixels)",fontsize=12)
+    ax.plot(bin_center, n_log, "rx", label="Histogram")
+    ax.plot(xgaussfit,np.log10(ygaussfit), "b-", label="Gaussian")
+    ax.plot(np.ones(len(n_log))*threshold0,n_log, "b--", label="Bias")
+    ax.plot(np.ones(2) * xlinefit.min(), [0.8 * ylinefit.max(), 1.2 * ylinefit.max()], "k--", label="5.5 Sigma")
+    ax.plot(np.ones(2) * xlinefit.max(), [0.8 * ylinefit.min(), 1.2 * ylinefit.min()], "k--")
+    for k in [1,3,5,10]:
+        ax.plot(np.ones(2) * (bias + k * sigma), [0,1], "k--")
+        
+        flux = np.sum(10**(n_log[(bin_center > bias + k * sigma) & (np.isfinite(n_log))])) / np.sum(10**(n_log[np.isfinite(n_log)])) 
+        ax.text(bias + k * sigma,1.1, 'k=%i \nRONpc=%0.1f \nF=%0.3fe-/p '%(k, 200*(1-stats.norm(0, 1).cdf(k)),flux),
+                fontsize=8)
+        
+    #ax.plot(np.ones(len(n_log))*threshold55, n_log, "k--", label="5.5 Sigma")
+    ax.plot(xlinefit,ylinefit, "g--", label="EM gain fit")
+    ax.text(.65, .75, 'Bias value = %0.3f DN\nSigma = %0.3f DN\n '
+                'EM gain = %0.3f e/e' % (bias, sigma, emgain),transform=ax.transAxes,
+                fontsize=10,bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
+    ax.text(.83, .45, 'Exposure = %i sec\nGain = %i \n '
+                'T det = %0.2f C' % (exposure, gain, float(temp)),transform=ax.transAxes,
+                fontsize=10,bbox={'facecolor':'blue', 'alpha':0.5, 'pad':10})
+    ax.legend(loc="upper right",fontsize=12)   
+    ax.grid(b=True, which='major', color='0.75', linestyle='--')
+    ax.grid(b=True, which='minor', color='0.75', linestyle='--')
+    ax.tick_params(axis='x', labelsize=13)
+    ax.tick_params(axis='y', labelsize=13)
+    ax.set_ylim([0,np.log10(n_bias) +0.1])
+#    ax.set_xlim((-1000,10000))
+    ax.set_xlim((bias - 10 * sigma, bias + 50 * sigma))
+    #a = np.isfinite(n_log)
+    #ax.set_xlim((np.nanpercentile(bin_center[a],0.1),np.nanpercentile(bin_center[a],80)))#([10**4,10**4.3])    
+    #ax.set_xlim((bias - 10 * sigma, bias + 100 * sigma))#([10**4,10**4.3]) 
     
-    n, bins = np.histogram(np.array(img_section)[np.isfinite(np.array(img_section))], bins=nbins)
-    bin_center = 0.5 * (bins[:-1] + bins[1:])#center of each bin
-    #y0 = np.min(n)		
-    n_log = np.log10(n)	
-    # What is the mean bias value?
-    idx = np.where(n == n.max())
-    bias = bin_center[idx][0]
-    n_bias = n[idx][0]  #number of pixels with this value of pixel
-    
-    # Range of data in which to fit the Gaussian to calculate sigma before -1.5 and 2.5
-    bias_lower = bias - float(1.5) * readnoise #if you get an error this value will need adjusting
-    bias_upper = bias + float(2.5) * readnoise #if you get an error this value will need adjusting
-    #print (bias_lower,bias_upper, readnoise, bias)
-    #print (bin_center)
-    idx_lower = np.where(bin_center >= bias_lower)[0][0]
-    #print (idx_lower)
-    idx_upper = np.where(bin_center >= bias_upper)[0][0]
+    if save:
+        if not os.path.exists(os.path.dirname(image) +'/Histograms'):
+            os.makedirs(os.path.dirname(image) +'/Histograms')
+        plt.savefig(os.path.dirname(image) +'/Histograms/'+ os.path.basename(image).replace('.fits', '.hist.png'), dpi = 100, bbox_inches = 'tight')
 
-#   gauss_range = np.where(bin_center >= bias_lower)[0][0] ne sert a rien je crois
-    
-    valid_idx = np.where(n[idx_lower:idx_upper] > 0)
+    return n_log, bin_center 
 
-    amp, x0, sigma = gaussianFit(bin_center[idx_lower:idx_upper][valid_idx], 
-                                 n[idx_lower:idx_upper][valid_idx], [n_bias, bias, readnoise])
-            
-    #plt.figure()
-    #plt.plot(bin_center[idx_lower:idx_upper], n[idx_lower:idx_upper], 'r.')
-    #plt.show()
 
-    # Fitted frequency values
-    xgaussfit = np.linspace(bin_center[idx_lower], bin_center[idx_upper], 1000)
-    #print xgaussfit
-    ygaussfit = gaussian(xgaussfit, amp, x0, sigma)
-    #print ygaussfit
-
-    # Define index of "linear" part of the curve: before 10 and 50
-    threshold_min = bias + (float(8.0) * sigma) #lower limit to fit line to measure slope for flat part of histogram --might need to adjust 10.0 to 8.0
-    threshold_max = bias + (float(40.0) * sigma) #upper limit to fit line to measure slope for flat part of histogram --might need to adjust 50.0 from 30.0 to 80.0
-    
-    # Lines for bias, 5.5*sigma line
-    
-    #n_line = n_log.size
-    #zeroline = np.zeros([n_line], dtype = np.float32)
-    threshold0 = int(bias)
-    threshold55 = int(bias + 5.5*sigma)
-    #thresholdmin = int(threshold_min)
-    #thresholdmax = int(threshold_max)
-    
-    idx_threshmin = np.array(np.where(bin_center >= threshold_min))[0,0]
-#    idx_threshmax = np.array(np.where(bin_center >= threshold_max))[0,0]
-    idx_threshmax = np.array(np.where(bin_center >= threshold_max))[0,0]
-
-    valid_idx2 = np.where(n[idx_threshmin:idx_threshmax] > 0)
-    
-    slope, intercept = fitLine(bin_center[idx_threshmin:idx_threshmax][valid_idx2], 
-                               n_log[idx_threshmin:idx_threshmax][valid_idx2]) 
-#        slope, intercept = fitLine(bin_center[idx_threshmin:idx_threshmax], n_log[idx_threshmin:idx_threshmax])  
-    # Fit line
-#        xlinefit = np.linspace(bias, bin_center[idx_threshmax], 1000)
-    xlinefit = np.linspace(threshold_min, threshold_max, 1000)
-    ylinefit = linefit(xlinefit, slope, intercept)
-    #plt.plot(xlinefit,ylinefit);plt.plot(bin_center[idx_threshmin:idx_threshmax][valid_idx2],n_log[idx_threshmin:idx_threshmax][valid_idx2])
-    emgain = (-1./slope) * (gain)
-    hist = open('histplot.txt', 'w')
-    hist.write('%0.0f/%0.0f/%0.0f/' % (emgain,bias,sigma) +json.dumps(list(bin_center)) + '/' +json.dumps(list(n.astype(float))) + '/' +json.dumps(list(xlinefit)) + '/' +json.dumps(list(ylinefit)) + '/' +json.dumps(list(xgaussfit)) + '/' +json.dumps(list(ygaussfit)) + '/%0.0f/' % (n_bias) + json.dumps(list(np.nan_to_num(n_log))) + '/%0.0f/%0.0f' % (threshold0,threshold55))
-    hist.close()  
-    exposure, gain, temp = 0, 0, 0
-    if plot_flag:
-        plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
-                   ygaussfit,n_bias,n_log,threshold0,threshold55,exposure, gain, temp,plot_flag=plot_flag)
-    #if area == image_area:
-    print('This needs to be corrected: image area and overscan area')
-    print ('pCIC + sCIC = ' , float(len(img_section[img_section>bias+5.5*sigma]))/len(img_section.flatten()))
-    #if area == overscan_area:
-    print ('sCIC = ', float(len(img_section[img_section>bias+5.5*sigma]))/len(img_section.flatten()))
-    return (emgain,bias,sigma,amp,slope,intercept) 
-
- 
 def apply_pc(image,bias, sigma,area=0):
     """Put image pixels to 1 if superior to threshold and 0 else
     """
-    cutoff = int(bias + sigma*5.5)
+    cutoff = int(bias + sigma*3)#)5.5)
     idx = image > cutoff - 1        
     image[idx] = np.ones(1, dtype = np.uint16)[0]
     image[~idx] = np.zeros(1, dtype = np.uint16)[0]
     return image
 
-def DS9photo_counting(xpapoint):
+def CountCRevent(paths='/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/CosmicRaysFree/image000???.CRv.fits'):
+    """
+    """
+    import glob
+    from astropy.io import fits
+    import matplotlib.pyplot as plt    
+    files = glob.glob(paths)
+    files.sort()
+    for path in files[::-1]:
+        print(path)
+        with fits.open(path) as f:
+            fitsimage = f[0]
+            header = f[0].header
+            image = f[0].data.copy()
+            image[np.isfinite(image)]=0
+            image[~np.isfinite(image)]=1
+            CS = plt.contour(image, levels=1, colors='white', alpha=0.5)
+            try:
+                header['N_CR'] = len(CS.allsegs[0]) - 1 
+            except IndexError:
+                header['N_CR'] = 0
+            header['%NaNs'] = 100*np.sum(image[:,1033:2053]) / (2069*(2053-1033))
+            fitsimage.header = header
+            fitsimage.writeto(path,overwrite=True)
+    return
+
+
+def DS9photo_counting(xpapoint, save=True):
     """Calculate threshold of the image and apply phot counting
     """
     from astropy.io import fits
+    import matplotlib.pyplot as plt
     d = DS9(xpapoint)
     filename = d.get("file")
     try:
         region = getregion(d)
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
-        image_area = [Xinf, Xsup, Yinf, Ysup]
-        print(Xinf, Xsup, Yinf, Ysup)
     except ValueError:
         image_area = [0,2069,1172,2145]
-
-
-    try:
-        n1, n2 = sys.argv[3].split('-')#'f3 names'#sys.argv[3]
-        n1, n2 = int(n1), int(n2)
-        print('n1, n2 = ', n1, n2)
-    except (ValueError, IndexError) as e:
-        print('No value given, taking only DS9 image:', e)
-        n1, n2 = None, None
     else:
-        numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
-        print('Numbers used: {}'.format(numbers))               
-        path = []
-        print('Specified numbers are integers, opening corresponding files ...')
-        names = os.path.basename(filename).split('.')
-        for number in numbers:
-            if len(names)==2:
-                path.append(os.path.dirname(filename) + '/image%06d.' % (int(number)) + names[-1])
-            if len(names)==3:
-                path.append(os.path.dirname(filename) + '/image%06d.' % (int(number)) + names[-2] + '.' + names[-1])            
-
-    if n1 is None:
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        image_area = [Yinf, Ysup,Xinf, Xsup]
+        print(Yinf, Ysup,Xinf, Xsup)
+    #entry = sys.argv[3]
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint, entry_point=3)
+    else:
         path = [filename]
+    #vpicouette 
+#    try:
+#        n1, n2 = entry.split('-')#'f3 names'#sys.argv[3]
+#        n1, n2 = int(n1), int(n2)
+#        print('n1, n2 = ', n1, n2)
+#    except (ValueError, IndexError) as e:
+#        print('No value given, taking only DS9 image:', e)
+#        n1, n2 = None, None
+#    else:
+#        numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
+#        print('Numbers used: {}'.format(numbers))               
+#        path = []
+#        print('Specified numbers are integers, opening corresponding files ...')
+#        names = os.path.basename(filename).split('.')
+#        for number in numbers:
+#            if len(names)==2:
+#                path.append(os.path.dirname(filename) + '/image%06d.' % (int(number)) + names[-1])
+#            if len(names)==3:
+#                path.append(os.path.dirname(filename) + '/image%06d.' % (int(number)) + names[-2] + '.' + names[-1])            
+#        
+
+#    if n1 is None:
+#        path = [filename]
+#        plot_flag = True
+#    else:
+#        plot_flag = False
+    if len(path) == 1:
         plot_flag = True
     else:
         plot_flag = False
+    print('plot_flag = ', plot_flag)
         
     for filename in path:
         print(filename)
         try:
             fitsimage = fits.open(filename)
         except IOError as e:
-            print('FILE NOT FOUND: ' , e)
+            print(bcolors.BLACK_RED + 'FILE NOT FOUND: ' + bcolors.end, e)
         else:
             image = fitsimage[0].data
             #emgain,bias,sigma,amp,slope,intercept = calc_emgain(image,area=image_area,plot_flag=True)
-            emgain,bias,sigma,frac_lost = calc_emgainGillian(filename,area=image_area,plot_flag=plot_flag)
-            new_image = apply_pc(image,bias, sigma ,area=0)
-            print (new_image.shape)
-            fitsimage[0].data = new_image
-            if 'NAXIS3' in fitsimage[0].header:
-                fitsimage[0].header.remove('NAXIS3')
-            if not os.path.exists(os.path.dirname(filename) +'/Thresholded_images'):
-                os.makedirs(os.path.dirname(filename) +'/Thresholded_images')
-            name = os.path.dirname(filename) +'/Thresholded_images/'+ os.path.basename(filename)[:-5] + '_THRES.fits'
-            fitsimage.writeto(name, overwrite=True)
-            if n1 is None:
-                d.set('frame new')
-                d.set('file ' + name)  
-    return
+            a, b = calc_emgainGillian(filename,area=image_area,plot_flag=plot_flag)
+            print(len(a),len(b))
+            (emgain,bias,sigma,frac_lost) = a
+            #image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,ygaussfit,n_bias,n_log,threshold0,threshold55,exposure, gain, temp = b
+            a = plot_hist2(*b, ax=None,plot_flag=plot_flag)
+            if plot_flag:
+                plt.show()
+            if save: 
+                new_image = apply_pc(image,bias, sigma ,area=0)
+                print (new_image.shape)
+                fitsimage[0].data = new_image
+                if 'NAXIS3' in fitsimage[0].header:
+                    fitsimage[0].header.remove('NAXIS3')
+                if not os.path.exists(os.path.dirname(filename) +'/Thresholded_images'):
+                    os.makedirs(os.path.dirname(filename) +'/Thresholded_images')
+                name = os.path.dirname(filename) +'/Thresholded_images/'+ os.path.basename(filename)[:-5] + '_THRES.fits'
+                fitsimage.writeto(name, overwrite=True)
+                if len(path) == 1:
+                    d.set('frame new')
+                    d.set('file ' + name)  
+    return a
 
 
 def gaussian(x, amp, x0, sigma):
@@ -1741,7 +1754,14 @@ def check_if_module_exists(module):
         found = eggs_loader is not None
         return found
     
-    
+class bcolors:
+    BLACK_RED = '\x1b[4;30;41m' 
+    GREEN_WHITE = '\x1b[0;32;47m' 
+    BLACK_GREEN = '\x1b[0;30;42m' 
+    END = '\x1b[0m'
+
+
+
 if check_if_module_exists('PyQt5'):
     from PyQt5 import QtWidgets
     #import matplotlib.pyplot as plt;from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas;from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -2421,7 +2441,7 @@ def Field_regions(xpapoint, mask=''):
                         guidingstars[i] = header['CY%i'%(i)],header['CX%i'%(i)],header['USE%i'%(i)]
                         if (int(guidingstars[i,2]) ==  257) or (int(guidingstars[i,2]) ==  1):
                             d.set('regions command "box %0.3f %0.3f 8 8  # color=yellow"' % (guidingstars[i,1],guidingstars[i,0]))
-                    print('guiding stars = ',guidingstars)
+                print('guiding stars = ',guidingstars)
             else:
                 guidingstars = np.zeros((8,3))
                 header = fits.open(path)[0].header
@@ -2635,7 +2655,7 @@ def DS9stack(xpapoint):
             numbers.append(int(name[5:12]))
             with fits.open(file) as f:
                 stack[:,:,i] = f[0].data
-        image.data = np.mean(stack,axis=2)
+        image.data = np.nanmean(stack,axis=2)
         fname = os.path.dirname(filename)                
         filename = '{}/StackedImage_{}-{}.fits'.format(fname, np.array(numbers).min(), np.array(numbers).max())
         image.writeto(filename ,overwrite=True)
@@ -2643,12 +2663,12 @@ def DS9stack(xpapoint):
         
     if Type == 'detector':
         entry = sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
-        print('Entry 1 = ', entry)
+        print('Images to stack = ', entry)
         try:
             number_dark = sys.argv[4] #''#sys.argv[4] #''#'sys.argv[4] #'365'#'365-374'#''#sys.argv[4] 
         except:
             number_dark = ''
-        print('Entry 2 = ', number_dark)
+        print('Dark to remove = ', number_dark)
         numbers = entry.split('-')
     
         if len(numbers) == 2:
@@ -2681,8 +2701,37 @@ def DS9stack(xpapoint):
     d.set("file {}".format(filename))   
     #d.set("scale mode 99.5")#vincent
     d.set("lock frame physical")
-    
     return
+
+
+def StackImagesPath(paths):
+    """Stack images of the files given in the path
+    """
+    from astropy.io import fits
+    n=len(paths)
+    paths.sort()
+    image = fits.open(paths[0])
+    lx,ly = image[0].data.shape
+    if 'CRv' in paths[0]:
+        stack = np.zeros((lx,ly,n))#,dtype='uint16')
+    else:
+        stack = np.zeros((lx,ly,n),dtype='uint16')
+    for i,file in enumerate(paths):
+        with fits.open(file) as f:
+            print(file)
+            stack[:,:,i] = f[0].data
+#    if np.isfinite(stack).all():
+#        stack.dtype = 'uint16'
+    image[0].data = np.nanmean(stack,axis=2)#,dtype='uint16')#AddParts2Image(np.mean(stack,axis=2))
+    
+    if 'NAXIS3' in image[0].header:
+        image[0].header.remove('NAXIS3')             
+    try:
+        name = '{}/StackedImage_{}-{}.fits'.format(os.path.dirname(paths[0]), int(os.path.basename(paths[0])[5:5+6]), int(os.path.basename(paths[-1])[5:5+6]))
+    except ValueError:
+        name = '{}/StackedImage_{}-{}'.format(os.path.dirname(paths[0]), os.path.basename(paths[0]).split('.')[0], os.path.basename(paths[-1]))       
+    image[0].writeto(name ,overwrite=True)
+    return image  
 
 def DS9focus(xpapoint):
     """Apply focus test class to the image
@@ -2762,7 +2811,8 @@ def DS9throughslit(xpapoint):
     #        files.append(f[0].data)        
     #    os.path.dirname(filename)
     #path = np.sort(path)
-    print(path) 
+    path.sort()
+    #print("\n".join(path)) 
     a = getregion(d)
     radius = 15
     print('Sum pixel is used (another estimator may be prefarable)')
@@ -2933,19 +2983,22 @@ def DS9meanvar(xpapoint):
     d = DS9(xpapoint)#DS9(xpapoint)
     filename = d.get("file")
     region = getregion(d)
-    if hasattr(region, 'h'):
-        xc, yc, w, h = int(region.xc), int(region.xc), int(region.w), int(region.h) 
-        Xinf = yc - h/2
-        Xsup = yc + h/2#int(region.yc + region.h/2)
-        Yinf = xc - w/2 #int(region.xc - region.w/2)
-        Ysup = xc + w/2 #int(region.xc + region.w/2)
-    if hasattr(region, 'r'):
-        xc, yc, r = int(region.xc), int(region.xc), int(region.r)
-        Xinf = yc - r
-        Xsup = yc + r
-        Yinf = xc - r
-        Ysup = xc + r
-    image = fits.open(filename)[0].data[Xinf:Xsup,Yinf:Ysup]
+#    if hasattr(region, 'h'):
+#        xc, yc, w, h = int(region.xc), int(region.xc), int(region.w), int(region.h) 
+#        Xinf = yc - h/2
+#        Xsup = yc + h/2#int(region.yc + region.h/2)
+#        Yinf = xc - w/2 #int(region.xc - region.w/2)
+#        Ysup = xc + w/2 #int(region.xc + region.w/2)
+#    if hasattr(region, 'r'):
+#        xc, yc, r = int(region.xc), int(region.xc), int(region.r)
+#        Xinf = yc - r
+#        Xsup = yc + r
+#        Yinf = xc - r
+#        Ysup = xc + r
+    Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+    area = [Yinf, Ysup, Xinf, Xsup]
+    print(area)
+    image = fits.open(filename)[0].data[area[0]:area[1],area[2]:area[3]]#picouet
     print ('Image : {}'.format(filename))
     print ('Mean : {}'.format(image.mean()))
     print ('Standard deviation : {}'.format(image.std()))
@@ -3110,7 +3163,7 @@ def DS9center(xpapoint,Plot=True):
                            text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
         d.set('regions /tmp/centers.reg')
         
-        fig, axes = plt.subplots(2, 1, sharex=True, figsize=(6,6))
+        fig, axes = plt.subplots(2, 1, sharex=True, figsize=(8,6))
         axes[0].plot(x,imagex, 'bo', label='Spatial direction')
         axes[1].plot(y,imagey, 'ro', label='Spectral direction')
         axes[0].plot(x, model(x, *poptx), color='b')#,label='Spatial direction')
@@ -3211,33 +3264,36 @@ def t2s(h,m,s,d=0):
     return 3600 * h + 60 * m + s + d*24*3600
 
 
-def calc_emgainGillian(image, area,plot_flag=False):
+def calc_emgainGillian(image, area,plot_flag=False,save=False):
         """Compute Bias and EMgain on a high voltage image taken with an EMCCD
         """
         from astropy.io import fits
         gain =  1.78
-
-        try:
-                fitsimage = fits.open(image)[0]
-                img_data = fitsimage.data
-        except IOError:
-                raise IOError("Unable to open FITS image %s" %(image))
-
-
-        if np.ndim(img_data) == 3:
-                # Image dimension
-                zsize, ysize, xsize = img_data.shape
-                img_section = img_data[:,area[0]:area[1],area[2]:area[3]]
-                #stddev = np.std(img_data[:,area[0]:area[1],area[2]:area[3]])
-                #img_size = img_section.size
-
+        if type(image) == str:        
+            try:
+                    fitsimage = fits.open(image)[0]
+                    img_data = fitsimage.data
+            except IOError:
+                    raise IOError("Unable to open FITS image %s" %(image))
+    
+    
+            if np.ndim(img_data) == 3:
+                    # Image dimension
+                    zsize, ysize, xsize = img_data.shape
+                    img_section = img_data[:,area[0]:area[1],area[2]:area[3]]
+                    #stddev = np.std(img_data[:,area[0]:area[1],area[2]:area[3]])
+                    #img_size = img_section.size
+    
+            else:
+                    # Image dimension
+                    ysize, xsize = img_data.shape
+                    img_section = img_data[area[0]:area[1],area[2]:area[3]]
+                    #stddev = np.std(img_data[area[0]:area[1],area[2]:area[3]])
+                    #img_size = img_section.size
         else:
-                # Image dimension
-                ysize, xsize = img_data.shape
-                img_section = img_data[area[0]:area[1],area[2]:area[3]]
-                #stddev = np.std(img_data[area[0]:area[1],area[2]:area[3]])
-                #img_size = img_section.size
-
+            fitsimage = fits.open(image)[0]
+            ysize, xsize = fitsimage.data.shape
+            img_section = fitsimage.data[area[0]:area[1],area[2]:area[3]]
         nbins = 1000
         readnoise = 60
         #gain = float(gain)
@@ -3334,9 +3390,8 @@ def calc_emgainGillian(image, area,plot_flag=False):
         frac_lost = (total_counts-thres_counts)/thres_counts
         print(frac_lost)
         exposure, gain, temp = fitsimage.header['EXPTIME'], fitsimage.header['EMGAIN'], fitsimage.header['TEMP']
-        plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
-                   ygaussfit,n_bias,n_log,threshold0,threshold55,exposure, gain, temp,plot_flag=plot_flag)
-        #plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,ygaussfit,n_bias,n_log,threshold0,threshold55,plot_flag=plot_flag)
+#        plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
+#                   ygaussfit,n_bias,n_log,threshold0,threshold55,exposure, gain, temp,plot_flag=plot_flag, ax=None)
         try:
             fitsimage.header['C_egain'] = emgain
         except ValueError as e:
@@ -3345,10 +3400,14 @@ def calc_emgainGillian(image, area,plot_flag=False):
         fitsimage.header['C_bias'] = bias
         fitsimage.header['C_sigR0'] = sigma
         fitsimage.header['C_flost'] = frac_lost
-        if 'NAXIS3' in fitsimage.header:
-            fitsimage.header.remove('NAXIS3')
-        fitsimage.writeto(image,overwrite=True)
-        return (emgain,bias,sigma,frac_lost)
+        if save:
+            if 'NAXIS3' in fitsimage.header:
+                fitsimage.header.remove('NAXIS3')
+            fitsimage.writeto(image,overwrite=True)
+        return (emgain,bias,sigma,frac_lost), (image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit, ygaussfit,n_bias,n_log,threshold0,threshold55,exposure, gain, temp)
+
+
+
     
 def create_DS9regions(xim, yim, radius=20, save=True, savename="test", form=['circle'], color=['green'], ID=None):#of boxe
     """Returns and possibly save DS9 region (circles) around sources with a given radius
@@ -3389,29 +3448,63 @@ def DS9removeCRtails2(xpapoint,filen=None):
     not be completely removed and would need some other specific care with
     the ReplaceByNaNs function
     """
-    from astropy.io import fits
-    if filen is None:
-        d=DS9(xpapoint)
-        filename = d.get('file')#,[0,-1,0,-1]#0#indata
+
+    d = DS9(xpapoint)
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint)
     else:
-        filename = filen#,[0,-1,0,-1]#0#indata
-    fitsimage =  fits.open(filename)[0] 
+        path = [d.get("file")]
+        
+#    try:
+#        region = getregion(d)
+#        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+#        area = [Yinf, Ysup,Xinf, Xsup]
+#        print(Yinf, Ysup,Xinf, Xsup)
+#    except ValueError:
+#        area = [0,-1,1053,2133]
+        
+    for filename in path:
+        print(filename)
+        result, name, cosmicRays = RemoveCRtail(filename,T=2.1*1e4)#, area=area) 
+    if len(path) < 2:    
+        d.set('region delete all')
+        d.set('region {}'.format('/tmp/cr.reg'))                                        
+        d.set('frame new')
+        d.set('tile yes')
+        d.set('lock frame physical')
+        d.set('file ' + name)
+
+
+    return cosmicRays
+
+ 
+def RemoveCRtail(path,T=6*1e4):
+    """
+    """
+    from astropy.io import fits
+    fitsimage =  fits.open(path)[0] 
     image = fitsimage.data
-    cosmicRays = detectCosmics(image)
+    cosmicRays = detectCosmics(image,T=T)
     if len(cosmicRays)>11000:
+        print('Too many cosmics to detected, Please make sure the image is not saturated or change the detection threshold.')
         return 1
     else:
-        cosmicRays = delete_doublons_CR(cosmicRays,dist=3)
-        cosmicRays = assign_CR(cosmicRays,dist=50)
+        #print('Deleting duplications...')
+        #cosmicRays = delete_doublons_CR(cosmicRays,dist=5)
+        print('Assigning detections to single cosmic-ray events...')
+        cosmicRays = assign_CR(cosmicRays,dist=5)
 #        plot(cosmicRays[cosmicRays['id']==-1]['xcentroid'],cosmicRays[cosmicRays['id']==-1]['ycentroid'],'.')
+        print('Distinguishing  Dark From CR...')
+        cosmicRays = DistinguishDarkFromCR(cosmicRays, T=T, number=2)
+        print('Determine cosmic-ray front')
         cosmicRays = Determine_front(cosmicRays)
         a=cosmicRays[cosmicRays['front']==1]
             
         create_DS9regions([list(a['xcentroid'])],[list(a['ycentroid'])], form=['circle'], radius=10, save=True, 
                    savename='/tmp/cr', color = ['yellow'],ID=None)
-        if filen is None:    
-            d.set('region delete all')
-            d.set('region {}'.format('/tmp/cr.reg'))
+#        create_DS9regions([list(a[a['dark']==1]['xcentroid'])],[list(a[a['dark']==1]['ycentroid'])], form=['circle'], radius=10, save=True, 
+#                   savename='/tmp/cr', color = ['green'],ID=None)
+        print('Masking cosmic-ray events...')
         maskedimage = MaskCosmicRays(image, cosmics=cosmicRays,all=False, cols=1)
 #        for run in range(3):
 #            cosmicRays = detectCosmics(maskedimage)
@@ -3420,34 +3513,41 @@ def DS9removeCRtails2(xpapoint,filen=None):
         fitsimage.data = maskedimage
         if 'NAXIS3' in fitsimage.header:
             fitsimage.header.remove('NAXIS3') 
-        name = os.path.dirname(filename)+'/' +os.path.basename(filename)[:-5]+'.CRv.fits'
+        name = os.path.dirname(path)+'/' +os.path.basename(path)[:-5]+'.CRv.fits'
         fitsimage.header['N_CR'] = cosmicRays['id'].max()
         fitsimage.header['MASK'] = len(np.where(maskedimage==np.nan)[0])
-        fitsimage.writeto(name,overwrite=True)
+        try:
+#            cosmicRays.write(name[:-5] + '.csv')
+            fitsimage.writeto(name,overwrite=True)
+        except IOError:
+            print(bcolors.IMPORTANT + 'Can not write in this repository : ' + name + bcolors.END)
+            name = '/tmp/' +os.path.basename(path)[:-5]+'.CRv.fits'
+            print(bcolors.IMPORTANT + 'Instead writing new file in : ' + name + bcolors.END)
+            fitsimage.writeto(name,overwrite=True)            
         print('File saved : ',name)
-        if filen is None:    
-            d.set('frame new')
-            d.set('tile yes')
-            d.set('lock frame physical')
-            d.set('file ' + name)
-        return fitsimage
-        
-def detectCosmics(image,T=2*1e4):
+        return fitsimage, name, cosmicRays
+
+       
+def detectCosmics(image,T=6*1e4):
     """Detect cosmic rays, for FIREBall-2 specfic case it is a simplistic case
     where only thresholding is enough
     """
     from astropy.table import Table
-    y,x = np.where(image>T)
-    cosmicRays = Table([x,y],names=('xcentroid','ycentroid'))
-    print(len(cosmicRays), ' Comsic rays detected, youpi!')
+    y, x = np.where(image>T)
+    value = image[image>T]
+    cosmicRays = Table([x, y, value], names = ('xcentroid', 'ycentroid', 'value'))
+    cosmicRays['doublons']=0
+    cosmicRays['dark'] = -1
+    cosmicRays['id'] = -1
+    print(len(cosmicRays), ' detections, youpi!')
     return cosmicRays
 
 def delete_doublons_CR(sources, dist=4):
     """Function that delete doublons detected in a table, 
     the initial table and the minimal distance must be specifies
     """
-    sources['doublons']=0
-    for i in range(len(sources)):
+    from tqdm import tqdm
+    for i in tqdm(range(len(sources))):
         a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) >= dist
         #a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
         #a = distance2(sources[sources['doublons']==0]['xcentroid','ycentroid'],sources['xcentroid','ycentroid'][i]) > dist
@@ -3463,50 +3563,95 @@ def delete_doublons_CR(sources, dist=4):
     print(len(sources[sources['doublons']==0]), ' Comsic rays detected, youpi!')
     return sources
 
-def assign_CR(sources, dist=7):
+def assign_CR(sources, dist=10):
     """Assign all the cosmic detected pixel (superior to the threshold) 
     to one cosmic ray hit event
     """
-    sources['id'] = -1
+    from tqdm import tqdm
     groups = sources[sources['doublons']==0]
-    for i, cr in enumerate(groups):
-        x,y = cr['xcentroid'],cr['ycentroid']
+#    for i, cr in tqdm(enumerate(groups)):
+#        x,y = cr['xcentroid'],cr['ycentroid']
+    for i in tqdm(range(len(groups))):
+        x,y = groups[i]['xcentroid'],groups[i]['ycentroid']
         index = (sources['xcentroid']>x-dist) & (sources['xcentroid']<x+dist) & (sources['ycentroid']>y-dist) & (sources['ycentroid']<y+dist)
         sources['id'][index]=i
     return sources
+
+def DistinguishDarkFromCR(sources, T, number=2):
+    """When only one pixel of the detection is above threshold it must be dark
+    """
+    from tqdm import tqdm
+#    groups = sources[sources['doublons']==0]
+    #for i, cr in tqdm(enumerate(groups)):
+    for i in tqdm(range(len(np.unique(sources['id'])))):
+        idd = np.unique(sources['id'])[i]
+        if len(sources[(sources['id'] == idd) & (sources['value'] > T)]) < 2:
+            #print(sources[sources['id'] == idd])
+            sources['dark'][sources['id'] == idd] = 1
+        else:
+            sources['dark'][sources['id'] == idd] = 0
+    return sources
+
+
+def PlotCR(sources):
+    """Visualization of the CRs
+    """
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(7,10))
+    plt.plot(sources[sources['dark']<1]['xcentroid'],sources[sources['dark']<1]['ycentroid'],'.',label='CR')
+    plt.plot(sources[sources['dark']==1]['xcentroid'],sources[sources['dark']==1]['ycentroid'],'.',label='Dark')
+    plt.axis('equal');plt.legend()
+    plt.xlim((1000,2100))
+    #plt.xlim((1000,2100))
+    for idd in np.unique(sources['id']):
+        plt.annotate('%i'%(idd), (sources[sources['id']==idd]['xcentroid'][0]+10,sources[sources['id']==idd]['ycentroid'][0]+10))
+        plt.scatter(sources[sources['id']==idd]['xcentroid'][0],sources[sources['id']==idd]['ycentroid'][0], s=180, facecolors='none', edgecolors='r')
+    return
+   #plt.scatter(sources[sources['id']==idd]['xcentroid'][0],sources[sources['id']==idd]['ycentroid'][0], s=10*len(sources[sources['id']==idd]['xcentroid']), facecolors='none', edgecolors='r')
+    
+
+#for idd in np.unique(sources['id']):
+#    print(sources[(sources['id'] == idd) & (sources['value'] > T)])
+#plot(a[a['dark']<1]['xcentroid'],a[a['dark']<1]['ycentroid'],'.')
+#plot(a[a['dark']==1]['xcentroid'],a[a['dark']==1]['ycentroid'],'.')
+#
+##
+#sources=a
+#for idd in sources['id']:
+#    plot(len(sources[(sources['id'] == idd) & (sources['value'] > T)]),
+#         sources[(sources['id'] == idd) & (sources['value'] > T)]['dark'].mean(),'.')
+#    
+    
 #plot(sources[sources['id']==-1]['xcentroid'],sources[sources['id']==-1]['ycentroid'],'.')  
         
-def delete_doublons_CR1(sources, dist=10):
-    """Function that delete doublons detected in a table, 
-    the initial table and the minimal distance must be specifies
-    """
-    sources['doublons']=0
-    for i in range(len(sources)):
-        a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
-        #a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
-        #a = distance2(sources[sources['doublons']==0]['xcentroid','ycentroid'],sources['xcentroid','ycentroid'][i]) > dist
-        a = list(1*a)
-        a.remove(0)
-        if np.mean(a)<1:
-            sources['doublons'][i]=1
-    #y, x = np.indices((image.shape))
-    #mask1 = (sources['xcentroid']<1053) 
-    #mask2 = (sources['xcentroid']>2133)
-    #sources['doublons'][~mask1]=1
-    #sources['doublons'][~mask2]=1
-    print(len(sources[sources['doublons']==0]), ' Comsic rays detected, youpi!')
-    return sources
+#def delete_doublons_CR1(sources, dist=10):
+#    """Function that delete doublons detected in a table, 
+#    the initial table and the minimal distance must be specifies
+#    """
+#    from tqdm import tqdm
+#    sources['doublons']=0
+#    for i in tqdm(range(len(sources))):
+#        a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
+#        #a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
+#        #a = distance2(sources[sources['doublons']==0]['xcentroid','ycentroid'],sources['xcentroid','ycentroid'][i]) > dist
+#        a = list(1*a)
+#        a.remove(0)
+#        if np.mean(a)<1:
+#            sources['doublons'][i]=1
+#    print(len(sources[sources['doublons']==0]), ' Comsic rays detected, youpi!')
+#    return sources
 
 def Determine_front(sources):
     """Function that delete doublons detected in a table, 
     the initial table and the minimal distance must be specifies
     """
+    from tqdm import tqdm
     sources['front'] = 0
-    a = sources[sources['doublons']==0]
-    for id in range(len(a)):
-        print('Id = ',id)
+    a = sources[(sources['doublons']==0)]# & (sources['dark']<1)]
+    for id in tqdm(range(len(a))):
+        #print('Id = ',id)
         index = sources['id']==id
-        print('Number of high value pixel in cosmic: ', len(sources[index]))
+        #print('Number of high value pixel in cosmic: ', len(sources[index]))
         for pixel in sources[index]:
             y = pixel['ycentroid']
             #x, y = pixel['xcentroid'], pixel['ycentroid']
@@ -3514,25 +3659,26 @@ def Determine_front(sources):
             frontmask = index & line  & (sources['xcentroid']==sources[line&index]['xcentroid'].max())
             sources['front'][frontmask]=1
             #sources[frontmask]#=1
-        print('Front pixels: ', sources[sources['id']==id]['front'].sum())
-    print(len(sources[sources['front']==1]), ' Front Comsic ray pixels detected, youpi!')
+        #print('Front pixels: ', sources[sources['id']==id]['front'].sum())
+    #print(len(sources[sources['front']==1]), ' Front Comsic ray pixels detected, youpi!')
     return sources
 
 def MaskCosmicRays(image, cosmics,cols=None,all=False):
     """Replace pixels impacted by cosmic rays by NaN values
     """
+    from tqdm import tqdm
     y, x = np.indices((image.shape))
     image = image.astype(float)
     if all is False:   
-        cosmics = cosmics[cosmics['front']==1]
+        cosmics = cosmics[(cosmics['front']==1) & (cosmics['dark']<1)]
     if cols is None:
-        for i, cosmic in enumerate(cosmics):#range(len(cosmics)):
+        for i in tqdm(range(len(cosmics))):#range(len(cosmics)):
             print(i)
-            image[(y==cosmic['ycentroid']) & (x<cosmic['xcentroid']+4) & (x>-200 + cosmic['xcentroid'])] = np.nan
+            image[(y==cosmics[i]['ycentroid']) & (x<cosmics[i]['xcentroid']+4) & (x>-200 + cosmics[i]['xcentroid'])] = np.nan
     else:
-        for i, cosmic in enumerate(cosmics):#range(len(cosmics)):
-            print(i)
-            image[(y>cosmic['ycentroid']-cols-0.1) & (y<cosmic['ycentroid']+cols+0.1) & (x<cosmic['xcentroid']+4) & (x>-200 + cosmic['xcentroid'])] = np.nan
+        for i in tqdm(range(len(cosmics))):#range(len(cosmics)):
+            #print(i)
+            image[(y>cosmics[i]['ycentroid']-cols-0.1) & (y<cosmics[i]['ycentroid']+cols+0.1) & (x<cosmics[i]['xcentroid']+4) & (x>-200 + cosmics[i]['xcentroid'])] = np.nan
     return image
 
 def distance(x1,y1,x2,y2):
@@ -3541,6 +3687,766 @@ def distance(x1,y1,x2,y2):
     """
     return np.sqrt(np.square(x1-x2)+np.square(y1-y2))
 
+def DS9RemoveImage(xpapoint):
+    """Substract an image, for instance bias or dark image, to the image
+    in DS9. Can take care of several images
+    """
+    d = DS9(xpapoint)
+    path2remove = sys.argv[3]
+    a, b = sys.argv[4].split(',')
+    a, b = float(a), float(b)
+    if len(sys.argv) > 5:
+        path = Charge_path(xpapoint, entry_point=5)
+    else:
+        path = [d.get("file")]
+        
+    for filename in path:
+        print(filename)
+        result, name = SubstractImage(filename, path2remove=path2remove, a=a, b=b) 
+                                        
+    if len(path) < 2:
+        d.set('frame new')
+        d.set('tile yes')
+        d.set('file ' + name)  
+    return
+
+
+
+def DS9_2D_autocorrelation(xpapoint):
+    """Return 2D_autocorrelation plot
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint, entry_point=3)
+    else:
+        path = [d.get("file")]
+    plot_flag = (len(path) == 1)
+    print('flag for plot = ', plot_flag)
+    try:
+        region = getregion(d)
+    except ValueError:
+        area = [0,-1,1053,2133]
+    else:
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        area = [Yinf, Ysup,Xinf, Xsup]
+        print(Yinf, Ysup,Xinf, Xsup)
+        if plot_flag:
+            d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (region.xc ,region.yc, 3*region.w, 3*region.h))
+    for filename in path:
+        print(filename)
+        corr = TwoD_autocorrelation(filename, save=True, area=area, plot_flag=plot_flag)
+    return corr
+#imshow(np.log10(b),vmin=np.percentile(np.log10(b),40),vmax=np.percentile(np.log10(b),60));
+#imshow(b,vmin=np.percentile(b,40),vmax=np.percentile(b,60));
+#colorbar()
+#c = b.flatten()
+#plt.hist(c)
+
+        
+def TwoD_autocorrelation(filename, save=True, area=None, plot_flag=True):
+    """Return 2D_autocorrelation plot
+    """
+    from scipy import signal#from scipy import misc
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
+#    lena = misc.lena() - misc.lena().mean()
+#    template = np.copy(lena[235:295, 310:370]) # right eye
+#    template -= template.mean()
+#    lena = lena + np.random.randn(*lena.shape) * 50 # add noise
+#    corr = signal.correlate2d(lena, template, boundary='symm', mode='same')
+#    y, x = np.unravel_index(np.argmax(corr), corr.shape) # find the match
+    new_area = [area[0] - (area[1] - area[0]),area[1] + (area[1] - area[0]),
+                area[2] - (area[3] - area[2]),area[2] + (area[3] - area[2])]
+    data = fits.open(filename)[0].data
+    template = np.copy(data[area[0]:area[1], area[2]:area[3]])
+    image = np.copy(data[new_area[0]:new_area[1], new_area[2]:new_area[3]])
+    corr = signal.correlate2d(image, template, boundary='symm', mode='same')
+    plt.imshow(corr, interpolation = 'none')
+    plt.title('2D auto-correlation')
+    plt.colorbar()
+    plt.savefig('/tmp/Autocorr_%s.png'%(os.path.basename(filename[:-5])))
+    plt.show()
+    return corr
+
+
+def DS9AnalyzeImage(xpapoint):
+    """Return some plot to analyze the image
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint, entry_point=3)
+    else:
+        path = [d.get("file")]
+    plot_flag = (len(path) == 1)
+    print('flag for plot = ', plot_flag)
+    for filename in path:
+        print(filename)
+        AnalyzeImage(filename, save=True, area=None, plot_flag=plot_flag)  
+    return
+
+def AnalyzeImage(filename, save=True, area=None, plot_flag=True):
+    """Return some plot to analyze the image
+    """
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
+    from matplotlib.gridspec import GridSpec
+    from scipy import stats 
+    import scipy.ndimage as ndimage
+    fitsimage = fits.open(filename)[0]
+    image = fitsimage.data#.astype('uint64')
+    header = fitsimage.header
+    if os.path.getsize(filename)>5638240:
+        Type = 'detector'
+        if area is None:
+            area = [0,-1,1050,2150]
+#        new_image = image[area[0]:area[1],area[2]:area[3]]
+        width_ratios = (1,2.8)
+
+    else:
+        Type = 'guider'
+        if area is None:
+            area = [0,-1,0,-1] 
+        width_ratios = (1,0.9)
+    new_image = image[area[0]:area[1],area[2]:area[3]]
+    lx, ly = image.shape
+ #   width_ratios = (1,ly/lx+0.5)
+
+    fig = plt.figure(figsize=(15,8))    
+    gs = GridSpec(6, 2, width_ratios=width_ratios,height_ratios=(1,1,1,1,0.3,0.2))
+    ax1 = fig.add_subplot(gs[:-1, :1])
+    axc = fig.add_subplot(gs[-1, :1])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[1,1])
+    ax4 = fig.add_subplot(gs[2:-2, 1])
+    #ax5 = fig.add_subplot(gs[-2:, 1])
+    amp = 0    
+    if Type == 'detector':
+        offset = 20
+        OScorr = ComputeOSlevel(image, OSR1=[offset,-offset,offset,400], OSR2=[offset,-offset,2200,2400]) 
+        new_image = new_image - OScorr
+        #ax2.set_ylim((0,1.1*np.nanmean(new_image,axis=1).max()))
+        #ax3.set_ylim((0,1.1*np.nanmean(new_image,axis=0).max()))
+        if header['EMGAIN'] > 0:
+            fitsimage.data = image - OScorr
+            amp=1
+            a, b = calc_emgainGillian(fitsimage,area=area)
+            emgain,bias,sigma,frac_lost = a
+            plot_hist2(*b, ax=ax4,plot_flag=True)
+            ax4.set_xlim((-1e3,10000))
+    if amp == 0:
+        ax4.hist(new_image.flatten(),bins=1000,histtype='step',log=True)
+        ax4.set_xlabel('Pixel value')
+        ax4.set_ylabel('Log10(#Pixels)')
+    cmap = plt.cm.cubehelix
+    cmap.set_bad('black',0.9)
+    new_image_sm = ndimage.gaussian_filter(new_image, sigma=(1.3, 1.3), order=0)
+
+    im = ax1.imshow(new_image_sm, cmap=cmap,vmin=np.nanpercentile(new_image_sm,10),vmax=np.nanpercentile(new_image_sm,99.99))
+    #ax1.axis('equal')
+    ax2.plot(np.nanmean(new_image,axis=1), label='Column values')
+    ax2.plot(np.nanmean(new_image,axis=0), label='Line values')
+    ax2.legend()
+    #ax2.set_ylabel('Column/Line value')
+    ax3 = ComputeEmGain(filename, Path2substract=None, save=False, plot_flag=False, d=None, ax=ax3)
+    #ax3.set_ylabel('Variance Intensity plot')
+    fig.colorbar(im, cax=axc, orientation='horizontal');
+    area = [500,600,500,600]
+    im = image[area[0]:area[1],area[2]:area[3]]
+    if Type == 'guider':
+        ax1.set_title("Image Analysis - " + os.path.basename(filename) + ' - ' + header['DATE'])
+        plt.figtext(.54, .1, 'Az = %0.3f deg\nEl = %0.3f deg\n'
+                'Exp = %0.1f sec' % (header['AZ'], header['EL'], header['EXPOSURE']),
+                fontsize=10,bbox={'facecolor':'orange', 'alpha':0.9, 'pad':10})
+        plt.figtext(.64, .1, 'Press = %i mB\nRotenc = %i \n'
+                'Mrot = %0.1f deg' % (header['PRESSURE'], header['ROTENC'], header['MROT']),
+                fontsize=10,bbox={'facecolor':'orange', 'alpha':0.9, 'pad':10})
+        plt.figtext(.75, .1, 'LINAENC = %0.2f \nLINBENC = %0.2f \n'
+                'LINCENC = %0.2f' % (header['LINAENC'], header['LINBENC'], header['LINCENC']),
+                fontsize=10,bbox={'facecolor':'orange', 'alpha':0.9, 'pad':10})
+        plt.figtext(.87, .1, 'Mean = %0.1f e-/s\nStd = %0.1f e-/s\n'
+                'SKew = %0.2f e-/s \nStdovers^2/<Im> = %0.3f' % (np.nanmean(new_image), np.nanstd(new_image), stats.skew(new_image,axis=None, nan_policy='omit'),
+                                                                np.nanstd(im)**2/np.nanmean(im)),
+                fontsize=10,bbox={'facecolor':'blue', 'alpha':0.3, 'pad':10})    
+    else:
+        ax2.set_title("Image Analysis [OS corrected] - " + os.path.basename(filename) + ' - ' + header['DATE'])
+        plt.figtext(.4, .1, 'Exposure = %i sec\nGain = %i \n'
+                'T det = %0.2f C' % (header['EXPTIME'], header['EXPTIME'], float(header['TEMP'])),
+                fontsize=12,bbox={'facecolor':'blue', 'alpha':0.5, 'pad':10})
+        plt.figtext(.6, .1, 'Mean = %0.5f \nStd = %0.3f \n'
+                'SKew = %0.3f ' % (np.nanmean(new_image), np.nanstd(new_image),  stats.skew(new_image,axis=None, nan_policy='omit')),
+                fontsize=12,bbox={'facecolor':'blue', 'alpha':0.5, 'pad':10})
+        plt.figtext(.8, .1, 'Gain = %i\nStd^2/<Im> = %0.3f \n'
+                'Bias = %i' % (header['EMGAIN'], np.nanstd(im)**2/np.nanmean(im), OScorr ),
+                fontsize=12,bbox={'facecolor':'blue', 'alpha':0.5, 'pad':10})
+        
+
+
+    fig.tight_layout()
+    name = os.path.dirname(os.path.dirname(filename)) + '/ImageAnalysis/'
+    if save:
+        try: 
+            os.makedirs(name)
+        except OSError:
+            pass
+        plt.savefig(name + os.path.basename(filename)[:-5] + '.png')        
+    if plot_flag:
+        plt.show()    
+    return
+#AnalyzeImage('/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/gobc_data/bin_r13_flight_only/img_save/stack25207657.fits')   
+#AnalyzeImage('/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/data/snape/180815/ptc/image000032.fits')
+
+    
+#AnalyzeImage('/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/CosmicRaysFree/image000093.CRv.fits')
+
+
+
+def SubstractImage(filename, path2remove, a , b):
+    """Substract an image, for instance bias or dark images,
+    and save it
+    """
+    from astropy.io import fits
+    fitsimage = fits.open(filename)[0]
+    image = fitsimage.data
+    image2substract = fits.open(path2remove)[0].data
+    fitsimage.data = image - a * image2substract - b 
+    name = filename[:-5] + '_subtracted_' + os.path.basename(path2remove)
+    if 'NAXIS3' in fitsimage.header:
+        fitsimage.header.remove('NAXIS3')
+    fitsimage.writeto(name,overwrite=True)
+    return fitsimage.data, name    
+
+def DS9NoiseMinimization(xpapoint):
+    """Substract a linear combination of images
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) > 4:
+        path = Charge_path(xpapoint, entry_point=4)
+    else:
+        path = [d.get("file")]
+    Path2substract = sys.argv[3]
+    images2substract = glob.glob(os.path.join(Path2substract, '*.fits'))
+    for filename in path:
+        print(filename)
+        name = NoiseMinimization(filename, images2substract=images2substract, save=True)  
+    if len(path) < 2:
+        d.set("lock frame physical")
+        d.set('frame new')
+        d.set('tile yes')
+        d.set('file ' + name)  
+    return    
+    #vpicouet
+def SubstractImages(param, image_name, images, save=True):
+    """
+    """
+    from astropy.io import fits
+    image = fits.open(image_name)[0]
+    new_image = image.data - np.nansum(param * images,axis=2)
+    if save:
+        image.data = new_image
+        par = '_{:0.2f}'*len(param)
+        name = image_name[:-5] + par.format(*param) + '.fits'
+        print('save : %s'%(name))
+        image.writeto(name,overwrite=True)        
+    return new_image.ravel() - np.nanmean(new_image), name
+
+def residual(param, image, images):
+    """
+    """
+    n=300
+    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  
+    yis = [1100, 1450, 1800]*3
+    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]
+    #area=[40,330,1830,2100]
+    im_tot = np.ones((n,n,len(areas)))
+    for i, area in enumerate(areas):
+        new_image = image[area[0]:area[1],area[2]:area[3]] - np.sum(np.square(param) * images[area[0]:area[1],area[2]:area[3],:],axis=2)
+        new_image -= np.nanmean(new_image)
+        im_tot[:,:,i] = new_image
+    
+    return im_tot[np.isfinite(im_tot)] #- new_image.mean()
+
+
+def DS9ComputeEmGain(xpapoint):
+    """Compute EMgain with the variance intensity method
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) > 4:
+        path = Charge_path(xpapoint, entry_point=4)
+    else:
+        path = [d.get("file")]
+    try:
+        Path2substract = None#sys.argv[3]
+    except IndexError:
+        Path2substract = None
+    for filename in path:
+        print(filename)
+        ComputeEmGain(filename, Path2substract=Path2substract, save=True, d=d)  
+    return
+
+
+def ComputeEmGain(filename, Path2substract=None, save=False, plot_flag=False, d=None, ax=None, radius=50):
+    """Compute EMgain with the variance intensity method
+    """
+    import matplotlib.pyplot as plt
+    from focustest import create_DS9regions2
+    from astropy.io import fits
+    import glob
+    fitsimage = fits.open(filename)[0]
+    image = fitsimage.data
+    offset = 20
+    image = image - ComputeOSlevel(image, OSR1=[offset,-offset,offset,400],OSR2=[offset,-offset,2200,2400])
+    if Path2substract is None:
+        #images = glob.glob(os.path.dirname(filename) + '/%s??????.fits'%(os.path.basename(filename)[:6]))
+        images = glob.glob(os.path.dirname(filename) + '/%s??????%s'%(os.path.basename(filename)[:6],os.path.basename(filename)[12:]))
+        images.sort()
+        try: 
+            name = images[images.index(filename) + 1]
+            print('Path substracted :', name)
+            image_sub = image - fits.open(name)[0].data            
+        except IndexError:
+            name = images[images.index(filename) - 1]
+            print('Path substracted :', name)
+            image_sub = image - fits.open(name)[0].data   
+    else:
+        image_sub = image - fits.open(Path2substract)[0].data 
+#    image_sub = image
+#    fitsimage.data = image_sub
+#    imagesub, name = BackgroundSubstraction(fitsimage, stddev=13, save=False) 
+#    image_sub = imagesub.data    
+    areas = CreateAreas(image, area=None, radius=radius)#    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
+    areasOS1 = CreateAreas(image, area=[0, 400, 0, 2069], radius=radius)#    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
+    areasOS2 = CreateAreas(image, area=[2200, 2400, 0, 2069], radius=radius)#    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
+    len_area_det = len(areas)
+    areas = areas + areasOS1 + areasOS2
+    print('Number of regions : ', len(areas))
+    var = []
+    intensity = []
+    OSarea = [0,-1,0,400]
+    var.append(np.nanvar(image_sub[OSarea[0]:OSarea[1],OSarea[2]:OSarea[3]])/2)
+    intensity.append(np.nanmean(image[OSarea[0]:OSarea[1],OSarea[2]:OSarea[3]]))
+    for i, area in enumerate(areas):
+        var.append(np.nanvar(image_sub[area[0]:area[1],area[2]:area[3]])/2)
+        intensity.append(np.nanmean(image[area[0]:area[1],area[2]:area[3]]))
+    #print(np.nanvar(imagesub.data[area[0]:area[1],area[2]:area[3]])/np.sqrt(1) - np.nanvar(image_sub[area[0]:area[1],area[2]:area[3]])/np.sqrt(1))
+    #print(np.nanvar(imagesub.data)/np.sqrt(1) - np.nanvar(image_sub)/np.sqrt(1))
+    var = np.array(var)
+    Indexg = var < np.nanmedian(var) + 3 * var.std()
+    var = var[Indexg]
+    intensity = np.array(intensity)[Indexg]
+    
+    areas = np.array(areas)
+    if d is not None:
+        #create_DS9regions2(np.array(yis)+float(n)/2,np.array(xis)+float(n)/2, radius=n, form = 'box',
+        create_DS9regions2(areas[:,2]+float(radius)/2,areas[:,0]+float(radius)/2, radius=radius, form = 'box',
+                           save=True,color = 'yellow', savename='/tmp/centers')
+        d.set('regions /tmp/centers.reg')
+    emgain = fitsimage.header['EMGAIN'] 
+    ax = PlotComputeEmGain(intensity, var, emgain, radius, filename=filename, len_area_det=len_area_det, ax=ax)
+    if save:
+        if not os.path.exists(os.path.dirname(filename) +'/VarIntensDiagram'):
+            os.makedirs(os.path.dirname(filename) +'/VarIntensDiagram')
+        plt.savefig(os.path.dirname(filename) +'/VarIntensDiagram/' + os.path.basename(filename)[:-5] + '.png')
+    if plot_flag:
+        plt.show()
+    return ax
+
+
+def CreateAreas_old(image, area=None, radius=100, offset=20):
+    """Create areas in the given image
+    """
+    #image = a.data
+    ly, lx = image.shape
+    if area is None:
+        if ly == 2069:
+            xmin, xmax = 1053, 2121#0,3000#1053, 2121
+            rangex = xmax - xmin
+        xi = np.arange(offset,rangex - offset - radius, radius)
+        yi = np.arange(offset,ly - offset - radius, radius)
+        xx, yy = np.meshgrid(xi,yi)
+        areas = [[a, a + radius, b + xmin, b + radius+ xmin] for a,b in zip(yy.flatten(),xx.flatten())]
+        return areas
+    else:
+        print(1)
+        
+def CreateAreas(image, area=None, radius=100, offset=20):
+    """Create areas in the given image
+    """
+    #image = a.data
+    ly, lx = image.shape
+    if area is None:
+        if ly == 2069:
+            xmin, xmax = 1053, 2121#0,3000#1053, 2121
+            ymin, ymax = 0,ly
+           # rangex = xmax - xmin
+        else:
+            xmin, xmax = 0, lx
+            ymin, ymax = 0, ly            
+    else:
+        xmin, xmax = area[0], area[1]
+        ymin, ymax = area[2], area[3]
+    xi = np.arange(offset + xmin, xmax - offset - radius, radius)
+    yi = np.arange(offset + ymin, ymax - offset - radius, radius)
+    xx, yy = np.meshgrid(xi,yi)
+    areas = [[a, a + radius, b, b + radius] for a,b in zip(yy.flatten(),xx.flatten())]
+    return areas
+
+
+
+
+
+
+
+def PlotComputeEmGain(intensity, var, emgain, n, filename, len_area_det, ax=None):
+    """
+    """
+    import matplotlib.pyplot as plt
+    if emgain > 0:
+        cst = 2
+    else:
+        cst = 1
+        
+    fit = np.polyfit(intensity,var/cst,1)
+    fit_fn = np.poly1d(fit) 
+    fit_wo0 = np.polyfit(intensity[:len_area_det],var[:len_area_det]/cst,1)
+    fit_fn_wo0 = np.poly1d(fit_wo0) 
+    if ax is None:
+        fig = plt.figure(figsize=(8,6))
+        ax = fig.add_subplot(111)
+        
+    ax.plot(intensity, var/cst, 'x', label='Data in %i pix side area, G = %i'%(n,emgain))
+    ax.plot(intensity, fit_fn(intensity), '--', label='Linear regression, Engain = %0.3f'%(fit[0]))
+    ax.plot(intensity, fit_fn_wo0(intensity), '--', label='Linear regression, Engain = %0.3f\n[WO OS region]'%(fit_wo0[0]))
+    ax.set_ylabel('Variance [ADU] / %i'%(cst))
+    ax.text(0.5,0.1,'y = %0.2f * x + %0.2f [W OS]'%(fit[0], fit[1]),transform=ax.transAxes)
+    ax.text(0.5,0.2,'y = %0.2f * x + %0.2f [WO OS]'%(fit_wo0[0], fit_wo0[1]),transform=ax.transAxes)
+    ax.legend(loc='upper left')
+    ax.set_xlabel('Intensity [ADU]')
+    ax.grid(linestyle='dotted')
+    ax.set_title('Variance intensity diagram - %s'%(os.path.basename(filename)))        
+    return ax
+
+
+def NoiseMinimization(filename, images2substract, save=True):
+    """
+    """
+    from scipy.optimize import leastsq
+    from astropy.io import fits
+    images2substract.sort()
+    im0 = fits.open(filename)[0].data
+    lx, ly = im0.shape
+    images = np.zeros((lx, ly, len(images2substract)))
+    for i, im in enumerate(images2substract):
+        images[:,:,i] = fits.open(im)[0].data
+    result, cov_x = leastsq(func=residual, x0=0.3*np.ones(len(images2substract)), args=(im0,images))        
+    image, name = SubstractImages(param=np.square(result), image_name=filename, images=images, save=True)
+    return name
+
+
+def DS9TotalReductionPipeline(xpapoint):
+    """Run the total reduction pipeline defined for fireball
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) == 7:
+        path = Charge_path(xpapoint, entry_point=6)
+    elif (len(sys.argv) ==  6) :
+        if (os.path.isdir(sys.argv[5]) is False) & (os.path.isfile(sys.argv[5]) is False) :
+            path = Charge_path(xpapoint, entry_point=5)
+    elif (len(sys.argv) <  6) :
+        path = [d.get("file")]
+    print('Path to reduce: ', path)
+    masterBias = sys.argv[3]
+    masterDark = sys.argv[4]
+    try:
+        masterFlat = sys.argv[5]
+    except IndexError:
+        masterFlat = None
+            
+    for filename in path:
+        print(filename)
+        result, name = ApplyTotalReductionPipeline(filename, masterBias, masterDark, masterFlat) 
+                                        
+    if len(path) < 2:
+        d.set("lock frame physical")
+        d.set('frame new')
+        d.set('tile yes')
+        d.set('file ' + name)  
+    return
+
+def ApplyTotalReductionPipeline(filename, masterBias, masterDark, masterFlat):
+    """Warning, you are about to run the total reduction piepeline. 
+    Please make sure you are aware about how it works. 
+    In particular note that master bias and dark should be stacked images (or folders containing the images),
+    at the same gains/temp. Also make sure the exposure time is saved in the header of your images as 'EXPTIME'.
+    If not flat path is given, flat removal will not be performed. 
+    """
+    from astropy.io import fits
+    from astropy.convolution import convolve
+    masterDark = '/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/NoiseReduction/Dark/StackedImage_StackedImage_207-211_100s_9000_NaNsFree-StackedImage_247-251_100s_9400_NaNsFree.fits'
+    masterBias = '/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/NoiseReduction/Bias/StackedImage_0-1.fits'
+    masterFlat = None
+    filename = '/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/CRfree_and_NaNsFree/StackedImage_368-379.fits'
+    if os.path.isdir(masterBias):
+        masterBias = StackImagesPath(glob.glob(os.path.join(masterBias, 'image*.fits')))
+    elif os.path.isfile(masterBias):
+        masterBias = fits.open(masterBias)
+    if os.path.isdir(masterDark):
+        masterDark = StackImagesPath(glob.glob(os.path.join(masterDark, 'image*.fits')))
+    elif os.path.isfile(masterDark):
+        masterDark = fits.open(masterDark)
+
+    Bias_OScorr, Bias_OScorrName = ApplyOverscanCorrection(masterBias.filename(), stddev=3, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20])
+    Bias_OScorr.data = convolve(Bias_OScorr.data, kernel=np.array([[1.,1.,0],[1.,1.,0],[0.,0.,0]])/4)
+    Bias_OScorr.writeto('/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/NoiseReduction/Bias/StackedImage_0-1_OScorr_convolved.fits')
+    Dark_OScorr, Dark_OScorrName = ApplyOverscanCorrection(masterDark.filename(), stddev=3, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20])
+    
+    
+    Dark_OScorr_Biascorr = Dark_OScorr.data - Bias_OScorr.data  #SubstractImage(DarkName, Bias_OScorrName)
+    if masterDark[0].header['EXPTIME'] != 0:
+        Dark_OScorr_Biascorr_per_sec = Dark_OScorr_Biascorr / masterDark[0].header['EXPTIME']
+    else:
+        print('Exposure time is null for master dark, can not proceed')
+        sys.exit()
+    if masterFlat is not None:
+        name = '_OScorr_Biascorr_Darkcorr_Flatcorr.fits'
+        if os.path.isdir(masterFlat):
+            masterFlat = StackImagesPath(glob.glob(os.path.join(masterFlat, 'image*.fits')))        
+        elif os.path.isfile(masterFlat):
+            masterFlat = fits.open(masterFlat)
+            
+        Flat_OScorr, Flat_OScorrName = ApplyOverscanCorrection(masterFlat, stddev=3, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20])
+        Flat_OScorr_Biascorr = Flat_OScorr - Bias_OScorr#SubstractImage(DarkName, Bias_OScorrName)
+        Flat_OScorr_Biascorr_Darkcorr = Flat_OScorr_Biascorr - (Dark_OScorr_Biascorr * masterFlat[0].header['EXPTIME'])#SubstractImage(DarkName, Bias_OScorrName)
+    else:
+        name = '_OScorr_Biascorr_Darkcorr.fits'
+        Flat_OScorr_Biascorr_Darkcorr = 0
+    finalImage = fits.open(filename)   
+    FinalImage_OScorr, FinalImage_OScorrName = ApplyOverscanCorrection(finalImage.filename(), stddev=3, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20])
+    FinalImage_OScorr_Biascorr = FinalImage_OScorr.data - Bias_OScorr.data
+    FinalImage_OScorr_Biascorr_Darkcorr = FinalImage_OScorr_Biascorr - (Dark_OScorr_Biascorr_per_sec * finalImage[0].header['EXPTIME'] )
+    FinalImage_OScorr_Biascorr_Darkcorr_Flatcorr = FinalImage_OScorr_Biascorr_Darkcorr - Flat_OScorr_Biascorr_Darkcorr
+    
+    finalImage[0].data = FinalImage_OScorr_Biascorr_Darkcorr_Flatcorr
+    if 'NAXIS3' in finalImage[0].header:
+        finalImage[0].header.remove('NAXIS3')
+    finalImage[0].writeto(finalImage.filename()[:-5] + name, overwrite=True)
+    print('Image saved : ' + finalImage.filename()[:-5] + name)
+    return finalImage, finalImage.filename()[:-5] + name
+
+
+
+def DS9Trimming(xpapoint):
+    """Crop the image to have only the utility area
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint)
+    else:
+        path = [d.get("file")]
+        
+    try:
+        region = getregion(d)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        area = [Yinf, Ysup,Xinf, Xsup]
+        print(Yinf, Ysup,Xinf, Xsup)
+    except ValueError:
+        area = [0,-1,1053,2133]
+        
+    for filename in path:
+        print(filename)
+        result, name = ApplyTrimming(filename, area=area) 
+                                        
+    if len(path) < 2:
+        d.set('frame new')
+        d.set('tile yes')
+        d.set('file ' + name)  
+    return
+
+def ApplyTrimming(path, area=[0,-0,1053,2133]):
+    """Apply overscan correction in the specified region, given the two overscann areas
+    """
+    from astropy.io import fits
+    fitsimage = fits.open(path)[0]
+    image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
+    #image = image[area[0]:area[1],area[2]:area[3]]
+    fitsimage.data = image
+    name = path[:-5] + '_Trimm.fits'
+    if 'NAXIS3' in fitsimage.header:
+        fitsimage.header.remove('NAXIS3')
+    fitsimage.writeto(name,overwrite=True)
+    return fitsimage, name
+
+def DS9CLcorrelation(xpapoint):
+    """
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint)
+    else:
+        path = [d.get("file")]
+    try:
+        region = getregion(d)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        area = [Yinf, Ysup,Xinf, Xsup]
+        print(Yinf, Ysup,Xinf, Xsup)
+    except ValueError:
+        area = [0,-1,1053,2133]
+        
+    for filename in path:
+        print(filename)
+        CLcorrelation(filename, area=area) 
+    return
+
+def CLcorrelation(path, area=[0,-1,1053,2133]):
+    """
+    """
+    from astropy.io import fits
+    from matplotlib import pyplot as plt
+    #path = '/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/NoiseReduction/Bias/image000000Bias9000.fits'
+    fitsimage = fits.open(path)[0]
+    image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
+    #image = image[area[0]:area[1],area[2]:area[3]]
+    imagex = np.nanmean(image, axis=1)
+    imagey = np.nanmean(image, axis=0)
+    nbins=100
+    fig, ax = plt.subplots(2, 2, figsize=(12,7))
+    ax[0,0].hist(imagex[1:]-imagex[:-1],bins=10*nbins,histtype='step',label='Lines')
+    ax[1,0].hist(imagey[1:]-imagey[:-1],bins=10*nbins,histtype='step',label='Column', color='orange')
+#    ax[0,1].hist((image[1:,:] - image[:-1,:]).flatten(),bins=nbins,histtype='step',label='Column', color='orange')
+    #ax[0,1].hist((image[1:,:] - image[:-1,:]).flatten(),bins=10*nbins,histtype='step',label='Column', color='orange')
+    x = (image[:,1:] - image[:,:-1]).flatten()
+    y = (image[1:,:] - image[:-1,:]).flatten()
+    ax[0,1].hist(x[np.isfinite(x)],bins=30*nbins,histtype='step',label='Line')
+    ax[1,1].hist(x[np.isfinite(x)],bins=30*nbins,histtype='step',label='Line')
+    ax[1,1].hist(y[np.isfinite(y)],bins=30*nbins,histtype='step',label='Column', color='orange')
+    ax[1,1].set_xlim((-100,100))
+    ax[0,1].set_xlim((-100,100))
+    #ax[1,1].set_ylim((-10,40000))
+    #ax[0,1].set_ylim((-10,40000))
+    for axx in ax.flatten():
+        axx.grid()
+    ax[0,0].legend();    ax[0,1].legend()
+    ax[1,0].legend();    ax[1,1].legend()
+    ax[1,0].set_xlabel('abs(CL(n) - CL(n-1))')
+    ax[1,1].set_xlabel('abs(P(n) - P(n-1))')
+    print('ok')
+    fig.suptitle('Histograms for Columns/Lines correlation analysis \n' + os.path.basename(path), y=0.95)
+    plt.show()
+    print('ok')
+    return
+
+
+
+
+    fitsimage.data = image
+    name = path[:-5] + '_Trimm.fits'
+    if 'NAXIS3' in fitsimage.header:
+        fitsimage.header.remove('NAXIS3')
+    fitsimage.writeto(name,overwrite=True)
+    return fitsimage, name
+
+
+
+
+def DS9SubstractBackground(xpapoint, save=True):
+    """Apply the background substraction fonction to the DS9 images or several if given
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint)
+    else:
+        path = [d.get("file")]
+    for filename in path:
+        print(filename)
+        result, name = BackgroundSubstraction(filename, stddev=10, save=save)
+    if len(path) < 2:
+        d.set("lock frame physical")
+        d.set('frame new')
+        d.set('tile yes')
+        d.set('file ' + name) 
+    return 
+
+def BackgroundSubstraction(path, stddev=13, save=False):
+    """Generate a background of the given image using a 2D gaussian convolution that smoothes the signal
+    Background is saved and then substracted from the given image. The bckd substracted image is saved as _BCKDsubstracted.fits
+    """
+    from astropy.io import fits
+    from scipy import ndimage
+    from astropy.convolution import interpolate_replace_nans
+    from astropy.convolution import Gaussian2DKernel 
+    if type(path) == str:
+        print(path)
+        image = fits.open(path)[0]
+    else:
+        image = path
+    imagesub = image.copy()
+    data = image.data
+    if np.isfinite(image.data).all() is False:       
+        kernel = Gaussian2DKernel(stddev=stddev)
+        image.data = interpolate_replace_nans(image.data, kernel)    
+    smoothed_image = ndimage.gaussian_filter(image.data, sigma=(stddev, stddev), order=0)
+
+    imagesub.data = data.astype(np.int16) - smoothed_image.astype(np.int16)
+    name = ''
+    if save:
+        if 'NAXIS3' in image.header:
+            image.header.remove('NAXIS3')
+            imagesub.header.remove('NAXIS3')
+        name = path[:-5] + '_BCKDsubstracted.fits'
+        imagesub.writeto(name, overwrite=True)
+        image.data = smoothed_image.astype('uint16')
+        image.writeto(path[:-5] + '_smoothed.fits', overwrite=True)
+    return imagesub, name
+
+
+def reject_outliers(data, stddev = 3.):
+    """Reject outliers above std=m, taking care of nan values
+    """
+    d = np.abs(data - np.nanmedian(data))
+    mdev = np.nanmedian(d)
+    s = d/mdev if mdev else 0.
+    return data[s<stddev]
+
+def DS9OverscanCorrection(xpapoint):
+    """Replace NaNs value of the image in DS9 (or several if specified) by values interpolated around NaNs value
+    """
+    d = DS9(xpapoint)
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint)
+    else:
+        path = [d.get("file")]
+    for filename in path:
+        print(filename)
+        offset = 20
+        result, name = ApplyOverscanCorrection(filename, stddev=3, 
+                                               OSR1=[offset,-offset,offset,400],#1053-offset], 
+                                               OSR2=[offset,-offset,2200,2400])#2133+offset,-offset])
+    if len(path) < 2:
+        d.set("lock frame physical")
+        d.set('frame new')
+        d.set('tile yes')
+        d.set('file ' + name)  
+    return
+
+
+def ApplyOverscanCorrection(path, stddev=3, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20], save=True):
+    """Apply overscan correction in the specified region, given the two overscann areas
+    """
+    from astropy.io import fits
+    fitsimage = fits.open(path)[0]
+    image = fitsimage.data.astype(float).copy()
+    OScorrection = ComputeOSlevel(image, OSR1=OSR1, OSR2=OSR2)
+    fitsimage.data = image - OScorrection
+    name = path[:-5] + '_OScorr.fits'
+    if save:
+        if 'NAXIS3' in fitsimage.header:
+            fitsimage.header.remove('NAXIS3')
+        fitsimage.writeto(name,overwrite=True)
+    return fitsimage, name
+
+def ComputeOSlevel(image, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20]):
+    OSregion = np.hstack((image[OSR1[0]:OSR1[1],OSR1[2]:OSR1[3]],image[OSR2[0]:OSR2[1],OSR2[2]:OSR2[3]]))
+    OScorrection = np.nanmedian(OSregion)#reject_outliers(OSregion, stddev=3))
+    return OScorrection
 
 def DS9replaceNaNs(xpapoint):
     """Replace the pixels in the selected regions in DS9 by NaN values
@@ -3552,8 +4458,9 @@ def DS9replaceNaNs(xpapoint):
     fitsimage = fits.open(filename)[0]
     image = fitsimage.data.astype(float).copy()
     print(regions)
-    for region in regions:
-        xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
+    try:
+        xc, yc, h, w = int(regions.xc), int(regions.yc), int(regions.h), int(regions.w)
+        print('Only one region found...')        
         print('W = ', w)
         print('H = ', h)
         Xinf = int(np.floor(yc - h/2 -1))
@@ -3561,6 +4468,17 @@ def DS9replaceNaNs(xpapoint):
         Yinf = int(np.floor(xc - w/2 -1))
         Ysup = int(np.ceil(xc + w/2 -1))
         image[Xinf:Xsup+1,Yinf:Ysup+2] = np.nan
+    except AttributeError:
+        print('Several regions found...')
+        for region in regions:
+            xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
+            print('W = ', w)
+            print('H = ', h)
+            Xinf = int(np.floor(yc - h/2 -1))
+            Xsup = int(np.ceil(yc + h/2 -1))
+            Yinf = int(np.floor(xc - w/2 -1))
+            Ysup = int(np.ceil(xc + w/2 -1))
+            image[Xinf:Xsup+1,Yinf:Ysup+2] = np.nan
     fitsimage.data = image
     fitsimage.writeto(filename,overwrite=True)
     #d.set('frame new')
@@ -3569,6 +4487,76 @@ def DS9replaceNaNs(xpapoint):
     d.set('pan to %0.3f %0.3f physical' % (xc,yc))
     #d.set('lock yes')
     #d.set("lock frame physical")
+    return
+
+
+
+def InterpolateNaNs(path, stddev=2):
+    """Return int16 fits image with NaNs interpolated
+    """
+    from astropy.convolution import interpolate_replace_nans
+    from astropy.io import fits
+    from astropy.convolution import Gaussian2DKernel          
+    print(path)
+    image = fits.open(path)[0]
+    result = image.data
+    stddev = 2
+    while (~np.isfinite(result).all()):
+        print(len(np.where(~np.isfinite(result))[0]), 'NaN values found!')
+        print('Infinite values in the image, inteprolating NaNs with 2D Gaussian kernel of standard deviation = ', stddev)
+        kernel = Gaussian2DKernel(stddev=stddev)
+        result = interpolate_replace_nans(result, kernel)
+        stddev += 1
+    if 'NAXIS3' in image.header:
+        image.header.remove('NAXIS3')
+    image.data = result.astype('uint16')
+    name = path[:-5] + '_NaNsFree.fits'
+    image.writeto(name, overwrite=True)    
+    return result, name
+
+def DS9InterpolateNaNs(xpapoint):
+    """Replace NaNs value of the image in DS9 (or several if specified) by values interpolated around NaNs value
+    """
+#    d = DS9(xpapoint)
+#    filename = d.get("file")
+#    try:
+#        n1, n2 = sys.argv[3].split('-')#'f3 names'#sys.argv[3]
+#        n1, n2 = int(n1), int(n2)
+#        print('n1, n2 = ', n1, n2)
+#    except (ValueError, IndexError) as e:
+#        print('No value given, taking only DS9 image:', e)
+#        n1, n2 = None, None
+#    else:
+#        numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
+#        print('Numbers used: {}'.format(numbers))               
+#        path = []
+#        print('Specified numbers are integers, opening corresponding files ...')
+#        names = os.path.basename(filename).split('.')
+#        for number in numbers:
+#            if len(names)==2:
+#                path.append(os.path.dirname(filename) + '/image%06d.' % (int(number)) + names[-1])
+#            if len(names)==3:
+#                path.append(os.path.dirname(filename) + '/image%06d.' % (int(number)) + names[-2] + '.' + names[-1])            
+#
+#    if n1 is None:
+#        path = [filename]
+    d = DS9(xpapoint)
+    if len(sys.argv) > 3:
+        path = Charge_path(xpapoint)
+    else:
+        path = [d.get("file")]
+        
+    for filename in path:
+        if os.path.isfile(filename) is False:
+            filename = filename[:-5] + '.CRv.fits'#os.path.join(os.path.dirname(filename),os.path.basename(fielname))
+        print(filename)
+        result, name = InterpolateNaNs(filename, stddev=2)
+        if len(path)<2:
+            d.set("lock frame physical")
+            d.set('frame new')
+            d.set('tile yes')
+            d.set('file ' + name)  
+            #picouet
     return
 
 
@@ -3626,10 +4614,11 @@ def AnalyzeBackground(filename):
 #    AnalyzeBackground(filename)
     
 
+
 def main():
     """Main function where the arguments are defined and the other functions called
     """
-    path = os.path.dirname(os.path.realpath(__file__))
+    #path = os.path.dirname(os.path.realpath(__file__))
     print(__file__)
     print(__package__)
     
@@ -3641,23 +4630,18 @@ def main():
             print(__file__)
             pass
         else:
-            print('To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path)
-            print('And switch on Autoreload')
+            print(bcolors.BLACK_RED + 'To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
+            print(bcolors.BLACK_RED + 'And switch on Autoreload' + bcolors.END)
             #sys.exit()
 
-
-    
-#  DS9  xpapoint = '7f000001:54016'
-#    function = 'plot_spectra_big_range'#'plot_spectra_big_range'#'plot_spectra_big_range'#plot_spectra
-#    sys.argv.append(xpapoint)
-#    sys.argv.append(function)   
-#    sys.argv.append('f2-206')
-#    sys.argv.append('10.49-0.25')#16.45-0.15
+#    sys.argv.append('7f000001:65439')
+#    sys.argv.append('photo_counting')   
+    #sys.argv.append('f2-206')
+    #sys.argv.append('10.49-0.25')#16.45-0.15
 
     
     
     print(datetime.datetime.now())
-    print (path)
     start = timeit.default_timer()
 
     DictFunction = {'centering':DS9center, 'radial_profile':DS9rp,
@@ -3669,34 +4653,48 @@ def main():
                     'next':DS9next, 'previous':DS9previous, 'plot_spectra_big_range':DS9plot_spectra_big_range,
                     'regions': Field_regions, 'stack': DS9stack,'lock': DS9lock,
                     'snr': DS9snr, 'focus': DS9focus,'inverse': DS9inverse,
-                    'throughuslit': DS9throughslit, 'meanvar': DS9meanvar,
+                    'throughslit': DS9throughslit, 'meanvar': DS9meanvar,
                     'xy_calib': DS9XYAnalysis,'Remove_Cosmics': DS9removeCRtails2,
-                    'ReplaceWithNans': DS9replaceNaNs}
-#    try:
+                    'ReplaceWithNans': DS9replaceNaNs,'InterpolateNaNs': DS9InterpolateNaNs,
+                    'OverscanCorrection': DS9OverscanCorrection, 'Trimming': DS9Trimming,
+                    'SubstractImage': DS9RemoveImage, 'TotalReduction': DS9TotalReductionPipeline,
+                    'BackgroundSubstraction': DS9SubstractBackground,
+                    'ColumnLineCorrelation': DS9CLcorrelation, 'OriginalSettings': DS9originalSettings,
+                    'ImageAnalysis': DS9AnalyzeImage, 'NoiseMinimization': DS9NoiseMinimization,
+                    'ComputeEmGain': DS9ComputeEmGain, '2D_autocorrelation': DS9_2D_autocorrelation}
+
     xpapoint = sys.argv[1]
     function = sys.argv[2]
+    print ('DS9Utils %s %s'%(xpapoint, function))
+    
+    print(bcolors.GREEN_WHITE + """
+          ********************************************************************
+                                     Function = %s
+          ********************************************************************
+          """%(function)+ bcolors.END)
 
-    print("""
-        ********************************************************************
-                                     Function = %s         
-        ********************************************************************
-        """%(function)) 
+    print('sys.argv = ', sys.argv)
+    print('xpapoint = ', xpapoint)
+    print('function = ', function)
 
-
+    
+#print(bcolors.GREEN_WHITE + "*** Function = %s *** "%(function)+ bcolors.END)
     a = DictFunction[function](xpapoint)             
 
 
 
     stop = timeit.default_timer()
 
-    print("""
+    print(bcolors.BLACK_GREEN + """
         ********************************************************************
                             Exited OK, test duration = {}s      
         ********************************************************************
-        """.format(stop - start)) 
+        """.format(stop - start) + bcolors.END)
 #    except Exception as e:
 #        print(e)
 #        pass
+    #print(bcolors.BLACK_GREEN + "*** Exited OK, test duration = {}s  *** ".format(stop - start) + bcolors.END)
+
     return a
 
 
