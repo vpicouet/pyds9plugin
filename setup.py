@@ -28,7 +28,7 @@ entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 data = { "DS9FireBall": ["FireBall.ds9.ans", "Slits/*","Targets/*","Mappings/*"]}
 
 
-version = '1.50dev'
+version = '1.52dev'
 
 if sys.version_info.major == 3:
     setup(
