@@ -1,23 +1,26 @@
 #from distutils.core import setup
 from setuptools import setup, find_packages
 import sys
+#from pip.req import parse_requirements
 
-requires1 = ['numpy >=1.8', 
+requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
+	    'numpy >=1.8', 
             'scipy >=0.14', 
             'matplotlib',
             'astropy >=1.3',
-            'pyds9',
+            #'pyds9',
             'photutils',
             'PyQt5',
             'tqdm'
             ]
 
 
-requires2 = ['numpy >=1.8', 
+requires2 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
+            'numpy >=1.8', 
             'scipy >=0.14', 
             'matplotlib',
             'astropy >=1.3',
-            'pyds9',
+            #'pyds9',
             'photutils',
             'tqdm'
             ]
@@ -25,10 +28,10 @@ requires2 = ['numpy >=1.8',
 entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 
-data = { "DS9FireBall": ["FireBall.ds9.ans", "Slits/*","Targets/*","Mappings/*"]}
+data = { "DS9FireBall": ["FireBall.ds9.ans", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*"]}
 
 
-version = '1.52dev'
+version = '1.86dev'
 
 if sys.version_info.major == 3:
     setup(
@@ -36,6 +39,7 @@ if sys.version_info.major == 3:
         version=version,
         license='Creative Commons Attribution-Noncommercial-Share Alike license',
         install_requires = requires1,
+#	install_reqs = parse_requirements('requirements.txt', session='hack'),
         packages = find_packages(),
         package_data = data,
         include_package_data=True,
@@ -48,6 +52,7 @@ elif sys.version_info.major == 2:
         version=version,
         license='Creative Commons Attribution-Noncommercial-Share Alike license',
         install_requires = requires2,
+#        install_reqs = parse_requirements('requirements.txt', session='hack'),
         packages = find_packages(),
         package_data = data,
         include_package_data=True,
