@@ -7044,7 +7044,7 @@ def CreateCatalogInfo(t1, verbose=False):
     fields = ['Col2ColDiff', 'Line2lineDiff', 'OverscannRight', 'OverscannLeft', 'Gtot_var_int_w_OS',
               'TopImage', 'BottomImage', 'MeanADUValue', 'SaturatedPixels','MeanFlux','OS_SMEARING1','OS_SMEARING2',
               'stdXY', 'stdY', 'stdX', 'MeanADUValueTR', 'MeanADUValueBR', 'MeanADUValueBL', 'MeanADUValueTL','Gtot_var_int_wo_OS',
-              'Smearing_coeff_phys','GainFactorVarIntens','GainFactorHist','BrightSpotFlux']
+              'Smearing_coeff_phys','GainFactorVarIntens','GainFactorHist','BrightSpotFlux','Top2BottomDiff_OSL','Top2BottomDiff_OSR']
     #t = Table(names=fields,dtype=('S20,'*len(fields)).split(',')[:-1])#,dtype=('S10,'*30).split(',')[:-1])
     t = Table(names=fields,dtype=('float,'*len(fields)).split(',')[:-1])#,dtype=('S10,'*30).split(',')[:-1])
     #for i, file in enumerate(files):
@@ -7071,6 +7071,8 @@ def CreateCatalogInfo(t1, verbose=False):
         t[i]['OverscannLeft'] = np.nanmean(OSL)
         t[i]['TopImage'] = np.nanmean(column[:20])
         t[i]['BottomImage'] = np.nanmean(column[-20:])
+        t[i]['Top2BottomDiff_OSL'] = np.nanmean(OSL[:20,:]) - np.nanmean(OSL[-20:,:])
+        t[i]['Top2BottomDiff_OSR'] = np.nanmean(OSR[:20,:]) - np.nanmean(OSR[-20:,:])
         t[i]['MeanFlux'] =  t[i]['MeanADUValue']/texp
         t[i]['MeanADUValueTR'] =  np.nanmean((data - ComputeOSlevel1(data))[1000:1950,1600:2100])
         t[i]['MeanADUValueBR'] =  np.nanmean((data - ComputeOSlevel1(data))[2:1000,1600:2100])
@@ -7527,12 +7529,16 @@ def DS9ExtractSources(xpapoint):
     #x, y = x+93, y-93
     d = DS9(xpapoint)
     filename = getfilename(d)
-    if len(sys.argv) > 3: path = Charge_path_new(filename, entry_point=3)
+    ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons = sys.argv[3:3+7]
+    threshold = np.array(threshold.split(','),dtype=float)
+    fwhm = np.array(fwhm.split(','),dtype=float)
+    print('ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons = ', ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons)
+    if len(sys.argv) > 3+7: path = Charge_path_new(filename, entry_point=3+7)
 
         
     for filename in path:
         print(filename)
-        sources = ExtractSources(filename, fwhm=5, threshold=5, theta=0, ratio=1, n=2, quick=True)
+        sources = ExtractSources(filename, fwhm=fwhm, threshold=threshold, theta=float(theta), ratio=float(ratio), n=int(ErosionDilatation), iters=int(iters), deleteDoublons=int(deleteDoublons))
         if len(path)<2:
             create_DS9regions2(sources['xcentroid'],sources['ycentroid'], radius=10, form = 'circle',save=True,color = 'yellow', savename='/tmp/centers')
             d.set('region delete all')
@@ -7547,7 +7553,7 @@ def DS9ExtractSources(xpapoint):
 
 
 
-def ExtractSources(filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, quick=True):
+def ExtractSources(filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, sigma=3, iters=5, deleteDoublons=3):
     """Extract sources for DS9 image and create catalog
     """
     from astropy.io import fits
@@ -7559,26 +7565,27 @@ def ExtractSources(filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, quick=T
     fitsfile = fits.open(filename)[0]
     data = fitsfile.data
     data2 = ndimage.grey_dilation(ndimage.grey_erosion(data, size=(n,n)), size=(n,n))       
-    mean, median, std = sigma_clipped_stats(data2, sigma=3.0, iters=5)    
-    if quick:    
-        daofind = DAOStarFinder(fwhm=fwhm, threshold=threshold*std,ratio = ratio, theta = theta)         
-        sources0 = daofind(data2 - median) 
-    if not quick:
-        daofind = DAOStarFinder(fwhm=fwhm[0], threshold=threshold[0]*std,ratio = ratio, theta = theta)        
-        sources0 = daofind(data2 - median)
-        for i in fwhm: 
-            for j in threshold: 
-                daofind = DAOStarFinder(fwhm=i, threshold=j*std,ratio =ratio, theta = theta)         
-            
-                sources1 = daofind(data2 - median) 
-                print('fwhm = {}, T = {}, len = {}'.format(i,j,len(sources1)))
-                try :
-                    sources0 = Table(np.hstack((sources0,sources1)))
-                except TypeError:
-                    print('catalog empty')
-                    if len(sources0)==0:
-                        sources0 = sources1
-    sources = delete_doublons(sources0, dist = 30)
+    mean, median, std = sigma_clipped_stats(data2, sigma=sigma, iters=iters)    
+#    if quick:    
+#        daofind = DAOStarFinder(fwhm=fwhm, threshold=threshold*std,ratio = ratio, theta = theta)         
+#        sources0 = daofind(data2 - median)  
+#    if not quick:
+    daofind = DAOStarFinder(fwhm=fwhm[0], threshold=threshold[0]*std,ratio = ratio, theta = theta)        
+    sources0 = daofind(data2 - median)
+    print('fwhm = {}, T = {}, len = {}'.format(fwhm[0],threshold[0],len(sources0)))
+    for i in fwhm[1:]: 
+        for j in threshold[1:]: 
+            daofind = DAOStarFinder(fwhm=i, threshold=j*std,ratio =ratio, theta = theta)         
+        
+            sources1 = daofind(data2 - median) 
+            print('fwhm = {}, T = {}, len = {}'.format(i,j,len(sources1)))
+            try :
+                sources0 = Table(np.hstack((sources0,sources1)))
+            except TypeError:
+                print('catalog empty')
+                if len(sources0)==0:
+                    sources0 = sources1
+    sources = delete_doublons(sources0, dist = deleteDoublons)
     return sources
 
 
@@ -7714,7 +7721,7 @@ def AddHeaderField(xpapoint, field='', value='', comment='-'):
         d.set('file '+ filename)
     return
 
-def DS9BackgroundEstimationPhot(xpapoint, n=2, DS9backUp = DS9_BackUp_path):
+def DS9BackgroundEstimationPhot(xpapoint, n=2, DS9backUp = DS9_BackUp_path, Plot=True):
     """
     """
     #from scipy import ndimage
@@ -7727,10 +7734,13 @@ def DS9BackgroundEstimationPhot(xpapoint, n=2, DS9backUp = DS9_BackUp_path):
     sigma, percentile, snr, npixels, dilate = np.array([sigma, percentile, snr, npixels, dilate], dtype=int)
     box1, box2 = np.array(boxs.split(','), dtype=int)
     if len(sys.argv) > 3+5: path = Charge_path_new(filename, entry_point=3+5+5)
-    
+    if len(path)>1:
+        Plot=False
 
     for filename in path:
-        fitsfile, name = BackgroundEstimationPhot(filename, n=2, DS9backUp = DS9_BackUp_path, sigma=float(sigma), bckd=bckd, rms=rms, filters=(filter1, filter2), boxs=(box1, box2),exclude_percentile=percentile, mask=mask, snr=snr, npixels=npixels, dilate_size=dilate)
+        fitsfile, name = BackgroundEstimationPhot(filename, n=2, DS9backUp = DS9_BackUp_path,
+                                                  sigma=float(sigma), bckd=bckd, rms=rms, filters=(filter1, filter2), boxs=(box1, box2),
+                                                  exclude_percentile=percentile, mask=mask, snr=snr, npixels=npixels, dilate_size=dilate, Plot=Plot)
 
     if len(path)<2:
         d.set("lock frame physical")
@@ -7743,14 +7753,14 @@ def DS9BackgroundEstimationPhot(xpapoint, n=2, DS9backUp = DS9_BackUp_path):
 #Background2D(mask, (50,50), filter_size=(3,3),sigma_clip=sigma_clip, bkg_estimator=BiweightLocationBackground(),exclude_percentile=20)
 
 
-def BackgroundEstimationPhot(filename,  sigma, bckd, rms, filters, boxs,n=2, DS9backUp = DS9_BackUp_path,snr = 3,npixels = 15,dilate_size = 3,exclude_percentile = 5, mask=False):
+def BackgroundEstimationPhot(filename,  sigma, bckd, rms, filters, boxs,n=2, DS9backUp = DS9_BackUp_path,snr = 3,npixels = 15,dilate_size = 3,exclude_percentile = 5, mask=False, Plot=True):
     """
     """
     from astropy.io import fits
     from photutils import make_source_mask, Background2D, MeanBackground, MedianBackground
     from photutils import ModeEstimatorBackground, MMMBackground, SExtractorBackground, BiweightLocationBackground
     from photutils import StdBackgroundRMS, MADStdBackgroundRMS, BiweightScaleBackgroundRMS
-    from astropy.stats import SigmaClip, sigma_clipped_stats
+    from astropy.stats import SigmaClip#, sigma_clipped_stats
     fitsfile = fits.open(filename)[0]
     data = fitsfile.data#[400:1700,1200:2000]
     #data2 = data#ndimage.grey_dilation(ndimage.grey_erosion(data, size=(n,n)), size=(n,n))   
@@ -7837,7 +7847,6 @@ def BackgroundEstimationPhot(filename,  sigma, bckd, rms, filters, boxs,n=2, DS9
         plt.title('Residual: Data = background')
         fig.tight_layout()
         plt.savefig(DS9backUp + 'Plots/%s_BackgroundSubtraction.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M:%S")))    #plt.subplot_tool()
-        plt.show()
     if len(masks)==2:
         diff1 = np.nanmean(masks[0]-bkg[0].background)
         diff2 = np.nanmean(masks[1]-bkg[1].background)
@@ -7862,6 +7871,7 @@ def BackgroundEstimationPhot(filename,  sigma, bckd, rms, filters, boxs,n=2, DS9
         plt.title('Residual: Data = background')
         fig.tight_layout()
         plt.savefig(DS9backUp + 'Plots/%s_BackgroundSubtraction.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M:%S")))    #plt.subplot_tool()
+    if Plot:
         plt.show()
     return fitsfile, name
 
@@ -8406,9 +8416,10 @@ def CreateImageFromCatalogObject(xpapoint, nb = int(1e3)):
     d = DS9(xpapoint)
     nb = nb
     lx, ly = 1000, 1000
-    if os.path.isfile( sys.argv[3]):
-        catfile =   sys.argv[3] #law = 'standard_exponential'
-        catalog = Table.read(catfile)
+    if len(sys.argv)>3:
+        if os.path.isfile( sys.argv[3]):
+            catfile =   sys.argv[3] #law = 'standard_exponential'
+            catalog = Table.read(catfile)
     else:
         x, y, angle = np.random.randint(lx, size=nb), np.random.randint(ly, size=nb), np.random.rand(nb)*2*np.pi - np.pi
         peak = np.random.exponential(10, size=nb)
@@ -8426,8 +8437,8 @@ def CreateImageFromCatalogObject(xpapoint, nb = int(1e3)):
         except KeyError:
             image += Gaussian2D.evaluate(x, y, catalog[i]['amplitude'], catalog[i]['x_mean'], catalog[i]['y_mean'], catalog[i]['x_stddev'],  catalog[i]['y_stddev'], catalog[i]['theta'])
     image_real = np.random.poisson(image)
-    fitswrite(image_real,'/tmp/galaxies.fits')
-    d.set('file /tmp/galaxies.fits')
+    fitswrite(image_real,'/tmp/galaxies000000.fits')
+    d.set('file /tmp/galaxies000000.fits')
 #    from photutils.datasets import make_gaussian_sources_image
 #    nb = int(1e3)
 #    lx, ly = 1000, 1000
