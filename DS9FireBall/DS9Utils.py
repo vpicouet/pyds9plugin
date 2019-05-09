@@ -4786,17 +4786,23 @@ def DS9DetectHotPixels(xpapoint, DS9backUp = DS9_BackUp_path, T1=None, T2=None, 
     #from astropy.io import fits
     d=DS9(xpapoint)
 
-    try:
-        region = getregion(d)
-    except ValueError:
-        Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
-    else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
-    area = [Yinf, Ysup,Xinf, Xsup]
-    print(Yinf, Ysup,Xinf, Xsup)    
+ 
     filename = d.get('file')
     fitsimage = d.get_fits()[0]#fits.open(path)[0] 
     image = fitsimage.data
+    try:
+        region = getregion(d)
+    except ValueError:
+        if image.shape == (2069, 3216):
+            Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
+        else:
+            Xinf, Xsup, Yinf, Ysup = [0,-1,0,-1]
+    else:
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+    area = [Yinf, Ysup,Xinf, Xsup]
+    print(Yinf, Ysup,Xinf, Xsup)   
+
+
     if T1 is None:
         try:
             entry = sys.argv[3]
@@ -4811,7 +4817,7 @@ def DS9DetectHotPixels(xpapoint, DS9backUp = DS9_BackUp_path, T1=None, T2=None, 
 
         T1, T2 = int(T1), int(T2)
         T1, T2 = np.min([T1,T2]), np.max([T1,T2])
-    print('Threshold = %i % i'%(T1,T2))
+    print('Threshold = %i % s'%(T1,T2))
     
     D = DetectHotPixels(filename, area=area, DS9backUp = DS9_BackUp_path, T1=T1, T2=T2,nb=nb)
 
@@ -4820,19 +4826,27 @@ def DS9DetectHotPixels(xpapoint, DS9backUp = DS9_BackUp_path, T1=None, T2=None, 
     return  D['table']
 
 def DS9Desmearing(xpapoint, DS9backUp = DS9_BackUp_path, T1=None, T2=None, config=my_conf, size=5,nb=None):
+    from tqdm import tqdm
+
     d=DS9(xpapoint)
     d.set('region delete all')
     filename = d.get('file')
     fitsimage = d.get_fits()[0]#fits.open(path)[0] 
     image = fitsimage.data
-    
-    table = DS9DetectHotPixels(xpapoint, DS9backUp = DS9_BackUp_path, T1=T1, T2=T2, config=my_conf, nb=nb)
+    ly, lx = image.shape
+    table = DS9DetectHotPixels(xpapoint, DS9backUp = DS9_BackUp_path, T1=T1, T2=T2, config=my_conf)
     print (table)
-    background = [np.nanmean(image[yi-1:yi,xi-size:xi]) for xi, yi in zip(table['xcentroid'],table['ycentroid'])]
+    
+    background = [np.nanmean(image[yi-1,np.max([0,xi-size]):xi+1]+image[np.min([ly-1,yi+1]),np.max([0,xi-size]):xi+1])/2 for xi, yi in zip(table['xcentroid'],table['ycentroid'])]
+#    background =[]
+#    for xi, yi in zip(table['xcentroid'],table['ycentroid']):
+#        print(xi,yi)
+#        background.append(np.nanmean(image[yi-1,np.max([0,xi-size]):xi+1]+image[np.min([ly-1,yi+1]),np.max([0,xi-size]):xi+1])/2 )
+#    
     #print(background)
-    #background = [np.nanmean(image[yi-1:yi,xi-size:xi]+image[yi:yi+2,xi-size:xi])/2 for xi, yi in zip(table['xcentroid'],table['ycentroid'])]
-    value = [np.nansum(image[yi,xi-size:xi]-bck) for xi, yi, bck in zip(table['xcentroid'],table['ycentroid'],background)]
-    for i in range(len(table['ycentroid'])):
+    #plt.plot(image[table['ycentroid'][0],table['xcentroid'][0]-size:table['xcentroid'][0]+1])
+    value = [np.nansum(image[yi,xi-size:xi+1]-bck) for xi, yi, bck in zip(table['xcentroid'],table['ycentroid'],background)]
+    for i in tqdm(range(len(table['ycentroid']))):
         print(i)
         #print(i,table['ycentroid'][i],table['xcentroid'][i])
         #print(value[i],background[i])
@@ -4842,6 +4856,8 @@ def DS9Desmearing(xpapoint, DS9backUp = DS9_BackUp_path, T1=None, T2=None, confi
     fitswrite(fitsimage,filename[:-5] + '_unsmeared.fits')
     d.set('frame new')
     d.set('file '+ filename[:-5] + '_unsmeared.fits')
+    #plt.plot(image[table['ycentroid'][0],table['xcentroid'][0]-size:table['xcentroid'][0]+1])
+    #plt.show()
     return table
     
     
@@ -4855,26 +4871,95 @@ def DetectHotPixels(filename, area, DS9backUp = DS9_BackUp_path, T1=None, T2=Non
     Yinf, Ysup,Xinf, Xsup = area
     if T1 is None:
         T1, T2 = GetThreshold(image[Yinf: Ysup,Xinf: Xsup], nb=nb), 7e4
-    cosmicRays = detectCosmics(image,T=T1 ,T2=T2, area=area)
+    cosmicRays = detectCosmics_new(image,T=T1 ,T2=T2, area=area)
     #cosmicRays = cosmicRays[(cosmicRays['xcentroid']<2200) & (cosmicRays['xcentroid']>1700) & (cosmicRays['ycentroid']<1000)]
     #plt.plot(cosmicRays['xcentroid'],cosmicRays['ycentroid'],'x')
-    random.shuffle(cosmicRays)
     #cosmicRays = cosmicRays[:10*nb]
-    cosmicRays = assign_CR(cosmicRays,dist=5)
-    cosmicRays = Determine_front(cosmicRays)
+
+
+    #random.shuffle(cosmicRays)
+
+#    cosmicRays = assign_CR(cosmicRays,dist=5)
+#    cosmicRays = Determine_front(cosmicRays)
+#    cosmicRays = cosmicRays[cosmicRays['front']==1]
+
+
 
     #plt.plot(cosmicRays[(cosmicRays['front']==1)]['xcentroid'],cosmicRays[(cosmicRays['front']==1)]['ycentroid'],'x')
-    cosmicRays = cosmicRays[cosmicRays['front']==1]
 #    index = random.sample(range(len(cosmicRays)), np.min([len(cosmicRays),nb]))
 #    index.sort()
 #    cosmicRays = cosmicRays[index]
-    cosmicRays = cosmicRays[:nb]
+    cosmicRays = cosmicRays[cosmicRays['doublons']==0]
+    cosmicRays = cosmicRays#[:nb]
 
     #csvwrite(cosmicRays, filename + '_HotPixels.csv')
     name = DS9backUp + 'DS9Regions/HotPixels%s-%s'%(T1,T2)
-    create_DS9regions([list(cosmicRays['xcentroid'])],[list(cosmicRays['ycentroid'])], form=['circle'], radius=3, save=True, savename=name, color = ['yellow'],ID=None)                
+    create_DS9regions([list(cosmicRays['xcentroid'])],[list(cosmicRays['ycentroid'])], form=['circle'], radius=1, save=True, savename=name, color = ['yellow'],ID=None)                
     return  {"table": cosmicRays,"region": name}
 
+
+
+def detectCosmics_new(image,T=6*1e4, T2=None,area=[0,2069,1053,2133], n=3, config=my_conf):
+    """Detect cosmic rays, for FIREBall-2 specfic case it is a simplistic case
+    where only thresholding is enough
+    """
+    from astropy.table import Table, Column
+    import matplotlib.dates as mdates
+    locator = mdates.HourLocator(interval=1)
+    locator.MAXTICKS = 50000
+    ax=plt.gca()
+    ax.xaxis.set_minor_locator(locator)
+    CS1 = ax.contour(image, levels=T, colors='white', alpha=0.5).allsegs[0] if (image>T).any() else []
+    if T2 is not None:
+        CS2 = ax.contour(image, levels=T2, colors='white', alpha=0.5).allsegs[0] if (image>T2).any() else []
+        contours = CS1 + CS2
+        print('%i hot pixels above %i, %i hot pixels above %i'%(len(CS1),T,len(CS2),T2))
+    names = ('id','sizex','sizey','len_contour','max_x','min_y', 'max_y')
+    cosmics = Table(np.zeros((len(contours),len(names))),names=names)
+    cosmics['id'] = np.arange(len(contours))
+    cosmics['sizex'] = [cs[:,0].max() - cs[:,0].min()     for cs in contours ]
+    cosmics['sizey'] = [cs[:,1].max() - cs[:,1].min()     for cs in contours ]
+
+    cosmics['len_contour'] = [ len(cs[:,1])   for cs in contours ]
+    cosmics['max_x'] = [ int(cs[:,0].max()+n*1)   for cs in contours ]
+    cosmics['min_y'] = [ int(cs[:,1].min()-n*1)   for cs in contours ]
+    cosmics['max_y'] = [ int(cs[:,1].max()+n*2)   for cs in contours ]
+    cosmics['mean_y'] = [ int((cs[:,1].max()+cs[:,1].max())/2)   for cs in contours ]
+    cosmics['size'] = [ n*50   for cs in contours ]
+    cosmics['size_opp'] = [ n*1 for cs in contours ]
+    imagettes = [image[int(cs[:,1].min()):int(cs[:,1].max())+1,int(cs[:,0].min()):int(cs[:,0].max())+1] for cs in contours]
+    for cs in contours:
+        print(int(cs[:,0].min()),int(cs[:,0].max())+1,int(cs[:,1].min()),int(cs[:,1].max()+1))
+    cosmics['cx']  = [ np.where(ima==np.nanmax(ima))[1][0] for ima in imagettes]
+    cosmics['cy']  = [ np.where(ima==np.nanmax(ima))[0][0] for ima in imagettes]
+    cosmics['c0x'] = [int(cs[:,0].min())    for cs in contours ]
+    cosmics['c0y'] = [int(cs[:,1].min())    for cs in contours ]
+    cosmics['xcentroid'] = cosmics['c0x'] + cosmics['cx'] 
+    cosmics['ycentroid'] = cosmics['c0y'] + cosmics['cy'] 
+    cosmics['value'] = [image[y,x] for  x, y in zip(cosmics['xcentroid'],cosmics['ycentroid'])]
+    #cosmics[my_conf.exptime[0]] = header[my_conf.exptime[0]]
+    #cosmics[my_conf.gain[0]] = header[my_conf.gain[0]]
+    #cosmics['number'] = re.findall(r'\d+',os.path.basename(filename))[-1]
+    if len(cosmics)==0:
+        print('No cosmic rays detected... Please verify the detection threshold')
+        #sys.exit()
+        cosmics.add_columns([Column(name='doublons'),Column(name='dark'),Column(name='id'),Column(name='distance')])
+        return cosmics
+    else:
+        cosmics['doublons']=0
+        cosmics['dark'] = -1
+        cosmics['id'] = -1
+        cosmics['distance'] = -1
+        cosmics['sum_10'] = -1
+        cosmics['contour'] = -1
+        cosmics['Nb_saturated'] = -1
+        print(len(cosmics), ' detections, youpi!')
+        cosmics_n = delete_doublons_CR(cosmics, dist=1, delete_both=False)
+        print(len(cosmics_n[cosmics_n['doublons']==0]))
+        print(cosmics_n['xcentroid','ycentroid','value','doublons'])
+    return cosmics_n
+
+#plt.plot(cosmics['xcentroid'],cosmics['ycentroid'],'x')
 
        
 def detectCosmics(image,T=6*1e4, T2=None,area=[0,2069,1053,2133], config=my_conf):
@@ -4907,26 +4992,33 @@ def detectCosmics(image,T=6*1e4, T2=None,area=[0,2069,1053,2133], config=my_conf
         print(len(cosmicRays), ' detections, youpi!')
     return cosmicRays
 
-def delete_doublons_CR(sources, dist=4):
+def delete_doublons_CR(sources, dist=4, delete_both=False):
     """Function that delete doublons detected in a table, 
     the initial table and the minimal distance must be specifies
     """
     from tqdm import tqdm
-    for i in tqdm(range(len(sources))):
-        distances = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i])
-        a = distances >= dist
-        #a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
-        #a = distance2(sources[sources['doublons']==0]['xcentroid','ycentroid'],sources['xcentroid','ycentroid'][i]) > dist
-        a = list(1*a)
-        a.remove(0)
-        if np.nanmean(a)<1:
-            sources['doublons'][i]=1
-            sources['distance'][i]= np.nanmin(distances[distances>0])
-    #y, x = np.indices((image.shape))
-    #mask1 = (sources['xcentroid']<1053) 
-    #mask2 = (sources['xcentroid']>2133)
-    #sources['doublons'][~mask1]=1
-    #sources['doublons'][~mask2]=1
+    if delete_both:
+        for i in tqdm(range(len(sources))):
+            distances = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i])
+            a = distances >= dist
+            #a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
+            #a = distance2(sources[sources['doublons']==0]['xcentroid','ycentroid'],sources['xcentroid','ycentroid'][i]) > dist
+            a = list(1*a)
+            a.remove(0)
+            if np.nanmean(a)<1:
+                sources['doublons'][i]=1
+                sources['distance'][i]= np.nanmin(distances[distances>0])
+    else:
+        for i in tqdm(range(len(sources))):
+            distances = distance(sources['xcentroid'],sources['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i])
+            a = distances >= dist
+            #a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
+            #a = distance2(sources[sources['doublons']==0]['xcentroid','ycentroid'],sources['xcentroid','ycentroid'][i]) > dist
+            a = list(1*a)
+            a.remove(0)
+            if np.nanmean(a)<1:#if there is still a 0, means if there is a neighboor closer to min distance
+                sources['doublons'][i]=1
+                sources['distance'][i]= np.nanmin(distances[distances>0])        
     print(len(sources[sources['doublons']==0]), ' Comsic rays detected, youpi!')
     return sources
 
