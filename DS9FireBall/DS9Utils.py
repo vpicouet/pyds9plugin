@@ -131,7 +131,7 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     try:
         cat, number, gain, folder, exp, temp = sys.argv[3:3+6]
         gain, folder, exp, temp = np.array(np.array([gain, folder, exp, temp],dtype=int),dtype=bool)
-        print('gain, folder, exp, temp = ',gain, folder, exp, temp)
+        print('cat, gain, folder, exp, temp = ',cat, gain, folder, exp, temp)
     except:
         pass
     
@@ -151,6 +151,7 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     fieldDate = 'date'
 
     EMGAIN = Transform(vgain)
+    print(vexp)
     EXPTIME = Transform(vexp)
     TEMP = Transform(vtemp)
     date = Transform(vdate)
@@ -844,7 +845,7 @@ def parse_data(data, nan=np.nan, map=map, float=float):
     Y[indices] = y
     return X.T, Y.T, arr.T
 
-def process_region(regions, win):
+def process_region(regions, win,quick=False):
     """Process DS9 regions to return pythonic regions
     """
     from collections import namedtuple
@@ -853,57 +854,65 @@ def process_region(regions, win):
         name, info = region.split('(')
         coords = [float(c) for c in info.split(')')[0].split(',')]
         print(coords)
-        if name == 'box':
-            xc,yc,w,h,angle = coords
-            dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))
-            X,Y,arr = parse_data(dat)
-            box = namedtuple('Box', 'data xc yc w h angle')
-            processed_regions.append(box(arr, xc, yc, w, h, angle))
-        elif name == 'bpanda':
-            xc, yc, a1, a2, a3, a4,a5, w, h,a6,a7 = coords
-            dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))
-            X,Y,arr = parse_data(dat)
-            box = namedtuple('Box', 'data xc yc w h angle')
-            processed_regions.append(box(arr, xc, yc, w, h, 0))
-        elif name == 'circle':
-            xc,yc,r = coords
-            dat = win.get("data physical %s %s %s %s no" % (xc - r, yc - r, 2*r, 2*r))
-            X,Y,arr = parse_data(dat)
-            Xc,Yc = np.floor(xc), np.floor(yc)
-            inside = (X - Xc)**2 + (Y - Yc)**2 <= r**2
-            circle = namedtuple('Circle', 'data databox inside xc yc r')
-            processed_regions.append(circle(arr[inside], arr, inside, xc, yc, r))
-        elif name == '# vector':
-            xc, yc, xl, yl = coords
-            vector = namedtuple('Vector', 'data databox inside xc yc r')
-            processed_regions.append(vector(xc, yc, xl, yl,0,0))
-        elif name == 'ellipse':
-            if len(coords) == 5:
-                xc, yc, a2, b2, angle = coords
-            else:
-                xc, yc, a1, b1, a2, b2, angle = coords
-            w = 2*a2
-            h = 2*b2
-            dat = win.get("data physical %s %s %s %s no" % (xc - a2,yc - b2,w,h))
-            X,Y,arr = parse_data(dat)
-            Xc,Yc = np.floor(xc), np.floor(yc)
-            inside = ((X - Xc)/a2)**2 + ((Y - Yc)/b2)**2 <= 1
-            if len(coords) == 5:
-                ellipse = namedtuple('Ellipse',
-                                     'data databox inside xc yc a b angle')
-                return ellipse(arr[inside], arr, inside, xc, yc, a2, b2, angle)
-    
-            inside &= ((X - Xc)/a1)**2 + ((Y - Yc)/b1)**2 >= 1
-            annulus = namedtuple('EllipticalAnnulus',
-                                 'data databox inside xc yc a1 b1 a2 b2 angle')
-            processed_regions.append(annulus(arr[inside], arr, inside, xc, yc, a1, b1, a2, b2, angle))
-            #return annulus(arr[inside], arr, inside, xc, yc, a1, b1, a2, b2, angle)
+        if quick:
+            return np.array(coords, dtype=int)
         else:
-            raise ValueError("Can't process region %s" % name)
-    if len(processed_regions) == 1:
-        return processed_regions[0]
-    else:
-        return processed_regions
+            if name == 'box':
+                xc,yc,w,h,angle = coords
+                print(1)
+                dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))
+                print(2)
+                
+                X,Y,arr = parse_data(dat)
+                print(3)
+                box = namedtuple('Box', 'data xc yc w h angle')
+                print(4)
+                processed_regions.append(box(arr, xc, yc, w, h, angle))
+            elif name == 'bpanda':
+                xc, yc, a1, a2, a3, a4,a5, w, h,a6,a7 = coords
+                dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))
+                X,Y,arr = parse_data(dat)
+                box = namedtuple('Box', 'data xc yc w h angle')
+                processed_regions.append(box(arr, xc, yc, w, h, 0))
+            elif name == 'circle':
+                xc,yc,r = coords
+                dat = win.get("data physical %s %s %s %s no" % (xc - r, yc - r, 2*r, 2*r))
+                X,Y,arr = parse_data(dat)
+                Xc,Yc = np.floor(xc), np.floor(yc)
+                inside = (X - Xc)**2 + (Y - Yc)**2 <= r**2
+                circle = namedtuple('Circle', 'data databox inside xc yc r')
+                processed_regions.append(circle(arr[inside], arr, inside, xc, yc, r))
+            elif name == '# vector':
+                xc, yc, xl, yl = coords
+                vector = namedtuple('Vector', 'data databox inside xc yc r')
+                processed_regions.append(vector(xc, yc, xl, yl,0,0))
+            elif name == 'ellipse':
+                if len(coords) == 5:
+                    xc, yc, a2, b2, angle = coords
+                else:
+                    xc, yc, a1, b1, a2, b2, angle = coords
+                w = 2*a2
+                h = 2*b2
+                dat = win.get("data physical %s %s %s %s no" % (xc - a2,yc - b2,w,h))
+                X,Y,arr = parse_data(dat)
+                Xc,Yc = np.floor(xc), np.floor(yc)
+                inside = ((X - Xc)/a2)**2 + ((Y - Yc)/b2)**2 <= 1
+                if len(coords) == 5:
+                    ellipse = namedtuple('Ellipse',
+                                         'data databox inside xc yc a b angle')
+                    return ellipse(arr[inside], arr, inside, xc, yc, a2, b2, angle)
+        
+                inside &= ((X - Xc)/a1)**2 + ((Y - Yc)/b1)**2 >= 1
+                annulus = namedtuple('EllipticalAnnulus',
+                                     'data databox inside xc yc a1 b1 a2 b2 angle')
+                processed_regions.append(annulus(arr[inside], arr, inside, xc, yc, a1, b1, a2, b2, angle))
+                #return annulus(arr[inside], arr, inside, xc, yc, a1, b1, a2, b2, angle)
+            else:
+                raise ValueError("Can't process region %s" % name)
+        if len(processed_regions) == 1:
+            return processed_regions[0]
+        else:
+            return processed_regions
 
 def DS9realignImage(xpapoint):
     """
@@ -969,7 +978,7 @@ def RecrateArrayFromIndexList(xs, ys, angle, image):
     
 
 
-def getregion(win, debug=False, all=False):
+def getregion(win, debug=False, all=False, quick=False):
     """ Read a region from a ds9 instance.
 
     Returns a tuple with the data in the region.
@@ -990,13 +999,13 @@ def getregion(win, debug=False, all=False):
             print('discarding %i regions' % len(rows[5:]) )
     #print(rows[5:])
     if all:
-        region = process_region(rows[3:], win)
+        region = process_region(rows[3:], win,quick=quick)
         if type(region) == list:
             return region
         else:
             return [region]
     else:
-        return process_region([rows[-1]], win)
+        return process_region([rows[-1]], win,quick=quick)
 #getregion(d, all=True)
         
 def create_PA(A=15.45,B=13.75,C=14.95,pas=0.15,nombre=11):
@@ -2373,16 +2382,6 @@ def ContinuumPhotometry(xpapoint, x=None, y=None, DS9backUp = DS9_BackUp_path, c
     plt.show()
 
 #plt.imshow(np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))]))
-
-
-    #### la limit en x pour 1/e est sigma*sqrt(2) donc 
-#erf2 = lambda x : (1 + special.erf(x))/2
-#gauss = lambda x: np.exp(-np.power(x, 2.) / (2 * np.power(1, 2.))) / np.sqrt(2*np.pi)
-#x = np.linspace(-10,10,1000)
-#g = gauss(x)/gauss(x).sum()
-#a = 2*(np.sum(g[x>0])/np.sum(g) - np.sum(g[x>np.sqrt(2)])/np.sum(g))
-#print('Need to correct for ',1-a)
-    
     
 #    popt, pcov = curve_fit(Gaussian, x,y, p0=[y.max()-y.min(), x[y.argmax()], 5, y.min()])
 #    plt.figure(figsize=(10,6))
@@ -2396,7 +2395,18 @@ def ContinuumPhotometry(xpapoint, x=None, y=None, DS9backUp = DS9_BackUp_path, c
 #    plt.plot(x, fit_fn(x),label='Fitted background')
 #    plt.legend()
 #    plt.show()
-    return popt1
+#    return popt1
+
+def FakeDetectionGaussian(sigma=1, threshold = 1):
+    #np.exp(-5.5*108/1500)
+    erf2 = lambda x : (1 + special.erf(x))/2
+    gauss = lambda x,sigma: np.exp(-np.power(x, 2.) / (2 * np.power(sigma, 2.))) / (sigma*np.sqrt(2*np.pi))
+    x = np.linspace(-10,10,100000)
+    g = gauss(x,sigma)/gauss(x,sigma).sum()
+#    a = 2*(np.sum(g[x>0])/np.sum(g) - np.sum(g[x>np.sqrt(2)])/np.sum(g))
+    a = 2*(np.sum(g[x>0])/np.sum(g) - np.sum(g[x>threshold*sigma])/np.sum(g))
+    print('Need to correct for ',(1-a)/2)
+    return (1-a)/2
 
 
 def DS9photo_counting(xpapoint, save=True, config=my_conf):
@@ -2955,8 +2965,9 @@ def detectLine2(x,y, clipping=10, window=20, savename='/tmp/stacked_spectrum.png
     interger the flux on 1/e(max-min) and then add the few percent calculated by the gaussian at 1/e 
     """
     #x, y = Table.read('/Users/Vincent/DS9BackUp/CSVs/190510-11H14_SpectraBigRange.csv')['col0'][8:-8],Table.read('/Users/Vincent/DS9BackUp/CSVs/190508-16H24_SpectraBigRange.csv')['col1'][8:-8]
-    
-    from dataphile.demos import auto_gui
+    from .dataphile.demos import auto_gui
+
+    #from dataphile.demos import auto_gui
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt    
     from scipy.optimize import curve_fit
@@ -4109,15 +4120,19 @@ def DS9Update(xpapoint,Plot=True):
     return
         
         
-def Lims_from_region(region):
+def Lims_from_region(region=None, coords=None):
     """Return the pixel locations limits of a DS9 region
     """
-    try:
-        xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
-    except:
-        print('Region is not a box, exracting box using the radius')
-        xc, yc, r = int(region.xc), int(region.yc), int(region.r)
-        w, h = r, r
+    #print(coords)
+    if coords is not None:
+         xc, yc, w, h = coords[:4]
+    else:
+        try:
+            xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
+        except:
+            print('Region is not a box, exracting box using the radius')
+            xc, yc, r = int(region.xc), int(region.yc), int(region.r)
+            w, h = r, r
     print('W = ', w)
     print('H = ', h)
     if w <= 2:
@@ -4484,11 +4499,11 @@ def DS9DetectCosmics(xpapoint,filen=None,T=6*1e4, config=my_conf):
 #    except ValueError:
 #        area = [0,-1,1053,2133]
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         Xinf, Xsup, Yinf, Ysup = my_conf.physical_region#[0,2069,1053,2133]
     else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
     area = [Yinf, Ysup,Xinf, Xsup]
     print(Yinf, Ysup,Xinf, Xsup)  
         
@@ -4546,11 +4561,11 @@ def DS9removeCRtails2(xpapoint,filen=None, length=20, config=my_conf):
     path = Charge_path_new(filename) if len(sys.argv) > 4 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
         
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         Xinf, Xsup, Yinf, Ysup = my_conf.physical_region#[0,2069,1053,2133]
     else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
     area = [Yinf, Ysup,Xinf, Xsup]
     print(Yinf, Ysup,Xinf, Xsup)   
         
@@ -4726,12 +4741,12 @@ def DS9removeCRtails_CS(xpapoint, threshold=60000,n=3,size=0, config=my_conf):
     if AllLine:
         size=1001
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
         #area = [0,2069,1053,2133]
     else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
     area = [Yinf, Ysup,Xinf, Xsup]
     print(Yinf, Ysup,Xinf, Xsup)   
    
@@ -4905,14 +4920,14 @@ def DS9DetectHotPixels(xpapoint, DS9backUp = DS9_BackUp_path, T1=None, T2=None, 
     fitsimage = d.get_fits()[0]#fits.open(path)[0] 
     image = fitsimage.data
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         if image.shape == (2069, 3216):
             Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
         else:
             Xinf, Xsup, Yinf, Ysup = [0,-1,0,-1]
     else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
     area = [Yinf, Ysup,Xinf, Xsup]
     print(Yinf, Ysup,Xinf, Xsup)   
 
@@ -5253,7 +5268,7 @@ def DS9SmearingProfileAutocorr(xpapoint, DS9backUp=DS9_BackUp_path, name='', Plo
     path = Charge_path_new(filename) if len(sys.argv) > 4 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
     
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         try:
             reg = resource_filename('DS9FireBall', 'Regions')
@@ -5264,9 +5279,9 @@ def DS9SmearingProfileAutocorr(xpapoint, DS9backUp=DS9_BackUp_path, name='', Plo
         else:
             d.set('regions ' + reg + '/Autocorr1dx.reg')
             
-        region = getregion(d)
+        region = getregion(d, quick=True)
         verboseprint('No region defined! Taking default region in %s.\nDo not hesitate to change this default region if needed'%(reg + '/Autocorr.reg'), verbose=my_conf.verbose)
-    Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+    Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
     area = [Yinf, Ysup,Xinf, Xsup]
     verboseprint(Yinf, Ysup,Xinf, Xsup,verbose=my_conf.verbose)
     
@@ -5780,17 +5795,17 @@ def DS9_2D_autocorrelation(xpapoint):
     plot_flag = False#(len(path) == 1)
     print('flag for plot = ', plot_flag)
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         try:
             reg = resource_filename('DS9FireBall', 'Regions')
         except:
             reg = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Regions')
         d.set('regions ' + reg + '/Autocorr.reg')
-        region = getregion(d)
+        region = getregion(d, quick=True)
         print('No region defined! Taking default region in %s.\nDo not hesitate to change this default region if needed'%(reg + '/Autocorr.reg'))
 
-    Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+    Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
     area = [Yinf, Ysup,Xinf, Xsup]
     print(Yinf, Ysup,Xinf, Xsup)
     if plot_flag:
@@ -5823,16 +5838,16 @@ def DS9_2D_FFT(xpapoint, config=my_conf):
     plot_flag = (len(path) == 1)
     print('flag for plot = ', plot_flag)
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         try:
             reg = resource_filename('DS9FireBall', 'Regions')
         except:
             reg = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Regions')
         d.set('regions ' + reg + '/Autocorr.reg')
-        region = getregion(d)
+        region = getregion(d, quick=True)
         print('No region defined! Taking default region in %s.\nDo not hesitate to change this default region if needed'%(reg + '/Autocorr.reg'))
-    Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+    Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
     area = [Yinf, Ysup,Xinf, Xsup]
     print(Yinf, Ysup,Xinf, Xsup)
     for filename in path:
@@ -6195,12 +6210,12 @@ def DS9PhotonTransferCurve(xpapoint, config=my_conf):
         Path2substract = None
         
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         print('Please define a region.')
         area = my_conf.physical_region#[1053,2133,500,2000]
     else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
         area = [Xinf, Xsup,Yinf, Ysup]
         print(Xinf, Xsup,Yinf, Ysup)
 
@@ -6402,12 +6417,12 @@ def DS9ComputeEmGain(xpapoint, subtract=True, verbose=False, config=my_conf):
         Path2substract = None
         
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         print('Please define a region.')
         area = my_conf.physical_region#[1053,2133,500,2000]
     else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
         area = [Xinf, Xsup,Yinf, Ysup]
         print(Xinf, Xsup,Yinf, Ysup)
 
@@ -6707,16 +6722,17 @@ def ComputeEmGain(filename, Path2substract=None, save=True, Plot=True, d=None, a
         cst = 2
     else:
         cst = 1    
-#    fig, (ax0,ax1) = plt.subplots(1,2)#,figsize=(14,6))  
-    fig= plt.figure()#plt.subplots(1,2)#,figsize=(14,6))  
-    ax0 = fig.add_axes([0.10, 0.30, 0.84/2, 0.66])      
-    ax1 = fig.add_axes([0.5, 0.30, 0.84/2, 0.66])      
+    fig, (ax0,ax1) = plt.subplots(1,2)#,figsize=(14,6)) 
+    fig.subplots_adjust(left=None, bottom=0.3, right=None, top=None, wspace=None, hspace=None)
+#    fig= plt.figure()#plt.subplots(1,2)#,figsize=(14,6))  
+#    ax0 = fig.add_axes([0.10, 0.30, 0.84/2-0.05, 0.66])      
+#    ax1 = fig.add_axes([0.6, 0.30, 0.84/2-0.05, 0.66])      
       
     intensity_phys_n,var_phys_n = SigmaClipBinned(intensity_phys,var_phys/cst, sig=1, Plot=True, ax=ax0)
     intensity_os_n,var_os_n = SigmaClipBinned(intensity_os,var_os/cst, sig=1, Plot=True, ax=ax0)
     intensity_phys_n,var_phys_n = SigmaClipBinned(intensity_phys,var_phys/cst, sig=1, Plot=True, ax=ax1)
     
-    ax, emgain_phys = PlotComputeEmGain(intensity_phys_n, var_phys_n, emgain , r1*r2, filename=filename, len_area_det=len_area_det, ax=ax1, cst='(%i x %i)'%(cst,n))
+    ax, emgain_phys = PlotComputeEmGain_old(intensity_phys_n, var_phys_n, emgain , r1*r2, filename=filename, len_area_det=len_area_det, ax=ax1, cst='(%i x %i)'%(cst,n))
     ax, emgain_all = PlotComputeEmGain(np.hstack((intensity_os_n,intensity_phys_n)), np.hstack((var_os_n,var_phys_n)), emgain , r1*r2, filename=filename, len_area_det=len_area_det, ax=ax0, cst='(%i x %i)'%(cst,n))
 
     csvwrite(np.vstack((intensity_phys_n,var_phys_n/cst)).T, DS9backUp + 'CSVs/%s_VarianceIntensity_%s.csv'%(datetime.datetime.now().strftime("%y%m%d-%H:%M:%S"),os.path.basename(filename)[:-5]) ,verbose=my_conf.verbose)
@@ -6728,7 +6744,7 @@ def ComputeEmGain(filename, Path2substract=None, save=True, Plot=True, d=None, a
     ax1.set_ylim((0.97*var_phys_n.min(),1.03*var_phys_n.max()))
     ax1.set_xlim((0.97*intensity_phys_n.min(),1.03*intensity_phys_n.max()))
     fig.suptitle('Variance intensity diagram - %s - G = %s - #regions = %i'%(os.path.basename(filename),emgain,areas[:,1].shape[0]),y=1)    
-    fig.tight_layout()
+    #fig.tight_layout()
     if save:
         if not os.path.exists(os.path.dirname(filename) +'/VarIntensDiagram'):
             os.makedirs(os.path.dirname(filename) +'/VarIntensDiagram')
@@ -6836,8 +6852,8 @@ def PlotComputeEmGain(intensity, var, emgain, n, filename, len_area_det, ax=None
     """
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
-    from dataphile.demos import auto_gui
-    auto_gui.LinearFit(intensity,var,ax=ax,linestyle=None, marker=None)
+    from .dataphile.demos import auto_gui
+    auto_gui.GeneralFit(intensity,var,ax=ax,linestyle=None, marker=None)
 #    fit = np.polyfit(intensity,var,1)
 #    fit_fn = np.poly1d(fit) 
 #    if ax is None:
@@ -6853,36 +6869,24 @@ def PlotComputeEmGain(intensity, var, emgain, n, filename, len_area_det, ax=None
     return ax, emgain
 
 
-def PlotComputeEmGain_old(intensity, var, emgain, n, filename, len_area_det, ax=None, DS9backUp = DS9_BackUp_path,name=''):
+def PlotComputeEmGain_old(intensity, var, emgain, n, filename, len_area_det, ax=None, DS9backUp = DS9_BackUp_path, name='',cst=2):
     """
     """
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
-    if emgain > 0:
-        cst = 2
-    else:
-        cst = 1
-    fit = np.polyfit(intensity,var/cst,1)
+    #from .dataphile.demos import auto_gui
+    #auto_gui.GeneralFit(intensity,var,ax=ax,linestyle=None, marker=None)
+    fit = np.polyfit(intensity,var,1)
     fit_fn = np.poly1d(fit) 
-    fit_wo0 = np.polyfit(intensity[:len_area_det],var[:len_area_det]/cst,1)
-    fit_fn_wo0 = np.poly1d(fit_wo0) 
     if ax is None:
         fig = plt.figure()#figsize=(8,6))
         ax = fig.add_subplot(111)
-    print(len_area_det)
-    ax.plot(intensity[:len_area_det], var[:len_area_det]/cst, 'x', label='Det: Data in %i pix side area, G = %i '%(n,emgain))
-    ax.plot(intensity[len_area_det:], var[len_area_det:]/cst, 'o', label='OS: Data in %i pix side area, G = %i '%(n,emgain))
-    ax.plot(intensity, fit_fn(intensity), '--', label='Linear regression, Engain = %0.1f \n-> %0.1f smr corr (0.32)'%(fit[0],fit[0]/0.32))
-    ax.plot(intensity[:len_area_det], fit_fn_wo0(intensity[:len_area_det]), '--', label='Linear regression[WO OS region], Engain = %0.1f\n-> %0.1f smr corr (0.32)'%(fit_wo0[0],fit[0]/0.32))
-    ax.set_ylabel('Variance [ADU] / %i'%(cst))
-    ax.text(0.5,0.1,'y = %0.2f *u x + %0.2f [W OS]'%(fit[0], fit[1]),transform=ax.transAxes)
-    ax.text(0.5,0.2,'y = %0.2f * x + %0.2f [WO OS]'%(fit_wo0[0], fit_wo0[1]),transform=ax.transAxes)
+    ax.plot(intensity, fit_fn(intensity), '--', label='Linear regression, GainTot = %0.1f \n-> %0.1f smr corr (0.32)'%(fit[0],fit[0]/0.32))
+    ax.set_ylabel('Variance [ADU] / %s'%(cst))
+    ax.text(0.5,0.1,'y = %0.2f * x + %0.2f'%(fit[0], fit[1]),transform=ax.transAxes)
     ax.legend(loc='upper left')
     ax.set_xlabel('Intensity [ADU]')
     ax.grid(linestyle='dotted')
-    ax.set_title('Variance intensity diagram - %s'%(os.path.basename(filename)))    
-    csvwrite(np.vstack((intensity,var/cst)).T, DS9backUp + 'CSVs/%s_VarianceIntensity_%s.csv'%(datetime.datetime.now().strftime("%y%m%d-%H:%M:%S"),os.path.basename(filename)[:-5]) ) 
-    
     emgain = fit[0]
     return ax, emgain
 
@@ -7081,8 +7085,8 @@ def DS9Trimming(xpapoint, config=my_conf):
 
         
     try:
-        region = getregion(d)
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        region = getregion(d, quick=True)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
         area = [Yinf, Ysup,Xinf, Xsup]
         print(Yinf, Ysup,Xinf, Xsup)
     except ValueError:
@@ -7120,8 +7124,8 @@ def DS9CLcorrelation(xpapoint, config=my_conf):
     path = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
 
     try:
-        region = getregion(d)
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        region = getregion(d, quick=True)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
         area = [Yinf, Ysup,Xinf, Xsup]
         print(Yinf, Ysup,Xinf, Xsup)
     except ValueError:
@@ -7889,7 +7893,7 @@ def PlotSpatial2(filename, field, save=True, plot_flag=True, DS9backUp = DS9_Bac
     obj.ax.hlines(yy, x - 10, x + 10,label='Slits position', colors='black')
     for i, sliti in enumerate(slit):
         if i% 4 == 1:
-            n =  3
+            n =  1
         elif i% 4 == 2:
             n = + 0.5
         elif i% 4 == 3:
@@ -8438,11 +8442,11 @@ def HistogramSums(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     
 
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         Yinf, Ysup,Xinf, Xsup = my_conf.physical_region#[0,2069,1172,2145]
     else:
-        Yinf, Ysup, Xinf, Xsup = Lims_from_region(region)#[131,1973,2212,2562]
+        Yinf, Ysup, Xinf, Xsup = Lims_from_region(None, coords=region)
         #image_area = [Yinf, Ysup,Xinf, Xsup]
         print(Yinf, Ysup,Xinf, Xsup)
 
@@ -9188,8 +9192,9 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
         exp = lambda x, a : np.exp(-x/a)
         smearingKernelx = exp(np.arange(5),Smearing)[::-1]#plt.plot(smearingKernel/np.sum(smearingKernel))
         smearingKernely = exp(np.arange(3),Smearing/2)[::-1]#plt.plot(smearingKernel/np.sum(smearingKernel))
-        image = np.apply_along_axis(lambda m: np.convolve(m, smearingKernelx, mode='same'), axis=1, arr=image)
-        image = np.apply_along_axis(lambda m: np.convolve(m, smearingKernely, mode='same'), axis=0, arr=image)
+        image = np.apply_along_axis(lambda m: np.convolve(m, smearingKernelx/smearingKernelx.sum(), mode='same'), axis=1, arr=image)
+        image = np.apply_along_axis(lambda m: np.convolve(m, smearingKernely/smearingKernely.sum(), mode='same'), axis=0, arr=image)
+
     fitswrite(image, name[:-5] + '_before_RN.fits')
 
     #np.convolve(image, smearingKernel)  
@@ -9345,29 +9350,49 @@ def BackgroundFit1D(xpapoint, config=my_conf):
     from .dataphile.demos import auto_gui
 
     d = DS9(xpapoint)
-    axis, function = sys.argv[-2:]
+    axis, function, nb_gaussians = sys.argv[-3:]
+    print('axis, function, nb_gaussians = ',axis, function, nb_gaussians)
     try:
-        region = getregion(d)
+        print(1)
+        region = getregion(d, quick=True)
+        print(2)
     except ValueError:
         image_area = my_conf.physical_region#[1500,2000,1500,2000]
         Yinf, Ysup,Xinf, Xsup = image_area
     else:
-        Yinf, Ysup, Xinf, Xsup = Lims_from_region(region)#[131,1973,2212,2562]
+        Yinf, Ysup, Xinf, Xsup = Lims_from_region(None,coords=region)#[131,1973,2212,2562]
         image_area = [Yinf, Ysup,Xinf, Xsup]
         print(Yinf, Ysup,Xinf, Xsup)    
+    print(1)
     data = d.get_fits()[0].data[Xinf: Xsup,Yinf: Ysup]
+    print(2)
     if axis=='y':
-        y = np.nanmean(data,axis=1)
+        y = np.nanmean(data,axis=1);x = np.arange(len(y))
+        index = np.isfinite(y)
+        x, y = x[index], y[index]
+        if np.nanmean(y[-10:])>np.nanmean(y[:10]):
+            y = y[::-1]
     else:
-        y = np.nanmean(data,axis=0)
-    x = np.arange(len(y))
+        y = np.nanmean(data,axis=0);x = np.arange(len(y))
+        print(x,y)
+        index = np.isfinite(y)
+        x, y = x[index], y[index]
+        print(x,y)
+        if np.nanmean(y[-10:])>np.nanmean(y[:10]):
+            y = y[::-1]
+    
+
     #auto_gui.Background(x,y)
     if function == 'polynomial1D':
-        auto_gui.LinearFit(x,y)
+#        auto_gui.LinearFit(x,y)
+        auto_gui.GeneralFit(x,y,nb_gaussians=int(nb_gaussians))
+        
     elif  function == 'both':
-        auto_gui.Background(x,y)
+        auto_gui.GeneralFit(x,y,exp=True,nb_gaussians=int(nb_gaussians))
+        #auto_gui.Background(x,y)
     elif  function == 'exponential1D':
-        auto_gui.Background(x,y)        
+        auto_gui.GeneralFit(x, y, background=False, exp=True)#,nb_gaussians=int(nb_gaussians))
+#        auto_gui.Background(x,y)        
     plt.show()
     return
     
@@ -9381,12 +9406,12 @@ def BackgroundMeasurement(xpapoint, config=my_conf):
     d = DS9(xpapoint)
     
     try:
-        region = getregion(d)
+        region = getregion(d, quick=True)
     except ValueError:
         image_area = my_conf.physical_region#[1500,2000,1500,2000]
         Yinf, Ysup,Xinf, Xsup = image_area
     else:
-        Yinf, Ysup, Xinf, Xsup = Lims_from_region(region)#[131,1973,2212,2562]
+        Yinf, Ysup, Xinf, Xsup = Lims_from_region(None, coords=region)#[131,1973,2212,2562]
         image_area = [Yinf, Ysup,Xinf, Xsup]
         print(Yinf, Ysup,Xinf, Xsup)    
     if d.get('tile')=='yes':
