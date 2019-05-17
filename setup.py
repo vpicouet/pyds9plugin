@@ -11,6 +11,7 @@ requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
             #'pyds9',
             'photutils',
             'PyQt5',
+            'logalpha',
             'tqdm'
             ]
 
@@ -22,6 +23,7 @@ requires2 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
             'astropy >=1.3',
             #'pyds9',
             'photutils',
+            'logalpha',
             'tqdm'
             ]
 
@@ -31,7 +33,7 @@ entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 data = { "DS9FireBall": ["FireBall.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*"]}
 
 
-version = '2.17dev'
+version = '2.18dev'
 
 if sys.version_info.major == 3:
     setup(
