@@ -9542,7 +9542,10 @@ def SimulateFIREBallemCCD(xpapoint, DS9backUp = DS9_BackUp_path):
     plt.ylabel('Log(#)')
     plt.grid(True)
     plt.show()
-   
+    return
+
+
+def DS9CreateHistrogram(xpapoint):
     return
 
 def ConvolveSlit2D_PSF(xy, amp=1, l=3, L=9, xo=0 ,yo=0 , sigmax2 = 40, sigmay2 = 40):
@@ -9596,12 +9599,21 @@ def convolvePSF(radius_hole = 20, fwhmsPSF =  [5,6], unit = 10, size=(201,201), 
     return conv
 
         
-
+def SimulateFIREBallemCCDHist(ConversionGain=0.53, EmGain=1500, Bias=3000, RN=80, p_pCIC=1, 
+                               p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50,  n_registers=604):
+    
+    imaADU, imaADU_wo_RN, imaADU_RN = SimulateFIREBallemCCDImage(ConversionGain=ConversionGain, EmGain=EmGain, Bias=Bias, RN=RN, 
+                                                                 p_pCIC=p_pCIC, p_sCIC=p_sCIC, 
+                                                                 Dark=Dark, Smearing=Smearing, SmearExpDecrement=SmearExpDecrement, 
+                                                                 exposure=exposure,  n_registers=n_registers, save=False)
+    n, bins = np.histogram(imaADU[:,1066:2124].flatten(),range=[0,2**16], bins = int(2**16/2**2))#, range=(-200,11800))
+    return n, (bins[:-1]+bins[1:])/2
+    
 
 def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN=80, p_pCIC=1, 
                                p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, 
                                source='Spectra', Rx=8, Ry=8, size=[3216,2069], OSregions=[1066,2124], 
-                               name='/tmp/image000001.fits', spectra=None, cube=None, n_registers=604):
+                               name='/tmp/image000001.fits', spectra='-', cube='-', n_registers=604, save=True):
 
     from astropy.modeling.functional_models import Gaussian2D
     from scipy.sparse import dia_matrix
@@ -9682,7 +9694,8 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
         image[id_scic] += np.random.exponential(np.power(EmGain, register/n_registers))       
         
         
-    fitswrite((image * ConversionGain).round().astype('int16'), name[:-5] + '_before_smearing_and_RN.fits')
+    if save:
+        fitswrite((image * ConversionGain).round().astype('int16'), name[:-5] + '_before_smearing_and_RN.fits')
 
     # semaring post EM amp (biggest noise reduction)
     if Smearing>0:
@@ -9705,10 +9718,10 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
     imaADU_wo_RN = (image * ConversionGain).round().astype('int16')
     imaADU_RN = (readout * ConversionGain).round().astype('int16')
     imaADU = ((image + readout) * ConversionGain).round().astype('int16')
-    
-    fitswrite(imaADU_wo_RN, name[:-5] + '_before_RN.fits')
-    fitswrite(imaADU_RN, name[:-5] + '_RN.fits')
-    fitswrite(imaADU, name)
+    if save:
+        fitswrite(imaADU_wo_RN, name[:-5] + '_before_RN.fits')
+        fitswrite(imaADU_RN, name[:-5] + '_RN.fits')
+        fitswrite(imaADU, name)
 
     #Not sure why now, but several events much higher than 2**16 -> put then to 0 for now...
     id_null = np.array((image + readout) * ConversionGain , dtype='int16')<0
