@@ -103,6 +103,7 @@ except (IOError or FileNotFoundError) as e:
 
 def ChangeConfig(xpapoint):
     from astropy.table import Table
+    print(len(sys.argv[3:]))
     exptime, temperature, gain, physical_region, extension, date, format_date, verbose, ConversionGain, Autocorr_region_1D, Autocorr_region_2D = sys.argv[3:]
     try:
         conf_dir = resource_filename('DS9FireBall', 'config')
@@ -472,7 +473,7 @@ def ReturnIndex(table, fields, values, config=my_conf):
 
     
 
-def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf)):
+def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.'):
     """ PlotFit1D(np.arange(100),np.arange(100)**2 + 1000*np.random.poisson(1,size=100),2)
     """
     #ajouter exp, sqrt, power low, gaussian, 
@@ -487,13 +488,20 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
     if sigma_clip is not None:
         index = (x > np.nanmean(x) - sigma_clip[0] * np.nanstd(x)) & (x < np.nanmean(x) + sigma_clip[0] * np.nanstd(x)) & (y > np.nanmean(y) - sigma_clip[1] * np.nanstd(y)) & (y < np.nanmean(y) + sigma_clip[1] * np.nanstd(y))
         x, y = x[index], y[index]
+        std = np.nanstd(y)
+    else:
+        sigma_clip = [10,1]
+        index = (x > np.nanmean(x) - sigma_clip[0] * np.nanstd(x)) & (x < np.nanmean(x) + sigma_clip[0] * np.nanstd(x)) & (y > np.nanmean(y) - sigma_clip[1] * np.nanstd(y)) & (y < np.nanmean(y) + sigma_clip[1] * np.nanstd(y))
+        std = np.nanstd(y[index])
+        
     if Plot:
         fig = plt.figure()#figsize=(10,6))
         gs = gridspec.GridSpec(2, 1, height_ratios=(4,1))
         ax1 = fig.add_subplot(gs[0])
         ax2 = fig.add_subplot(gs[1])
         #fig, (ax1, ax2) = plt.subplots(2, sharex=True,figsize=(10,6),height_ratios=[4,1])
-        ax1.plot(x, y, '.',label='Data')
+        ax1.plot(x, y, fmt,label='Data')
+        ax1.plot(x, np.ones(len(x))*np.nanmean(y[index]) + std, linestyle='dotted',label='Standard deviation')
     xp = np.linspace(x.min(),x.max(), 1000)
 
     if type(deg)==int:
@@ -519,7 +527,7 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         elif deg=='gaus':
             law = lambda x, a, xo, sigma, offset: a**2 * np.exp(-np.square((x-xo) / sigma) / 2) + offset
             if P0 is None:
-                P0 = [np.nanmax(y)-np.nanmin(y),x[np.argmax(y)],np.std(y),np.nanmin(y)]
+                P0 = [np.nanmax(y)-np.nanmin(y),x[np.argmax(y)],np.std(y),np.nanmin(y)]                
         elif deg=='power':
             law = lambda x, amp, index, offset: amp * (x**index) + offset
             P0 = None
@@ -530,10 +538,12 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             return np.zeros(len(P0))
         zp = law(xp,*popt)
         zz = law(x,*popt)
-        name = 'Fit %s'%(popt)
+        name = 'Fit %s'%(np.round(np.array(popt, dtype=int),0))
         res = None
         #plt.plot(xp, , '--', label='Fit: ')
     if Plot:
+        if deg=='gaus':
+            ax1.text(popt[1],popt[0]**2,'Max = %0.1f std'%(popt[0]**2/std))
         if title:
             fig.suptitle(title,y=1)
         if xlabel:
@@ -552,8 +562,9 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         ax1.grid(linestyle='dotted');ax2.grid(linestyle='dotted')
         ax1.legend()
         plt.tight_layout()
-        plt.show()
-    return {'popt':popt, 'pcov': pcov, 'res': res}
+        #plt.show()
+        return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x': x}
+    return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x}
 
 #PlotFit1D(a[(a[my_conf.gain[0]]==gain)&(a[my_conf.exptime[0]]>5)][my_conf.exptime[0]],a[(a[my_conf.gain[0]]==gain)&(a[my_conf.exptime[0]]>5)]['MeanADUValue']/a[(a[my_conf.gain[0]]==gain)&(a[my_conf.exptime[0]]>5)][my_conf.exptime[0]],sigma_clip=[10,4]) 
 #PlotFit1D(b[(b[my_conf.gain[0]]==gain)&(b[my_conf.exptime[0]]>5)][my_conf.exptime[0]],b[(b[my_conf.gain[0]]==gain)&(b[my_conf.exptime[0]]>5)]['MeanADUValue']/b[(b[my_conf.gain[0]]==gain)&(b[my_conf.exptime[0]]>5)][my_conf.exptime[0]]) 
@@ -569,7 +580,7 @@ def TimerSMS(start, hour=1, message='Hello my friend, have a beer your super lon
         return 'Code ran fast, SMS not sent'
 
 
-def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, verbose=False):#of boxe
+def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, config=my_conf):
     """Returns and possibly save DS9 region (circles) around sources with a given radius
     """
     
@@ -617,12 +628,12 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
     if save:
         with open(savename+'.reg', "w") as text_file:
             text_file.write(regions)        
-        verboseprint(('region file saved at: ' +  savename + '.reg'),verbose=my_conf.verbose)
+        verboseprint(('Region file saved at: ' +  savename + '.reg'),verbose=config.verbose)
         return 
 
 
 
-def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test",text=0, form='circle', color='green', verbose=False):#of boxe
+def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test",text=0, form='circle', color='green', config=my_conf):
     """Returns and possibly save DS9 region (circles) around sources with a given radius
     """
     regions = """
@@ -670,7 +681,7 @@ def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test
             text_file.write("{}".format(regions))        
 #        r.write(savename+'.reg') 
 #        np.savetxt(savename+'.reg',regions)
-        verboseprint(('Predicted region file saved at: ' +  savename + '.reg'),verbose=my_conf.verbose)
+        verboseprint(('Region file saved at: ' +  savename + '.reg'),verbose=config.verbose)
         return 
 
     
@@ -1002,7 +1013,7 @@ def DS9setup2(xpapoint, config=my_conf):
 #              np.percentile(fitsimage[0].data,99.6)))
     d.set("scale limits {} {} ".format(np.nanpercentile(image,50),np.nanpercentile(image,99.95)))
     d.set("scale asinh")
-    d.set("cmap bb")
+    d.set("cmap grey")
 #        d.set("smooth yes")
 #        d.set("cmap Cubehelix0")
 #        d.set("smooth radius {}".format(2))
@@ -1049,21 +1060,28 @@ def parse_data(data, nan=np.nan, map=map, float=float):
     Y[indices] = y
     return X.T, Y.T, arr.T
 
-def process_region(regions, win,quick=False):
+def process_region(regions, win,quick=False, config=my_conf):
     """Process DS9 regions to return pythonic regions
     """
     from collections import namedtuple
     processed_regions = []
     #print(regions)
-    if len(regions)>1:
-        quick=False
+#    if len(regions)>1:
+#        quick=False
+    
     for i, region in enumerate(regions):
         name, info = region.split('(')
         coords = [float(c) for c in info.split(')')[0].split(',')]
         #print('Region %i: %s'%(i, region))
         if quick:
             #print('Salut')
-            return np.array(coords, dtype=int)
+            #print(regions)
+            if len(regions)==1:
+                verboseprint('Only one region, taking it', verbose=config.verbose)
+                return np.array(coords, dtype=int)
+            else:
+                verboseprint('There are no regions here', verbose=config.verbose)
+                raise ValueError
         else:
             if name == 'box':
                 xc,yc,w,h,angle = coords
@@ -1181,7 +1199,7 @@ def RecrateArrayFromIndexList(xs, ys, angle, image):
     
 
 
-def getregion(win, debug=False, all=False, quick=False):
+def getregion(win, debug=False, all=False, quick=False, config=my_conf):
     """ Read a region from a ds9 instance.
 
     Returns a tuple with the data in the region.
@@ -1190,27 +1208,27 @@ def getregion(win, debug=False, all=False, quick=False):
     win.set("regions system physical")#rows = win.get("regions list")
     if all is False:
         regions = win.get("regions selected")
-        print(regions)
-        print(len([row for row in regions.split('\n')]))
+        verboseprint(regions, verbose=config.verbose)
+        verboseprint(len([row for row in regions.split('\n')]), verbose=config.verbose)
         if len([row for row in regions.split('\n')])>=3:
-            print('Taking only selected region')
+            verboseprint('Taking only selected region', verbose=config.verbose)
             rows = regions
         else:
-            print('no region selected')
+            verboseprint('no region selected', verbose=config.verbose)
             rows = win.get("regions all")
     else:
-        print('Taking all regions')
+        verboseprint('Taking all regions', verbose=config.verbose)
         rows = win.get("regions all")
     rows = [row for row in rows.split('\n') ]
     if len(rows) < 3:
-        print( "No regions found")
+        verboseprint( "No regions found", verbose=config.verbose)
 
     #units = rows[2]
     #assert units == 'physical'
     if debug:
-        print (rows[4])
+        verboseprint (rows[4])
         if rows[5:]:
-            print('discarding %i regions' % len(rows[5:]) )
+            verboseprint('discarding %i regions' % len(rows[5:]) , verbose=config.verbose)
     #print(rows[5:])
     if all:
         #print(rows[3:], type(rows[3:]))
@@ -2053,10 +2071,13 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, anisotrope=False,angle=30
                            profile + 1.5*np.abs(profile - gaus(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
           
       else:
-          #profile /= profile.max()
+          stddev /= profile.max()
+          profile /= profile.max() 
           #SigmaMax = 10
           #popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[profile.max(),fiber,2, np.nanmean(profile)],bounds=([0,0.95*fiber,1,-1],[2,1.05*fiber,SigmaMax,1]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
-          popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[profile.max(),fiber,2, np.nanmean(profile)],bounds=([1e-3*profile.max(),0.95*fiber,1,1e-1*profile.mean()],[1e3*profile.max(),1.05*fiber,SigmaMax,1e1*profile.mean()]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
+#          popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[np.nanmax(profile),fiber,2, np.nanmin(profile)],bounds=([1e-3*profile.max(),0.95*fiber,1,1e-1*profile.mean()],[1e3*profile.max(),1.05*fiber,SigmaMax,1e1*profile.mean()]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
+          popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[np.nanmax(profile),fiber,2, np.nanmin(profile)],bounds=([1e-3*(profile.max()-profile.min()),0.8*fiber,1,profile.min()],[1e3*(profile.max()-profile.min()),1.2*fiber,SigmaMax,profile.max()]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
+          #popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[np.nanmax(profile),fiber,2, np.nanmin(profile)],bounds=([-np.inf,0.95*fiber,1,-np.inf],[np.inf,1.05*fiber,SigmaMax,np.inf]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
           ax1.plot(np.linspace(0,size,10*size), ConvolveDiskGaus2D(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
           ax1.fill_between(rmean[:size], profile - 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), 
                            profile + 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
@@ -2172,10 +2193,7 @@ def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end
             print('Taking function argument not sys.argv')
     print('All, begin, end, liste, path =', All, begin, end, liste, patht)
     #fitsimage = fits.open(filename)
-    number = re.findall(r'\d+',os.path.basename(filename))[-1]
-    n = len(number)
-    filen1, filen2 = filename.split(number)
-    print(filen1, filen2)
+
     
 #    if fitsimage[0].header['BITPIX'] == -32:
 #        Type = 'guider'
@@ -2183,7 +2201,6 @@ def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end
 #        Type = 'detector'
 #    print ('Type = {}'.format(Type))
 #    print(int(float(All)), type(int(float(All))))
-
 
     
     if os.path.isdir(patht):
@@ -2197,36 +2214,43 @@ def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end
         #path = glob.glob('%s%s%s'%(filen1,'?'*n,filen2))
         path = glob.glob(os.path.dirname(filename) + '/*.fits')
 
-    
-    elif liste.split('-')[0]!='':
-        path = []
-        print('Specified numbers are integers, opening corresponding files ...')
-        numbers = np.array( liste.split('-'),dtype=int)
-        print('Numbers used: {}'.format(numbers))               
-        for number in numbers:
-            path.append(filen1 + '%0{}d'.format(n)%(number) + filen2) #'%0{}d'.format(n)%(1) + filen2
-    
-    elif (begin == '-') & (end == '-')  :
+    elif (begin == '-') & (end == '-') & (liste == '-')  :
         path = [filename]
-    
+
+
+
     else:
-        path = []
-        print('Two numbers given, opening files in range ...')
-        n1, n2 = int(float(begin)), int(float(end))
-        numbers = [n1,n2]
-        files = np.sort(glob.glob('%s%s%s'%(filen1,'?'*n,filen2)));#print(files)
-        #print(files)
-        im_numbers = []
-        for file in files:
-            n = int(file.split(filen1)[-1].split(filen2)[0])
-            im_numbers.append(n)
-        im_numbers = np.array(im_numbers);im_numbers.sort()
-        print('Files in folder : ', im_numbers)
-        for i, im_number in enumerate(im_numbers):
-            #print('ok',n1,n2,im_number)
-            if (im_number >= n1) & (im_number <= n2):
-                #print('yes')
-                path.append(files[i])   
+        number = re.findall(r'\d+',os.path.basename(filename))[-1]
+        n = len(number)
+        filen1, filen2 = filename.split(number)
+        print(filen1, filen2)
+            
+        if liste.split('-')[0]!='':
+            path = []
+            print('Specified numbers are integers, opening corresponding files ...')
+            numbers = np.array( liste.split('-'),dtype=int)
+            print('Numbers used: {}'.format(numbers))               
+            for number in numbers:
+                path.append(filen1 + '%0{}d'.format(n)%(number) + filen2) #'%0{}d'.format(n)%(1) + filen2
+    
+        else:
+            path = []
+            print('Two numbers given, opening files in range ...')
+            n1, n2 = int(float(begin)), int(float(end))
+            numbers = [n1,n2]
+            files = np.sort(glob.glob('%s%s%s'%(filen1,'?'*n,filen2)));#print(files)
+            #print(files)
+            im_numbers = []
+            for file in files:
+                n = int(file.split(filen1)[-1].split(filen2)[0])
+                im_numbers.append(n)
+            im_numbers = np.array(im_numbers);im_numbers.sort()
+            print('Files in folder : ', im_numbers)
+            for i, im_number in enumerate(im_numbers):
+                #print('ok',n1,n2,im_number)
+                if (im_number >= n1) & (im_number <= n2):
+                    #print('yes')
+                    path.append(files[i])   
     path = np.sort(path)
     print("\n".join(path))
     if len(path)==0:
@@ -2437,7 +2461,7 @@ def plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,
         if not os.path.exists(os.path.dirname(image) +'/Histograms'):
             os.makedirs(os.path.dirname(image) +'/Histograms')
         plt.savefig(os.path.dirname(image) +'/Histograms/'+ os.path.basename(image).replace('.fits', '.hist.png'), dpi = 100, bbox_inches = 'tight')
-    csvwrite(Table(np.vstack((bin_center,n_log)).T), DS9backUp + 'CSVs/%s_Histogramcsv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
+    csvwrite(Table(np.vstack((bin_center,n_log)).T), DS9backUp + 'CSVs/%s_Histogram.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
     #a = Table(np.vstack((bin_center,n_log)).T)
     #print(a)
     #a.write(DS9backUp + 'CSVs/%s_Histogramcsv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")),format='csv')
@@ -2538,7 +2562,7 @@ def popol2D(x, y , coeff):
             fit += np.power(x,i) * np.power(y,j) * coeff[i,j] 
     return fit
 
-def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_path, config=my_conf, Type=None, axis=None, kernel=None, fwhm=None, center=False):
+def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_path, config=my_conf, axis='y', kernel=1, fwhm='', center=False, Type = None):
     """Fit a gaussian
     interger the flux on 1/e(max-min) and then add the few percent calculated by the gaussian at 1/e 
     """
@@ -2547,94 +2571,120 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
     import matplotlib.pyplot as plt
     from astropy.table import Table
     from scipy.optimize import curve_fit
+    from astropy.io import fits
 #    from .focustest import Gaussian
     if xpapoint is not None:
         d = DS9(xpapoint)
         filename = getfilename(d)
-        Type, axis, kernel, fwhm, center = sys.argv[-5:]
-    else:
-        filename = None
-    texp = 1#d.get_fits()[0].header[my_conf.exptime[0]]
-    
-    print('Type, axis, kernel =',Type, axis, kernel)
-    if Type == 'ProjectionRegion':
-        if y is None:
-            try:
-                path = sys.argv[3]
-                a = Table.read(path,format='ascii')
-            except IndexError:
-                a = Table.read(DS9backUp + '/DS9Curves/ds9.dat',format='ascii')
-            x, y = a['col1'], a['col2']
-    elif Type == 'BoxRegion':
-        region = getregion(d, quick=True)
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
-        data = d.get_pyfits()[0].data[Yinf:Ysup,Xinf:Xsup]
-        if axis=='y':
-            y = np.nanmean(data,axis=1)
-            yerr = np.nanstd(data,axis=1)/np.sqrt(data.shape[1])
+        Type, axis, kernel, fwhm, center = sys.argv[-10:-5]
+        path = Charge_path_new(filename) if len(sys.argv) > 10 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+        if len(path) == 1:
+            plot_flag = True
         else:
-            y = np.nanmean(data,axis=0)  
-            yerr = np.nanstd(data,axis=0)/np.sqrt(data.shape[0])
-        kernel = int(kernel)
-        y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
-        yerr = yerr[kernel:-kernel]
+            plot_flag = False
+        verboseprint('plot_flag = ', plot_flag, verbose=config.verbose)
         
-    if x is None:
-        x = np.arange(len(y))
-    n=0.3
-    fit = np.polyfit(x[y<y.mean()+n*np.std(y)], y[y<y.mean()+n*np.std(y)] , 1)
-    #xmax = x[np.argmax(y)]
-    fit_fn = np.poly1d(fit) 
-
-    if fwhm.split('-')[0] == '':
-        if bool(int(center)):
-            popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, 5],bounds=([-np.inf,len(y)/2-1,-np.inf],[np.inf,len(y)/2 +1,np.inf]))            
-        else:
-            popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], 5])
-
     else:
-        stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
-        if bool(int(center)):
-            print(bool(int(center)))
-            popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, (stdmin+stdmin)/2],bounds=([-np.inf,len(y)/2-1,stdmin],[np.inf,len(y)/2 +1,stdmax]))            
+        filename = None        
+    L = []
+    for filename in path:
+        print(filename)
+        texp = 1#d.get_fits()[0].header[my_conf.exptime[0]]
+        
+        verboseprint('Type, axis, kernel =',Type, axis, kernel, verbose=config.verbose)
+        if Type == 'ProjectionRegion':
+            if y is None:
+                try:
+                    path = sys.argv[3]
+                    a = Table.read(path,format='ascii')
+                except IndexError:
+                    a = Table.read(DS9backUp + '/DS9Curves/ds9.dat',format='ascii')
+                x, y = a['col1'], a['col2']
+        elif Type == 'BoxRegion':
+            region = getregion(d, quick=True)
+            Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+            data = fits.open(filename)[0].data[Yinf:Ysup,Xinf:Xsup]
+            if axis=='y':
+                y = np.nanmean(data,axis=1)
+                yerr = np.nanstd(data,axis=1)/np.sqrt(data.shape[1])
+            else:
+                y = np.nanmean(data,axis=0)  
+                yerr = np.nanstd(data,axis=0)/np.sqrt(data.shape[0])
+            kernel = int(kernel)
+            y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
+            yerr = yerr[kernel:-kernel]
         else:
-            print(bool(int(center)))
-            popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], (stdmin+stdmin)/2],bounds=([-np.inf,-np.inf,stdmin],[np.inf,np.inf,stdmax]))
-    print(popt1)
-    limfit =  fit_fn(x)+gaussian(x, *popt1).max()/np.exp(1)
-
-#    import matplotlib._cntr as cntr
-#    c = cntr.Cntr(x, y, z)
-#    nlist = c.trace(level, level, 0)
-#    CS = nlist[:len(nlist)//2]
-    image = np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))])
-    CS = plt.contour(image,levels=1);plt.close()
-    #size = [cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ]
-    maxx = [ int(cs[:,0].max())   for cs in CS.allsegs[0] ]
-    minx = [ int(cs[:,0].min())   for cs in CS.allsegs[0] ]
-    maxx.sort();minx.sort()
-    index = np.where(maxx>popt1[1])[0][0]#np.argmax(size)
-    print(minx[index],maxx[index])
-
-    y0 = y-fit_fn(x)
-    plt.figure()#figsize=(10,6))
-    plt.xlabel('Spatial direction')
-    plt.ylabel('ADU mean value')
-    plt.plot(x, gaussian(x, *popt1) + fit_fn(x), label='Gaussian Fit, F = %0.2f - sgm=%0.1f'%(np.sum(gaussian(x, *popt1))/texp,popt1[-1]))
-#    plt.plot(x[y>limfit], y[y>limfit], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[y>limfit])/texp))
-    mask = (x>minx[index]) & (x<maxx[index])
-    #p = plt.plot(x, y , linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
-    p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
-    plt.plot(x, y,linestyle='dotted',c=p[0].get_color())
+            kernel = int(kernel)
+            y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
+            yerr = np.zeros(len(y))
+            
+            
+        if x is None:
+            x = np.arange(len(y))
+        n=1
+        mask = (y<y.mean()+n*np.std(y)) & (y>y.mean()-n*np.std(y))
+        fit = np.polyfit(x[mask], y[mask] , 1)
+        #xmax = x[np.argmax(y)]
+        fit_fn = np.poly1d(fit) 
+        try:
+            p0=[y.max()-y.min(), x[y.argmax()], 5]
+            if fwhm.split('-')[0] == '':
+                if bool(int(center)):
+                    popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, 5],bounds=([-np.inf,len(y)/2-1,-np.inf],[np.inf,len(y)/2 +1,np.inf]))            
+                else:
+                    popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], 5])
+        
+            else:
+                stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
+                if bool(int(center)):
+                    print(bool(int(center)))
+                    popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, (stdmin+stdmin)/2],bounds=([-np.inf,len(y)/2-1,stdmin],[np.inf,len(y)/2 +1,stdmax]))            
+                else:
+                    print(bool(int(center)))
+                    popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], (stdmin+stdmin)/2],bounds=([-np.inf,-np.inf,stdmin],[np.inf,np.inf,stdmax]))
+        except RuntimeError as e:
+            print(e)
+            popt1 = p0
+            
+        print(popt1)
+        limfit =  fit_fn(x)+gaussian(x, *popt1).max()/np.exp(1)
     
-#    plt.plot(x[mask], y[mask], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[mask])/texp))
-    #plt.plot(x,  limfit,'--', c='black', label='1/e limit')
-    plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.2f'%(1.155*np.sum(y0[mask])/texp))
-    plt.plot(x, fit_fn(x),label='Fitted background',linestyle='dotted',c=p[0].get_color())
-    plt.legend()
-    plt.title(os.path.basename("%s"%(filename)))
-    plt.savefig( DS9backUp + 'Plots/%s_Continuumphotometry.jpg'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss")) )
-    plt.show()
+    #    import matplotlib._cntr as cntr
+    #    c = cntr.Cntr(x, y, z)
+    #    nlist = c.trace(level, level, 0)
+    #    CS = nlist[:len(nlist)//2]
+        image = np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))])
+        CS = plt.contour(image,levels=1);plt.close()
+        #size = [cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ]
+        maxx = [ int(cs[:,0].max())   for cs in CS.allsegs[0] ]
+        minx = [ int(cs[:,0].min())   for cs in CS.allsegs[0] ]
+        maxx.sort();minx.sort()
+        index = np.where(maxx>popt1[1])[0][0]#np.argmax(size)
+        print(minx[index],maxx[index])
+    
+        y0 = y-fit_fn(x)
+        
+        plt.figure()#figsize=(10,6))
+        plt.xlabel('Spatial direction')
+        plt.ylabel('ADU mean value')
+        plt.plot(np.linspace(x.min(),x.max(),10*len(x)), gaussian(np.linspace(x.min(),x.max(),10*len(x)), *popt1) + fit_fn(np.linspace(x.min(),x.max(),10*len(x))), label='Gaussian Fit, F = %0.2f - sgm=%0.1f'%(np.sum(gaussian(x, *popt1))/texp,popt1[-1]))
+    #    plt.plot(x[y>limfit], y[y>limfit], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[y>limfit])/texp))
+        mask = (x>minx[index]) & (x<maxx[index])
+        #p = plt.plot(x, y , linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
+        p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
+        plt.plot(x, y,linestyle='dotted',c=p[0].get_color())
+        
+    #    plt.plot(x[mask], y[mask], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[mask])/texp))
+        #plt.plot(x,  limfit,'--', c='black', label='1/e limit')
+        plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.2f'%(1.155*np.sum(y0[mask])))
+        plt.plot(x, fit_fn(x),label='Fitted background',linestyle='dotted',c=p[0].get_color())
+        plt.legend()
+        plt.title(os.path.basename("%s"%(filename)))
+        plt.savefig( DS9backUp + 'Plots/%s_Continuumphotometry_%s.jpg'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss"), os.path.basename(filename) ))
+        if plot_flag:
+            plt.show()
+        L.append({'Flux':1.155*np.sum(y0[mask])})
+    return L
 
 #plt.imshow(np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))]))
     
@@ -3603,6 +3653,23 @@ def DS9tsuite(xpapoint, Plot=False):
 #    print('Test completed: OK')
 
 
+def Concolve2d(xpapoint):
+    d = DS9(xpapoint)
+    from astropy.convolution import Gaussian2DKernel
+    #from scipy.signal import convolve as scipy_convolve
+    from astropy.convolution import convolve
+    from astropy.io import fits
+    kernel = Gaussian2DKernel(x_stddev=1)
+    #scipy_conv = scipy_convolve(img, kernel, mode='same', method='direct')
+    file = getfilename(d)
+    fitsfile = fits.open(file)[0]
+    data_conv = convolve(fitsfile.data,np.ones((3,33))/99)
+    fitsfile.data = data_conv
+    fitswrite(fitsfile,'/tmp/convolved_%s'%(os.path.basename(file)))
+    d.set('frame new')
+    d.set('file /tmp/convolved_%s'%(os.path.basename(file)))
+    return
+
 def Field_regions(xpapoint, mask=''):
     """Display on DS9 some region files. GS and holes location if guider images,
     slits' locations if detector iamges.
@@ -3613,10 +3680,12 @@ def Field_regions(xpapoint, mask=''):
     #d.set("regions system image")
     path = d.get("file")
     ImageName = os.path.basename(path)
-    if (ImageName[:5].lower() == 'image') or (ImageName[:5]== 'Stack'):
-        Type = 'detector'
+
     if ImageName[:5] == 'stack':
         Type = 'guider'
+    #if (ImageName[:5].lower() == 'image') or (ImageName[:5]== 'Stack'):
+    else:
+        Type = 'detector'
     print ('Type = ', Type)
     try:
         slit_dir = resource_filename('DS9FireBall', 'Slits')
@@ -4372,7 +4441,7 @@ def DS9Update(xpapoint,Plot=True):
     return
         
         
-def Lims_from_region(region=None, coords=None):
+def Lims_from_region(region=None, coords=None,  config=my_conf):
     """Return the pixel locations limits of a DS9 region
     """
     #print(coords)
@@ -4402,9 +4471,9 @@ def Lims_from_region(region=None, coords=None):
     Ysup = int(np.ceil(yc + h/2 -1))
     Xinf = int(np.floor(xc - w/2 -1))
     Xsup = int(np.ceil(xc + w/2 -1))
-    print('Xinf, Xsup, Yinf, Ysup = ', Xinf, Xsup, Yinf, Ysup)
-    print('data[%i:%i,%i:%i]'%(Yinf, Ysup,Xinf, Xsup))
-    return Xinf, Xsup, Yinf, Ysup
+    verboseprint('Xinf, Xsup, Yinf, Ysup = ', Xinf, Xsup, Yinf, Ysup, verbose=config.verbose)
+    verboseprint('data[%i:%i,%i:%i]'%(Yinf, Ysup,Xinf, Xsup), verbose=config.verbose)
+    return np.max([0,Xinf]), Xsup, np.max([0,Yinf]), Ysup
 
 
 def DS9center(xpapoint,Plot=True):
@@ -5001,7 +5070,7 @@ def DS9removeCRtails_CS(xpapoint, threshold=60000,n=3,size=0, config=my_conf):
     if AllLine:
         size=1001
     try:
-        region = getregion(d, quick=True)
+        region = getregion(d, quick=True, all=True)
     except ValueError:
         Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
         #area = [0,2069,1053,2133]
@@ -5270,18 +5339,24 @@ def DS9DeconvolveSmearing(xpapoint, DS9backUp = DS9_BackUp_path,  config=my_conf
     d.set('file '+ filename[:-5] + '_smearing_deconvolved.fits')
     #plt.plot(image[table['ycentroid'][0],table['xcentroid'][0]-size:table['xcentroid'][0]+1])
     #plt.show()
-    return# table
+    return
 
 
-def DS9DeconvolveSmearing2(xpapoint, DS9backUp = DS9_BackUp_path,  config=my_conf, size=10, smearing_length=1.5, SmearExp=50000):
+def DS9DeconvolveSmearing2(xpapoint=None, filename=None, DS9backUp = DS9_BackUp_path,  config=my_conf, size=10, smearing_length=1.5, SmearExp=50000):
 
     from scipy.linalg import solve_banded
-    
-    d=DS9(xpapoint)
-    #image = d.get_arr2np()
-    hdu = d.get_fits()
+    from astropy.io import fits
+    if xpapoint is not None:
+        d=DS9(xpapoint)
+        #image = d.get_arr2np()
+        hdu = d.get_fits()
+        d.get('file')[:-5]
+        filename = getfilename(d)
+    else:
+        hdu = fits.open(filename)
     image = hdu[0].data
-   
+    smearing_length, SmearExp = np.array(sys.argv[3:5], dtype = float)
+    print('smearing_length, SmearExp = ', smearing_length, SmearExp)
     image_deconv = image
     niter = 5
     if SmearExp == 0:
@@ -5292,10 +5367,12 @@ def DS9DeconvolveSmearing2(xpapoint, DS9backUp = DS9_BackUp_path,  config=my_con
         image_deconv = solve_banded((0,5), smearing_kernels.reshape((6,-1))[::-1,:], image.ravel()).reshape(image.shape)
         
     hdu[0].data = image_deconv
-    newfilename = d.get('file')[:-5] + '_smearing_deconvolved.fits'
+    newfilename = filename + '_smearing_deconvolved.fits'
     fitswrite(hdu[0], newfilename)
-    d.set('frame new')
-    d.set('file '+ newfilename)
+    if xpapoint is not None:
+        d.set('frame new')
+        d.set('file '+ newfilename)
+    return image_deconv, newfilename
 
 
 
@@ -8294,7 +8371,7 @@ def DS9PlotSpatial(xpapoint):
         plot_flag = True
     for filename in path:
         print(filename)
-        result = PlotSpatial2(filename, field=field, plot_flag=plot_flag)#2133+offset,-offset]) 
+        result = PlotSpatial1(filename, field=field, plot_flag=plot_flag)#2133+offset,-offset]) 
     return result
 
 
@@ -8511,8 +8588,10 @@ def ApplyOverscanCorrection(path=None, fitsimage=None, stddev=3, OSR1=[20,-20,20
     fits.setval(path, 'OVS_CORR', value = lineCorrection)
     fitsimage[0].data = image - OScorrection
     if ColumnCorrection == 'ColumnByColumn':
-        colcorr = np.nanmedian(fitsimage[0].data,axis=0)[np.newaxis,...]*np.ones((image.shape))
-        fitsimage[0].data -= colcorr
+        median = np.nanmedian(fitsimage[0].data,axis=0)
+        colcorr = median[np.newaxis,...]*np.ones((image.shape))
+        colcorr2 = np.convolve(median, np.ones(2)/2,mode='same')[np.newaxis,...]*np.ones((image.shape))
+        fitsimage[0].data -= colcorr - 3000 - colcorr2
         
         
         
@@ -8877,6 +8956,60 @@ def getfilename(ds9, config=my_conf):
     #print('Simlink = ',os.path.islink(new_filename))
     return new_filename    
 
+
+def DS9CreateHistrogram(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
+    """
+    """
+    from astropy.io import fits
+    import matplotlib; matplotlib.use('TkAgg')  
+    import matplotlib.pyplot as plt   
+    from astropy.table import Table
+    d = DS9(xpapoint)
+    filename = getfilename(d)
+    log = bool(int(sys.argv[3]))
+    try:
+        hrange = np.array(sys.argv[4].split('-'), dtype=float)
+    except ValueError:
+        hrange = None
+    if len(sys.argv) > 5: path = Charge_path_new(filename, entry_point=5)
+    
+
+    try:
+        region = getregion(d, quick=True)
+    except ValueError:
+        Yinf, Ysup,Xinf, Xsup = my_conf.physical_region#[0,2069,1172,2145]
+    else:
+        Yinf, Ysup, Xinf, Xsup = Lims_from_region(None, coords=region)
+        print(Yinf, Ysup,Xinf, Xsup)
+
+
+    for filename in path[:]: 
+        print(filename)
+        fitsfile = fits.open(filename)[0]
+        data = fitsfile.data[Xinf: Xsup, Yinf: Ysup]
+        value, bins = np.histogram(data.flatten(),range=[0,2**16], bins = 10 * int(2**16/2**0))
+        bins_c = (bins[1:] + bins[:-1])/2
+        plt.figure()#figsize=(10,6))
+        #plt.step(bins_c,np.log10(value))
+        if log:
+            plt.step(bins_c,np.log10(value))
+            plt.ylabel('Frequency Log(#)')
+        else:
+            plt.step(bins_c,value)
+            plt.ylabel('Frequency # ')
+        if hrange is not None:
+            plt.xlim((hrange[0],hrange[1]))            
+        plt.grid(True, which="both", linestyle='dotted')
+        plt.xlabel('ADU value')
+        plt.title("Histogram - "+ os.path.basename(filename))
+        plt.grid()
+
+        if len(path)==1:
+            plt.show()
+        plt.savefig( DS9backUp + 'Plots/%s_Histogram_%s.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"), os.path.basename(filename)))
+        csvwrite(Table(np.vstack((bins_c,value)).T), DS9backUp + 'CSVs/%s_Histogram_%s.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"), os.path.basename(filename)))#piki
+    return
+
 def HistogramSums(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     """
     """
@@ -8886,7 +9019,9 @@ def HistogramSums(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     from astropy.table import Table
     d = DS9(xpapoint)
     filename = getfilename(d)
-    if len(sys.argv) > 3: path = Charge_path_new(filename, entry_point=3)
+    log = bool(int(sys.argv[3]))
+    hrange = np.array(sys.argv[4].split('-'), dtype=float)
+    if len(sys.argv) > 5: path = Charge_path_new(filename, entry_point=5)
     
 
     try:
@@ -8902,7 +9037,9 @@ def HistogramSums(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     data = fitsfile.data[Xinf: Xsup, Yinf: Ysup]
     #value, bins = np.histogram(data,bins=500,range=(data.min(),np.percentile(data,99.999)))
 #    value, bins = np.histogram(data,bins=500,range=(np.nanmin(data),np.percentile(data,99.995)))#np.nanmax(data)))#,np.percentile(data,99.99)))
-    value, bins = np.histogram(data,bins=500,range=(2500,10000))#np.nanmax(data)))#,np.percentile(data,99.99)))
+    #value, bins = np.histogram(data,bins=500,range=(2500,10000))#np.nanmax(data)))#,np.percentile(data,99.99)))
+    value, bins = np.histogram(data.flatten(),range=[0,2**16], bins = int(2**16/2**2))
+    
     bins_c = (bins[1:] + bins[:-1])/2
 
     for filename in path[1:]: 
@@ -8913,12 +9050,20 @@ def HistogramSums(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
         value += value1
     plt.figure()#figsize=(10,6))
     #plt.step(bins_c,np.log10(value))
-    plt.step(bins_c,np.log10(value))
+    if log:
+        plt.step(bins_c,np.log10(value))
+        plt.ylabel('Frequency Log(#)')
+    else:
+        plt.step(bins_c,value)
+        plt.ylabel('Frequency # ')
+    if hrange is not None:
+        plt.xlim((hrange[0],hrange[1]))   
     plt.grid(True, which="both", linestyle='dotted')
     plt.xlabel('ADU value')
-    plt.title("Histogram's sum")
+    plt.title("Histogram's sum : " + '%s_HistogramSum.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")))
     plt.ylabel('Log(#)')
     plt.grid()
+    plt.xlim((2500,10000))
     plt.show()
     csvwrite(Table(np.vstack((bins_c,value)).T), DS9backUp + 'CSVs/%s_HistogramSum.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")))#piki
     return
@@ -9473,6 +9618,8 @@ def Centroiding(xpapoint):
 
 def SimulateFIREBallemCCD(xpapoint, DS9backUp = DS9_BackUp_path):
     from astropy.io import fits
+    from decimal import Decimal
+    from astropy.table import Table
     d = DS9(xpapoint)
     lx, ly = np.array(sys.argv[3].split(','), dtype=int)
     if sys.argv[4] == '1':
@@ -9486,16 +9633,19 @@ def SimulateFIREBallemCCD(xpapoint, DS9backUp = DS9_BackUp_path):
     else:
         OS1, OS2 = 0, -1
         
-    ConversionGain, EmGain, n_registers, Bias, RN, pCIC, sCIC, Dark, Smearing, SmearExp, exposure, flux, source, Rx, Ry, name, spectra, cube, sigma = sys.argv[6:]
+    ConversionGain, EmGain, n_registers, Bias, RN, pCIC, sCIC, Dark, Smearing, SmearExp, exposure, flux, source, Rx, Ry, name, spectra, cube, sigma, hist_path = sys.argv[6:]
     ConversionGain, EmGain, n_registers, RN, pCIC, sCIC, Dark, Smearing, SmearExp, exposure, flux, Rx, Ry, sigma = np.array([ConversionGain, EmGain, n_registers, RN, pCIC, sCIC, Dark, Smearing, SmearExp, exposure, flux, Rx, Ry, sigma], dtype=float)
     if SmearExp==0:
         SmearExpDecrement = np.inf
     else:
         SmearExpDecrement = SmearExp
-    name = DS9backUp + 'CreatedImages/' + name
+    if name == 'Auto':
+        name = DS9backUp + 'CreatedImages/' + 'image000001_emgain%i_RON%i_CIC%0.0E_Dark%0.0E_Exp%i_Smearing%0.1E_ExpSmear%0.1E_.fits'%(EmGain, RN, Decimal(pCIC), Decimal(Dark), exposure, Decimal(Smearing), Decimal(SmearExp))
+    else:
+        name = DS9backUp + 'CreatedImages/' + name
     image, image_woRN, ReadNOise = SimulateFIREBallemCCDImage(ConversionGain=ConversionGain, EmGain=EmGain, Bias=Bias, RN=RN, p_pCIC=pCIC, p_sCIC=sCIC, Dark=Dark, 
-                                       Smearing=Smearing, SmearExpDecrement=SmearExpDecrement, exposure=exposure, flux=flux, source=source, Rx=Rx/2.35, n_registers=n_registers,
-                                       Ry=Ry/2.35, size=(lx,ly),spectra=spectra, cube=cube, 
+                                       Smearing=Smearing, SmearExpDecrement=SmearExpDecrement, exposure=exposure, flux=flux, source=source, Rx=Rx/2.335, n_registers=n_registers,
+                                       Ry=Ry/2.353, size=(lx,ly),spectra=spectra, cube=cube, 
                                        OSregions=(OS1,OS2), name=name)
     fitsimage = fits.HDUList([fits.PrimaryHDU(image)])[0]
     fitsimage.header['CONVGAIN'] = (float(ConversionGain), 'Conversion Gain')
@@ -9525,18 +9675,30 @@ def SimulateFIREBallemCCD(xpapoint, DS9backUp = DS9_BackUp_path):
             Bias = 3000# / ConversionGain
         else:
             Bias = 6000# / ConversionGain
+    else:
+        Bias = float(Bias)
 #    value, bins = np.histogram(image[:,OS1:OS2],bins=500,range=(np.percentile(image[:,OS1:OS2],1e-3),np.percentile(image[:,OS1:OS2],100-1e-3)))
-    value, bins = np.histogram(image[:,OS1:OS2],bins=500,range=(2000,10000))
+    #value, bins = np.histogram(image[:,OS1:OS2],bins=500,range=(2000,10000))
+    #value, bins = np.histogram(image[:,OS1:OS2],bins=500,range=(2000,10000))
+    
+    
+    value, bins = np.histogram(image[:,OS1:OS2],range=[0,2**16], bins = int(2**16/2**2))#,
     bins_c = (bins[1:] + bins[:-1])/2
     detections = 100 * np.exp(-RN*sigma*ConversionGain/(EmGain*Smearing2Noise(exp_coeff=Smearing)['Hist_smear']))
     Fake_detections = 100 * FakeDetectionGaussian(sigma=1, threshold = sigma*ConversionGain)
     plt.figure()
+    if os.path.isfile(hist_path):
+        cat = Table.read(hist_path)
+        x, y = cat['col0'], cat['col1']
+        plt.step(x,np.log10(y) - (np.max(np.log10(y))-np.max(np.log10(value))),c='grey', label = 'Input histogram: ' + os.path.basename(hist_path), alpha=0.5)        
+
     plt.step(bins_c,np.log10(value),label='%0.1f%% of True Detections\n%0.1f%% of Fake detections RN'%(detections,Fake_detections))
     plt.fill_between(bins_c[bins_c<=(Bias)+sigma*RN*ConversionGain],np.log10(value[bins_c<=(Bias)+sigma*RN*ConversionGain]),alpha=0.2, step='pre',label='0 in pc mode: %0.1f sigma'%(sigma))
     plt.fill_between(bins_c[bins_c>=(Bias)+sigma*RN*ConversionGain],np.log10(value[bins_c>(Bias)+sigma*RN*ConversionGain]),alpha=0.2, step='pre',label='1 in pc mode: %0.1f sigma'%(sigma))
     plt.grid(True, which="both", linestyle='dotted')
     plt.legend()
-    plt.gca().set_xlim(right=10000)
+    plt.xlim((2500,10000))
+    #plt.gca().set_xlim(right=10000)
     plt.xlabel('ADU value')
     plt.title("Histogram")
     plt.ylabel('Log(#)')
@@ -9545,8 +9707,8 @@ def SimulateFIREBallemCCD(xpapoint, DS9backUp = DS9_BackUp_path):
     return
 
 
-def DS9CreateHistrogram(xpapoint):
-    return
+
+
 
 def ConvolveSlit2D_PSF(xy, amp=1, l=3, L=9, xo=0 ,yo=0 , sigmax2 = 40, sigmay2 = 40):
     from scipy import special
@@ -9565,7 +9727,7 @@ def addAtPos(M1, M2, center):
     M1[coor_x:end_x, coor_y:end_y] = M1[coor_x:end_x, coor_y:end_y] + M2
     return M1
 
-
+    
    
 def createHole(radius=40,size=(200,200)):
     """
@@ -9599,22 +9761,22 @@ def convolvePSF(radius_hole = 20, fwhmsPSF =  [5,6], unit = 10, size=(201,201), 
     return conv
 
         
-def SimulateFIREBallemCCDHist(ConversionGain=0.53, EmGain=1500, Bias=3000, RN=80, p_pCIC=1, 
-                               p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50,  n_registers=604):
-    
+def SimulateFIREBallemCCDHist(ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, Dark, Smearing, SmearExpDecrement, exposure,  n_registers):
+    #bins, ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, Dark, Smearing, SmearExpDecrement, exposure,  n_registersbins, ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, Dark, Smearing, SmearExpDecrement, exposure,  n_registers = args
+#ConversionGain=0.53, EmGain=1500, Bias=3000, RN=80, p_pCIC=1, p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50,  n_registers=604    
     imaADU, imaADU_wo_RN, imaADU_RN = SimulateFIREBallemCCDImage(ConversionGain=ConversionGain, EmGain=EmGain, Bias=Bias, RN=RN, 
                                                                  p_pCIC=p_pCIC, p_sCIC=p_sCIC, 
                                                                  Dark=Dark, Smearing=Smearing, SmearExpDecrement=SmearExpDecrement, 
                                                                  exposure=exposure,  n_registers=n_registers, save=False)
-    n, bins = np.histogram(imaADU[:,1066:2124].flatten(),range=[0,2**16], bins = int(2**16/2**2))#, range=(-200,11800))
-    return n, (bins[:-1]+bins[1:])/2
+    #n, bins = np.histogram(imaADU[:,1066:2124].flatten(),range=[0,2**16], bins = int(2**16/2**2))#, range=(-200,11800))
+    return imaADU[:,1066:2124]#n#, (bins[:-1]+bins[1:])/2
     
 
 def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN=80, p_pCIC=1, 
                                p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, 
                                source='Spectra', Rx=8, Ry=8, size=[3216,2069], OSregions=[1066,2124], 
-                               name='/tmp/image000001.fits', spectra='-', cube='-', n_registers=604, save=True):
-
+                               name='Auto', spectra='-', cube='-', n_registers=604, save=True):
+    #print('conversion gain = ', ConversionGain)
     from astropy.modeling.functional_models import Gaussian2D
     from scipy.sparse import dia_matrix
 
@@ -9625,6 +9787,8 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
             Bias = 3000 / ConversionGain
         else:
             Bias = 6000 / ConversionGain
+    else:
+        Bias = float(Bias) / ConversionGain
     image = np.zeros((size[1],size[0]),dtype = 'float32')
 
     #dark & flux
@@ -9649,8 +9813,8 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
         ConvolveSlit2D_PSF_75muWidth = lambda xy , amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
         source_im += ConvolveSlit2D_PSF_75muWidth((x,y),30000*flux,9,ly/2, lx/2,Rx,Ry).reshape(lx,ly)
     elif source == 'Fibre':
-        print('Create fibre source')
-        fibre= convolvePSF(radius_hole = 20, fwhmsPSF = [5,6], unit = 10, size=(201,201), Plot = False)#[:,OSregions[0]:OSregions[1]]
+        print('Create fibre source, FWHM: ', 2.353*Rx, 2.353*Ry)
+        fibre= convolvePSF(radius_hole = 10, fwhmsPSF = [2.353*Rx,2.353*Ry], unit = 1, size=(201,201), Plot = False)#[:,OSregions[0]:OSregions[1]]
         source_im = addAtPos(source_im, fibre, (int(lx/2), int(ly/2)))
         print('Done')
     elif source[:5] == 'Field':
@@ -9695,7 +9859,7 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
         
         
     if save:
-        fitswrite((image * ConversionGain).round().astype('int16'), name[:-5] + '_before_smearing_and_RN.fits')
+        fitswrite((image * ConversionGain).round().astype('int32'), name[:-5] + '_before_smearing_and_RN.fits')
 
     # semaring post EM amp (biggest noise reduction)
     if Smearing>0:
@@ -9714,10 +9878,19 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
 
     # read noise
     readout = np.random.normal(Bias, RN, (size[1],size[0]))
-    
-    imaADU_wo_RN = (image * ConversionGain).round().astype('int16')
-    imaADU_RN = (readout * ConversionGain).round().astype('int16')
-    imaADU = ((image + readout) * ConversionGain).round().astype('int16')
+
+    print(np.max( ((image + readout) * ConversionGain).round()))
+    if np.max( ((image + readout) * ConversionGain).round())>2**15:
+        type_ = 'int32'
+    else:
+        type_ = 'int16'
+    print('Saving data in type ' + type_)
+
+    imaADU_wo_RN = (image * ConversionGain).round().astype(type_)
+    imaADU_RN = (readout * ConversionGain).round().astype(type_)
+    imaADU = ((image + readout) * ConversionGain).round().astype(type_)
+
+        
     if save:
         fitswrite(imaADU_wo_RN, name[:-5] + '_before_RN.fits')
         fitswrite(imaADU_RN, name[:-5] + '_RN.fits')
@@ -9918,7 +10091,9 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False):
     #auto_gui.Background(x,y)
     if  function == 'exponential1D':
         exp=True
-    auto_gui.GeneralFit_new(x,y,nb_gaussians=int(nb_gaussians), background=int(background), exp=exp)
+    if  function == 'DoubleExponiential':
+        double_exp=True
+    auto_gui.GeneralFit_new(x,y,nb_gaussians=int(nb_gaussians), background=int(background), exp=exp, double_exp=double_exp)
     
 #    if function == 'polynomial1D':
 #        auto_gui.GeneralFit(x,y,nb_gaussians=int(nb_gaussians), background=background)
@@ -10161,7 +10336,7 @@ def main():
                     'StackAllImages': StackAllImages, 'DS9Catalog2Region':DS9Catalog2Region, 'AddHeaderField':AddHeaderField,
                     'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'BackgroundMeasurement':BackgroundMeasurement,
                     'DS9realignImage':DS9realignImage,'DS9createSubset':DS9createSubset,'DS9Visualization':DS9Visualization,
-                    'BackgroundFit1D':BackgroundFit1D,
+                    'BackgroundFit1D':BackgroundFit1D,'DS9CreateHistrogram':DS9CreateHistrogram,
 
                     #AIT Functions
                     'centering':DS9center, 'radial_profile':DS9rp,
@@ -10171,7 +10346,7 @@ def main():
                     'throughslit': DS9throughslit, 'meanvar': DS9meanvar,
                     'xy_calib': DS9XYAnalysis,'SourcePhotometry':SourcePhotometry,'DS9MeasureDispersion':DS9MeasureDispersion,
                     
-                    'AnalyzeOSSmearing':DS9AnalyzeOSSmearing,
+                    'AnalyzeOSSmearing':DS9AnalyzeOSSmearing,'Concolve2d':Concolve2d,
                     #Flight Functions
                     'ReplaceWithNans': DS9replaceNaNs,'InterpolateNaNs': DS9InterpolateNaNs,
                     'OverscanCorrection': DS9OverscanCorrection, 'Trimming': DS9Trimming,
@@ -10230,8 +10405,9 @@ def main():
                 l=np.array(l)
                 plt.figure()
                 plt.hist(l)
-                plt.title(key + 'M = %0.2f  -  Sigma = %0.3f'%(np.nanmean(l), np.nanstd(l)));plt.xlabel(key);plt.ylabel('Frequecy')
+                plt.title(key + '%i objets: M = %0.2f  -  Sigma = %0.3f'%(len(l), np.nanmean(l), np.nanstd(l)));plt.xlabel(key);plt.ylabel('Frequecy')
                 plt.savefig(DS9_BackUp_path +'Plots/%s_Outputs_%s.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
+                csvwrite(np.vstack((np.arange(len(l)), l)).T,DS9_BackUp_path +'CSVs/%s_Outputs_%s.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
             except TypeError:
                 pass
 
