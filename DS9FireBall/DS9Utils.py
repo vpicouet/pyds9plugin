@@ -10464,9 +10464,9 @@ def RunSextractor(xpapoint):
     d = DS9(xpapoint)
     filename = getfilename(d)
     from shutil import which
-#    if which('sex') is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+    if which('sex') is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
     params = np.array(sys.argv[-33:], dtype=str)
     DETECTION_IMAGE = sys.argv[-34]
     CATALOG_NAME, CATALOG_TYPE,  PARAMETERS_NAME,  DETECT_TYPE,  DETECT_MINAREA = params[:5]
@@ -10483,8 +10483,8 @@ def RunSextractor(xpapoint):
             field = 'Y'
         elif field == '0':
             field = 'N'
-    FILTER='Y' if FILTER=='1' else 'N'
-    CLEAN='Y' if CLEAN=='1' else 'N'
+    params[8]='Y' if  params[8]=='1' else 'N'
+    params[12]='Y' if params[12]=='1' else 'N'
 
     if DETECTION_IMAGE == '-':
         DETECTION_IMAGE = None
@@ -10507,8 +10507,10 @@ def RunSextractor(xpapoint):
         print('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
         os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
 
-
-    DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+    if os.path.isfile(CATALOG_NAME):
+        DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+    else:
+        print('Can not find the output sextractor catalog...')
     return
    
     
