@@ -4970,7 +4970,7 @@ def DS9removeCRtails2(xpapoint,filen=None, length=20, config=my_conf):
 
 
 
-def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid'):
+def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None):
     """
     """
     from astropy.table import Table
@@ -4984,11 +4984,13 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid'):
     except:
         pass
     cat = Table.read(name)
+    if (ID is None) & (sys.argv[5] != '-'):
+        ID = sys.argv[5] 
     print(cat)
-    if sys.argv[5] == '-':
+    if (sys.argv[5] == '-') & (ID is None):
         create_DS9regions2(cat[x],cat[y], radius=3, form = 'circle', save=True,color = 'yellow', savename='/tmp/centers')
     else:
-        create_DS9regions([cat[x]],[cat[y]], radius=3, form = ['circle'],save=True,color = ['yellow'], ID=[np.array(cat[sys.argv[5]], dtype=int)],savename='/tmp/centers')
+        create_DS9regions([cat[x]],[cat[y]], radius=3, form = ['circle'],save=True,color = ['yellow'], ID=[np.array(cat[ID], dtype=int)],savename='/tmp/centers')
 #        try:
 #            create_DS9regions([cat[x]],[cat[y]], radius=3, form = ['circle'],save=True,color = ['yellow'], ID=[np.array(cat[sys.argv[5]], dtype=int)],savename='/tmp/centers')
 #
@@ -10455,7 +10457,7 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Y=True, 
             if band_im in np.array(['U', 'G', 'R', 'I', 'Z', 'Y', 'Us', 'H'])[U, G, R, I, Z, Y, Us, H] :
                 images.append(file)
                 varImages.append(file)
-        MakeChi2image(images,varImages,os.path.join(dn,'-'.join(fn.split('-')[:1] + fn.split('-')[-2:])),clobber=True)
+        MakeChi2image(images,varImages,os.path.join(dn,'-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','.')),clobber=True)
     return
 
 def RunSextractor(xpapoint):
@@ -10481,6 +10483,9 @@ def RunSextractor(xpapoint):
             field = 'Y'
         elif field == '0':
             field = 'N'
+    FILTER='Y' if FILTER=='1' else 'N'
+    CLEAN='Y' if CLEAN=='1' else 'N'
+
     for field in [WEIGHT_IMAGE, CLEAN]:
         if field == '1':
             field = 'Y'
@@ -10498,11 +10503,14 @@ def RunSextractor(xpapoint):
                                      Parameters sextractor:
           ********************************************************************"""+ bcolors.END)
     print(bcolors.BLACK_RED + '\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]) + bcolors.END)
+    os.system('sex -d > default.sex')
 
     if DETECTION_IMAGE is not None:
-        print('sex ' + filename + DETECTION_IMAGE + ' -c -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-    else:
-        print('sex ' + filename + ' -c -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        print('sex ' + filename + DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        os.system('sex ' + filename + DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+    else:   
+        print('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
+        os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
 
 
 

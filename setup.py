@@ -33,7 +33,7 @@ entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 data = { "DS9FireBall": ["FireBall.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*"]}
 
 
-version = '2.19dev'
+version = '2.22dev'
 
 if sys.version_info.major == 3:
     setup(
