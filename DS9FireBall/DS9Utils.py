@@ -10459,15 +10459,53 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Y=True, 
     return
 
 def RunSextractor(xpapoint):
-    from shutil import which
-    if which('sex') is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
-
     d = DS9(xpapoint)
-    filename = d.get("file")
-    U, G, R, I, Z, Y, Us, H = np.array(sys.argv[-8-5:-5], dtype=bool)
-    return
+    filename = getfilename(d)
+    from shutil import which
+#    if which('sex') is None:
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+    params = np.array(sys.argv[-33:], dtype=str)
+    DETECTION_IMAGE = sys.argv[-34]
+    CATALOG_NAME, CATALOG_TYPE,  PARAMETERS_NAME,  DETECT_TYPE,  DETECT_MINAREA = params[:5]
+    THRESH_TYPE,  DETECT_THRESH,  ANALYSIS_THRESH,  FILTER,  FILTER_NAME,  DEBLEND_NTHRESH = params[5:5+6]
+    DEBLEND_MINCONT,  CLEAN,  CLEAN_PARAM,  MASK_TYPE,  WEIGHT_TYPE, WEIGHT_IMAGE,  PHOT_APERTURES = params[5+6:5+6+7]
+    PHOT_AUTOPARAMS,  PHOT_PETROPARAMS,  PHOT_FLUXFRAC,  MAG_ZEROPOINT,  PIXEL_SCALE,  SEEING_FWHM = params[5+6+7:5+6+7+6]
+    STARNNW_NAME,  BACK_TYPE,  BACK_SIZE,  BACK_FILTERSIZE,  BACKPHOTO_TYPE,  BACKPHOTO_THICK = params[5+6+7+6:5+6+7+6+6]
+    BACK_FILTTHRESH,  CHECKIMAGE_TYPE, CHECKIMAGE_NAME = params[-3:]
+    
+    param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
+
+    for field in [FILTER, CLEAN]:
+        if field == '1':
+            field = 'Y'
+        elif field == '0':
+            field = 'N'
+    for field in [WEIGHT_IMAGE, CLEAN]:
+        if field == '1':
+            field = 'Y'
+        elif field == '0':
+            field = 'N'
+    if DETECTION_IMAGE == '-':
+        DETECTION_IMAGE = None
+    else:
+        DETECTION_IMAGE = ',' + DETECTION_IMAGE
+    print(bcolors.BLACK_RED +'Image used for detection  = ' + str(DETECTION_IMAGE) + bcolors.END)
+    print(bcolors.BLACK_RED + 'Image used for photometry  = '+ str(filename) + bcolors.END)
+    
+    print(bcolors.GREEN_WHITE + """
+          ********************************************************************
+                                     Parameters sextractor:
+          ********************************************************************"""+ bcolors.END)
+    print(bcolors.BLACK_RED + '\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]) + bcolors.END)
+
+    if DETECTION_IMAGE is not None:
+        print('sex ' + filename + DETECTION_IMAGE + ' -c -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+    else:
+        print('sex ' + filename + ' -c -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+
+
+
    
     
     
