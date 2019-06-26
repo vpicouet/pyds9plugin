@@ -10508,7 +10508,7 @@ def RunSextractor(xpapoint):
         os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
 
 
-    DS9Catalog2Region(xpapoint, name=None, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+    DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
     return
    
     
