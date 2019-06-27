@@ -2793,51 +2793,6 @@ def DS9photo_counting(xpapoint, save=True, config=my_conf):
     return 
 
 
-def sepCoadd(imName,scale=1.):
-    '''
-    move data,variance,mask extensions to new images
-    '''
-    from astropy.io import fits
-    print(imName)
-    dataHead = fits.getheader(imName,1)
-    varHead = fits.getheader(imName ,3)
-    maskHead = fits.getheader(imName,2)
-    im = fits.open(imName)
-    fits.writeto((imName[:-5]+'_data.fits').replace(',','.'),scale*im[1].data,dataHead,overwrite=True)
-    var = im[3].data
-    var[np.where(np.isinf(var))] = 999
-    fits.writeto((imName[:-5]+'_vari.fits').replace(',','.'),scale*im[3].data,varHead,overwrite=True)
-    fits.writeto((imName[:-5]+'_mask.fits').replace(',','.'),im[2].data.astype(float),maskHead,overwrite=True)
-    return
-
-def MakeChi2image(images,varImages,outputImage,clobber=True):
-    '''
-    Inputs:
-        images = list of filenames of HSC images with extensions [IMAGE] and [VARIANCE]
-        baseIm = filename of an image whose [IMAGE] header will be copied for WCS information
-        outputImage = filename of output image
-    Outputs:
-        None
-    '''
-    from astropy.io import fits
-    baseIm = images[0]
-    fluxData,varMaps = [],[]
-    for i,image in enumerate(images):
-        myFluxData = fits.getdata(image)
-        med = np.median(myFluxData)
-        myFluxData -= med
-        myFluxData[np.where(myFluxData==0.)]+=1e-50
-        fluxData.append(myFluxData)
-        varMaps.append(fits.getdata(varImages[i]))
-    fluxData = np.array(fluxData)
-    varMaps = np.array(varMaps)
-    chi2 = np.zeros(shape=fluxData[0].shape)   
-    for i in range(len(fluxData)):
-        chi2 += (fluxData[i])/np.sqrt((varMaps[i])) #TEST
-        #chi2 += (fluxData[i])**2/(varMaps[i])
-    header = fits.getheader(baseIm)
-    fits.writeto(outputImage, chi2, header,overwrite=clobber)
-
 
 def fitswrite(fitsimage, filename, verbose=True, config=my_conf):
     """
@@ -9099,7 +9054,10 @@ def HistogramSums(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     d = DS9(xpapoint)
     filename = getfilename(d)
     log = bool(int(sys.argv[3]))
-    hrange = np.array(sys.argv[4].split('-'), dtype=float)
+    try:
+        hrange = np.array(sys.argv[4].split('-'), dtype=float)
+    except ValueError:
+        hrange = None
     if len(sys.argv) > 5: path = Charge_path_new(filename, entry_point=5)
     
 
@@ -10432,35 +10390,144 @@ def ROC_curve(image_unamplified, final_image):
     return 
 
 
+def sepCoadd(imName,scale=1.):
+    '''
+    move data,variance,mask extensions to new images
+    '''
+    from astropy.io import fits
+    print(imName)
+    
+    dataHead = fits.getheader(imName,1)
+    varHead = fits.getheader(imName ,3)
+    maskHead = fits.getheader(imName,2)
+    im = fits.open(imName)
+    fits.writeto(('/tmp/' + os.path.basename(imName)[:-5]+'_data.fits').replace(',','-'),scale*im[1].data,dataHead,overwrite=True)
+    var = im[3].data
+    var[np.where(np.isinf(var))] = 999
+    fits.writeto(('/tmp/' + os.path.basename(imName)[:-5]+'_vari.fits').replace(',','-'),scale*im[3].data,varHead,overwrite=True)
+    fits.writeto(('/tmp/' + os.path.basename(imName)[:-5]+'_mask.fits').replace(',','-'),im[2].data.astype(float),maskHead,overwrite=True)
+    return
+
+def sepCoadd_2(imName,scale=1.):
+    '''
+    move data,variance,mask extensions to new images and apply corrections to the variance map
+    '''
+    from astropy.io import fits
+    # Computed from 2" apertures in the background and in the variancde map
+    print(os.path.basename(imName))
+    if 'MegaCam-u' in imName : 
+        corr = 2.76
+    elif 'MegaCam-uS' in imName : 
+        corr = 2.97
+    elif 'HSC-G' in imName :
+        corr = 2.63
+    elif 'HSC-R' in imName :
+        corr = 3.37
+    elif 'HSC-I' in imName :
+        corr = 3.09
+    elif 'HSC-Z' in imName :
+        corr = 2.5
+    elif 'HSC-Y' in imName :
+        corr = 2.90
+    elif 'VIRCAM-J' in imName:
+        corr = 9.83
+    elif 'VIRCAM-H' in imName :
+        corr = 8.52
+    elif 'VIRCAM-Y' in imName :
+        corr = 10.69
+    elif 'VIRCAM-Ks' in imName :
+        corr = 7.03
+    print('Corr = ', corr) 
+    dataHead = fits.getheader(imName,1)
+    varHead = fits.getheader(imName,3)
+    maskHead = fits.getheader(imName,2)
+    im = fits.open(imName)
+    if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(imName)),'tmp')):
+        os.makedirs(os.path.join(os.path.dirname(os.path.dirname(imName)),'tmp'))
+
+    fits.writeto((os.path.dirname(os.path.dirname(imName)) + '/tmp/' + os.path.basename(imName)[:-5]+'_data.fits').replace(',','-'),scale*im[1].data,dataHead,overwrite=True)
+    var = im[3].data 
+    var[np.where(np.isinf(var))] = 999
+    #var *= corr 
+    fits.writeto((os.path.dirname(os.path.dirname(imName)) + '/tmp/' + os.path.basename(imName)[:-5]+'_vari.fits').replace(',','-'),var,varHead,overwrite=True)
+    fits.writeto((os.path.dirname(os.path.dirname(imName)) + '/tmp/' + os.path.basename(imName)[:-5]+'_mask.fits').replace(',','-'),im[2].data.astype(float),maskHead,overwrite=True)
+    return
+
+
+def MakeChi2image(images,varImages,outputImage,clobber=True):
+    '''
+    Inputs:
+        images = list of filenames of HSC images with extensions [IMAGE] and [VARIANCE]
+        baseIm = filename of an image whose [IMAGE] header will be copied for WCS information
+        outputImage = filename of output image
+    Outputs:
+        None
+    '''
+    from astropy.io import fits
+    baseIm = images[0]
+    fluxData,varMaps = [],[]
+    for i,image in enumerate(images):
+        myFluxData = fits.getdata(image)
+        med = np.median(myFluxData)
+        myFluxData -= med
+        myFluxData[np.where(myFluxData==0.)]+=1e-50
+        fluxData.append(myFluxData)
+        varMaps.append(fits.getdata(varImages[i]))
+    fluxData = np.array(fluxData)
+    varMaps = np.array(varMaps)
+    chi2 = np.zeros(shape=fluxData[0].shape)   
+    for i in range(len(fluxData)):
+        chi2 += (fluxData[i])/np.sqrt((varMaps[i])) #TEST
+        #chi2 += (fluxData[i])**2/(varMaps[i])
+    header = fits.getheader(baseIm)
+    fits.writeto(outputImage, chi2, header,overwrite=clobber)
+    return 
+
+
 def DS9CreateDetectionImages(xpapoint):
     d = DS9(xpapoint)
     filename = d.get("file")
-    U, G, R, I, Z, Y, Us, H = np.array(sys.argv[-8-5:-5], dtype=bool)
-    print('U, G, R, I, Z, Y, Us, H',U, G, R, I, Z, Y, Us, H)
+    U, G, R, I, Z, Y, Us, H, J, Ks = np.array(sys.argv[-8-7:-5], dtype=bool)
+    print('U, G, R, I, Z, Y, Us, H, J, Ks',U, G, R, I, Z, Y, Us, H, J, Ks)
     #if len(sys.argv) > 3+2: paths = Charge_path_new(filename, entry_point=3+2)
-    paths = Charge_path_new(filename) if len(sys.argv) > 5+8 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+    paths = Charge_path_new(filename) if len(sys.argv) > 7+8 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
         
 
     for path in paths:
-        createDetectionImages(path, U, G, R, I, Z, Y, Us, H)
+        createDetectionImages(path, U, G, R, I, Z, Y, Us, H, J, Ks)
     return 
 
-def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Y=True, Us=True, H=True):
+def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Y=True, Us=True, H=True, J=True, Ks=True):
     dn = os.path.dirname(path)
     fn = os.path.basename(path)
     images = []
     varImages = []
-    if os.path.isfile(os.path.join(dn,'-'.join(fn.split('-')[:1] + fn.split('-')[-2:]))) is False:
-        for file in glob.glob(os.path.join(dn, fn[:-19] + '*' + fn[-14:])):
-            sepCoadd(file,scale=1.)
+    name = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
+    bools_bands = np.array([U, G, R, I, Z, Y, Us, H, J, Ks] )
+    bands = np.array(['u', 'G', 'R', 'I', 'Z', 'Y', 'uS', 'H', 'J', 'Ks'])[bools_bands]
+    print('Bands to use : ', bands)
+    if os.path.isfile(name) is False:
+        for file in glob.glob(os.path.join(dn, fn[:7] + '*' + fn[-14:])):
             band_im = file.split('-')[2]
-            if band_im in np.array(['U', 'G', 'R', 'I', 'Z', 'Y', 'Us', 'H'])[U, G, R, I, Z, Y, Us, H] :
-                images.append(file)
-                varImages.append(file)
-        MakeChi2image(images,varImages,os.path.join(dn,'-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','.')),clobber=True)
+            if band_im in bands:
+                sepCoadd_2(file,scale=1.)
+                print(band_im)    
+                image_name = (os.path.dirname(os.path.dirname(file)) + '/tmp/' + os.path.basename(file)[:-5]+'_data.fits').replace(',','-')
+                var_name = (os.path.dirname(os.path.dirname(file)) + '/tmp/' + os.path.basename(file)[:-5]+'_vari.fits').replace(',','-')
+                images.append(image_name)
+                varImages.append(var_name)
+        print('Images = ', images)
+        if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages')):
+            os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages'))
+        MakeChi2image(images,varImages,name,clobber=True)
+        print('Detection image %s created!'%(name))
+        for file in glob.glob(os.path.dirname(dn) + '/tmp/' + '-*'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-')[:-5]+'*.fits' ):
+            os.remove(file)
+    else:
+        print('Detection image %s already exists!'%(name))
     return
 
-def RunSextractor(xpapoint):
+def RunSextractor(xpapoint, filename=None, detector=None):
     d = DS9(xpapoint)
     filename = getfilename(d)
     from shutil import which
@@ -10468,6 +10535,7 @@ def RunSextractor(xpapoint):
         from tkinter import messagebox
         messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
     params = np.array(sys.argv[-33:], dtype=str)
+    print(params)
     DETECTION_IMAGE = sys.argv[-34]
     CATALOG_NAME, CATALOG_TYPE,  PARAMETERS_NAME,  DETECT_TYPE,  DETECT_MINAREA = params[:5]
     THRESH_TYPE,  DETECT_THRESH,  ANALYSIS_THRESH,  FILTER,  FILTER_NAME,  DEBLEND_NTHRESH = params[5:5+6]
@@ -10478,11 +10546,6 @@ def RunSextractor(xpapoint):
     
     param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
 
-    for field in [FILTER, CLEAN]:
-        if field == '1':
-            field = 'Y'
-        elif field == '0':
-            field = 'N'
     params[8]='Y' if  params[8]=='1' else 'N'
     params[12]='Y' if params[12]=='1' else 'N'
 
@@ -10513,7 +10576,56 @@ def RunSextractor(xpapoint):
         print('Can not find the output sextractor catalog...')
     return
    
+ 
     
+def RunSextractorHSC_CLAUDS(filename=None, detector=None):
+    #d = DS9(xpapoint)
+    filename = getfilename(d)
+    from shutil import which
+    if which('sex') is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+    #params = np.array(sys.argv[-33:], dtype=str)
+    DETECTION_IMAGE = sys.argv[-34]
+    params = ['/tmp/catalog.fits','FITS_1.0','/home/vpicouet/sextractor/test.param' , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 1,
+     '/usr/share/sextractor/gauss_4.0_7x7.conv' ,64, 0.0003 ,1, '1_PARAM',
+     'CORRECT', 'MAP_VAR', '-', '6,12,18', '2.5,4.0', '2.0,4.0',
+     '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', 30.0, 0, 0.8,
+     '/usr/share/sextractor/default.nnw', 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
+     'NONE', 'check.fits']    
+    param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
+
+    params[8]='Y' if  params[8]=='1' else 'N'
+    params[12]='Y' if params[12]=='1' else 'N'
+
+    if DETECTION_IMAGE == '-':
+        DETECTION_IMAGE = None
+    else:
+        DETECTION_IMAGE = ',' + DETECTION_IMAGE
+    print(bcolors.BLACK_RED +'Image used for detection  = ' + str(DETECTION_IMAGE) + bcolors.END)
+    print(bcolors.BLACK_RED + 'Image used for photometry  = '+ str(filename) + bcolors.END)
+    
+    print(bcolors.GREEN_WHITE + """
+          ********************************************************************
+                                     Parameters sextractor:
+          ********************************************************************"""+ bcolors.END)
+    print(bcolors.BLACK_RED + '\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]) + bcolors.END)
+    os.system('sex -d > default.sex')
+
+    if DETECTION_IMAGE is not None:
+        print('sex ' + filename + DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        os.system('sex ' + filename + DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+    else:   
+        print('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
+        os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+
+    if os.path.isfile(CATALOG_NAME):
+        DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+    else:
+        print('Can not find the output sextractor catalog...')
+    return
+
+
     
 def main():
     """Main function where the arguments are defined and the other functions called
