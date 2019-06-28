@@ -3692,10 +3692,16 @@ def Field_regions(xpapoint, mask=''):
     ImageName = os.path.basename(path)
     if ImageName[:6] == 'calexp':
         Type = 'HSC_CLAUDS'
-        filename = os.path.dirname(path) + '/reg/'+ ImageName[:-5].replace('.',',') + '.reg'
+        if 'DetectionImages' in path:
+            name = os.path.dirname(path) + '/reg/' + ImageName[:7] + '*' + ImageName[-14:-5] + '.reg'
+            print(name)
+            filename = glob.glob(name)[0]
+            #filename = os.path.dirname(path) + '/reg/'+ ImageName[:-5].replace('.',',') + '.reg'        
+        else:
+            filename = os.path.dirname(os.path.dirname(path)) + '/DetectionImages/reg/'+ ImageName[:-5].replace(',','-') + '.reg'
         print(filename)
         d.set('regions ' + filename)
-        sys.quit()
+        sys.exit()
     elif ImageName[:5] == 'stack':
         Type = 'guider'
     #if (ImageName[:5].lower() == 'image') or (ImageName[:5]== 'Stack'):
@@ -10649,7 +10655,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     if os.path.isfile(CATALOG_NAME):
         cat = Table.read(CATALOG_NAME)
         
-        create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],-180*cat['THETA_IMAGE']/np.pi], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5] ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
+        create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],-180*cat['THETA_IMAGE']/np.pi], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
         if path is None:
             d.set('regions ' + os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5] + '*.reg')
