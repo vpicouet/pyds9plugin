@@ -1015,7 +1015,8 @@ def DS9setup2(xpapoint, config=my_conf):
     d.set("grid no") 
 #        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
 #              np.percentile(fitsimage[0].data,99.6)))
-    d.set("scale limits {} {} ".format(np.nanpercentile(image,50),np.nanpercentile(image,99.95)))
+    #d.set("scale limits {} {} ".format(np.nanpercentile(image,50),np.nanpercentile(image,99.95)))
+    d.set("scale limits {} {} ".format(np.nanmedian(image),np.nanpercentile(image,99)))
     d.set("scale asinh")
     #d.set("cmap grey")
     d.set("cmap bb")
@@ -3689,8 +3690,13 @@ def Field_regions(xpapoint, mask=''):
     #d.set("regions system image")
     path = d.get("file")
     ImageName = os.path.basename(path)
-
-    if ImageName[:5] == 'stack':
+    if ImageName[:6] == 'calexp':
+        Type = 'HSC_CLAUDS'
+        filename = os.path.dirname(path) + '/reg/'+ ImageName[:-5].replace('.',',') + '.reg'
+        print(filename)
+        d.set('regions ' + filename)
+        sys.quit()
+    elif ImageName[:5] == 'stack':
         Type = 'guider'
     #if (ImageName[:5].lower() == 'image') or (ImageName[:5]== 'Stack'):
     else:
@@ -10581,20 +10587,28 @@ def RunSextractor(xpapoint, filename=None, detector=None):
  
     
 def RunSextractorHSC_CLAUDS(xpapoint, path=None):
-    d = DS9(xpapoint)
-    path = getfilename(d)
+    from shutil import which
+    if path is None:
+        d = DS9(xpapoint)
+        path = getfilename(d)
+        
+    if 'MegaCam' in os.path.basename(path) or 'VIRCAM' in os.path.basename(path):
+        MAG_ZEROPOINT = 30
+    else:
+        MAG_ZEROPOINT = 27
     dn = os.path.dirname(path)
     fn = os.path.basename(path)
     DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
     sepCoadd_2(path,scale=1.)
     PHOTOMETRIC_NAME = (os.path.dirname(os.path.dirname(path)) + '/tmp/' + os.path.basename(path)[:-5]+'_data.fits').replace(',','-')
     VAR_IMAGE = (os.path.dirname(os.path.dirname(path)) + '/tmp/' + os.path.basename(path)[:-5]+'_vari.fits').replace(',','-')
-    if not os.path.exists(os.path.join(os.path.dirname(dn),'Photometric_Catalogs')):
-        os.makedirs(os.path.join(os.path.dirname(dn),'Photometric_Catalogs'))
+    if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs')):
+        os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs'))
+    if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/reg')):
+        os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/reg'))
     
-    CATALOG_NAME = os.path.join(os.path.dirname(dn),'Photometric_Catalogs',fn[:-5]+'_cat.fits')
+    CATALOG_NAME = os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs',fn[:-5].replace(',','-')+'_cat.fits')
     
-    from shutil import which
     if which('sex') is None:
         from tkinter import messagebox
         messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
@@ -10603,7 +10617,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     params = [CATALOG_NAME,'FITS_1.0','/data/deepZ/HSC_CLAUDS/sextractor/test.param' , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'Y',
      '/usr/share/sextractor/gauss_4.0_7x7.conv' ,64, 0.0003 ,'Y', '1_PARAM',
      'CORRECT', 'MAP_VAR', VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
-     '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', 30.0, 0, 0.8,
+     '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT, 0, 0.8,
      '/usr/share/sextractor/default.nnw', 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
      'NONE', 'check.fits']    
     param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
@@ -10627,13 +10641,19 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
 
 #    if DETECTION_IMAGE is not None:
     print('sex ' + PHOTOMETRIC_NAME +','+ DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-    os.system('sex ' + PHOTOMETRIC_NAME + DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+    os.system('sex ' + PHOTOMETRIC_NAME +','+ DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
 #    else:   
 #        print('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
 #        os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
 
     if os.path.isfile(CATALOG_NAME):
-        DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+        cat = Table.read(CATALOG_NAME)
+        
+        create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],-180*cat['THETA_IMAGE']/np.pi], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5] ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
+        #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+        if path is None:
+            d.set('regions ' + os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5] + '*.reg')
+
     else:
         print('Can not find the output sextractor catalog...')
     for file in glob.glob(os.path.dirname(dn) + '/tmp/' + fn[:-5] + '*.fits' ):
