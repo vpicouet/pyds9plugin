@@ -10651,7 +10651,6 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
 #    else:   
 #        print('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
 #        os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-    FormatSextrectorCatalog(CATALOG_NAME)
     
     if os.path.isfile(CATALOG_NAME):
         cat = Table.read(CATALOG_NAME)
@@ -10663,6 +10662,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
 
     else:
         print('Can not find the output sextractor catalog...')
+    FormatSextrectorCatalog(CATALOG_NAME)
     for file in glob.glob(os.path.dirname(dn) + '/tmp/' + fn[:-5] + '*.fits' ):
         os.remove(file)
     return
@@ -10820,8 +10820,8 @@ def FormatSextrectorCatalog(outCat, apertures=['12pix','18pix','24pix'],flux_rad
     # Write multiband table
     tab.write(outCat,format='fits',overwrite=True)
     # Remove intermediate catalogs and images
-    os.system('rm '+outCat+'_flags.cat')
-    os.system('rm '+outCat+'.cat')
+#    os.system('rm '+outCat+'_flags.cat')
+#    os.system('rm '+outCat+'.cat')
     return(outCat)
 
 
