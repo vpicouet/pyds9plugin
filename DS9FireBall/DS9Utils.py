@@ -595,7 +595,7 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
     #r = radius   
     #print(range(len(xim)))
     for i in range(len(xim)):
-        print(form[i])
+        #print(form[i])
         if form[i] == 'box':
             #print('Box')
             rest = '{:.2f},{:.2f})'.format(r, r1)
@@ -10659,13 +10659,10 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     print(bcolors.BLACK_RED + '\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]) + bcolors.END)
     os.system('sex -d > default.sex')
 
-#    if DETECTION_IMAGE is not None:
-    print('sex ' + PHOTOMETRIC_NAME +','+ DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-    os.system('sex ' + PHOTOMETRIC_NAME +','+ DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-#    else:   
-#        print('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
-#        os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-    
+    if os.path.isfile(CATALOG_NAME) is False:
+        print('sex ' + PHOTOMETRIC_NAME +','+ DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        os.system('sex ' + PHOTOMETRIC_NAME +','+ DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        
     if os.path.isfile(CATALOG_NAME):
         cat = Table.read(CATALOG_NAME)
         
