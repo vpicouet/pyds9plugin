@@ -10660,8 +10660,9 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     os.system('sex -d > default.sex')
 
     if os.path.isfile(CATALOG_NAME) is False:
-        print('sex ' + PHOTOMETRIC_NAME +','+ DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-        os.system('sex ' + PHOTOMETRIC_NAME +','+ DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        print('Catalog not existing yet, running sextractor')
+        print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         
     if os.path.isfile(CATALOG_NAME):
         cat = Table.read(CATALOG_NAME)
@@ -10685,12 +10686,16 @@ def patchMultiCat(catalog):
         patchIm = fileName of one of the input images used to get patch dimension that is used to mask edges
         outcat = name of output catalog
     '''
+    
     fn = os.path.basename(catalog)
     fd = os.path.dirname(catalog)
+    print(fn)
     bandcats = glob.glob(fd + '/calexp*%s'%(fn[-14:]))
+    print([os.path.basename(file) for file in bandcats])
     tract = fn.split('-')[3]
     patch = fn.split('-')[4] + '-' + fn.split('-')[5][0]
     outChiCat = os.path.dirname(bandcats[0]) + '/BandMergedCatalogs/' + '-'.join(fn.split('-')[:1] + fn.split('-')[-3:])
+    
     if os.path.isfile(outChiCat):
         print('Multi band catalog already exists, exiting code.')
         return
