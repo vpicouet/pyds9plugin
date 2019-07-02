@@ -10636,7 +10636,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     #DETECTION_IMAGE = sys.argv[-34]
     params = [CATALOG_NAME,'FITS_1.0','/data/deepZ/HSC_CLAUDS/sextractor/test.param' , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'Y',
      '/usr/share/sextractor/gauss_4.0_7x7.conv' ,64, 0.0003 ,'Y', '1_PARAM',
-     'CORRECT', 'MAP_VAR', VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
+     'CORRECT', 'NONE,MAP_VAR', 'NONE,'+VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
      '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT, 0, 0.8,
      '/usr/share/sextractor/default.nnw', 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
      'NONE', 'check.fits']    
@@ -10694,8 +10694,10 @@ def patchMultiCat(catalog):
     print([os.path.basename(file) for file in bandcats])
     tract = fn.split('-')[3]
     patch = fn.split('-')[4] + '-' + fn.split('-')[5][0]
-    outChiCat = os.path.dirname(bandcats[0]) + '/BandMergedCatalogs/' + '-'.join(fn.split('-')[:1] + fn.split('-')[-3:])
-    
+    if not os.path.exists( os.path.dirname(bandcats[0]) + '/BandMergedCatalogs/'):
+        os.makedirs( os.path.dirname(bandcats[0]) + '/BandMergedCatalogs/')
+    outChiCat = os.path.join(fd,'BandMergedCatalogs','-'.join(fn.split('-')[:1] + fn.split('-')[-3:] ))
+    print(outChiCat)
     if os.path.isfile(outChiCat):
         print('Multi band catalog already exists, exiting code.')
         return
