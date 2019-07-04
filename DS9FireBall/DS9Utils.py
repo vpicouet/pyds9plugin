@@ -827,6 +827,83 @@ def compute_local_background(ima):
     return bkg
     
     
+def getdata(Plot=False):
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    d = DS9()
+    region = getregion(d, quick=True)
+    filename = getfilename(d)
+    Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+    data = fits.open(filename)[0].data[Yinf:Ysup,Xinf:Xsup]
+    if Plot:
+        plt.imshow(data)
+        plt.colorbar()
+    return data
+
+def fitsgaussian2D(xpapoint):
+    from scipy.optimize import curve_fit
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    from scipy.stats import multivariate_normal
+    fwhm, center = sys.argv[-2:]
+    
+    image = getdata()
+
+    lx, ly = image.shape
+    x = np.linspace(0,lx-1,lx)
+    y = np.linspace(0,ly-1,ly)
+    x, y = np.meshgrid(x,y)
+
+
+    xo = np.where(image == np.nanmax(image))[0][0]
+    yo = np.where(image == np.nanmax(image))[1][0]
+ 
+    try:
+        Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
+        if fwhm.split('-')[0] == '':
+            if bool(int(center)):
+                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, 5],bounds=([-np.inf,len(y)/2-1,-np.inf],[np.inf,len(y)/2 +1,np.inf]))            
+            else:
+                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], 5])
+    
+        else:
+            stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
+            if bool(int(center)):
+                print(bool(int(center)))
+                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, (stdmin+stdmin)/2],bounds=([-np.inf,len(y)/2-1,stdmin],[np.inf,len(y)/2 +1,stdmax]))            
+            else:
+                print(bool(int(center)))
+                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], (stdmin+stdmin)/2],bounds=([-np.inf,-np.inf,stdmin],[np.inf,np.inf,stdmax]))
+    except RuntimeError as e:
+        print(e)
+        popt1 = p0
+            
+    
+    
+    
+    bounds = ([1e-1*np.nanmax(image), xo-10 , yo-10, 0.5,0.5,-1e5], [10*np.nanmax(image), xo+10 , yo+10, 10,10,1e5])#(-np.inf, np.inf)#
+    
+    print ('bounds = ',bounds)
+    print('\nParam = ', Param)
+    popt,pcov = curve_fit(twoD_Gaussian,(x,y),image.flat,Param,bounds=bounds)
+
+    z = twoD_Gaussian((x,y),*popt).reshape(x.shape)
+    fig = plt.figure()    
+    ax = fig.add_subplot(111, projection='3d')   
+    ax.scatter(x,y, image, c='r', s=5)#, cstride=1, alpha=0.2)
+  
+    ax.plot_surface(x,y,z, alpha=0.5, label = 'amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]))
+    plt.title('3D plot')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Pixel value')
+    ax.axis('equal')
+    ax.axis('tight')
+    ax.text(popt[1],popt[2], np.nanmax(image),s='amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]))    
+    plt.show()
+    return
+
+
 def process_image(ima, hdr, with_prior=False, config=my_conf):
     """
     """
@@ -10690,7 +10767,7 @@ def patchMultiCat(catalog):
     fn = os.path.basename(catalog)
     fd = os.path.dirname(catalog)
     print(fn)
-    bandcats = glob.glob(fd + '/calexp*%s'%(fn[-14:]))
+    bandcats = glob.glob(fd + '/calexp*%s'%(fn[-18:]))
     print([os.path.basename(file) for file in bandcats])
     tract = fn.split('-')[3]
     patch = fn.split('-')[4] + '-' + fn.split('-')[5][0]
@@ -10702,10 +10779,14 @@ def patchMultiCat(catalog):
         print('Multi band catalog already exists, exiting code.')
         return
     else:
+        print(bandcats)
         from astropy.io import fits
         from astropy.table import Table
         # Read catalog for band 1 as base
-        t = Table(fits.getdata(bandcats[0],1))   
+        try:
+            t = Table(fits.getdata(bandcats[0],1)) 
+        except ValueError:
+            return
         
         # Change IDs to include tract and patch
         ids = []
@@ -10715,8 +10796,8 @@ def patchMultiCat(catalog):
         
         # Add field, tract, patch columns 
         #colnames = t.colnames
-        t['TRACT'] = len(t)*[tract]
-        t['PATCH'] = len(t)*[patch]
+        t['TRACT'] = int(tract)
+        t['PATCH'] = float(patch.replace('-','.'))
         #newcolnames = colnames[:5]+['FIELD','TRACT','PATCH']+[colnames[5:]]
         tab = t
     
@@ -10804,7 +10885,7 @@ def FormatSextrectorCatalog(outCat, apertures=['12pix','18pix','24pix'],flux_rad
     
     # Add filter to flux column names
     for col in tab.colnames:
-        if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','FLUX_APER','FLUXERR_APER','FLUX_RADIUS','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','BACKGROUND','THRESHOLD','FWHM_IMAGE','FLAGS','CLASS_STAR','ELONGATION','ELLIPTICITY']:
+        if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','FLUX_APER','FLUXERR_APER','FLUX_RADIUS','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','BACKGROUND','THRESHOLD','FWHM_IMAGE','ELONGATION','ELLIPTICITY']:
             tab.rename_column(col,col+'_'+band.replace('-','_'))
     # Change RA/DEC
     tab.rename_column('ALPHA_J2000','RA')
@@ -10849,6 +10930,35 @@ def FormatSextrectorCatalog(outCat, apertures=['12pix','18pix','24pix'],flux_rad
     return(outCat)
 
 
+def createWCStractfromHeader(path):
+    from astropy import wcs
+    from astropy.io import fits
+    header = fits.open(path)[0].header
+    lx, ly = header['NAXIS1'] ,header['NAXIS2']
+    crval1 = header['CRVAL1A'] 
+    crval2 = header['CRVAL2A']     
+    w0 = wcs.WCS(naxis=2)
+    w0.wcs.crpix = [1, 1]
+    w0.wcs.cdelt = np.array([1, 1])
+    w0.wcs.crval = [crval1, crval2]
+    w0.wcs.ctype = ["LINEAR", "LINEAR"]
+    #w0.wcs.set_pv([(2, 1, 45.0)])
+    xx, yy = np.meshgrid(np.arange(lx),np.arange(ly),indexing='ij')
+    x, y = w0.all_pix2world(xx.flatten(),yy.flatten(),0)
+    return w0, xx.flatten(),yy.flatten(), np.array(x,dtype=int), np.array(y,dtype=int)
+
+def CreateBigImage(paths,save_path, dtype='float32'):
+    from astropy.io import fits
+    new_image = np.zeros((4100*2,4200*2), dtype=dtype)
+    for path in glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/TRACT/calexp-9813-*.fits'):
+        image = fits.open(path)[0].data
+        w0, x0, y0, x, y = createWCStractfromHeader(path)
+        for i0,j0, i, j in zip(x0,y0, x,y):
+            new_image[j,i] = image[j0,i0]
+    fitswrite(new_image,save_path)
+    return new_image
+
+
 def main():
     """Main function where the arguments are defined and the other functions called
     """
@@ -10884,6 +10994,7 @@ def main():
                     'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'BackgroundMeasurement':BackgroundMeasurement,
                     'DS9realignImage':DS9realignImage,'DS9createSubset':DS9createSubset,'DS9Visualization':DS9Visualization,
                     'BackgroundFit1D':BackgroundFit1D,'DS9CreateHistrogram':DS9CreateHistrogram,'DS9save':DS9save,
+                    'fitsgaussian2D': fitsgaussian2D,
 
                     #AIT Functions
                     'centering':DS9center, 'radial_profile':DS9rp,
