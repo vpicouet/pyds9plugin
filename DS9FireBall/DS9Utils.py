@@ -10826,7 +10826,7 @@ def patchMultiCat(catalog):
         for bandCat  in bandcats[1:]:
             bTab = Table(fits.getdata(bandCat,1))
             for col in bTab.colnames:
-                if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','FWHM_IMAGE','FLAGS','CLASS_STAR','ELONGATION','ELLIPTICITY']:
+                if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','FWHM_IMAGE','ELONGATION','ELLIPTICITY']:
                     tab[col.replace('-','_')] = bTab[col]    
         ### DEPRECATED###    
         #################
@@ -10906,7 +10906,7 @@ def FormatSextrectorCatalog(outCat, apertures=['12pix','18pix','24pix'],flux_rad
     
     # Add filter to flux column names
     for col in tab.colnames:
-        if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','FLUX_APER','FLUXERR_APER','FLUX_RADIUS','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','BACKGROUND','THRESHOLD','FWHM_IMAGE','ELONGATION','ELLIPTICITY']:
+        if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','FLUX_APER','FLUXERR_APER','FLUX_RADIUS','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','FWHM_IMAGE','ELONGATION','ELLIPTICITY']:
             tab.rename_column(col,col+'_'+band.replace('-','_'))
     # Change RA/DEC
     tab.rename_column('ALPHA_J2000','RA')
