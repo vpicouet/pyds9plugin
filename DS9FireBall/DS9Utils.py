@@ -840,6 +840,27 @@ def getdata(Plot=False):
         plt.colorbar()
     return data
 
+
+
+
+def AddGaussian2d(xpapoint):
+    from astropy.io import fits
+    flux, fwhm = np.array(sys.argv[-2:],dtype=float)
+    d = DS9(xpapoint)
+    filename = getfilename(d)
+    reg = getregion(d)[0]
+    fitsimage = fits.open(filename)[0]
+    lx, ly = fitsimage.data.shape
+    x = np.linspace(0,lx-1,lx)
+    y = np.linspace(0,ly-1,ly)
+    x, y = np.meshgrid(x,y)
+    z = np.array(twoD_Gaussian((x,y),flux, reg.yc, reg.xc, fwhm/2.35, fwhm/2.35).reshape(ly,lx), dtype=int).T
+    fitsimage.data = fitsimage.data + z
+    fitswrite(fitsimage, filename[:-5] + '_gaus.fits' )
+    d.set('file ' + filename[:-5] + '_gaus.fits' )
+    return
+
+
 def fitsgaussian2D(xpapoint):
     from scipy.optimize import curve_fit
     import matplotlib.pyplot as plt
@@ -4579,8 +4600,8 @@ def Lims_from_region(region=None, coords=None,  config=my_conf):
     print('W = ', w)
     print('H = ', h)
     if w <= 2:
-        w = 2		      
-    if h <= 2:																			
+        w = 2             
+    if h <= 2:                                                                          
         h = 2
     Yinf = int(np.floor(yc - h/2 -1))
     Ysup = int(np.ceil(yc + h/2 -1))
@@ -9850,7 +9871,7 @@ def SimulateFIREBallemCCD(xpapoint, DS9backUp = DS9_BackUp_path):
 
 
 
-def ConvolveSlit2D_PSF(xy, amp=1, l=3, L=9, xo=0 ,yo=0 , sigmax2 = 40, sigmay2 = 40):
+def ConvolveSlit2D_PSF(xy=np.meshgrid(np.linspace(-20,20,100),np.linspace(-20,20,100)), amp=1, l=3, L=20, xo=0 ,yo=0 , sigmax2 = 20, sigmay2 = 20):
     from scipy import special
     x, y = xy
     A1 = special.erf((l-(x-xo))/np.sqrt(2*sigmax2))
@@ -10744,7 +10765,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     if os.path.isfile(CATALOG_NAME):
         cat = Table.read(CATALOG_NAME)
         
-        create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],-180*cat['THETA_IMAGE']/np.pi], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
+        create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
         if path is None:
             d.set('regions ' + os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5] + '*.reg')
@@ -10805,7 +10826,7 @@ def patchMultiCat(catalog):
         for bandCat  in bandcats[1:]:
             bTab = Table(fits.getdata(bandCat,1))
             for col in bTab.colnames:
-                if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','BACKGROUND','THRESHOLD','FWHM_IMAGE','FLAGS','CLASS_STAR','ELONGATION','ELLIPTICITY']:
+                if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','FWHM_IMAGE','FLAGS','CLASS_STAR','ELONGATION','ELLIPTICITY']:
                     tab[col.replace('-','_')] = bTab[col]    
         ### DEPRECATED###    
         #################
@@ -10849,9 +10870,9 @@ def fill_missing_photometry(copycat):
             print(band)
             for col in cols2add:
                 if 'FLUX' in col:
-                    t[col + band.replace('-','_')] = [-99.]*len(t)
+                    t[col + '_'+ band.replace('-','_')] = [-99.]*len(t)
                 if 'MAG' in col[:3]: # Avoid confusion with IMAGE and MAG...
-                    t[col + band.replace('-','_')] = [-99.]*len(t)
+                    t[col + '_'+  band.replace('-','_')] = [-99.]*len(t)
 #                if 'HSC' in col:
 #                    t[col].name = col[:-5]+band.replace('-','_')
 #                elif 'VIRCAM'in col:
@@ -10994,7 +11015,7 @@ def main():
                     'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'BackgroundMeasurement':BackgroundMeasurement,
                     'DS9realignImage':DS9realignImage,'DS9createSubset':DS9createSubset,'DS9Visualization':DS9Visualization,
                     'BackgroundFit1D':BackgroundFit1D,'DS9CreateHistrogram':DS9CreateHistrogram,'DS9save':DS9save,
-                    'fitsgaussian2D': fitsgaussian2D,
+                    'fitsgaussian2D': fitsgaussian2D, 'AddGaussian2d' :AddGaussian2d,
 
                     #AIT Functions
                     'centering':DS9center, 'radial_profile':DS9rp,
