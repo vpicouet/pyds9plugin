@@ -10796,49 +10796,49 @@ def patchMultiCat(catalog):
         os.makedirs( os.path.dirname(bandcats[0]) + '/BandMergedCatalogs/')
     outChiCat = os.path.join(fd,'BandMergedCatalogs','-'.join(fn.split('-')[:1] + fn.split('-')[-3:] ))
     print(outChiCat)
-    if os.path.isfile(outChiCat):
-        print('Multi band catalog already exists, exiting code.')
+#    if os.path.isfile(outChiCat):
+#        print('Multi band catalog already exists, exiting code.')
+#        return
+#    else:
+    print(bandcats)
+    from astropy.io import fits
+    from astropy.table import Table
+    # Read catalog for band 1 as base
+    try:
+        t = Table(fits.getdata(bandcats[0],1)) 
+    except ValueError:
         return
-    else:
-        print(bandcats)
-        from astropy.io import fits
-        from astropy.table import Table
-        # Read catalog for band 1 as base
-        try:
-            t = Table(fits.getdata(bandcats[0],1)) 
-        except ValueError:
-            return
-        
-        # Change IDs to include tract and patch
-        ids = []
-        for j in t['NUMBER']:
-            ids.append(int(str(tract)+str(patch).replace('-',''))*10000000+j)
-        t.replace_column('NUMBER', np.array(ids).astype('int64'))
-        
-        # Add field, tract, patch columns 
-        #colnames = t.colnames
-        t['TRACT'] = int(tract)
-        t['PATCH'] = float(patch.replace('-','.'))
-        #newcolnames = colnames[:5]+['FIELD','TRACT','PATCH']+[colnames[5:]]
-        tab = t
     
-        # Add multiband stuff
-        for bandCat  in bandcats[1:]:
-            bTab = Table(fits.getdata(bandCat,1))
-            for col in bTab.colnames:
-                if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','FWHM_IMAGE','ELONGATION','ELLIPTICITY']:
-                    tab[col.replace('-','_')] = bTab[col]    
-        ### DEPRECATED###    
-        #################
-        # Add overlap flag
-        #f = fits.getdata(patchIm)
-        #patchDims = [f.shape[0],f.shape[1]]
-        #xmax,ymax=patchDims[1]-100,patchDims[0]-100
-        #tab['NOT_AT_PATCH_EDGE'] = overlap
-        tab.write(outChiCat,format='fits',overwrite=True)
-        fill_missing_photometry(outChiCat)
-        print(outChiCat)
-        return
+    # Change IDs to include tract and patch
+    ids = []
+    for j in t['NUMBER']:
+        ids.append(int(str(tract)+str(patch).replace('-',''))*10000000+j)
+    t.replace_column('NUMBER', np.array(ids).astype('int64'))
+    
+    # Add field, tract, patch columns 
+    #colnames = t.colnames
+    t['TRACT'] = int(tract)
+    t['PATCH'] = float(patch.replace('-','.'))
+    #newcolnames = colnames[:5]+['FIELD','TRACT','PATCH']+[colnames[5:]]
+    tab = t
+
+    # Add multiband stuff
+    for bandCat  in bandcats[1:]:
+        bTab = Table(fits.getdata(bandCat,1))
+        for col in bTab.colnames:
+            if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','FWHM_IMAGE','ELONGATION','ELLIPTICITY']:
+                tab[col.replace('-','_')] = bTab[col]    
+    ### DEPRECATED###    
+    #################
+    # Add overlap flag
+    #f = fits.getdata(patchIm)
+    #patchDims = [f.shape[0],f.shape[1]]
+    #xmax,ymax=patchDims[1]-100,patchDims[0]-100
+    #tab['NOT_AT_PATCH_EDGE'] = overlap
+    tab.write(outChiCat,format='fits',overwrite=True)
+    fill_missing_photometry(outChiCat)
+    print(outChiCat)
+    return
     
 def fill_missing_photometry(copycat):
     #['_'.join(col.split('_')[:-2]) for col in [col for col in colNames if 'HSC_G' in col]]
