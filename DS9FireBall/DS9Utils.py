@@ -10757,10 +10757,10 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     print(bcolors.BLACK_RED + '\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]) + bcolors.END)
     os.system('sex -d > default.sex')
 
-    if os.path.isfile(CATALOG_NAME) is False:
-        print('Catalog not existing yet, running sextractor')
-        print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-        os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+    #if os.path.isfile(CATALOG_NAME) is False:
+    print('Running sextractor')
+    print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+    os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         
     if os.path.isfile(CATALOG_NAME):
         cat = Table.read(CATALOG_NAME)
@@ -10850,6 +10850,10 @@ def fill_missing_photometry(copycat):
                  'FLUXERR_AUTO',
                  'MAG_AUTO',
                  'MAGERR_AUTO',
+                 'MAG_ISO',
+                 'MAGERR_ISO',                 
+                 'MAG_APER',
+                 'MAGERR_APER',                 
                  'MU_MAX',
                  'FLUX_APER_12pix',
                  'FLUXERR_APER_12pix',
@@ -10954,7 +10958,7 @@ def FormatSextrectorCatalog(outCat, apertures=['12pix','18pix','24pix'],flux_rad
 def createWCStractfromHeader(path):
     from astropy import wcs
     from astropy.io import fits
-    header = fits.open(path)[0].header
+    header = fits.open(path)[1].header
     lx, ly = header['NAXIS1'] ,header['NAXIS2']
     crval1 = header['CRVAL1A'] 
     crval2 = header['CRVAL2A']     
@@ -10968,11 +10972,13 @@ def createWCStractfromHeader(path):
     x, y = w0.all_pix2world(xx.flatten(),yy.flatten(),0)
     return w0, xx.flatten(),yy.flatten(), np.array(x,dtype=int), np.array(y,dtype=int)
 
-def CreateBigImage(paths,save_path, dtype='float32'):
+def CreateBigImage(paths=glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/TRACT/calexp*-9813-*.fits'),save_path='/tmp/test_99.fits', dtype='float32'):
     from astropy.io import fits
-    new_image = np.zeros((4100*2,4200*2), dtype=dtype)
-    for path in glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/TRACT/calexp-9813-*.fits'):
-        image = fits.open(path)[0].data
+    n = len(paths)
+    new_image = np.zeros((4100*int(np.sqrt(n)),4200*int(np.sqrt(n))), dtype=dtype)
+    for path in paths:
+        print(path)
+        image = fits.open(path)[1].data
         w0, x0, y0, x, y = createWCStractfromHeader(path)
         for i0,j0, i, j in zip(x0,y0, x,y):
             new_image[j,i] = image[j0,i0]
