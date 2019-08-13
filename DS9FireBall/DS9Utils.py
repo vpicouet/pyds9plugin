@@ -10839,7 +10839,31 @@ def patchMultiCat(catalog):
     fill_missing_photometry(outChiCat)
     print(outChiCat)
     return
+ 
     
+
+        
+def StackPhotometricTables(tract=''):
+    #files = glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/Catalogs/BandMergedCatalogs/calexp-*%i*_cat.fits'%(tract))
+    import glob
+    from astropy.table import Table, vstack
+    files = glob.glob('calexp-*%i*_cat.fits'%(tract))
+    tables = [Table.read(file) for file in files ]
+    tables_ = [table_i for table_i in tables if len(table_i)>0 ]
+    new_tables = [] 
+    for table in tables: 
+        if len(table)>0: 
+            #table['TRACT'] = np.array(table['TRACT'],dtype='int64') 
+            #new_tables.append(table) 
+            #print(type(table['TRACT'][0])    )
+            print(0)
+    print('Stacking tables...')
+    stack_table = vstack(tables)
+    stack_table.write('TotalMergedCatalog_%i.fits'%(tract))#tres tres long...
+    return 
+        
+
+
 def fill_missing_photometry(copycat):
     #['_'.join(col.split('_')[:-2]) for col in [col for col in colNames if 'HSC_G' in col]]
     from astropy.table import Table 
