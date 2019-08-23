@@ -2278,19 +2278,22 @@ def DS9open(xpapoint, filename=None):
 
 
 def DS9save(xpapoint, filename=None):
-    from astropy.io import fits
-    import matplotlib.image as mpimg
+    from shutil import which
+    #from astropy.io import fits
+    #import matplotlib.image as mpimg
     path1, path2, path3, path_save = sys.argv[-4:]
-#    a = fits.open('/Users/Vincent/Nextcloud/Work/These/HSC/sextractor/calexp-HSC-I-9813-8,7.fits')[1].data
-#    b = fits.open('/Users/Vincent/Nextcloud/Work/These/HSC/sextractor/calexp-HSC-R-9813-8,7.fits')[1].data
-#    c = fits.open('/Users/Vincent/Nextcloud/Work/These/HSC/sextractor/calexp-HSC-Y-9813-8,7.fits')[1].data
-    a = fits.open(path1)[1].data
-    b = fits.open(path2)[1].data
-    c = fits.open(path3)[1].data
-    im2 = np.dstack((a,b,c))
-    mpimg.imsave(os.path.dirname(path1) + '/' + path_save,im2)
-    plt.imshow(im2)
-    return im2
+#    a = fits.open(path1)[1].data
+#    b = fits.open(path2)[1].data
+#    c = fits.open(path3)[1].data
+#    im2 = np.dstack((a,b,c))
+    #mpimg.imsave(os.path.dirname(path1) + '/' + path_save,im2)
+    if which('stiff') is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Stiff error', message="""Stiff do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+    else:
+        os.system("stiff %s %s %s -OUTFILE_NAME %s"%(path1, path2, path3, path_save))
+    #plt.imshow(im2)
+    return #im2
 
   
 
@@ -2500,6 +2503,31 @@ def Charge_path(filename, entry_point = 3, entry=None):
 
     return path
     
+
+def DS9SaveOnlyImage(xpapoint):
+    '''
+    '''
+    from astropy.io import fits
+    d = DS9(xpapoint)
+    filename = getfilename(d)
+    paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+    if not os.path.exists(os.path.join(os.path.dirname(paths[0]),'ImagesOnly')):
+        os.makedirs(os.path.join(os.path.dirname(paths[0]),'ImagesOnly'))
+
+    for path in paths:
+        a = fits.open(path)[1]
+#        hdu = fits.PrimaryHDU(np.arange(10))
+#        hdu.data = a.data
+#        hdu.header = a.header
+#        hdul = fits.HDUList([hdu])
+#        hdul.writeto(os.path.join(os.path.dirname(path),'ImagesOnly',os.path.basename(path)),overwrite=True)
+        fits.writeto(os.path.join(os.path.dirname(path),'ImagesOnly',os.path.basename(path)).replace(',','-'), a.data,a.header,overwrite=True)
+
+       # a.writeto(os.path.join(os.path.dirname(path),'ImagesOnly',os.path.basename(path)),overwrite=True)
+        #a.header = 
+        #fitswrite(a,os.path.join(os.path.dirname(path),'ImagesOnly',os.path.basename(path)))
+    return
+
 def DS9visualisation_throughfocus(xpapoint):
     """
     """
@@ -10611,28 +10639,31 @@ def MakeChi2image(images,varImages,outputImage,clobber=True):
 def DS9CreateDetectionImages(xpapoint):
     d = DS9(xpapoint)
     filename = d.get("file")
-    U, G, R, I, Z, Y, Us, H, J, Ks = np.array(sys.argv[-8-7:-5], dtype=bool)
-    print('U, G, R, I, Z, Y, Us, H, J, Ks',U, G, R, I, Z, Y, Us, H, J, Ks)
+    U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks = np.array(np.array(sys.argv[-8-8:-5],dtype=int), dtype=bool)
+    print(np.array(sys.argv[-8-8:-5], dtype=bool))
+    print('MegaCam-u', 'HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z', 'HSC-Y', 'VIRCAM-Y', 'MegaCam-uS', 'VIRCAM-H', 'VIRCAM-J', 'VIRCAM-Ks',U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks)
     #if len(sys.argv) > 3+2: paths = Charge_path_new(filename, entry_point=3+2)
     paths = Charge_path_new(filename) if len(sys.argv) > 7+8 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
         
 
     for path in paths:
-        createDetectionImages(path, U, G, R, I, Z, Y, Us, H, J, Ks)
+        createDetectionImages(path, U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks)
     return 
-
-def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Y=True, Us=True, H=True, J=True, Ks=True):
+def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=True, Yvircam=False, Us=False, H=False, J=False, Ks=True):
+    #UGRIZY(HSC)Ks
+    from astropy.io import fits
     dn = os.path.dirname(path)
     fn = os.path.basename(path)
     images = []
     varImages = []
     name = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
-    bools_bands = np.array([U, G, R, I, Z, Y, Us, H, J, Ks] )
-    bands = np.array(['u', 'G', 'R', 'I', 'Z', 'Y', 'uS', 'H', 'J', 'Ks'])[bools_bands]
+    bools_bands = np.array([U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks] )
+    bands = np.array(['MegaCam-u', 'HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z', 'HSC-Y', 'VIRCAM-Y', 'MegaCam-uS', 'VIRCAM-H', 'VIRCAM-J', 'VIRCAM-Ks'])[bools_bands]
     print('Bands to use : ', bands)
+    band_ims = []
     if os.path.isfile(name) is False:
         for file in glob.glob(os.path.join(dn, fn[:7] + '*' + fn[-14:])):
-            band_im = file.split('-')[2]
+            band_im = '-'.join(file.split('-')[1:3])
             print(band_im)    
             if band_im in bands:
                 sepCoadd_2(file,scale=1.)
@@ -10640,10 +10671,12 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Y=True, 
                 var_name = (os.path.dirname(os.path.dirname(file)) + '/tmp/' + os.path.basename(file)[:-5]+'_vari.fits').replace(',','-')
                 images.append(image_name)
                 varImages.append(var_name)
+                band_ims.append(band_im)
         print('Images = ', images)
         if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages')):
             os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages'))
         MakeChi2image(images,varImages,name,clobber=True)
+        fits.setval(name, 'BANDS', value = ' - '.join(band_ims), comment = 'Band used for detection image')
         print('Detection image %s created!'%(name))
         for file in glob.glob(os.path.dirname(dn) + '/tmp/' + '-*'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-')[:-5]+'*.fits' ):
             os.remove(file)
@@ -10702,6 +10735,50 @@ def RunSextractor(xpapoint, filename=None, detector=None):
 
     return
    
+    
+
+def DS9SWARP(xpapoint):
+    from shutil import which
+    d = DS9(xpapoint)
+    filename = getfilename(d)
+    paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+
+    if which('swarp') is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'SWARP error', message="""SWARP do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+    else:
+        os.system("cd %s"%(os.path.dirname(paths[0])))
+        os.system("sleep 0.5")
+        os.system("swarp -d >default.swarp")
+        print("swarp %s  -IMAGEOUT_NAME %s -c default.swarp"%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ))
+        os.system("swarp %s  -IMAGEOUT_NAME %s -c default.swarp"%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ))
+        os.system("rm default.swarp")
+    return
+
+def DS9saveColor(xpapoint, filename=None):
+    from shutil import which
+    #from astropy.io import fits
+    #import matplotlib.image as mpimg
+    params = sys.argv[-20:]
+    param_names =  ['BINNING', 'BITS_PER_CHANNEL',  'COLOUR_SAT',  'COPY_HEADER',  'DESCRIPTION' , 'GAMMA',  'GAMMA_FAC',  'GAMMA_TYPE',  'IMAGE_TYPE',  'MAX_LEVEL',  'MAX_TYPE', 'MIN_LEVEL',  'MIN_TYPE', 'OUTFILE_NAME', 'SKY_LEVEL',  'SKY_TYPE',  'SATURATION_LEVEL']
+    path1, path2, path3, BINNING, BITS_PER_CHANNEL, COLOUR_SAT, COPY_HEADER, DESCRIPTION, GAMMA, GAMMA_FAC, GAMMA_TYPE, IMAGE_TYPE, MAX_LEVEL, MAX_TYPE, MIN_LEVEL, MIN_TYPE, OUTFILE_NAME, SKY_LEVEL, SKY_TYPE, SATURATION_LEVEL = params
+#    a = fits.open(path1)[1].data
+#    b = fits.open(path2)[1].data
+#    c = fits.open(path3)[1].data
+#    im2 = np.dstack((a,b,c))
+    #mpimg.imsave(os.path.dirname(path1) + '/' + path_save,im2)
+    if which('stiff') is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Stiff error', message="""Stiff do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+    else:
+        #print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        #os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+
+        print("stiff %s %s %s -"%(path1, path2, path3) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+        os.system("stiff %s %s %s -"%(path1, path2, path3) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+    #plt.imshow(im2)
+    return #im2
+
  
     
 def RunSextractorHSC_CLAUDS(xpapoint, path=None):
@@ -10847,7 +10924,7 @@ def StackPhotometricTables(tract=''):
     #files = glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/Catalogs/BandMergedCatalogs/calexp-*%i*_cat.fits'%(tract))
     import glob
     from astropy.table import Table, vstack
-    files = glob.glob('calexp-*%i*_cat.fits'%(tract))
+    files = glob.glob('/data/deepZ/HSC_CLAUDS/DetectionImages/Photometric_Catalogs/BandMergedCatalogs/calexp-*%i*_cat.fits'%(tract))
     tables = [Table.read(file) for file in files ]
     tables_ = [table_i for table_i in tables if len(table_i)>0 ]
     new_tables = [] 
@@ -11044,7 +11121,7 @@ def main():
                     'StackAllImages': StackAllImages, 'DS9Catalog2Region':DS9Catalog2Region, 'AddHeaderField':AddHeaderField,
                     'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'BackgroundMeasurement':BackgroundMeasurement,
                     'DS9realignImage':DS9realignImage,'DS9createSubset':DS9createSubset,'DS9Visualization':DS9Visualization,
-                    'BackgroundFit1D':BackgroundFit1D,'DS9CreateHistrogram':DS9CreateHistrogram,'DS9save':DS9save,
+                    'BackgroundFit1D':BackgroundFit1D,'DS9CreateHistrogram':DS9CreateHistrogram,'DS9save':DS9save,'DS9saveColor':DS9saveColor,
                     'fitsgaussian2D': fitsgaussian2D, 'AddGaussian2d' :AddGaussian2d,
 
                     #AIT Functions
@@ -11085,7 +11162,10 @@ def main():
                     
                      #Others
                     'test':DS9tsuite, 'ChangeConfig':ChangeConfig,'ComputeReadNoise':ComputeReadNoise,'ComputeGainHistogram':ComputeGainHistogram,
-                    'DS9CreateDetectionImages': DS9CreateDetectionImages,'RunSextractor':RunSextractorHSC_CLAUDS
+                    'DS9CreateDetectionImages': DS9CreateDetectionImages,'RunSextractor':RunSextractorHSC_CLAUDS,
+                    
+                    #sofwares
+                    'DS9SWARP':DS9SWARP,'DS9SaveOnlyImage':DS9SaveOnlyImage
              }
 
     xpapoint = sys.argv[1]
