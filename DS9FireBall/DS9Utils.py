@@ -617,10 +617,12 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
             for j, (x, y) in enumerate(np.nditer([xim[i], yim[i]])):
                 if form[0] == 'ellipse':
                     rest = '{:.2f},{:.2f},{:.2f})'.format(more[0][j],more[1][j],more[2][j])
-                    rest += ' # color={}'.format(color[i])
+                    rest += ' # color={}'.format(color[j])
+                    #print(color[j])
                 regions += '{}({:f},{:f},'.format(form[i], x+1, y+1) + rest
                 if ID is not None:
                     regions += ' text={{{}}}'.format(ID[i][j])
+                    print(ID[i][j])
                 regions +=  '\n'  
         except ValueError:
             pass
@@ -861,68 +863,132 @@ def AddGaussian2d(xpapoint):
     return
 
 
-def fitsgaussian2D(xpapoint):
+def fitsgaussian2D(xpapoint, Plot=True, n=300):
+    from astropy.io import fits
     from scipy.optimize import curve_fit
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     from scipy.stats import multivariate_normal
-    fwhm, center = sys.argv[-2:]
+    from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
+    fwhm, center, test = sys.argv[-3:]
+    if bool(int(test)):
+        Plot=False
+        d = DS9(xpapoint)
+        region = getregion(d, quick=True)
+        filename = getfilename(d)
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+        data = fits.open(filename)[0].data
+        size = Xsup - Xinf
+        xinfs, yinfs = np.random.randint(1100,1900,size=n), np.random.randint(100,1900,size=n)
+        images = [data[Yinf:Yinf+size,Xinf:Xinf+size] for Xinf, Yinf in zip(xinfs, yinfs)]
+        print('Test: number of images = %s'%(len(images)))
+    else:
+        images = [getdata()]
+ # 
+#    try:
+#        Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
+#        if fwhm.split('-')[0] == '':
+#            if bool(int(center)):
+#                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, 5],bounds=([-np.inf,len(y)/2-1,-np.inf],[np.inf,len(y)/2 +1,np.inf]))            
+#            else:
+#                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], 5])
+#    
+#        else:
+#            stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
+#            if bool(int(center)):
+#                print(bool(int(center)))
+#                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, (stdmin+stdmin)/2],bounds=([-np.inf,len(y)/2-1,stdmin],[np.inf,len(y)/2 +1,stdmax]))            
+#            else:
+#                print(bool(int(center)))
+#                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], (stdmin+stdmin)/2],bounds=([-np.inf,-np.inf,stdmin],[np.inf,np.inf,stdmax]))
+#    except RuntimeError as e:
+#        print(e)
+#        popt1 = p0
+
+#    n=1
+#    mask = (y<y.mean()+n*np.std(y)) & (y>y.mean()-n*np.std(y))
+#    fit = np.polyfit(x[mask], y[mask] , 1)
+#    #xmax = x[np.argmax(y)]
+#    fit_fn = np.poly1d(fit) 
+    fluxes = []
+    for i,image in enumerate(images):
+        #print(xinfs[i],yinfs[i])
+        #print(image)
+
+        while np.isfinite(image).all() == False:
+            kernel = Gaussian2DKernel(stddev=2)
+            image = interpolate_replace_nans(image, kernel)#.astype('float16')
+            print(np.isfinite(image).all())
+
+        print(np.isfinite(image).all())
+        lx, ly = image.shape
+        x = np.linspace(0,lx-1,lx)
+        y = np.linspace(0,ly-1,ly)
+        x, y = np.meshgrid(x,y)
     
-    image = getdata()
-
-    lx, ly = image.shape
-    x = np.linspace(0,lx-1,lx)
-    y = np.linspace(0,ly-1,ly)
-    x, y = np.meshgrid(x,y)
+    
 
 
-    xo = np.where(image == np.nanmax(image))[0][0]
-    yo = np.where(image == np.nanmax(image))[1][0]
- 
-    try:
-        Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
+
+         
         if fwhm.split('-')[0] == '':
             if bool(int(center)):
-                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, 5],bounds=([-np.inf,len(y)/2-1,-np.inf],[np.inf,len(y)/2 +1,np.inf]))            
+                Param = (np.nanmax(image),lx/2,ly/2,2,2,np.percentile(image,15))
+                bounds = ([-np.inf, lx/2-0.5,ly/2-0.5, 0.5,0.5,-np.inf], [np.inf, lx/2+0.5,ly/2+0.5, 10,10,np.inf])#(-np.inf, np.inf)#
             else:
-                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], 5])
-    
+                xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
+                Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
+                bounds = ([-np.inf, xo-10 , yo-10, 0.5,0.5,-np.inf], [np.inf, xo+10 , yo+10, 10,10,np.inf])#(-np.inf, np.inf)#
         else:
             stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
             if bool(int(center)):
-                print(bool(int(center)))
-                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, (stdmin+stdmin)/2],bounds=([-np.inf,len(y)/2-1,stdmin],[np.inf,len(y)/2 +1,stdmax]))            
+                Param = (np.nanmax(image),lx/2,ly/2, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
+                bounds = ([-np.inf, lx/2-0.5,ly/2-0.5, stdmin, stdmin,-np.inf], [np.inf, lx/2+0.5,ly/2+0.5, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
             else:
-                print(bool(int(center)))
-                popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], (stdmin+stdmin)/2],bounds=([-np.inf,-np.inf,stdmin],[np.inf,np.inf,stdmax]))
-    except RuntimeError as e:
-        print(e)
-        popt1 = p0
-            
+                xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
+                Param = (np.nanmax(image),xo, yo, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
+                bounds = ([-np.inf, xo-10 , yo-10, stdmin, stdmin,-np.inf], [np.inf, xo+10 , yo+10, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
     
     
-    
-    bounds = ([1e-1*np.nanmax(image), xo-10 , yo-10, 0.5,0.5,-1e5], [10*np.nanmax(image), xo+10 , yo+10, 10,10,1e5])#(-np.inf, np.inf)#
-    
-    print ('bounds = ',bounds)
-    print('\nParam = ', Param)
-    popt,pcov = curve_fit(twoD_Gaussian,(x,y),image.flat,Param,bounds=bounds)
-
-    z = twoD_Gaussian((x,y),*popt).reshape(x.shape)
-    fig = plt.figure()    
-    ax = fig.add_subplot(111, projection='3d')   
-    ax.scatter(x,y, image, c='r', s=5)#, cstride=1, alpha=0.2)
-  
-    ax.plot_surface(x,y,z, alpha=0.5, label = 'amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]))
-    plt.title('3D plot')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Pixel value')
-    ax.axis('equal')
-    ax.axis('tight')
-    ax.text(popt[1],popt[2], np.nanmax(image),s='amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]))    
-    plt.show()
-    return
+        
+        
+        print ('bounds = ',bounds)
+        print('\nParam = ', Param)
+        try:
+            popt,pcov = curve_fit(twoD_Gaussian,(x,y),image.flat,Param,bounds=bounds)
+        except RuntimeError:
+            popt = [0,0,0,0,0,0]
+        else:
+            print('\npopt = ', popt)
+        fluxes.append(2*np.pi*popt[3]*popt[4]*popt[0])
+    print(fluxes)
+    if Plot:
+        z = twoD_Gaussian((x,y),*popt).reshape(x.shape)
+        fig = plt.figure()    
+        ax = fig.add_subplot(111, projection='3d')   
+        ax.scatter(x,y, image, c='r', s=5)#, cstride=1, alpha=0.2)
+      
+        ax.plot_surface(x,y,z, alpha=0.5, label = 'amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]))
+        plt.title('3D plot, FLUX = %0.1f'%(fluxes[0]))
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Pixel value')
+        ax.axis('equal')
+        ax.axis('tight')
+        ax.text(popt[1],popt[2], np.nanmax(image),s='amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]))    
+        plt.show()
+    else:
+        create_DS9regions([xinfs+size/2],[yinfs+size/2], radius=[size,size], form = ['circle']*len(xinfs),save=True, savename='/tmp/centers',ID=[np.array(fluxes).astype(int)])
+#        create_DS9regions2([xinfs+size/2],[yinfs+size/2], form = 'circle',
+#                           save=True,color = 'yellow', savename='/tmp/centers',
+#                           text = [fluxes])
+        d.set('regions /tmp/centers.reg')
+        fig = plt.figure()
+        plt.hist(fluxes, bins=np.linspace(min(fluxes),max(fluxes),100))
+        plt.title('Median = %0.1f - std = %0.1f'%(np.median(fluxes),np.std(fluxes)))
+        plt.xlabel('Sum ADU')
+        plt.show()
+        return
 
 
 def process_image(ima, hdr, with_prior=False, config=my_conf):
@@ -2710,7 +2776,7 @@ def popol2D(x, y , coeff):
             fit += np.power(x,i) * np.power(y,j) * coeff[i,j] 
     return fit
 
-def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_path, config=my_conf, axis='y', kernel=1, fwhm='', center=False, Type = None):
+def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_path, config=my_conf, axis='y', kernel=1, fwhm='', center=False, Type = None, n=4):
     """Fit a gaussian
     interger the flux on 1/e(max-min) and then add the few percent calculated by the gaussian at 1/e 
     """
@@ -2724,7 +2790,7 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
     if xpapoint is not None:
         d = DS9(xpapoint)
         filename = getfilename(d)
-        Type, axis, kernel, fwhm, center = sys.argv[-10:-5]
+        Type, axis, kernel, fwhm, center, test = sys.argv[-11:-5]
         path = Charge_path_new(filename) if len(sys.argv) > 10 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
         if len(path) == 1:
             plot_flag = True
@@ -2747,91 +2813,120 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
                     a = Table.read(path,format='ascii')
                 except IndexError:
                     a = Table.read(DS9backUp + '/DS9Curves/ds9.dat',format='ascii')
-                x, y = a['col1'], a['col2']
+                x, ys = a['col1'], [a['col2']]
         elif Type == 'BoxRegion':
             region = getregion(d, quick=True)
             Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
-            data = fits.open(filename)[0].data[Yinf:Ysup,Xinf:Xsup]
+            data = fits.open(filename)[0].data
+            
             if axis=='y':
-                y = np.nanmean(data,axis=1)
-                yerr = np.nanstd(data,axis=1)/np.sqrt(data.shape[1])
+                ys = [np.nanmean(data[Yinf:Ysup,Xinf:Xsup],axis=1)]
+                yerrs = [np.nanstd(data[Yinf:Ysup,Xinf:Xsup],axis=1)/np.sqrt(data.shape[1])]
             else:
-                y = np.nanmean(data,axis=0)  
-                yerr = np.nanstd(data,axis=0)/np.sqrt(data.shape[0])
-            kernel = int(kernel)
-            y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
-            yerr = yerr[kernel:-kernel]
-        else:
-            kernel = int(kernel)
-            y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
-            yerr = np.zeros(len(y))
-            
-            
-        if x is None:
-            x = np.arange(len(y))
-        n=1
-        mask = (y<y.mean()+n*np.std(y)) & (y>y.mean()-n*np.std(y))
-        fit = np.polyfit(x[mask], y[mask] , 1)
-        #xmax = x[np.argmax(y)]
-        fit_fn = np.poly1d(fit) 
-        try:
-            p0=[y.max()-y.min(), x[y.argmax()], 5]
-            if fwhm.split('-')[0] == '':
-                if bool(int(center)):
-                    popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, 5],bounds=([-np.inf,len(y)/2-1,-np.inf],[np.inf,len(y)/2 +1,np.inf]))            
-                else:
-                    popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], 5])
-        
+                ys = [np.nanmean(data[Yinf:Ysup,Xinf:Xsup],axis=0)] 
+                yerrs = [np.nanstd(data[Yinf:Ysup,Xinf:Xsup],axis=0)/np.sqrt(data.shape[0])]
+
+        if bool(int(test)):
+            plot_flag=False
+            sizex = Xsup - Xinf
+            sizey = Ysup - Yinf
+            xinfs, yinfs = np.random.randint(100,1900,size=n), np.random.randint(1400,1600,size=n)
+            images = [data[Yinf:Yinf+sizey,Xinf:Xinf+sizex] for Xinf, Yinf in zip(xinfs, yinfs)]
+            if axis=='y':
+                ys = [np.nanmean(image,axis=1) for image in images]
+                yerrs = [np.nanstd(image,axis=1)/np.sqrt(data.shape[1]) for image in images]
             else:
-                stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
-                if bool(int(center)):
-                    print(bool(int(center)))
-                    popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, (stdmin+stdmin)/2],bounds=([-np.inf,len(y)/2-1,stdmin],[np.inf,len(y)/2 +1,stdmax]))            
-                else:
-                    print(bool(int(center)))
-                    popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], (stdmin+stdmin)/2],bounds=([-np.inf,-np.inf,stdmin],[np.inf,np.inf,stdmax]))
-        except RuntimeError as e:
-            print(e)
-            popt1 = p0
+                ys = [np.nanmean(image,axis=1) for image in images]
+                yerrs = [np.nanstd(image,axis=0)/np.sqrt(data.shape[0]) for image in images]   
+            print('Test: number of images = %s'%(len(images)))
+        
+
+
+
+#            kernel = int(kernel)
+#            y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
+#            yerr = yerr[kernel:-kernel]
+#        else:
+#            kernel = int(kernel)
+#            y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
+#            yerr = np.zeros(len(y))
             
-        print(popt1)
-        limfit =  fit_fn(x)+gaussian(x, *popt1).max()/np.exp(1)
-    
-    #    import matplotlib._cntr as cntr
-    #    c = cntr.Cntr(x, y, z)
-    #    nlist = c.trace(level, level, 0)
-    #    CS = nlist[:len(nlist)//2]
-        image = np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))])
-        CS = plt.contour(image,levels=1);plt.close()
-        #size = [cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ]
-        maxx = [ int(cs[:,0].max())   for cs in CS.allsegs[0] ]
-        minx = [ int(cs[:,0].min())   for cs in CS.allsegs[0] ]
-        maxx.sort();minx.sort()
-        index = np.where(maxx>popt1[1])[0][0]#np.argmax(size)
-        print(minx[index],maxx[index])
-    
-        y0 = y-fit_fn(x)
+        for y, yerr in zip(ys,yerrs):  
+            if x is None:
+                x = np.arange(len(y))
+            n=1
+            mask = (y<y.mean()+n*np.std(y)) & (y>y.mean()-n*np.std(y))
+            print(x,y,yerr,mask)
+            fit = np.polyfit(x[mask], y[mask] , 1)
+            #xmax = x[np.argmax(y)]
+            fit_fn = np.poly1d(fit) 
+            try:
+                p0=[y.max()-y.min(), x[y.argmax()], 5]
+                if fwhm.split('-')[0] == '':
+                    if bool(int(center)):
+                        popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, 5],bounds=([-np.inf,len(y)/2-1,-np.inf],[np.inf,len(y)/2 +1,np.inf]))            
+                    else:
+                        popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], 5])
+            
+                else:
+                    stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
+                    if bool(int(center)):
+                        print(bool(int(center)))
+                        popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, (stdmin+stdmin)/2],bounds=([-np.inf,len(y)/2-1,stdmin],[np.inf,len(y)/2 +1,stdmax]))            
+                    else:
+                        print(bool(int(center)))
+                        popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], (stdmin+stdmin)/2],bounds=([-np.inf,-np.inf,stdmin],[np.inf,np.inf,stdmax]))
+            except RuntimeError as e:
+                print(e)
+                popt1 = p0
+                
+            print(popt1)
+            limfit =  fit_fn(x)+gaussian(x, *popt1).max()/np.exp(1)
         
-        plt.figure()#figsize=(10,6))
-        plt.xlabel('Spatial direction')
-        plt.ylabel('ADU mean value')
-        plt.plot(np.linspace(x.min(),x.max(),10*len(x)), gaussian(np.linspace(x.min(),x.max(),10*len(x)), *popt1) + fit_fn(np.linspace(x.min(),x.max(),10*len(x))), label='Gaussian Fit, F = %0.2f - sgm=%0.1f'%(np.sum(gaussian(x, *popt1))/texp,popt1[-1]))
-    #    plt.plot(x[y>limfit], y[y>limfit], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[y>limfit])/texp))
-        mask = (x>minx[index]) & (x<maxx[index])
-        #p = plt.plot(x, y , linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
-        p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
-        plt.plot(x, y,linestyle='dotted',c=p[0].get_color())
-        
-    #    plt.plot(x[mask], y[mask], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[mask])/texp))
-        #plt.plot(x,  limfit,'--', c='black', label='1/e limit')
-        plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.2f'%(1.155*np.sum(y0[mask])))
-        plt.plot(x, fit_fn(x),label='Fitted background',linestyle='dotted',c=p[0].get_color())
-        plt.legend()
-        plt.title(os.path.basename("%s"%(filename)))
-        plt.savefig( DS9backUp + 'Plots/%s_Continuumphotometry_%s.jpg'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss"), os.path.basename(filename) ))
-        if plot_flag:
-            plt.show()
-        L.append({'Flux':1.155*np.sum(y0[mask])})
+        #    import matplotlib._cntr as cntr
+        #    c = cntr.Cntr(x, y, z)
+        #    nlist = c.trace(level, level, 0)
+        #    CS = nlist[:len(nlist)//2]
+            image = np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))])
+            CS = plt.contour(image,levels=1);plt.close()
+            #size = [cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ]
+            maxx = [ int(cs[:,0].max())   for cs in CS.allsegs[0] ]
+            minx = [ int(cs[:,0].min())   for cs in CS.allsegs[0] ]
+            maxx.sort();minx.sort()
+            index = np.where(maxx>popt1[1])[0][0]#np.argmax(size)
+            print(minx[index],maxx[index])    
+            y0 = y-fit_fn(x)
+           #L.append({'Flux':1.155*np.sum(y0[mask])})
+            L.append(1.155*np.sum(y0[mask]))
+    
+
+    if plot_flag:
+            plt.figure()#figsize=(10,6))
+            plt.xlabel('Spatial direction')
+            plt.ylabel('ADU mean value')
+            plt.plot(np.linspace(x.min(),x.max(),10*len(x)), gaussian(np.linspace(x.min(),x.max(),10*len(x)), *popt1) + fit_fn(np.linspace(x.min(),x.max(),10*len(x))), label='Gaussian Fit, F = %0.2f - sgm=%0.1f'%(np.sum(gaussian(x, *popt1))/texp,popt1[-1]))
+        #    plt.plot(x[y>limfit], y[y>limfit], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[y>limfit])/texp))
+            mask = (x>minx[index]) & (x<maxx[index])
+            #p = plt.plot(x, y , linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
+            p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
+            plt.plot(x, y,linestyle='dotted',c=p[0].get_color())
+            
+        #    plt.plot(x[mask], y[mask], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[mask])/texp))
+            #plt.plot(x,  limfit,'--', c='black', label='1/e limit')
+            plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.2f'%(1.155*np.sum(y0[mask])))
+            plt.plot(x, fit_fn(x),label='Fitted background',linestyle='dotted',c=p[0].get_color())
+            plt.legend()
+            plt.title(os.path.basename("%s"%(filename)))
+            plt.savefig( DS9backUp + 'Plots/%s_Continuumphotometry_%s.jpg'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss"), os.path.basename(filename) ))
+            if plot_flag:
+                plt.show()
+    else:
+        fig = plt.figure()#figsize=(10,6))
+        ax = fig.add_subplot(111)   
+        print(L)
+        #ax.plot(np.histogram(np.array(L)))
+        ax.hist(np.array(L))
+        plt.show()
     return L
 
 #plt.imshow(np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))]))
@@ -8869,8 +8964,6 @@ def DS9replaceNaNs(xpapoint):
     #d.set("lock frame physical")
     return
 
-
-
 def InterpolateNaNs(path, stddev=1):
     """Return int16 fits image with NaNs interpolated
     """
@@ -10640,7 +10733,6 @@ def DS9CreateDetectionImages(xpapoint):
     d = DS9(xpapoint)
     filename = d.get("file")
     U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks = np.array(np.array(sys.argv[-8-8:-5],dtype=int), dtype=bool)
-    print(np.array(sys.argv[-8-8:-5], dtype=bool))
     print('MegaCam-u', 'HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z', 'HSC-Y', 'VIRCAM-Y', 'MegaCam-uS', 'VIRCAM-H', 'VIRCAM-J', 'VIRCAM-Ks',U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks)
     #if len(sys.argv) > 3+2: paths = Charge_path_new(filename, entry_point=3+2)
     paths = Charge_path_new(filename) if len(sys.argv) > 7+8 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
@@ -10739,6 +10831,15 @@ def RunSextractor(xpapoint, filename=None, detector=None):
 
 def DS9SWARP(xpapoint):
     from shutil import which
+   
+    params = sys.argv[-31-5-3:-5-3]
+    param_names =  ['BACK_DEFAULT', 'BACK_FILTERSIZE', 'BACK_FILTTHRESH', 'BACK_SIZE', 'BACK_TYPE', 'CELESTIAL_TYPE' ,'CENTER_TYPE', 'CENTER', 'COMBINE',  'COMBINE_BUFSIZE', 
+                    'COMBINE_TYPE', 'COPY_KEYWORDS' ,'FSCALASTRO_TYPE', 'FSCALE_DEFAULT', 'GAIN_DEFAULT' ,'GAIN_KEYWORD' ,'IMAGEOUT_NAME' ,'IMAGE_SIZE', 'MEM_MAX' ,'OVERSAMPLING', 
+                    'PIXEL_SCALE', 'PIXELSCALE_TYPE' ,'PROJECTION_ERR', 'PROJECTION_TYPE' ,'RESAMPLE', 'RESAMPLING_TYPE', 'SUBTRACT_BACK', 'WRITE_FILEINFO' ,'VERBOSE_TYPE', 'WRITE_XML', 'XML_NAME']
+    
+    BACK_DEFAULT, BACK_FILTERSIZE, BACK_FILTTHRESH, BACK_SIZE, BACK_TYPE, CELESTIAL_TYPE, CENTER_TYPE, CENTERI, COMBINEI,    COMBINE_BUFSIZE, COMBINE_TYPE, COPY_KEYWORDS, FSCALASTRO_TYPE, FSCALE_DEFAULT, GAIN_DEFAULT, GAIN_KEYWORD, IMAGEOUT_NAME, IMAGE_SIZE, MEM_MAX, OVERSAMPLING, PIXEL_SCALE, PIXELSCALE_TYPE,PROJECTION_ERR, PROJECTION_TYPE, RESAMPLE, RESAMPLING_TYPE, SUBTRACT_BACK, WRITE_FILEINFO, VERBOSE_TYPE, WRITE_XML, XML_NAME = params
+    
+
     d = DS9(xpapoint)
     filename = getfilename(d)
     paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
@@ -10748,10 +10849,11 @@ def DS9SWARP(xpapoint):
         messagebox.showwarning( title = 'SWARP error', message="""SWARP do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
     else:
         os.system("cd %s"%(os.path.dirname(paths[0])))
-        os.system("sleep 0.5")
+        os.system("sleep 0.1")
         os.system("swarp -d >default.swarp")
-        print("swarp %s  -IMAGEOUT_NAME %s -c default.swarp"%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ))
-        os.system("swarp %s  -IMAGEOUT_NAME %s -c default.swarp"%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ))
+        print("swarp %s  -IMAGEOUT_NAME %s -c default.swarp "%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+        os.system("swarp %s  -IMAGEOUT_NAME %s -c default.swarp "%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ) )#+ ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+#        os.system("swarp %s  -c default.swarp "%(' '.join(paths))+ ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) + ' -IMAGEOUT_NAME %s'%(os.path.join(os.path.dirname(paths[0]), 'coadd.fits')))
         os.system("rm default.swarp")
     return
 
@@ -10826,7 +10928,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     #    DETECTION_IMAGE = ',' + DETECTION_IMAGE
     print(bcolors.BLACK_RED +'Image used for detection  = ' + str(DETECTION_IMAGE) + bcolors.END)
     print(bcolors.BLACK_RED + 'Image used for photometry  = '+ str(PHOTOMETRIC_NAME) + bcolors.END)
-    
+    band = '_'.join(os.path.basename(DETECTION_IMAGE).split('-')[1:3])
     print(bcolors.GREEN_WHITE + """
           ********************************************************************
                                      Parameters sextractor:
@@ -10840,9 +10942,14 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         
     if os.path.isfile(CATALOG_NAME):
+        from astropy.table import vstack
         cat = Table.read(CATALOG_NAME)
-        
-        create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
+        cat1 = cat[cat['MAG_AUTO_'+band]>=cat['MAG_ISO_'+band]]
+        cat2 = cat[cat['MAG_AUTO_'+band]<cat['MAG_ISO_'+band]]
+        cat3 = vstack((cat1,cat2))
+        #x, y = [list(cat1['X_IMAGE'])+list(cat2['X_IMAGE'])], [list(cat2['X_IMAGE'])+list(cat2['X_IMAGE'])]
+        #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
+        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat3['MAG_AUTO_'+band],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
         if path is None:
             d.set('regions ' + os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5] + '*.reg')
