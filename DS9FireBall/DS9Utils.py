@@ -11269,7 +11269,7 @@ def main():
                     
                      #Others
                     'test':DS9tsuite, 'ChangeConfig':ChangeConfig,'ComputeReadNoise':ComputeReadNoise,'ComputeGainHistogram':ComputeGainHistogram,
-                    'DS9CreateDetectionImages': DS9CreateDetectionImages,'RunSextractor':RunSextractorHSC_CLAUDS,
+                    'DS9CreateDetectionImages': DS9CreateDetectionImages,'RunSextractorHSC_CLAUDS':RunSextractorHSC_CLAUDS,'RunSextractor':RunSextractor,
                     
                     #sofwares
                     'DS9SWARP':DS9SWARP,'DS9SaveOnlyImage':DS9SaveOnlyImage
