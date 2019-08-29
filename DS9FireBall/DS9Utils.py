@@ -622,7 +622,7 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
                 regions += '{}({:f},{:f},'.format(form[i], x+1, y+1) + rest
                 if ID is not None:
                     regions += ' text={{{}}}'.format(ID[i][j])
-                    print(ID[i][j])
+                    #print(ID[i][j])
                 regions +=  '\n'  
         except ValueError:
             pass
@@ -829,14 +829,14 @@ def compute_local_background(ima):
     return bkg
     
     
-def getdata(Plot=False):
+def getdata(xpapoint, Plot=False):
     import matplotlib.pyplot as plt
-    from astropy.io import fits
-    d = DS9()
+    #from astropy.io import fits
+    d = DS9(xpapoint)
     region = getregion(d, quick=True)
-    filename = getfilename(d)
+    #filename = getfilename(d)
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
-    data = fits.open(filename)[0].data[Yinf:Ysup,Xinf:Xsup]
+    data = d.get_pyfits()[0].data[Yinf:Ysup,Xinf:Xsup]
     if Plot:
         plt.imshow(data)
         plt.colorbar()
@@ -1181,9 +1181,10 @@ def DS9setup2(xpapoint, config=my_conf):
 #              np.percentile(fitsimage[0].data,99.6)))
     #d.set("scale limits {} {} ".format(np.nanpercentile(image,50),np.nanpercentile(image,99.95)))
     d.set("scale limits {} {} ".format(np.nanmedian(image),np.nanpercentile(image,99)))
-    d.set("scale asinh")
-    d.set("cmap grey")
-    #d.set("cmap bb")
+#    d.set("scale asinh")
+    d.set("scale log")
+    #d.set("cmap grey")
+    d.set("cmap cool")
 #        d.set("smooth yes")
 #        d.set("cmap Cubehelix0")
 #        d.set("smooth radius {}".format(2))
@@ -2369,6 +2370,7 @@ def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end
     """
     #from astropy.io import fits
     import re
+    print(sys.argv)
 #    if len(sys.argv[entry_point:]) == 5:    
 #        All, begin, end, liste, patht = sys.argv[entry_point:]
     try:
@@ -2376,7 +2378,7 @@ def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end
     except ValueError:
         pass
     else:
-        if a.isdigit() & (b=='-' or b.isdigit()) & (e=='-' or e.isdigit()) & (p=='-' or os.path.isdir(p)):
+        if a.isdigit() & (b=='-' or b.isdigit()) & (e=='-' or e.isdigit()) & (p=='-' or len(glob.glob(p, recursive=True))>0):
             All, begin, end, liste, patht = sys.argv[-5:]
         else:
             print('Taking function argument not sys.argv')
@@ -2391,12 +2393,12 @@ def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end
 #    print ('Type = {}'.format(Type))
 #    print(int(float(All)), type(int(float(All))))
 
-    
-    if os.path.isdir(patht):
+    print('glob = ',glob.glob(patht, recursive=True))
+    if len(glob.glob(patht, recursive=True))>0:
         print('Folder given, going though all the repositories of %s'%(patht))
-        path = glob.glob(os.path.join(patht , '**/*.fits'), recursive=True)
-        path += glob.glob(os.path.join(patht , '**/*.FIT'), recursive=True)
-        path += glob.glob(os.path.join(patht , '**/*.fit'), recursive=True)
+        path = glob.glob(patht, recursive=True)
+        #path += glob.glob(os.path.join(patht , '**/*.FIT'), recursive=True)
+        #path += glob.glob(os.path.join(patht , '**/*.fit'), recursive=True)
 
     elif int(float(All)) == 1:
         print('Not numbers, taking all the .fits images from the current repository')
@@ -10776,7 +10778,7 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=Tru
         print('Detection image %s already exists!'%(name))
     return
 
-def RunSextractor(xpapoint, filename=None, detector=None):
+def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     d = DS9(xpapoint)
     filename = getfilename(d)
     from shutil import which
@@ -10819,12 +10821,29 @@ def RunSextractor(xpapoint, filename=None, detector=None):
         print('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
         os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
 
+#    if os.path.isfile(CATALOG_NAME):
+#        DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+#    else:
+#        print('Can not find the output sextractor catalog...')
+
+    if not os.path.exists(os.path.dirname(filename) + '/DetectionImages/reg/'):
+        os.makedirs(os.path.dirname(filename) + '/DetectionImages/reg/')     
     if os.path.isfile(CATALOG_NAME):
-        DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+        from astropy.table import vstack
+        cat = Table.read(CATALOG_NAME)
+        cat1 = cat[cat['MAG_AUTO']>=cat['MAG_ISO']]
+        cat2 = cat[cat['MAG_AUTO']<cat['MAG_ISO']]
+        cat3 = vstack((cat1,cat2))
+        #x, y = [list(cat1['X_IMAGE'])+list(cat2['X_IMAGE'])], [list(cat2['X_IMAGE'])+list(cat2['X_IMAGE'])]
+        #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
+        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+        #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+        if path is None:
+            d.set('regions ' +os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
     else:
         print('Can not find the output sextractor catalog...')
-
-
+    for file in glob.glob(os.path.dirname(filename) + '/tmp/' + fn[:-5] + '*.fits' ):
+        os.remove(file)
     return
    
     
@@ -10887,18 +10906,18 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     from shutil import which
     if path is None:
         d = DS9(xpapoint)
-        path = getfilename(d)
+        filename = getfilename(d)
         
-    if 'MegaCam' in os.path.basename(path) or 'VIRCAM' in os.path.basename(path):
+    if 'MegaCam' in os.path.basename(filename) or 'VIRCAM' in os.path.basename(filename):
         MAG_ZEROPOINT = 30
     else:
         MAG_ZEROPOINT = 27
-    dn = os.path.dirname(path)
-    fn = os.path.basename(path)
+    dn = os.path.dirname(filename)
+    fn = os.path.basename(filename)
     DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
-    sepCoadd_2(path,scale=1.)
-    PHOTOMETRIC_NAME = (os.path.dirname(os.path.dirname(path)) + '/tmp/' + os.path.basename(path)[:-5]+'_data.fits').replace(',','-')
-    VAR_IMAGE = (os.path.dirname(os.path.dirname(path)) + '/tmp/' + os.path.basename(path)[:-5]+'_vari.fits').replace(',','-')
+    sepCoadd_2(filename,scale=1.)
+    PHOTOMETRIC_NAME = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_data.fits').replace(',','-')
+    VAR_IMAGE = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_vari.fits').replace(',','-')
     if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs')):
         os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs'))
     if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/reg')):
@@ -10908,14 +10927,19 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     
     if which('sex') is None:
         from tkinter import messagebox
-        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
-    #params = np.array(sys.argv[-33:], dtype=str)
-    #DETECTION_IMAGE = sys.argv[-34]
-    params = [CATALOG_NAME,'FITS_1.0','/data/deepZ/HSC_CLAUDS/sextractor/test.param' , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'Y',
+        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take some time. On a mac run 'brew install brewsci/science/sextrator' """)     
+
+    try:
+        param_dir = resource_filename('DS9FireBall', 'Sextractor')
+    except:
+        param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
+
+
+    params = [CATALOG_NAME,'FITS_1.0',os.path.join(param_dir,'sex.param') , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'N',
      '/usr/share/sextractor/gauss_4.0_7x7.conv' ,64, 0.0003 ,'Y', '1_PARAM',
      'CORRECT', 'NONE,MAP_VAR', 'NONE,'+VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
      '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT, 0, 0.8,
-     '/usr/share/sextractor/default.nnw', 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
+     os.path.join(param_dir,'default.nnw'), 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
      'NONE', 'check.fits']    
     param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
 
@@ -10928,7 +10952,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     #    DETECTION_IMAGE = ',' + DETECTION_IMAGE
     print(bcolors.BLACK_RED +'Image used for detection  = ' + str(DETECTION_IMAGE) + bcolors.END)
     print(bcolors.BLACK_RED + 'Image used for photometry  = '+ str(PHOTOMETRIC_NAME) + bcolors.END)
-    band = '_'.join(os.path.basename(DETECTION_IMAGE).split('-')[1:3])
+    band = '_'.join(os.path.basename(PHOTOMETRIC_NAME).split('-')[1:3])
     print(bcolors.GREEN_WHITE + """
           ********************************************************************
                                      Parameters sextractor:
@@ -10944,18 +10968,44 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     if os.path.isfile(CATALOG_NAME):
         from astropy.table import vstack
         cat = Table.read(CATALOG_NAME)
-        cat1 = cat[cat['MAG_AUTO_'+band]>=cat['MAG_ISO_'+band]]
-        cat2 = cat[cat['MAG_AUTO_'+band]<cat['MAG_ISO_'+band]]
+        cat1 = cat[cat['MAG_AUTO']>=cat['MAG_ISO']]
+        cat2 = cat[cat['MAG_AUTO']<cat['MAG_ISO']]
         cat3 = vstack((cat1,cat2))
         #x, y = [list(cat1['X_IMAGE'])+list(cat2['X_IMAGE'])], [list(cat2['X_IMAGE'])+list(cat2['X_IMAGE'])]
         #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
-        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat3['MAG_AUTO_'+band],dtype=int)])
+        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(os.path.dirname(dn)) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
         if path is None:
-            d.set('regions ' + os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5] + '*.reg')
-
+            d.set('regions ' + os.path.dirname(os.path.dirname(dn)) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] + '.reg')
     else:
         print('Can not find the output sextractor catalog...')
+        
+        
+    fig, (ax0,ax1) = plt.subplots(2,3)
+    ax0[0].hist(cat['MAG_ISO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_ISO',log=True, color='darkgreen')
+    ax0[0].hist(cat['MAG_AUTO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_AUTO',log=True, color='lime')
+    ax0[0].legend()
+    ax0[1].plot(cat1['MAG_AUTO'],cat1['MAG_AUTO']-cat1['MAG_ISO'],'.',alpha=0.3,markersize=2, c='limegreen')
+    ax0[1].plot(cat2['MAG_AUTO'],cat2['MAG_AUTO']-cat2['MAG_ISO'],'.',alpha=0.3,markersize=2, c='mediumspringgreen');ax0[1].set_ylim((-8,8));ax0[1].set_xlim((12,35))
+    ax0[1].set_ylabel('MAG_AUTO-MAG_ISO')
+        
+    ax0[2].plot(cat['MAG_AUTO'],cat['CLASS_STAR'],'.',alpha=0.3,markersize=2, c='forestgreen');ax0[2].set_xlim((15,33))
+    ax0[2].set_ylabel('CLASS_STAR')
+    
+    ax1[0].plot(cat['MAG_AUTO'],cat['MAGERR_AUTO'],'.',alpha=0.3,markersize=2,c='green',label='MAG_AUTO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
+    ax1[0].plot(cat['MAG_ISO'],cat['MAGERR_ISO'],'.',alpha=0.3,markersize=2,c='springgreen',label='MAG_ISO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
+    ax1[0].legend()
+    ax1[0].set_ylabel('MAGERR')
+
+    ax1[1].plot(cat['MAG_AUTO'],cat['MU_MAX'],'.',alpha=0.3,markersize=2,c='seagreen');ax1[1].set_xlim((13,33));ax1[1].set_ylim((16,28))
+    ax1[1].set_xlabel('MAG_AUTO')
+    ax1[1].set_ylabel('MU_MAX')
+    ax1[2].plot(cat['MAG_AUTO'],cat['MU_MAX']-cat['MAG_AUTO'],'.',alpha=0.3,markersize=2,c='mediumseagreen');ax1[2].set_xlim((13,33));ax1[2].set_ylim((-5,5))
+    ax1[2].set_ylabel('MU_MAX - MAG_AUTO')
+    fig.tight_layout()
+    plt.show()
+    
+    
     FormatSextrectorCatalog(CATALOG_NAME)
     for file in glob.glob(os.path.dirname(dn) + '/tmp/' + fn[:-5] + '*.fits' ):
         os.remove(file)
@@ -11194,6 +11244,44 @@ def CreateBigImage(paths=glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/TRAC
     return new_image
 
 
+def CreateMultiColorImage(xpapoint,paths=None):
+    from astropy.io import fits
+    d = DS9(xpapoint)
+    path = getfilename(d)
+    fd = os.path.dirname(path)
+    fn = os.path.basename(path)
+    data = getdata(xpapoint)
+    lx,ly  = data.shape
+    data -= data.min()
+    vmin, vmax = np.nanmedian(np.log(data.T)),np.nanpercentile(np.log(data.T),99)
+    
+    if paths is None:
+        #paths = glob.glob(fd+'/calexp*'+fn[-13:])
+        paths = Charge_path_new(path) if len(sys.argv) > 5 else [path] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+
+    region = getregion(d, quick=True)
+    Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region) 
+    im3d = np.zeros((ly,lx,len(paths))) 
+    fig, ax = plt.subplots(3,4,sharex=True,sharey=True)
+    ax = ax.ravel()
+    n = 3 * 4 - len(paths)
+    for i, path in enumerate(paths):
+        print(path)
+        band = '_'.join(os.path.basename(path).split('-')[1:3])
+        image = fits.open(path)[1].data[Yinf:Ysup,Xinf:Xsup]
+        im3d[:,:,i] = image.T
+        ax[i].imshow(np.log(data.T - data.T.min()),vmin=vmin,vmax=vmax)
+        ax[i].set_xlabel(band)
+    for i in range(n):
+        fig.delaxes(ax[-i-1])
+    fig.tight_layout()
+    fig.savefig(fd+'/3d'+fn[-14:-5]+'.png')
+    
+    fitswrite(im3d.T,fd+'/3d'+fn[-14:])
+    d.set('frame new') 
+    d.set("file {}".format(fd+'/3d'+fn[-14:]))#a = OpenFile(xpaname,filename = filename)
+    return
+
 def main():
     """Main function where the arguments are defined and the other functions called
     """
@@ -11272,7 +11360,7 @@ def main():
                     'DS9CreateDetectionImages': DS9CreateDetectionImages,'RunSextractorHSC_CLAUDS':RunSextractorHSC_CLAUDS,'RunSextractor':RunSextractor,
                     
                     #sofwares
-                    'DS9SWARP':DS9SWARP,'DS9SaveOnlyImage':DS9SaveOnlyImage
+                    'DS9SWARP':DS9SWARP,'DS9SaveOnlyImage':DS9SaveOnlyImage,'CreateMultiColorImage':CreateMultiColorImage
              }
 
     xpapoint = sys.argv[1]
