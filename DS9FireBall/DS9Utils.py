@@ -11210,7 +11210,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         CHECKIMAGE_TYPE, CHECKIMAGE_NAME]    
     except ValueError:
         print('No arguments given, taking, default CLAUDS ones !!!')
-        params = [CATALOG_NAME,'FITS_LDAC',os.path.join(param_dir,'sex.param') , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'N',
+        params = [CATALOG_NAME,'FITS_1.0',os.path.join(param_dir,'sex.param') , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'N',
         os.path.join(param_dir,'gauss_4.0_7x7.conv'),64, 0.0003 ,'Y', '1_PARAM',
         'CORRECT', 'NONE,MAP_VAR', 'NONE,'+VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
         '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT_real, 0, 0.8,
@@ -11375,7 +11375,7 @@ def StackPhotometricTables(tract=''):
             print(0)
     print('Stacking tables...')
     stack_table = vstack(tables)
-    stack_table.write('TotalMergedCatalog_%i.fits'%(tract))#tres tres long...
+    stack_table.write('/data/deepZ/HSC_CLAUDS/DetectionImages/Photometric_Catalogs/BandMergedCatalogs/TotalMergedCatalog_%i.fits'%(tract))#tres tres long...
     return 
         
 
