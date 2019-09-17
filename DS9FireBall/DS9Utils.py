@@ -10859,7 +10859,7 @@ def sepCoadd_2(imName,scale=1.):
     fits.writeto((os.path.dirname(os.path.dirname(imName)) + '/tmp/' + os.path.basename(imName)[:-5]+'_data.fits').replace(',','-'),scale*im[1].data,dataHead,overwrite=True)
     var = im[3].data 
     var[np.where(np.isinf(var))] = 999
-    #var *= corr 
+    var *= corr 
     fits.writeto((os.path.dirname(os.path.dirname(imName)) + '/tmp/' + os.path.basename(imName)[:-5]+'_vari.fits').replace(',','-'),var,varHead,overwrite=True)
     fits.writeto((os.path.dirname(os.path.dirname(imName)) + '/tmp/' + os.path.basename(imName)[:-5]+'_mask.fits').replace(',','-'),im[2].data.astype(float),maskHead,overwrite=True)
     return
@@ -10907,7 +10907,7 @@ def DS9CreateDetectionImages(xpapoint):
     for path in paths:
         createDetectionImages(path, U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks)
     return 
-def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=True, Yvircam=False, Us=False, H=False, J=False, Ks=True):
+def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=True, Yvircam=False, Us=False, H=False, J=False, Ks=False):
     #UGRIZY(HSC)Ks
     from astropy.io import fits
     dn = os.path.dirname(path)
