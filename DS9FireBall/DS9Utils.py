@@ -11151,7 +11151,8 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     if path is None:
         d = DS9(xpapoint)
         filename = getfilename(d)
-        
+    else:
+        filename = path
     if 'MegaCam' in os.path.basename(filename) or 'VIRCAM' in os.path.basename(filename):
         MAG_ZEROPOINT_real = 30
     else:
@@ -11207,7 +11208,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         PHOT_FLUXFRAC, MAG_ZEROPOINT_real, PIXEL_SCALE, SEEING_FWHM,
         os.path.join(param_dir,STARNNW_NAME), BACK_TYPE, BACK_SIZE, BACK_FILTERSIZE, BACKPHOTO_TYPE, BACKPHOTO_THICK, BACK_FILTTHRESH,
         CHECKIMAGE_TYPE, CHECKIMAGE_NAME]    
-    except IndexError:
+    except ValueError:
         print('No arguments given, taking, default CLAUDS ones !!!')
         params = [CATALOG_NAME,'FITS_LDAC',os.path.join(param_dir,'sex.param') , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'N',
         os.path.join(param_dir,'gauss_4.0_7x7.conv'),64, 0.0003 ,'Y', '1_PARAM',
