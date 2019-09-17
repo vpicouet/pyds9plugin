@@ -11242,7 +11242,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
     os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         
-    if os.path.isfile(CATALOG_NAME):
+    if (os.path.isfile(CATALOG_NAME)) & (path is None):
         from astropy.table import vstack
         cat = Table.read(CATALOG_NAME)
         cat.sort('MAG_AUTO')
@@ -11255,36 +11255,38 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
         create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(os.path.dirname(dn)) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
-        if path is None:
-            d.set('regions ' + os.path.dirname(os.path.dirname(dn)) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] + '.reg')
+        d.set('regions ' + os.path.dirname(os.path.dirname(dn)) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] + '.reg')
+
+        fig, (ax0,ax1) = plt.subplots(2,3)
+        ax0[0].hist(cat['MAG_ISO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_ISO',log=True, color='darkgreen')
+        ax0[0].hist(cat['MAG_AUTO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_AUTO',log=True, color='lime')
+        ax0[0].legend()
+        ax0[1].plot(cat1['MAG_AUTO'],cat1['MAG_AUTO']-cat1['MAG_ISO'],'.',alpha=0.3,markersize=2, c='limegreen')
+        ax0[1].plot(cat2['MAG_AUTO'],cat2['MAG_AUTO']-cat2['MAG_ISO'],'.',alpha=0.3,markersize=2, c='mediumspringgreen');ax0[1].set_ylim((-8,8));ax0[1].set_xlim((12,35))
+        ax0[1].set_ylabel('MAG_AUTO-MAG_ISO')
+            
+        ax0[2].plot(cat['MAG_AUTO'],cat['CLASS_STAR'],'.',alpha=0.3,markersize=2, c='forestgreen');ax0[2].set_xlim((15,33))
+        ax0[2].set_ylabel('CLASS_STAR')
+        
+        ax1[0].plot(cat['MAG_AUTO'],cat['MAGERR_AUTO'],'.',alpha=0.3,markersize=2,c='green',label='MAG_AUTO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
+        ax1[0].plot(cat['MAG_ISO'],cat['MAGERR_ISO'],'.',alpha=0.3,markersize=2,c='springgreen',label='MAG_ISO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
+        ax1[0].legend()
+        ax1[0].set_ylabel('MAGERR')
+    
+        ax1[1].plot(cat['MAG_AUTO'],cat['MU_MAX'],'.',alpha=0.3,markersize=2,c='seagreen');ax1[1].set_xlim((13,33));ax1[1].set_ylim((16,28))
+        ax1[1].set_xlabel('MAG_AUTO')
+        ax1[1].set_ylabel('MU_MAX')
+        ax1[2].plot(cat['MAG_AUTO'],cat['MU_MAX']-cat['MAG_AUTO'],'.',alpha=0.3,markersize=2,c='mediumseagreen');ax1[2].set_xlim((13,33));ax1[2].set_ylim((-5,5))
+        ax1[2].set_ylabel('MU_MAX - MAG_AUTO')
+        fig.tight_layout()
+        plt.show()
+    
+
     else:
         print('Can not find the output sextractor catalog...')
         
         
-    fig, (ax0,ax1) = plt.subplots(2,3)
-    ax0[0].hist(cat['MAG_ISO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_ISO',log=True, color='darkgreen')
-    ax0[0].hist(cat['MAG_AUTO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_AUTO',log=True, color='lime')
-    ax0[0].legend()
-    ax0[1].plot(cat1['MAG_AUTO'],cat1['MAG_AUTO']-cat1['MAG_ISO'],'.',alpha=0.3,markersize=2, c='limegreen')
-    ax0[1].plot(cat2['MAG_AUTO'],cat2['MAG_AUTO']-cat2['MAG_ISO'],'.',alpha=0.3,markersize=2, c='mediumspringgreen');ax0[1].set_ylim((-8,8));ax0[1].set_xlim((12,35))
-    ax0[1].set_ylabel('MAG_AUTO-MAG_ISO')
-        
-    ax0[2].plot(cat['MAG_AUTO'],cat['CLASS_STAR'],'.',alpha=0.3,markersize=2, c='forestgreen');ax0[2].set_xlim((15,33))
-    ax0[2].set_ylabel('CLASS_STAR')
-    
-    ax1[0].plot(cat['MAG_AUTO'],cat['MAGERR_AUTO'],'.',alpha=0.3,markersize=2,c='green',label='MAG_AUTO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
-    ax1[0].plot(cat['MAG_ISO'],cat['MAGERR_ISO'],'.',alpha=0.3,markersize=2,c='springgreen',label='MAG_ISO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
-    ax1[0].legend()
-    ax1[0].set_ylabel('MAGERR')
 
-    ax1[1].plot(cat['MAG_AUTO'],cat['MU_MAX'],'.',alpha=0.3,markersize=2,c='seagreen');ax1[1].set_xlim((13,33));ax1[1].set_ylim((16,28))
-    ax1[1].set_xlabel('MAG_AUTO')
-    ax1[1].set_ylabel('MU_MAX')
-    ax1[2].plot(cat['MAG_AUTO'],cat['MU_MAX']-cat['MAG_AUTO'],'.',alpha=0.3,markersize=2,c='mediumseagreen');ax1[2].set_xlim((13,33));ax1[2].set_ylim((-5,5))
-    ax1[2].set_ylabel('MU_MAX - MAG_AUTO')
-    fig.tight_layout()
-    plt.show()
-    
     
     FormatSextrectorCatalog(CATALOG_NAME)
     for file in glob.glob(os.path.dirname(dn) + '/tmp/' + fn[:-5] + '*.fits' ):
