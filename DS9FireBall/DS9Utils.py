@@ -5535,15 +5535,19 @@ def removeCRtails_CS(filename, area, threshold=15000,n=3,size=0,DS9backUp = DS9_
     import matplotlib.dates as mdates
     import re
     from astropy.table import Table
-    locator = mdates.HourLocator(interval=1)
-    locator.MAXTICKS = 50000
-    ax=plt.gca()
-    ax.xaxis.set_minor_locator(locator)
     fitsimage = fits.open(filename)[0]
     image = fitsimage.data
     header = fitsimage.header
+
+#    locator = mdates.HourLocator(interval=1)
+#    locator.MAXTICKS = 50000
+    ax=plt.gca()
+#    ax.xaxis.set_minor_locator(locator)
     print(threshold)
-    CS = ax.contour(image, levels=threshold, colors='white', alpha=0.5)
+#    CS = ax.contour(image, levels=threshold, colors='white', alpha=0.5)
+    cr_places = np.array(image>threshold,dtype=int)
+    CS = ax.contour(cr_places, levels=1)
+
     names = ('id','sizex','sizey','len_contour','max_x','min_y', 'max_y')
     cosmics = Table(np.zeros((len(CS.allsegs[0]),len(names))),names=names)
     cosmics['id'] = np.arange(len(CS.allsegs[0]))
@@ -11159,7 +11163,10 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         MAG_ZEROPOINT_real = 27
     dn = os.path.dirname(filename)
     fn = os.path.basename(filename)
-    DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
+    if os.path.isfile(sys.argv[-35]) is False:
+        DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
+    else:
+        DETECTION_IMAGE = sys.argv[-35]
     sepCoadd_2(filename,scale=1.)
     PHOTOMETRIC_NAME = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_data.fits').replace(',','-')
     VAR_IMAGE = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_vari.fits').replace(',','-')
@@ -11167,8 +11174,8 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs'))
     if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/reg')):
         os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/reg'))
-    
-    CATALOG_NAME = os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs',fn[:-5].replace(',','-')+'_cat.fits')
+    if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/Plots')):
+        os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/Plots'))
     
     if which('sex') is None:
         from tkinter import messagebox
@@ -11197,6 +11204,8 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         STARNNW_NAME,  BACK_TYPE,  BACK_SIZE,  BACK_FILTERSIZE,  BACKPHOTO_TYPE,  BACKPHOTO_THICK = given_params[5+6+7+6:5+6+7+6+6]
         BACK_FILTTHRESH,  CHECKIMAGE_TYPE, CHECKIMAGE_NAME = given_params[-3:]
     
+        if CATALOG_NAME=='-':
+            CATALOG_NAME = os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs',fn[:-5].replace(',','-')+'_cat.fits')
     
         FILTER ='Y' if  FILTER=='1' else 'N'
         CLEAN ='Y' if CLEAN=='1' else 'N'
@@ -11243,19 +11252,30 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         
     if (os.path.isfile(CATALOG_NAME)) & (path is None):
+
         from astropy.table import vstack
         cat = Table.read(CATALOG_NAME)
-        cat.sort('MAG_AUTO')
-        cat_ = cat[:int(sys.argv[-1])]
-        #cat = cat[cat['MAGERR_AUTO']<float(sys.argv[-1])]
+        print('\n\n',CATALOG_NAME)
+        #cat.sort('MAG_AUTO')
+        cat_ = cat#[:int(sys.argv[-1])]
+        
+        ########cat = cat[cat['MAGERR_AUTO']<float(sys.argv[-1])]
         cat1 = cat_[cat_['MAG_AUTO']>=cat_['MAG_ISO']]
         cat2 = cat_[cat_['MAG_AUTO']<cat_['MAG_ISO']]
         cat3 = vstack((cat1,cat2))
         #x, y = [list(cat1['X_IMAGE'])+list(cat2['X_IMAGE'])], [list(cat2['X_IMAGE'])+list(cat2['X_IMAGE'])]
         #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
-        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(os.path.dirname(dn)) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
-        d.set('regions ' + os.path.dirname(os.path.dirname(dn)) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] + '.reg')
+        d.set('regions ' + os.path.dirname(dn) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] + '.reg')
+
+        d.set('pan to 2000 2000 image')
+        d.set('tile no')
+        d.set('zoom 1')
+        d.set('saveimage jpeg %s 50'%(os.path.join(os.path.dirname(dn),'DetectionImages/Plots/',fn[:-5].replace(',','-')+'.jpeg'))) 
+
+    
+
 
         fig, (ax0,ax1) = plt.subplots(2,3)
         ax0[0].hist(cat['MAG_ISO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_ISO',log=True, color='darkgreen')
@@ -11279,18 +11299,79 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         ax1[2].plot(cat['MAG_AUTO'],cat['MU_MAX']-cat['MAG_AUTO'],'.',alpha=0.3,markersize=2,c='mediumseagreen');ax1[2].set_xlim((13,33));ax1[2].set_ylim((-5,5))
         ax1[2].set_ylabel('MU_MAX - MAG_AUTO')
         fig.tight_layout()
-        plt.show()
-    
+        fig.savefig(os.path.join(os.path.dirname(dn),'DetectionImages/Plots/',fn[:-5].replace(',','-')+'.png'))
+        #plt.show()
+
+                
 
     else:
         print('Can not find the output sextractor catalog...')
         
         
 
-    
     FormatSextrectorCatalog(CATALOG_NAME)
     for file in glob.glob(os.path.dirname(dn) + '/tmp/' + fn[:-5] + '*.fits' ):
         os.remove(file)
+
+    bands_thibaud = ['u', 'uS','g','r','z','y']
+    bands_laigle = ['u','yHSC','Y','H', 'Ks']
+    try:
+        Laigle = Table.read(dn + '/COSMOS2015_Laigle+_v1.1.fits')
+        Moutard = Table.read(dn + '/UV_CLAUDS_HSC_s16a_uddd_deep_COSMOS_kNNZP_MixPHZ_PHYSPARAM.fits')
+    except FileNotFoundError:
+        return
+    else:
+        mask1 = (Moutard['RA']>cat['ALPHA_J2000'].min()) & (Moutard['RA']<cat['ALPHA_J2000'].max()) & (Moutard['DEC']>cat['DELTA_J2000'].min()) & (Moutard['DEC']<cat['DELTA_J2000'].max())
+        mask2 = (Laigle['ALPHA_J2000']>cat['ALPHA_J2000'].min()) & (Laigle['ALPHA_J2000']<cat['ALPHA_J2000'].max()) & (Laigle['DELTA_J2000']>cat['DELTA_J2000'].min()) & (Laigle['DELTA_J2000']<cat['DELTA_J2000'].max())
+        Moutard = Moutard[mask1]
+        Laigle = Laigle[mask2]
+        if band == 'MegaCam_uS':
+            laigle, moutard = 'u_MAG_AUTO', 'uS'
+        if band == 'MegaCam_uS':
+            moutard = 'u'
+        if band == 'HSC_G':
+            moutard = 'g'
+        if band == 'HSC_R':
+            moutard = 'r'
+        if band == 'HSC_Z':
+            moutard = 'z'
+        if band == 'HSC_Y':
+            laigle, moutard = 'yHSC_MAG_AUTO', 'y'
+
+        if band == 'HSC_Y':
+            laigle, moutard = 'yHSC_MAG_AUTO', 'y'
+        if band == 'VIRCAM_Y':
+            laigle = 'Y_MAG_AUTO'
+        if band == 'VIRCAM_H':
+            laigle = 'H_MAG_AUTO'
+        if band == 'VIRCAM_Ks':
+            laigle = 'Ks_MAG_AUTO'
+            
+            
+#        if band == 'MegaCam_uS':
+#            laigle, moutard = 'u_MAG_AUTO', 'uS'
+#        if band == 'MegaCam_uS':
+#            laigle, moutard = 'u_MAG_AUTO', 'uS'
+#        if band == 'MegaCam_uS':
+#            laigle, moutard = 'u_MAG_AUTO', 'uS'
+
+        plt.figure(figsize=(8,8))
+        plt.hist(cat['MAG_AUTO'],bins=np.arange(21,29,0.09),alpha=0.3, label='Picouet AUTO',log=True)
+        plt.hist(cat['MAG_ISO'],bins=np.arange(21,29,0.09),alpha=0.3, label='Picouet ISO',log=True)
+        try:
+            plt.hist(Laigle[laigle],bins=np.arange(21,29,0.09),alpha=0.3, label='Laigle',log=True, histtype='step', linewidth=3)
+        except NameError:
+            pass
+        try:
+            plt.hist(Moutard[moutard],bins=np.arange(21,29,0.09),alpha=0.3, label='Moutard',log=True, histtype='step', linewidth=3)
+        except NameError:
+            pass
+        plt.title(band)
+        plt.xlabel('Magnitude')
+        plt.legend()
+        plt.savefig(os.path.join(os.path.dirname(dn),'DetectionImages/Plots/',fn[:-5].replace(',','-')+'LaigleMoutard.png'))
+        #plt.show()
+            
     return
 
 def patchMultiCat(catalog):
@@ -11364,17 +11445,23 @@ def StackPhotometricTables(tract=''):
     import glob
     from astropy.table import Table, vstack
     files = glob.glob('/data/deepZ/HSC_CLAUDS/DetectionImages/Photometric_Catalogs/BandMergedCatalogs/calexp-*%i*_cat.fits'%(tract))
-    tables = [Table.read(file) for file in files ]
-    tables_ = [table_i for table_i in tables if len(table_i)>0 ]
-    new_tables = [] 
-    for table in tables: 
-        if len(table)>0: 
-            #table['TRACT'] = np.array(table['TRACT'],dtype='int64') 
-            #new_tables.append(table) 
-            #print(type(table['TRACT'][0])    )
-            print(0)
+    tables = []
+    for file in files:
+        print(file)
+        tables.append(Table.read(file))
+    for i, table in enumerate(tables):
+        if len(table)==0 :
+            tables.remove(table)
+    #tables = [Table.read(file) for file in files ]
+    #tables_ = [table_i for table_i in tables if len(table_i)>0 ]
+#    new_tables = [] 
+#    for table in tables: 
+#        if len(table)>0: 
+#            print(0)
     print('Stacking tables...')
     stack_table = vstack(tables)
+    del tables
+    del table
     stack_table.write('/data/deepZ/HSC_CLAUDS/DetectionImages/Photometric_Catalogs/BandMergedCatalogs/TotalMergedCatalog_%i.fits'%(tract))#tres tres long...
     return 
         
