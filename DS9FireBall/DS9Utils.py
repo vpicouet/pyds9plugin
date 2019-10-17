@@ -23,9 +23,12 @@ except ImportError:
 else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
 
-import matplotlib; matplotlib.use('TkAgg')  
+#import matplotlib; matplotlib.use('TkAgg')  
 import matplotlib.pyplot as plt
 
+
+    
+#get_ipython().magic(u'matplotlib inline')
 #import tkinter as tk
 #root = tk.Tk()
 width = 23#root.winfo_screenmmwidth() / 25.4
@@ -836,10 +839,16 @@ def getdata(xpapoint, Plot=False):
     region = getregion(d, quick=True)
     #filename = getfilename(d)
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
-    data = d.get_pyfits()[0].data[Yinf:Ysup,Xinf:Xsup]
-    if Plot:
-        plt.imshow(data)
-        plt.colorbar()
+    data = d.get_pyfits()[0].data
+    if len(data.shape) == 2:
+        data = data[Yinf:Ysup,Xinf:Xsup]
+        if Plot:
+            plt.imshow(data)
+            plt.colorbar()
+    if len(data.shape) == 3:
+        data = data[:,Yinf:Ysup,Xinf:Xsup]
+
+
     return data
 
 
@@ -934,7 +943,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300):
         if fwhm.split('-')[0] == '':
             if bool(int(center)):
                 Param = (np.nanmax(image),lx/2,ly/2,2,2,np.percentile(image,15))
-                bounds = ([-np.inf, lx/2-0.5,ly/2-0.5, 0.5,0.5,-np.inf], [np.inf, lx/2+0.5,ly/2+0.5, 10,10,np.inf])#(-np.inf, np.inf)#
+                bounds = ([-np.inf, lx/2-0.5,ly/2-0.00001, 0.5,0.5,-np.inf], [np.inf, lx/2+0.00001,ly/2+0.5, 10,10,np.inf])#(-np.inf, np.inf)#
             else:
                 xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
                 Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
@@ -943,7 +952,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300):
             stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
             if bool(int(center)):
                 Param = (np.nanmax(image),lx/2,ly/2, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
-                bounds = ([-np.inf, lx/2-0.5,ly/2-0.5, stdmin, stdmin,-np.inf], [np.inf, lx/2+0.5,ly/2+0.5, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
+                bounds = ([-np.inf, lx/2-0.5,ly/2-0.00001, stdmin, stdmin,-np.inf], [np.inf, lx/2+0.00001,ly/2+0.5, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
             else:
                 xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
                 Param = (np.nanmax(image),xo, yo, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
@@ -978,15 +987,34 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300):
         ax.text(popt[1],popt[2], np.nanmax(image),s='amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]))    
         plt.show()
     else:
-        create_DS9regions([xinfs+size/2],[yinfs+size/2], radius=[size,size], form = ['circle']*len(xinfs),save=True, savename='/tmp/centers',ID=[np.array(fluxes).astype(int)])
-#        create_DS9regions2([xinfs+size/2],[yinfs+size/2], form = 'circle',
-#                           save=True,color = 'yellow', savename='/tmp/centers',
-#                           text = [fluxes])
-        d.set('regions /tmp/centers.reg')
+
+        L = np.array(fluxes)
+        median, mean, std = np.median(L), np.mean(L),np.std(L)
+        limit = median + 3 * std
+        mask = L >  limit
+        #create_DS9regions([xinfs[mask]+sizex/2],[yinfs[mask]+sizey/2], radius=[sizex,sizey], form = ['box']*len(xinfs[mask]),save=True, savename='/tmp/centers',ID=[L[mask].astype(int)])
+        #create_DS9regions([xinfs[~mask]+sizex/2],[yinfs[~mask]+sizey/2], radius=[sizex,sizey], color=['red']*len(xinfs[~mask]), form = ['box']*len(xinfs[~mask]),save=True, savename='/tmp/centers2',ID=[L[~mask].astype(int)])
+        #d.set('regions /tmp/centers.reg')
+        #d.set('regions /tmp/centers2.reg')
+
+#        fig = plt.figure()#figsize=(10,6))
+#        ax = fig.add_subplot(111)   
+#        ax.hist(L[~mask],label='mean = %0.1f, std = %0.1f'%(mean, std), alpha=0.3,bins=50)
+#        ax.hist(L[mask],label='Detections', alpha=0.3)#,bins=50)
+#        ax.vlines( limit, 0, 10, label='5 sigma limit')
+
+
+        if len(xinfs[mask])>0:
+            create_DS9regions([xinfs[mask]+size/2],[yinfs[mask]+size/2], radius=[size,size], form = ['circle']*len(xinfs[mask]),save=True, savename='/tmp/centers',ID=[L[mask].astype(int)])
+            d.set('regions /tmp/centers.reg')
         fig = plt.figure()
-        plt.hist(fluxes, bins=np.linspace(min(fluxes),max(fluxes),100))
-        plt.title('Median = %0.1f - std = %0.1f'%(np.median(fluxes),np.std(fluxes)))
-        plt.xlabel('Sum ADU')
+        #plt.hist(fluxes, bins=np.linspace(min(fluxes),max(fluxes),100))
+        plt.hist(L[~mask],label='mean = %0.1f, std = %0.1f'%(mean, std), alpha=0.3,bins=50)
+        plt.hist(L[mask],label='Detections', alpha=0.3)#,bins=50)
+        plt.vlines(limit, 0, 10, label='5 sigma limit')
+        plt.ylabel('Frequency')
+        plt.xlabel('Flux estimator [log(ADU)]')
+        plt.legend()
         plt.show()
         return
 
@@ -1268,12 +1296,13 @@ def process_region(regions, win,quick=False, config=my_conf):
                 processed_regions.append(box(arr, xc, yc, w, h, 0))
             elif name == 'circle':
                 xc,yc,r = coords
-                dat = win.get("data physical %s %s %s %s no" % (xc - r, yc - r, 2*r, 2*r))
-                X,Y,arr = parse_data(dat)
+                #dat = win.get("data physical %s %s %s %s no" % (xc - r, yc - r, 2*r, 2*r))
+                #X,Y,arr = parse_data(dat)
                 Xc,Yc = np.floor(xc), np.floor(yc)
-                inside = (X - Xc)**2 + (Y - Yc)**2 <= r**2
+                #inside = (X - Xc)**2 + (Y - Yc)**2 <= r**2
                 circle = namedtuple('Circle', 'data databox inside xc yc r')
-                processed_regions.append(circle(arr[inside], arr, inside, xc, yc, r))
+                #processed_regions.append(circle(arr[inside], arr, inside, xc, yc, r))
+                processed_regions.append(circle(0, 0, 0, xc, yc, r))
             elif name == '# vector':
                 xc, yc, xl, yl = coords
                 vector = namedtuple('Vector', 'data databox inside xc yc r')
@@ -2162,7 +2191,8 @@ def DS9rp(xpapoint, Plot=True, config=my_conf):
 #        entry = ''
     
     fibersize = sys.argv[4] if sys.argv[4].replace('.','',1).isdigit() else 0 and print('Fiber size not understood, setting to 0')
-    log = bool(sys.argv[5])
+    log = bool(int(sys.argv[-1]))
+    print('log = ',log)
 #    if hasNumbers(entry):
 #        fibersize = float(re.findall(r'\d+','456')[0])
 #    else:
@@ -2206,7 +2236,7 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   import matplotlib; matplotlib.use('TkAgg')  
   import matplotlib.pyplot as plt
   from .focustest import ConvolveDiskGaus2D
-  from .focustest import gausexp
+  #from .focustest import gausexp
   from scipy.optimize import curve_fit
   from scipy import interpolate
   rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, anisotrope=anisotrope, angle=angle, radius=radius, n=n, center_type=center_type, size=size)
@@ -2225,22 +2255,28 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
           #                 profile + 1.5*np.abs(profile - gaus(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
           
       else:
-          ax1.plot(np.linspace(0,size,10*size), gaus(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
-          ax1.fill_between(rmean[:size], profile - 1.5*np.abs(profile - gaus(rmean[:size], *popt)), 
-                           profile + 1.5*np.abs(profile - gaus(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
+          #ax1.plot(np.linspace(0,size,10*size), gaus(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
+          #ax1.fill_between(rmean[:size], profile - 1.5*np.abs(profile - gaus(rmean[:size], *popt)), 
+          #                 profile + 1.5*np.abs(profile - gaus(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
+          popt_m, pcov_m = curve_fit(Moffat1D,rmean[:size], profile,p0=[profile.max(),4,2.5])
+          ax1.plot(rmean[:size], Moffat1D(rmean[:size],*popt_m),label='Moffat fit: A=%0.3f, std=%0.2f, beta=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
           
   else:
       stddev /= profile.max()
       profile /= profile.max() 
+
+      popt_m, pcov_m = curve_fit(Moffat1D,rmean[:size], profile,p0=[profile.max(),4,2.5])
+
       popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[np.nanmax(profile),fiber,2, np.nanmin(profile)],bounds=([1e-3*(profile.max()-profile.min()),0.8*fiber,1,profile.min()],[1e3*(profile.max()-profile.min()),1.2*fiber,SigmaMax,profile.max()]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
       if log:
           ax1.semilogy(np.linspace(0,size,10*size), ConvolveDiskGaus2D(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
       else:
+          ax1.plot(rmean[:size], Moffat1D(rmean[:size],*popt_m),label='Moffat fit: A=%0.3f, std=%0.2f, beta=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
           ax1.plot(np.linspace(0,size,10*size), ConvolveDiskGaus2D(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
           ax1.fill_between(rmean[:size], profile - 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), profile + 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
   if log:
-      p = ax1.semilogy(rmean[:size], profile, linestyle='dotted', c='black', label='Normalized isotropic profile')
-      ax1.set_ylim(ymin=1e-4, ymax=20*np.nanmax(np.log10(profile)))
+      p = ax1.semilogy(rmean[:size], profile, '.', c='black', label='Normalized isotropic profile')#, linestyle='dotted')
+      ax1.set_ylim(ymin=1e-4)#, ymax=20*np.nanmax(np.log10(profile))
       #ax1.errorbar(rmean, profile, yerr = stddev, fmt='o', color=p[0].get_color(), alpha=0.5)
   else:
       p = ax1.plot(rmean[:size], profile, linestyle='dotted', c='black', label='Normalized isotropic profile')
@@ -2287,9 +2323,12 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
       d = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       print("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
   plt.savefig(DS9backUp + 'Plots/%s_RdialProfile.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss")) )
-  csvwrite(np.vstack((rmean[:size], profile,ConvolveDiskGaus2D(rmean[:size], *popt))).T, DS9backUp + 'CSVs/%s_EnergyProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
-  csvwrite(np.vstack((rsurf, EE)).T, DS9backUp + 'CSVs/%s_RadialProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
+  csvwrite(np.vstack((rmean[:size], profile,ConvolveDiskGaus2D(rmean[:size], *popt))).T, DS9backUp + 'CSVs/%s_RadialProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
+  csvwrite(np.vstack((rsurf, EE)).T, DS9backUp + 'CSVs/%s_EnergyProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
   return d
+
+      
+
 
 
 def DS9open(xpapoint, filename=None):
@@ -2618,6 +2657,9 @@ def DS9visualisation_throughfocus(xpapoint):
     return
 
 
+
+
+
 def plot_hist2(image,emgain,bias,sigma,bin_center,n,xlinefit,ylinefit,xgaussfit,ygaussfit,n_bias,n_log,threshold0,threshold55,exposure, gain,temp,  plot_flag=False, ax=None, save=True, DS9backUp = DS9_BackUp_path):
     """Plot the log histogram of the image used to apply thresholding photocounting
     process
@@ -2720,6 +2762,7 @@ def getImage(xpapoint):
     """
     #from astropy.io import fits
     d = DS9(xpapoint)
+    filename = getfilename(d)
     region = getregion(d)
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
     area = [Yinf, Ysup,Xinf, Xsup]
@@ -2727,7 +2770,7 @@ def getImage(xpapoint):
     fitsimage = d.get_fits()[0]
     image = fitsimage.data[area[0]:area[1],area[2]:area[3]]#picouet
     header = fitsimage.header
-    return image, header, area
+    return image, header, area, filename
     
 
 def PlotArea3D(xpapoint):
@@ -2738,26 +2781,46 @@ def PlotArea3D(xpapoint):
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D #Needed even if not used
-    from .polynomial import polyfit2d
-    image, header, area = getImage(xpapoint)
+    #from .polynomial import polyfit2d
+    log = np.bool(int(sys.argv[-2]))
+    smooth = sys.argv[-1]
+    image, header, area, filename = getImage(xpapoint)
+
+
+    if smooth != '-':
+        from astropy.convolution import convolve, Gaussian2DKernel
+
+        if len(smooth.split(','))==1:
+            sm = float(smooth.split(',')[0])
+            smx, smy = sm, sm
+        else:
+            smx, smy = np.array(smooth.split(','),dtype=int)
+        kernel = np.ones((int(smx),int(smy))) / (int(smx)*int(smy))
+        kernel = Gaussian2DKernel(x_stddev=smx,y_stddev=smy)    
+        image = convolve(image,kernel)
+        image = image[int(3*smx):-int(3*smx),int(3*smy):-int(3*smy)]
+        image = image[int(3*smy):-int(3*smy),int(3*smx):-int(3*smx)]
+    
     X,Y = np.indices(image.shape)
     x, y = image.shape
     x,y = np.meshgrid(np.arange(x),np.arange(y),indexing='ij')
     x, y = x.ravel(), y.ravel()
 #    pol = polyfit2d(np.arange(image.shape[1]), np.arange(image.shape[0]), image, [5,5])
-    imager = image.ravel()
-    coeff = polyfit2d(x, y, imager, [4,4])
-    
+    #imager = image.ravel()
+    if log:
+        image = np.log10(image - image.min() +1)
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    ax.scatter(X, Y, image, c='r', s=0.1)#, cstride=1, alpha=0.2)
-    ax.plot_surface(X, Y, popol2D(x, y , coeff).reshape(X.shape) ,rstride=1, cstride=1, shade=True)#,  linewidth=0)
-    plt.title('3D plot, area = %s'%(area))
+    ax.scatter(X, Y, image, c='r', s=200/len(x))#1.1)#, cstride=1, alpha=0.2)
+    ax.plot_surface(X, Y, image,rstride=1, cstride=1, shade=True, alpha=0.2)#, cstride=1, alpha=0.2)
+    #coeff = polyfit2d(x, y, imager, [4,4])
+    #ax.plot_surface(X, Y, popol2D(x, y , coeff).reshape(X.shape) ,rstride=1, cstride=1, shade=True)#,  linewidth=0)
+    plt.title('3D plot - %s - area = %s'%(os.path.basename(filename),area))
     plt.xlabel('X')
     plt.ylabel('Y')
     ax.set_zlim((0.9 * image.min(), 1.1 * image.max()))
     ax.set_zlabel('Pixels ADU value')
-    ax.axis('equal')
+    #ax.axis('equal')
     ax.axis('tight')
     plt.show()
     return
@@ -2926,10 +2989,360 @@ def ContinuumPhotometry_old(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackU
 
 
 
+def DS9PlotColor(xpapoint=None, path=None, f1=None, f2=None, f3=None, bins=None):
+    import astropy
+    from decimal import Decimal
+    import matplotlib.pyplot as plt
+    from astropy.table import Table
+    from scipy.optimize import curve_fit
+    import random
+    if xpapoint is not None:
+        path,f1, f2, f3, bins = sys.argv[-5:]
+        try:
+            bins_m = np.array(bins.split(','),dtype=float)
+        except ValueError:
+            if ('abs' in (f1+f2+f3).lower()):
+                bins_m = -22,-10, -18, -16
+            else:
+                bins_m = 20, 22, 24, 26
+            
+
+    try:
+        table = Table.read(path)
+    except astropy.io.registry.IORegistryError:
+        table = Table.read(path, format='ascii')
+
+
+    if ('abs' in (f1+f2+f3).lower()):
+        range_mag = np.arange(-23,-14,0.7)
+        table = table[(table[f1]>-26)&(table[f2]>-26)&(table[f3]>-26)&(table[f1]<-12)&(table[f2]<-12)&(table[f3]<-12)]
+        yrange= (-7,7)
+    else:
+        range_mag = np.arange(19,27.5,0.5)
+        table = table[(table[f1]<range_mag.max())&(table[f2]<range_mag.max())&(table[f3]<range_mag.max())&(table[f1]>12)&(table[f2]>12)&(table[f3]>12)]
+        yrange= (-0.25,0.25)
+
+    x = np.arange(len(table))
+    random.shuffle(x)
+    table = table[x[:10000]]
+
+    
+    #mean = [np.mean(table[(table[f1]<maxi)&(table[f1]<mini)][f1] - table[(table[f1]<maxi)&(table[f1]<mini)][f2]) for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+    #std16 = [np.percentile(table[(table[f1]<maxi)&(table[f1]<mini)][f1] - table[(table[f1]<maxi)&(table[f1]<mini)][f2],16) for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+    #std32 = [np.percentile(table[(table[f1]<maxi)&(table[f1]<mini)][f1] - table[(table[f1]<maxi)&(table[f1]<mini)][f2],84) for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+    fig, (ax0,ax1) = plt.subplots(1, 2, figsize=(14,8),sharey=True)
+    ax0.plot( table[f1],table[f1] - table[f2],'.', linewidth=0.01, alpha=0.1, color='grey')
+    ax0.grid(False)
+
+    for z1, z2 in zip(bins_m[:-1],bins_m[1:]):
+        table_sub = table[(table[f1]>z1)&(table[f1]<z2)]
+        ax0.plot( table_sub[f3],table_sub[f1] - table_sub[f2],'.', linewidth=0.01, alpha=0.1)
+        
+        vals, bins = np.histogram(table_sub[f1] - table_sub[f2],bins= np.linspace(min(yrange),max(yrange),60),density=True)
+        vals_err, bins_err = np.histogram(table_sub[f1] - table_sub[f2],bins= np.linspace(-0.5,0.5,200),density=True)
+        bins_c = (bins[:-1] + bins[1:])/2
+        bins_c_err = (bins_err[:-1] + bins_err[1:])/2
+        popt, pcov = curve_fit(gaussian, bins_c, vals) 
+        popt_err, pcov_err = curve_fit(gaussian, bins_c_err, vals_err,p0=[10,0.05,0.1])   
+        x = np.linspace(bins.min(),bins.max(),100)
+        p = ax1.fill_betweenx(bins_c,vals, step='mid', alpha=0.3, label=' %0.1f<%s<%0.1f - sig = %0.3f - Bias = %0.3f \nLine: sigErr = %0.3f - BiasErr = %0.3f' % (z1,f1,z2,abs(popt[2]),popt[1],abs(popt_err[2]),popt_err[1]))
+        ax1.plot(gaussian(x,*popt_err),x)#, label='sigErr = %0.3f - BiasErr = %0.3f'%(abs(popt_err[2]),popt_err[1]))#, label='%0.1f<%s<%0.1f - sigma=%0.1f'%(z1,f1,z2,popt[2]))
+##
+    mean,median, std16, std32 = [], [], [], [] 
+    for mini, maxi in zip(range_mag[:-1],range_mag[1:]):
+        mask = (table[f1]<maxi)&(table[f1]>mini)
+        sub_tab = table[mask]
+        print(mini, maxi, len(sub_tab))
+        
+        mean.append(np.mean(sub_tab[f1] - sub_tab[f2]))# for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+        median.append(np.median(sub_tab[f1] - sub_tab[f2]))# for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+        std16.append(np.percentile(sub_tab[f1] - sub_tab[f2],16))# for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+        std32.append(np.percentile(sub_tab[f1] - sub_tab[f2],84))# for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+
+    #ax0.errorbar((range_mag[:-1]+range_mag[1:])/2,mean,yerr=np.array([-np.array(std16),std32]),fmt='o',c='black')
+    ax0.plot((range_mag[:-1]+range_mag[1:])/2,mean,'o',c='blue',label='Mean')
+    ax0.plot((range_mag[:-1]+range_mag[1:])/2,median,'o',c='red',label='Median')
+    ax0.vlines((range_mag[:-1]+range_mag[1:])/2,std16,std32,color='black',label='16 - 82 th percentile')
+    ax0.legend()
+    ax0.grid()
+    ax1.grid()
+    ax0.set_ylabel('%s - %s'%(f1,f2))
+    ax0.set_xlabel('%s'%(f3))
+    ax0.set_ylim(yrange)
+    ax1.set_ylim(yrange)
+    ax0.set_xlim(range_mag.min(),range_mag.max())
+    ax1.legend()
+    fig.tight_layout()
+    fig.suptitle(os.path.basename(path)[:-4] ,y=1.05,fontsize=18)
+    fig.savefig(path[:-4] + '_%s.jpg'%('_'.join([f1,f2,f3])))
+    plt.show()
+    return
+
+
+def ComputeEstims(zphot,zspec):
+    residuals = (zphot - zspec) / (1+zspec)
+    prediction_bias = np.mean(residuals)     
+    sigma_mad = 1.4826 * np.median(np.abs(residuals - np.median(residuals)))  
+    outliars = len(zphot[np.abs(residuals)>0.15])/len(zphot)
+    return residuals, prediction_bias, sigma_mad, outliars
+
+
+def DS9PlotRedshiftGaussian(xpapoint):
+    import astropy
+    from decimal import Decimal
+    from scipy.optimize import curve_fit
+    import random
+    #plt.rc('text', usetex=True)
+    #plt.rc('font', family='serif')
+    path, photo, spectro, bins = sys.argv[-4:]
+    bins_ = np.array(bins.split(','),dtype=float)
+    #table, name='', photo='PHOTOZ', spectro='ZSPEC'
+    try:
+        table = Table.read(path)
+    except astropy.io.registry.IORegistryError:
+        table = Table.read(path, format='ascii')
+    
+    Clauds = table[(table[photo]>0)&(table[spectro]>0)&(table[photo] - table[spectro]>-20)] 
+    
+#    x = np.arange(len(Clauds))
+#    random.shuffle(x)
+#    Clauds = table[x[:10000]]
+
+    residuals = (Clauds[photo] - Clauds[spectro]) / (1+Clauds[spectro])
+    prediction_bias = np.mean(residuals)     
+    sigma_mad = 1.4826 * np.median(np.abs(residuals - np.median(residuals)))  
+    
+    
+    outliars = len(Clauds[np.abs(residuals)>0.15])/len(Clauds)
+    
+    x=np.arange(6)
+
+
+    fig, (ax0,ax1, ax2) = plt.subplots(3, 1, figsize=(10,10))
+    ax0.plot(x,x,c='black')
+    #plt.plot(x,0.85*(x),c='black',linestyle='dotted')
+    #plt.plot(x,1.15*(x),c='black',linestyle='dotted')
+    ax0.plot(x,x + 0.15*(1+x),c='black',linestyle='dotted')
+    ax0.plot(x,x - 0.15*(1+x),c='black',linestyle='dotted')
+    ax0.set_xlabel(spectro)
+    ax0.set_ylabel(photo)
+    ax0.grid(False)
+    plt.figtext(0.75,0.75,'N = %i \nBias = %0.3f \nsigma_mad = %0.1E\nCatastrophic = %0.1f%%' % (len(Clauds), prediction_bias,Decimal(sigma_mad),100*outliars), 
+                fontsize=14,bbox={'facecolor':'grey', 'alpha':0, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha    
+
+#    vals, bins, patch = plt.hist((Clauds['ZSPEC'] - Clauds['Z_ML'])/(1+Clauds['ZSPEC']),bins=np.linspace(-0.1,0.1,50),histtype='step',color='grey')
+    #print(Clauds)
+    for z1, z2 in zip(bins_[:-1],bins_[1:]):
+        z1, z2 = float(z1), float(z2)
+        print(z1,z2)
+        #print(Clauds[spectro],Clauds[photo])
+        Clauds_sub = Clauds[(Clauds[spectro]>z1)&(Clauds[spectro]<z2)]
+        #print(Clauds_sub)
+        residuals, prediction_bias, sigma_mad, outliars = ComputeEstims(Clauds_sub[photo],Clauds_sub[spectro])
+        ax0.plot(Clauds_sub[spectro],Clauds_sub[photo],'.',ms=3, alpha=0.3,label='%i%% - Bias = %0.3f - sigma = %0.1E - Catastrophic = %0.1f%%'%(100*len(Clauds_sub[photo])/len(Clauds[photo]),prediction_bias,Decimal(sigma_mad),100*outliars))
+        #print(Clauds_sub)
+        vals, bins = np.histogram((Clauds_sub[spectro] - Clauds_sub[photo])/(1+Clauds_sub[spectro]),bins= np.linspace(-0.15,0.15,30),density=True)
+        #vals, bins, patch = ax1.hist((Clauds_sub['ZSPEC'] - Clauds_sub['Z_ML'])/(1+Clauds_sub['ZSPEC']),bins=np.linspace(-0.1,0.1,30),density=False, alpha=0.3, stacked=False)#,histtype='step',color='grey'
+        bins_c = (bins[:-1] + bins[1:])/2
+        popt, pcov = curve_fit(gaussian, bins_c, vals)   
+        x = np.linspace(bins.min(),bins.max(),100)
+        p = ax1.fill_between(bins_c,vals, step='mid', alpha=0.3, label=' %0.1f<z<%0.1f - sig = %0.3f' % (z1,z2,abs(popt[2])))
+        #ax1.plot(x,gaussian(x,*popt), label='sigma = %0.2f' % (popt[2]),c=patch.get_color())
+        
+        
+        ax2.hist((Clauds_sub[spectro] - Clauds_sub[photo])/(1+Clauds_sub[spectro]),bins=250,cumulative=True,alpha=1,density=True,histtype='step',linewidth=2)
+        
+        
+        
+    #plt.figtext(0.8,0.75,'sigma = %0.2f' % (popt[2]), fontsize=14,bbox={'facecolor':'grey', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha    
+    ax0.legend(); ax1.legend()
+
+    ax1.set_ylim(ymin=0)
+    ax2.set_xlim((-0.3,0.3))
+    #ax1.set_xlim((-0.3,0.3))
+    ax2.set_ylim((0,1.02))
+    ax0.set_xlim((-0,4))
+    ax0.set_ylim((-0,4))
+    ax2.vlines(0,0,ax2.get_ylim()[1],linestyle='dotted')
+    ax2.hlines(0.5, -0.3,0.3,linestyle='dotted')
+    ax2.vlines(-0.15,0,0.2,linestyle='dotted')
+    ax2.vlines(0.15,0.8,ax2.get_ylim()[1],linestyle='dotted')
+
+    ax1.grid(False);ax2.grid(False)
+    ax1.set_xlabel('(Z_SPEC - Z_ML)/(1+Z_SPEC)')
+    ax2.set_xlabel('(Z_SPEC - Z_ML)/(1+Z_SPEC)')
+    fig.tight_layout()
+    fig.suptitle(os.path.basename(path[:-4]),y=1,fontsize=18)
+    fig.savefig(path[:-4])
+    plt.show()
+    return
+    
+
+   
+
+def FlagStars_bzk(table):
+#    mask = abs((table['g_MAG_OBS'] - table['z_MAG_OBS'])/(table['z_MAG_OBS'] - table['K_MAG_OBS']))>3/3.8
+    a = table['g_MAG_OBS'] - table['z_MAG_OBS']
+    b = table['z_MAG_OBS'] - table['K_MAG_OBS']
+    mask1 = (a/b>=4) & (a>=0) & (b>=0)
+    mask2 = (a>=0) & (b<=0)
+    mask3 = (a/b<=4) & (a<=0) & (b<=0)
+    mask = mask1 | mask2 | mask3
+    plt.figure()
+    plt.plot(a[mask], b[mask], '.', alpha=0.3,label='Stars = %i%%'%(100*len(table[mask])/len(table)))
+    plt.plot(a[~mask], b[~mask], '.', alpha=0.3,label='Galaxies - QSOs= %i%%'%(100*len(table[~mask])/len(table)))
+    plt.xlim(-2,5)
+    plt.ylim(-6,4)
+    plt.legend()
+    plt.show()
+    table['FLAG_STAR'][mask] += 1
+    
+    return table
+
+
+def FlagStars_chi2(table):
+    mask_star = table['CHI_STAR']/table['CHI_BEST']<0.5
+    mask_qso = table['CHI_QSO']/table['CHI_BEST']<0.5
+
+    fig, (ax0,ax1) = plt.subplots(1,2)
+    ax0.hist(table[mask_star]['CHI_STAR']/table[mask_star]['CHI_BEST'],log=True, bins=np.linspace(0,5,100), alpha=0.3,label='Stars = %i%%'%(100*len(table[mask_star])/len(table)))
+    ax0.hist(table[~mask_star]['CHI_STAR']/table[~mask_star]['CHI_BEST'],log=True, bins=np.linspace(0,5,100), alpha=0.3,label='Galaxies - Stars= %i%%'%(100*len(table[~mask_star])/len(table)))
+    ax0.set_xlabel('CHI_STAR / CHI_BEST')
+    ax0.legend()
+    ax1.hist(table[mask_qso]['CHI_QSO']/table[mask_qso]['CHI_BEST'],log=True, bins=np.linspace(0,5,100), alpha=0.3,label='Stars = %i%%'%(100*len(table[mask_qso])/len(table)))
+    ax1.hist(table[~mask_qso]['CHI_QSO']/table[~mask_qso]['CHI_BEST'],log=True, bins=np.linspace(0,5,100), alpha=0.3,label='Galaxies - QSOs= %i%%'%(100*len(table[~mask_qso])/len(table)))
+    ax1.set_xlabel('CHI_QSO / CHI_BEST')
+    ax1.legend()
+    plt.show()
+    
+    table['FLAG_STAR'][mask_star]+= 1
+    table['FLAG_QSO'][mask_qso]+= 1
+    return table#table[mask]
+
+def FlagStars_compactness(table):
+    try:
+        mag = 'MAG_AUTO_HSC_R'
+        a = table[mag] 
+    except KeyError:
+        mag = 'TOTAL_MAG_HSC_R'
+        a = table[mag] 
+        
+    b = table['MU_MAX_HSC_R'] - table['MAG_AUTO_HSC_R']
+    mask1 = (a<=33) & (b<=0) 
+    mask2 = (a<=18) & (b<=3)
+    mask3 = (a<=19) & (b<=0.5)
+    #mask3 = (a/b<=5/3) & (a<=0) & (b<=0)
+    mask = mask1 | mask2 | mask3
+
+    plt.figure()
+    plt.plot(table[mask][mag],table[mask]['MU_MAX_HSC_R']-table[mask][mag], '.', alpha=0.3,label='Stars = %i%%'%(100*len(table[mask])/len(table)))
+    plt.plot(table[~mask][mag],table[~mask]['MU_MAX_HSC_R']-table[~mask][mag], '.', alpha=0.3,label='Galaxies - QSOs= %i%%'%(100*len(table[~mask])/len(table)))
+    plt.xlabel(mag)
+    plt.ylabel('MU_MAX_HSC_R - ',mag)
+    plt.legend()
+    plt.xlim(16,33)
+    plt.ylim(-6,3)
+
+    plt.show()
+    table['FLAG_STAR'][mask]+= 1
+
+    return table
+
+
+def GalaxyStarsClassification(xpapoint, bzk=False, chi2=False, comptacness=True, path='/Users/Vincent/Nextcloud/Work/These/HSC/Catalogs/TOTAL_CAT/COUPON_amd_mu_max.fits', write=True):
+    if xpapoint is not None:
+        path = sys.argv[-4]
+        bzk, chi2, comptacness = np.array(np.array(sys.argv[-3:],dtype=int),dtype=bool)
+        
+    table = Table.read(path)
+    table['FLAG_STAR'] = 0
+    table['FLAG_QSO'] = 0
+    if bzk:
+        table = FlagStars_bzk(table)
+    if chi2:
+        table = FlagStars_chi2(table)
+    if comptacness:
+        table = FlagStars_compactness(table)
+    if write:
+        table.write(path,overwrite=True)
+    
+    mask0 =  table['FLAG_STAR'] == 0
+    mask1 =  table['FLAG_STAR'] == 1
+    mask2 =  table['FLAG_STAR'] == 2
+    mask3 =  table['FLAG_STAR'] == 3
+    
+    a = table['g_MAG_OBS'] - table['z_MAG_OBS']
+    b = table['z_MAG_OBS'] - table['K_MAG_OBS']
+
+    if bzk:
+        plt.figure()
+        plt.plot(a[mask0], b[mask0], '.', alpha=0.3,label='0 = %i%%'%(100*len(table[mask0])/len(table)))
+        plt.plot(a[mask1], b[mask1], '.', alpha=0.3,label='1 = %i%%'%(100*len(table[mask1])/len(table)))
+        plt.plot(a[mask2], b[mask2], '.', alpha=0.3,label='2 = %i%%'%(100*len(table[mask2])/len(table)))
+        plt.plot(a[mask3], b[mask3], '.', alpha=0.3,label='3 = %i%%'%(100*len(table[mask3])/len(table)))
+        plt.xlim(-2,5)
+        plt.ylim(-6,4)
+        plt.legend()
+        plt.show()
+     
+    if comptacness:
+        plt.figure()
+        plt.plot(table[mask0]['r_MAG_OBS'],table[mask0]['MU_MAX_HSC_R']-table[mask0]['r_MAG_OBS'], '.', alpha=0.3,label='0 = %i%%'%(100*len(table[mask0])/len(table)))
+        plt.plot(table[mask1]['r_MAG_OBS'],table[mask1]['MU_MAX_HSC_R']-table[mask1]['r_MAG_OBS'], '.', alpha=0.3,label='1 = %i%%'%(100*len(table[mask1])/len(table)))
+        plt.plot(table[mask2]['r_MAG_OBS'],table[mask2]['MU_MAX_HSC_R']-table[mask2]['r_MAG_OBS'], '.', alpha=0.3,label='2 = %i%%'%(100*len(table[mask2])/len(table)))
+        plt.plot(table[mask3]['r_MAG_OBS'],table[mask3]['MU_MAX_HSC_R']-table[mask3]['r_MAG_OBS'], '.', alpha=0.3,label='3 = %i%%'%(100*len(table[mask3])/len(table)))
+        plt.xlabel('MAG_AUTO_HSC_R')
+        plt.ylabel('MU_MAX_HSC_R - MAG_AUTO_HSC_R')
+        plt.legend()
+        plt.xlim(16,33)
+        plt.ylim(-6,3) 
+        plt.show() 
+    return table
 
 
 
-def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_path, config=my_conf, axis='y', kernel=1, fwhm='', center=False, Type = None, n=4):
+def Check_CLAUDS_image_quality(xpapoint):
+    from astropy.table import Table
+    cat = Table.read('/Users/Vincent/Documents/Work/sextractorCatalogs/subcats/TotalMergedCatalog_9813_corr_ugrizyk_only_mag_stars.fits')
+    bins = np.linspace(0.3,3,50)
+    bins_c = (bins[:-1] + bins[1:])/2
+
+
+    plt.figure()
+    val_u, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_MegaCam_uS']<25]['FWHM_IMAGE_MegaCam_uS'],bins=bins,alpha=0.3, label='Us')
+    val_us, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_MegaCam_u']<25]['FWHM_IMAGE_MegaCam_u'],bins=bins,alpha=0.3, label='Us')
+    plt.text(bins_c[argmax(val_u)],val_u.max(),'u = %0.2f'%(bins_c[argmax(val_u)]))
+    plt.text(bins_c[argmax(val_us)],val_us.max(),'uS = %0.2f'%(bins_c[argmax(val_us)]))
+    plt.show()
+    
+    plt.figure()
+    val_g, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_HSC_G']<25]['FWHM_IMAGE_HSC_G'],bins=bins,alpha=0.3, label='G')
+    val_r, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_HSC_R']<25]['FWHM_IMAGE_HSC_R'],bins=bins,alpha=0.3, label='R')
+    val_i, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_HSC_I']<25]['FWHM_IMAGE_HSC_I'],bins=bins,alpha=0.3, label='I')
+    val_z, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_HSC_Z']<25]['FWHM_IMAGE_HSC_Z'],bins=bins,alpha=0.3, label='Z')
+    val_y, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_HSC_Y']<25]['FWHM_IMAGE_HSC_Y'],bins=bins,alpha=0.3, label='Y_HSC')
+    plt.text(bins_c[argmax(val_g)],val_g.max(),'g = %0.2f'%(bins_c[argmax(val_g)]))
+    plt.text(bins_c[argmax(val_r)],val_r.max(),'r = %0.2f'%(bins_c[argmax(val_r)]))
+    plt.text(bins_c[argmax(val_i)],val_i.max(),'i = %0.2f'%(bins_c[argmax(val_i)]))
+    plt.text(bins_c[argmax(val_z)],val_z.max(),'z = %0.2f'%(bins_c[argmax(val_z)]))
+    plt.text(bins_c[argmax(val_y)],val_y.max(),'y = %0.2f'%(bins_c[argmax(val_y)]))
+    plt.show()
+
+    plt.figure()
+    val_y, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_VIRCAM_Y']<25]['FWHM_IMAGE_VIRCAM_Y'],bins=bins,alpha=0.3, label='Y')
+    val_j, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_VIRCAM_J']<25]['FWHM_IMAGE_VIRCAM_J'],bins=bins,alpha=0.3, label='J')
+    val_h, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_VIRCAM_H']<25]['FWHM_IMAGE_VIRCAM_H'],bins=bins,alpha=0.3, label='H')
+    val_k, bins, ax = plt.hist(0.1679*cat[cat['MAG_AUTO_VIRCAM_Ks']<25]['FWHM_IMAGE_VIRCAM_Ks'],bins=bins,alpha=0.3, label='Ks')
+    plt.text(bins_c[argmax(val_y)],val_y.max()-3,'y = %0.2f'%(bins_c[argmax(val_y)]))
+    plt.text(bins_c[argmax(val_j)],val_j.max(),'j = %0.2f'%(bins_c[argmax(val_j)]))
+    plt.text(bins_c[argmax(val_h)],val_h.max(),'h = %0.2f'%(bins_c[argmax(val_h)]))
+    plt.text(bins_c[argmax(val_k)],val_k.max(),'k = %0.2f'%(bins_c[argmax(val_k)]))
+    plt.legend()
+    plt.show()
+    return
+    
+
+def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_path, config=my_conf, axis='y', kernel=1, fwhm='', center=False, Type = None, n=200):
     """Fit a gaussian
     interger the flux on 1/e(max-min) and then add the few percent calculated by the gaussian at 1/e 
     """
@@ -2985,7 +3398,10 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
             plot_flag=False
             sizex = Xsup - Xinf
             sizey = Ysup - Yinf
-            xinfs, yinfs = np.random.randint(100,1900,size=n), np.random.randint(1400,1600,size=n)
+            print('\n\n\n', 1000+sizex/2,2000-sizex/2)
+            yinfs, xinfs = np.random.randint(10,2000-sizey,size=n), np.random.randint(1100,2000-sizex,size=n)
+            print(yinfs)
+            print(xinfs)
             images = [data[Yinf:Yinf+sizey,Xinf:Xinf+sizex] for Xinf, Yinf in zip(xinfs, yinfs)]
             if axis=='y':
                 ys = [np.nanmean(image,axis=1) for image in images]
@@ -3043,7 +3459,10 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
         #    nlist = c.trace(level, level, 0)
         #    CS = nlist[:len(nlist)//2]
             image = np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))])
-            CS = plt.contour(image,levels=1);plt.close()
+            #CS = plt.contour(image,levels=1);plt.close()
+            ax=plt.gca()
+            CS = ax.contour(image, levels=1)
+            
             #size = [cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ]
             maxx = [ int(cs[:,0].max())   for cs in CS.allsegs[0] ]
             minx = [ int(cs[:,0].min())   for cs in CS.allsegs[0] ]
@@ -3052,22 +3471,23 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
             print(minx[index],maxx[index])    
             y0 = y-fit_fn(x)
            #L.append({'Flux':1.155*np.sum(y0[mask])})
+            mask = (x>minx[index]) & (x<maxx[index])
             L.append(1.155*np.sum(y0[mask]))
-    
-
+    print(y0)
+    print(L)
+    plt.close()
     if plot_flag:
             plt.figure()#figsize=(10,6))
             plt.xlabel('Spatial direction')
             plt.ylabel('ADU mean value')
             plt.plot(np.linspace(x.min(),x.max(),10*len(x)), gaussian(np.linspace(x.min(),x.max(),10*len(x)), *popt1) + fit_fn(np.linspace(x.min(),x.max(),10*len(x))), label='Gaussian Fit, F = %0.2f - sgm=%0.1f'%(np.sum(gaussian(x, *popt1))/texp,popt1[-1]))
         #    plt.plot(x[y>limfit], y[y>limfit], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[y>limfit])/texp))
-            mask = (x>minx[index]) & (x<maxx[index])
             #p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
             filtered = ndimage.filters.gaussian_filter1d(y0[~mask], sigma=7/2.35)[7:-7]
             std = np.std(filtered)*7/2.35*np.sqrt(2*np.pi)
             #std = np.std(np.convolve(y0[~mask],np.ones(7),mode='valid'))#scipy.ndimage.filters.gaussian_filter1d
-            plt.plot(filtered)
-            plt.plot(np.convolve(y0[~mask],np.ones(7)/7,mode='valid'))
+            #plt.plot(filtered)
+            #plt.plot(np.convolve(y0[~mask],np.ones(7)/7,mode='valid'))
             p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - std = %0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,std, 1.155*np.sum(y0[mask])/std))
             plt.plot(x, y,linestyle='dotted',c=p[0].get_color())
             
@@ -3080,13 +3500,31 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
             plt.savefig( DS9backUp + 'Plots/%s_Continuumphotometry_%s.jpg'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss"), os.path.basename(filename) ))
             if plot_flag:
                 plt.show()
+            
     else:
+        L = np.array(L)
+        median, mean, std = np.median(L), np.mean(L),np.std(L)
+        limit = median + 3 * std
+        mask = L >  limit
+        create_DS9regions([xinfs[mask]+sizex/2],[yinfs[mask]+sizey/2], radius=[sizex,sizey], form = ['box']*len(xinfs[mask]),save=True, savename='/tmp/centers',ID=[L[mask].astype(int)])
+        create_DS9regions([xinfs[~mask]+sizex/2],[yinfs[~mask]+sizey/2], radius=[sizex,sizey], color=['red']*len(xinfs[~mask]), form = ['box']*len(xinfs[~mask]),save=True, savename='/tmp/centers2',ID=[L[~mask].astype(int)])
+        d.set('regions /tmp/centers.reg')
+        #d.set('regions /tmp/centers2.reg')
+
         fig = plt.figure()#figsize=(10,6))
         ax = fig.add_subplot(111)   
-        print(L)
-        #ax.plot(np.histogram(np.array(L)))
-        ax.hist(np.array(L))
+        ax.hist(L[~mask],label='mean = %0.1f, std = %0.1f'%(np.mean(L[~mask]), np.std(L[~mask])), alpha=0.3,bins=50)
+        ax.hist(L[mask],label='Detections', alpha=0.3)#,bins=50)
+        ax.vlines( limit, 0, 10, label='5 sigma limit')
+        #plt.plot(np.array([-1.772662017174298e-12, 1.2638423640964902e-12, -2.462030579408747e-14, -1.148947603724082e-13, 4.267519670975162e-13, 6.565414878423326e-13, 1.9039703147427643e-12, -6.401279506462743e-13, -9.519851573713822e-13, 1.1817746781161986e-12, 1.8383161659585314e-12, -2.33892905043831e-13, 3.446842811172246e-13, -6.073008762541576e-13, -1.0832934549398488e-12, 1.3787371244688983e-12, -1.0340528433516738e-12, -8.86331008587149e-13, -6.565414878423326e-13, 3.282707439211663e-14, -2.2158275214678726e-13, 2.462030579408747e-13, 1.1653611409201403e-12, 3.3155345136037795e-12, 3.282707439211663e-12, 1.2802559012925486e-12, -1.8465229345565604e-13, 6.23714413450216e-13, 1.0504663805477321e-12, -2.9544366952904965e-13, -1.3787371244688983e-12, 1.9039703147427643e-12, -2.9544366952904965e-13, -4.103384299014579e-14, -2.6261659513693303e-13, 1.5510792650275108e-12, 4.267519670975162e-13, 1.2720491326945193e-13, 4.924061158817494e-14, 1.0340528433516738e-12, -1.148947603724082e-13, -1.8054890915664146e-13, -4.5137227289160365e-14, 1.2146017525083152e-12, 1.3130829756846652e-12, -2.6261659513693303e-13, 6.770584093374055e-13, 1.723421405586123e-13, 2.7903013233299137e-13, 3.1513991416431962e-12]))
+        #plt.plot(np.array([-1.772662017174298e-12, 1.2638423640964902e-12, -2.462030579408747e-14, -1.148947603724082e-13, 4.267519670975162e-13, 6.565414878423326e-13, 1.9039703147427643e-12, -6.401279506462743e-13, -9.519851573713822e-13, 1.1817746781161986e-12, 1.8383161659585314e-12, -2.33892905043831e-13, 3.446842811172246e-13, -6.073008762541576e-13, -1.0832934549398488e-12, 1.3787371244688983e-12, -1.0340528433516738e-12, -8.86331008587149e-13, -6.565414878423326e-13, 3.282707439211663e-14, -2.2158275214678726e-13, 2.462030579408747e-13, 1.1653611409201403e-12, 3.3155345136037795e-12, 3.282707439211663e-12, 1.2802559012925486e-12, -1.8465229345565604e-13, 6.23714413450216e-13, 1.0504663805477321e-12, -2.9544366952904965e-13, -1.3787371244688983e-12, 1.9039703147427643e-12, -2.9544366952904965e-13, -4.103384299014579e-14, -2.6261659513693303e-13, 1.5510792650275108e-12, 4.267519670975162e-13, 1.2720491326945193e-13, 4.924061158817494e-14, 1.0340528433516738e-12, -1.148947603724082e-13, -1.8054890915664146e-13, -4.5137227289160365e-14, 1.2146017525083152e-12, 1.3130829756846652e-12, -2.6261659513693303e-13, 6.770584093374055e-13, 1.723421405586123e-13, 2.7903013233299137e-13, 3.1513991416431962e-12]))
+        plt.legend()
+        ax.set_ylabel('Frequency')
+        ax.set_xlabel('Best SNR flux estimator [ADU]')
         plt.show()
+        #print(4)
+        print(L)
+
     return L
 
 
@@ -3207,13 +3645,18 @@ def fitswrite(fitsimage, filename, verbose=True, config=my_conf):
         filename = '/tmp/image.fits'
         fitsimage.header['NAXIS3'], fitsimage.header['NAXIS1'] = fitsimage.header['NAXIS1'], fitsimage.header['NAXIS3']
         fitsimage.writeto(filename,overwrite=True) 
-    try:
-        fitsimage = fitsimage[0]
-    except TypeError:
-        pass
-    if 'NAXIS3' in fitsimage.header:
-        verboseprint('2D array: Removing NAXIS3 from header...',verbose=my_conf.verbose)
-        fitsimage.header.remove('NAXIS3')
+#    try:
+#        fitsimage = fitsimage[0]
+#    except TypeError:
+#        pass
+    if hasattr(fitsimage, 'header'):
+        if 'NAXIS3' in fitsimage.header:
+            verboseprint('2D array: Removing NAXIS3 from header...',verbose=my_conf.verbose)
+            fitsimage.header.remove('NAXIS3')
+    elif hasattr(fitsimage[0], 'header'):
+        if 'NAXIS3' in fitsimage[0].header:
+            verboseprint('2D array: Removing NAXIS3 from header...',verbose=my_conf.verbose)
+            fitsimage[0].header.remove('NAXIS3')        
     elif not os.path.exists(os.path.dirname(filename)):
         os.makedirs(os.path.dirname(filename))
     if not os.path.exists(os.path.dirname(filename)):
@@ -4064,21 +4507,36 @@ def DS9tsuite(xpapoint, Plot=False):
 #    print('Test completed: OK')
 
 
-def Concolve2d(xpapoint):
+def Convolve2d(xpapoint):
     d = DS9(xpapoint)
-    from astropy.convolution import Gaussian2DKernel
+    from astropy.convolution import Gaussian2DKernel, convolve
     #from scipy.signal import convolve as scipy_convolve
-    from astropy.convolution import convolve
     from astropy.io import fits
-    kernel = Gaussian2DKernel(x_stddev=1)
+    type_, path, sizex, sizey = sys.argv[-4-5:-5]
+    if os.path.isfile(path) is False:
+        if type_.lower() == 'gaussian':
+            print('Convolving with gaussian')
+            kernel = Gaussian2DKernel(x_stddev=float(sizex),y_stddev=float(sizey))
+        elif type_.lower() == 'box':
+            print('Convolving with box')
+            kernel = np.ones((int(sizex),int(sizey))) / (int(sizex)*int(sizey))
+    else:
+        print('Convolving with image: ', path)
+        kernel = fits.open(path)[0].data
     #scipy_conv = scipy_convolve(img, kernel, mode='same', method='direct')
-    file = getfilename(d)
-    fitsfile = fits.open(file)[0]
-    data_conv = convolve(fitsfile.data,np.ones((3,33))/99)
-    fitsfile.data = data_conv
-    fitswrite(fitsfile,'/tmp/convolved_%s'%(os.path.basename(file)))
-    d.set('frame new')
-    d.set('file /tmp/convolved_%s'%(os.path.basename(file)))
+    filename = getfilename(d)
+    paths = Charge_path_new(filename) if len(sys.argv) > 5 else [filename]
+    for file in paths:
+        fitsfile = fits.open(file)
+        i = np.argmax([im.size for im in fitsfile[:4]])
+        #fitsfile = fitsfile[i]
+        data_conv = convolve(fitsfile[i].data,kernel)
+        fitsfile[i].data = data_conv
+        #fitswrite(fitsfile,'/tmp/convolved_%s'%(os.path.basename(file)))
+        fitsfile.writeto(file[:-5] + '_convolved.fits', overwrite=True)
+    if len(paths)==1:
+        d.set('frame new')
+        d.set('file /tmp/convolved_%s'%(os.path.basename(file)))
     return
 
 def Field_regions(xpapoint, mask=''):
@@ -4877,15 +5335,28 @@ def Lims_from_region(region=None, coords=None,  config=my_conf):
             except ValueError:
                 return None
     else:
-        try:
-            xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
-        except AttributeError:
+        if hasattr(region, 'xc'):
+            if hasattr(region, 'h'):
+                xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
+            if hasattr(region, 'r'):
+                xc, yc, h, w = int(region.xc), int(region.yc), 2*int(region.r), 2*int(region.r)
+
+        else:
             region = region[0]
-            xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
+            if hasattr(region, 'h'):
+                xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
+            if hasattr(region, 'r'):
+                xc, yc, h, w = int(region.xc), int(region.yc), 2*int(region.r), 2*int(region.r)
+
+
+
+#            xc, yc, h, w = int(region.xc), int(region.yc), int(region.r), int(region.r)
             
 #            print('Region is not a box, exracting box using the radius')
 #            xc, yc, r = int(region.xc), int(region.yc), int(region.r)
 #            w, h = r, r
+
+    xc, yc = giveValue(xc,yc)
     print('W = ', w)
     print('H = ', h)
     if w <= 2:
@@ -4899,6 +5370,11 @@ def Lims_from_region(region=None, coords=None,  config=my_conf):
     verboseprint('Xinf, Xsup, Yinf, Ysup = ', Xinf, Xsup, Yinf, Ysup, verbose=config.verbose)
     verboseprint('data[%i:%i,%i:%i]'%(Yinf, Ysup,Xinf, Xsup), verbose=config.verbose)
     return np.max([0,Xinf]), Xsup, np.max([0,Yinf]), Ysup
+
+def giveValue(x,y):
+    x = int(x) if x%1>0.5 else int(x)-1
+    y = int(y) if y%1>0.5 else int(y)-1
+    return x, y
 
 
 def DS9center(xpapoint,Plot=True):
@@ -5341,6 +5817,7 @@ def DS9removeCRtails2(xpapoint,filen=None, length=20, config=my_conf):
 def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None):
     """
     """
+    import astropy
     from astropy.table import Table
     #from .focustest import create_DS9regions2
     if xpapoint is not None:
@@ -5351,20 +5828,24 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
         x, y = sys.argv[4].replace(',','-').split('-')
     except:
         pass
-    cat = Table.read(name)
+
+    try:
+        cat = Table.read(name)
+    except astropy.io.registry.IORegistryError:
+        cat = Table.read(name, format='ascii')
+
     if (ID is None) & (sys.argv[5] != '-'):
         ID = sys.argv[5] 
+
+    form = sys.argv[-2] 
+    size = sys.argv[-1] 
+
     print(cat)
     if (sys.argv[5] == '-') & (ID is None):
-        create_DS9regions2(cat[x],cat[y], radius=3, form = 'circle', save=True,color = 'yellow', savename='/tmp/centers')
+        create_DS9regions2(cat[x],cat[y], radius=int(size), form = form, save=True,color = 'yellow', savename='/tmp/centers')
     else:
-        create_DS9regions([cat[x]],[cat[y]], radius=3, form = ['circle'],save=True,color = ['yellow'], ID=[np.array(cat[ID], dtype=int)],savename='/tmp/centers')
-#        try:
-#            create_DS9regions([cat[x]],[cat[y]], radius=3, form = ['circle'],save=True,color = ['yellow'], ID=[np.array(cat[sys.argv[5]], dtype=int)],savename='/tmp/centers')
-#
-#        except KeyError:
-#            create_DS9regions2(cat[x],cat[y], radius=3, form = 'circle', save=True,color = 'yellow', savename='/tmp/centers')
-#            
+        create_DS9regions([cat[x]],[cat[y]], radius=int(size), form = [form],save=True,color = ['yellow'], ID=[np.round(np.array(cat[ID], dtype=float),1)],savename='/tmp/centers')
+   
     if xpapoint is not None:
         d.set('regions /tmp/centers.reg')    
     return cat , '/tmp/centers.reg'
@@ -5493,10 +5974,9 @@ def MaskCosmicRaysCS(image, cosmics,all=False, size=None):
     return image
 
 def DS9removeCRtails_CS(xpapoint, threshold=60000,n=3,size=0, config=my_conf):
-#    from astropy.io import fits
-#    import matplotlib.pyplot as plt
-#    from astropy.table import Table, Column
-    #from .focustest import create_DS9regions
+
+    from multiprocessing import Process, Queue, Manager, Pipe
+
     d = DS9(xpapoint)
     filename = getfilename(d)
     #if len(sys.argv) > 3: path = Charge_path_new(filename, entry_point=3)
@@ -5513,22 +5993,49 @@ def DS9removeCRtails_CS(xpapoint, threshold=60000,n=3,size=0, config=my_conf):
     else:
         try:
             Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
-        except TypeError as e:
+        except TypeError:
             Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
     area = [Yinf, Ysup,Xinf, Xsup]
     print(Yinf, Ysup,Xinf, Xsup)   
-   
+    jobs = []
+    manager = Manager()
+    return_dict = manager.dict()
+    #q = Queue()
     for filename in path:
-        fitsimage, name, a = removeCRtails_CS(filename=filename, threshold=threshold,n=masking_factor,size=size, area=area, create=False)
-    if (len(path)<2) & (len(a)>1):    
-        create_DS9regions([list(a['max_x'])],[list(a['mean_y'])], form=['circle'], radius=10, save=True, 
-                   savename='/tmp/cr', color = ['yellow'],ID=[list(a['len_contour'])])
-        d.set('region delete all')
-        d.set('regions /tmp/cr.reg')
-        d.set('frame new')
-        d.set('file '+ name)
-        d.set('tile yes')
+        #fitsimage, name, a = removeCRtails_CS(filename=filename, threshold=threshold,n=masking_factor,size=size, area=area, create=False)
+        parent_conn, child_conn = Pipe()
+        p = Process(target=RunFunction, args=(removeCRtails_CS,[filename,area,threshold,masking_factor,size,DS9_BackUp_path,False],return_dict,))
+        jobs.append(p)
+        p.start()
+
+
+    for job in jobs:
+        job.join()
+
+    name, a = return_dict['output']
+    if (len(path)<2):
+        if (len(a)>1):
+            create_DS9regions([list(a['max_x'])],[list(a['mean_y'])], form=['circle'], radius=10, save=True, 
+                       savename='/tmp/cr', color = ['yellow'],ID=[list(a['len_contour'])])
+            d.set('region delete all')
+            d.set('regions /tmp/cr.reg')
+            d.set('frame new')
+            d.set('file '+ name)
+            d.set('tile yes')
     return  
+
+
+
+def RunProcess(process):
+    os.system(process)
+    return
+
+def RunFunction(Fonction, args, return_dict):
+    out = Fonction(*args)
+    print(out)
+    return_dict['output'] = out
+    return 
+
 
 def removeCRtails_CS(filename, area, threshold=15000,n=3,size=0,DS9backUp = DS9_BackUp_path, create=False): 
     from astropy.io import fits
@@ -5538,7 +6045,7 @@ def removeCRtails_CS(filename, area, threshold=15000,n=3,size=0,DS9backUp = DS9_
     fitsimage = fits.open(filename)[0]
     image = fitsimage.data
     header = fitsimage.header
-
+    print('area=',area)
 #    locator = mdates.HourLocator(interval=1)
 #    locator.MAXTICKS = 50000
     ax=plt.gca()
@@ -5621,15 +6128,15 @@ def removeCRtails_CS(filename, area, threshold=15000,n=3,size=0,DS9backUp = DS9_
         fits.setval(filename, 'MASK', value = 100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0]*maskedimage.shape[1]))
     if create:          
         fitswrite(fitsimage,name)
-        return fitsimage, name, cosmics
+        return name, cosmics
     elif len(cosmics)>0:
         fitswrite(fitsimage,name)
-        return fitsimage, name, cosmics
+        return name, cosmics
     else:    #testv
         if not os.path.exists(os.path.dirname(name)):
             os.makedirs(os.path.dirname(name))
         symlink_force(filename, name)
-        return fitsimage, filename, cosmics
+        return filename, cosmics
 
 
 def symlink_force(target, link_name):
@@ -7825,7 +8332,7 @@ def ApplyTotalReductionPipeline_new(xpapoint,filename, BackgroundCorrection=Fals
     If not flat path is given, flat removal will not be performed. 
     """
     if cosmics:
-        fitsimage, filename, cosmics = removeCRtails_CS(filename, threshold=40000,n=3,size=0,area=area, create=create)
+        filename, cosmics = removeCRtails_CS(filename, threshold=40000,n=3,size=0,area=area, create=create)
 
 #    try:
 #        table_path = resource_filename('DS9FireBall', 'Regions') + '/HotPixelsFinalV1_190222.reg'
@@ -10823,35 +11330,38 @@ def sepCoadd(imName,scale=1.):
     fits.writeto(('/tmp/' + os.path.basename(imName)[:-5]+'_mask.fits').replace(',','-'),im[2].data.astype(float),maskHead,overwrite=True)
     return
 
-def sepCoadd_2(imName,scale=1.):
+def sepCoadd_2(imName,scale=1., corr=True):
     '''
     move data,variance,mask extensions to new images and apply corrections to the variance map
     '''
     from astropy.io import fits
     # Computed from 2" apertures in the background and in the variancde map
     print(os.path.basename(imName))
-    if 'MegaCam-u' in imName : 
-        corr = 2.76
-    elif 'MegaCam-uS' in imName : 
-        corr = 2.97
-    elif 'HSC-G' in imName :
-        corr = 2.63
-    elif 'HSC-R' in imName :
-        corr = 3.37
-    elif 'HSC-I' in imName :
-        corr = 3.09
-    elif 'HSC-Z' in imName :
-        corr = 2.5
-    elif 'HSC-Y' in imName :
-        corr = 2.90
-    elif 'VIRCAM-J' in imName:
-        corr = 9.83
-    elif 'VIRCAM-H' in imName :
-        corr = 8.52
-    elif 'VIRCAM-Y' in imName :
-        corr = 10.69
-    elif 'VIRCAM-Ks' in imName :
-        corr = 7.03
+    if corr:
+        if 'MegaCam-u' in imName : 
+            corr = 2.76
+        elif 'MegaCam-uS' in imName : 
+            corr = 2.97
+        elif 'HSC-G' in imName :
+            corr = 2.63
+        elif 'HSC-R' in imName :
+            corr = 3.37
+        elif 'HSC-I' in imName :
+            corr = 3.09
+        elif 'HSC-Z' in imName :
+            corr = 2.5
+        elif 'HSC-Y' in imName :
+            corr = 2.90
+        elif 'VIRCAM-J' in imName:
+            corr = 9.83
+        elif 'VIRCAM-H' in imName :
+            corr = 8.52
+        elif 'VIRCAM-Y' in imName :
+            corr = 10.69
+        elif 'VIRCAM-Ks' in imName :
+            corr = 7.03
+    else:
+        corr = 1
     print('Corr = ', corr) 
     dataHead = fits.getheader(imName,1)
     varHead = fits.getheader(imName,3)
@@ -10902,16 +11412,16 @@ def MakeChi2image(images,varImages,outputImage,clobber=True):
 def DS9CreateDetectionImages(xpapoint):
     d = DS9(xpapoint)
     filename = d.get("file")
-    U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks = np.array(np.array(sys.argv[-8-8:-5],dtype=int), dtype=bool)
+    corr, U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks = np.array(np.array(sys.argv[-8-9:-5],dtype=int), dtype=bool)
     print('MegaCam-u', 'HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z', 'HSC-Y', 'VIRCAM-Y', 'MegaCam-uS', 'VIRCAM-H', 'VIRCAM-J', 'VIRCAM-Ks',U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks)
     #if len(sys.argv) > 3+2: paths = Charge_path_new(filename, entry_point=3+2)
     paths = Charge_path_new(filename) if len(sys.argv) > 7+8 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
         
 
     for path in paths:
-        createDetectionImages(path, U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks)
+        createDetectionImages(path, U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks, corr=corr)
     return 
-def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=True, Yvircam=False, Us=False, H=False, J=False, Ks=False):
+def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=True, Yvircam=False, Us=False, H=False, J=False, Ks=False, corr=True):
     #UGRIZY(HSC)Ks
     from astropy.io import fits
     dn = os.path.dirname(path)
@@ -10928,7 +11438,7 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=Tru
             band_im = '-'.join(file.split('-')[1:3])
             print(band_im)    
             if band_im in bands:
-                sepCoadd_2(file,scale=1.)
+                sepCoadd_2(file,scale=1.,corr=corr)
                 image_name = (os.path.dirname(os.path.dirname(file)) + '/tmp/' + os.path.basename(file)[:-5]+'_data.fits').replace(',','-')
                 var_name = (os.path.dirname(os.path.dirname(file)) + '/tmp/' + os.path.basename(file)[:-5]+'_vari.fits').replace(',','-')
                 images.append(image_name)
@@ -10938,6 +11448,7 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=Tru
         if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages')):
             os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages'))
         MakeChi2image(images,varImages,name,clobber=True)
+        fits.setval(name, 'VAR_CORR', value = corr, comment = 'Rescaling factor for variance map')
         fits.setval(name, 'BANDS', value = ' - '.join(band_ims), comment = 'Band used for detection image')
         print('Detection image %s created!'%(name))
         for file in glob.glob(os.path.dirname(dn) + '/tmp/' + '-*'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-')[:-5]+'*.fits' ):
@@ -10946,28 +11457,147 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=Tru
         print('Detection image %s already exists!'%(name))
     return
 
+
+def get_depth_image(xpapoint):
+    from .getDepth import main_coupon
+    d = DS9(xpapoint)
+    filename = getfilename(d)
+    mag_zp, aper_size, N_aper = sys.argv[-3-5:-5]
+    if mag_zp.lower() == '-':
+        mag_zp = None
+    else:
+        mag_zp = float(mag_zp)
+    aper_size = float(aper_size)
+    N_aper = int(N_aper)
+    paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+    for filename in paths:
+        if mag_zp is None:
+            if 'HSC' in filename:
+                mag_zp = 27
+            if ('VIRCAM' in filename) | ('MegaCam' in filename):
+                mag_zp = 30
+        print(filename)
+        print('Zero point magnitude =', mag_zp)
+        main_coupon(fileInName=filename, fileOutName=None, ext=1, ext_seg=1, mag_zp=mag_zp, sub=None, aper_size=aper_size, verbose=True, plot=True, fileSegName=None, type="image", nomemmap=False, N_aper=N_aper)
+    return
+
+
+def PlotSpectraDataCube(xpapoint):
+    from astropy.io import fits
+    from scipy import stats, ndimage
+
+    d = DS9(xpapoint)
+    filename = getfilename(d)
+    dn = os.path.dirname(filename)
+    fn = os.path.basename(filename)
+    fits_im = fits.open(filename.split('[')[0])
+    header = fits_im[0].header
+    x_ = np.arange(1,header['NAXIS3']+1)
+    lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['CD3_3']
+    #x = np.linspace(header['CRVAL3'] - header['CRVAL3'] * header['CD3_3'], header['NAXIS3'])
+    reg = getregion(d,all=True)
+    smoothl, smoothx = np.array(sys.argv[-2:],dtype=float)
+    
+    spectra = ndimage.gaussian_filter(fits_im[0].data, sigma=(smoothl,smoothx,smoothx), order=0)
+    plt.figure()
+    for i in range(len(reg)):
+        x, y, r = reg[i].xc, reg[i].yc, reg[i].r
+        spectra_ = spectra[:,int(x),int(y)]
+        plt.plot(lambda_,spectra_,label='Selected spectra %i'%(i))
+#    x_sky, y_sky = np.random.randint(x -r ), np.random.randint(y-r) 
+#    sky = ndimage.gaussian_filter(fits_im[0].data, sigma=(smoothl,smoothx,smoothx), order=0)[:,x_sky, y_sky]
+#    plt.plot(lambda_,sky,label='Sky background')
+    #plt.plot(lambda_,spectra,label='Selected spectra')
+    plt.legend()
+    plt.xlabel('Wavelength [A]')
+    plt.ylabel('Flux')
+    plt.title('Spectra - spectral smoothing = %0.1f - spatial smoothing = %0.1f'%(smoothl, smoothx))
+    plt.show()    
+#    if stack: 
+#            im3d = getdata(xpapoint)
+#            im = np.mean(im3d,axis=(1,2))
+#            plt.plot(lambda_,im)
+#            plt.plot(lambda_,im-fits_im[0].data[:,int(x),int(y)])
+
+    return
+
+def StackDataDubeSpectrally(xpapoint):
+    from astropy.io import fits
+    from scipy import ndimage
+    smooth = float(sys.argv[-1])
+    d = DS9(xpapoint)
+    filename = getfilename(d)
+    fits_im = fits.open(filename.split('[')[0])
+    header = fits_im[0].header
+    x_ = np.arange(1,header['NAXIS3']+1)
+    lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['CD3_3']
+    #x = np.linspace(header['CRVAL3'] - header['CRVAL3'] * header['CD3_3'], header['NAXIS3'])
+    reg = getregion(d)
+    x, y, r = reg[0].xc, reg[0].yc, reg[0].r
+    spectra = ndimage.gaussian_filter(fits_im[0].data, sigma=(0, smooth, smooth), order=0)[:,int(x-2*r):int(x+2*r),int(y-2*r):int(y+2*r)]
+    #x_sky, y_sky = np.random.randint(x -r ), np.random.randint(y-r) 
+    #if sky_subtraction:
+    try:
+        inf, sup = np.array(sys.argv[-2].split('-'),dtype=int)
+    except ValueError:
+        mask = np.ones(len(lambda_),dtype=bool)
+    else:
+        mask = (lambda_>inf) & (lambda_<sup) 
+    print(mask)
+    fitswrite(np.sum(spectra[mask],axis=0),'/tmp/stacked.fits')
+    d.set('frame new')
+    d.set('tile yes')
+    d.set('file /tmp/stacked.fits')
+#    d.set_np2arr(spectra[mask])
+
+#    plt.figure(figsize=(8,8))
+#    plt.imshow(np.sum(spectra[mask],axis=0))
+#    plt.axis('equal')
+#    theta = np.arange(361)*(np.pi/180.)
+#    plt.plot(y+r*np.sin(theta), x+r*np.cos(theta), c = 'white')
+#    plt.colorbar()
+#    plt.show()
+    return
+
 def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     d = DS9(xpapoint)
     filename = getfilename(d)
+    dn = os.path.dirname(filename)
+    fn = os.path.basename(filename)
+
     from shutil import which
     if which('sex') is None:
         from tkinter import messagebox
         messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
-    params = np.array(sys.argv[-33:], dtype='<U256')#str)
+    params = np.array(sys.argv[-34:-1], dtype='<U256')#str)
     print(params)
-    DETECTION_IMAGE = sys.argv[-34]
+    DETECTION_IMAGE = sys.argv[-35]
     CATALOG_NAME, CATALOG_TYPE,  PARAMETERS_NAME,  DETECT_TYPE,  DETECT_MINAREA = params[:5]
     THRESH_TYPE,  DETECT_THRESH,  ANALYSIS_THRESH,  FILTER,  FILTER_NAME,  DEBLEND_NTHRESH = params[5:5+6]
     DEBLEND_MINCONT,  CLEAN,  CLEAN_PARAM,  MASK_TYPE,  WEIGHT_TYPE, WEIGHT_IMAGE,  PHOT_APERTURES = params[5+6:5+6+7]
     PHOT_AUTOPARAMS,  PHOT_PETROPARAMS,  PHOT_FLUXFRAC,  MAG_ZEROPOINT,  PIXEL_SCALE,  SEEING_FWHM = params[5+6+7:5+6+7+6]
     STARNNW_NAME,  BACK_TYPE,  BACK_SIZE,  BACK_FILTERSIZE,  BACKPHOTO_TYPE,  BACKPHOTO_THICK = params[5+6+7+6:5+6+7+6+6]
     BACK_FILTTHRESH,  CHECKIMAGE_TYPE, CHECKIMAGE_NAME = params[-3:]
+
+    try:
+        param_dir = resource_filename('DS9FireBall', 'Sextractor')
+    except:
+        param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
+
+
     
     param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
     params[0]= filename[:-5] + '_sex.fits' if  (params[0]=='-') or (params[0]=='.') else params[0]
     print(filename,params[0],filename + '_sex.fits')
     params[8]='Y' if  params[8]=='1' else 'N'
     params[12]='Y' if params[12]=='1' else 'N'
+
+    if CATALOG_NAME=='-':
+        CATALOG_NAME = os.path.join(os.path.dirname(dn),fn[:-5].replace(',','-')+'_cat.fits')
+        params[0] = CATALOG_NAME
+    params[2] = os.path.join(param_dir,params[2])
+    params[9] = os.path.join(param_dir,params[9])
+    params[24] = os.path.join(param_dir,params[24])
 
     if DETECTION_IMAGE == '-':
         DETECTION_IMAGE = None
@@ -11024,13 +11654,13 @@ def DS9SWARP(xpapoint):
     param_names =  ['BACK_DEFAULT', 'BACK_FILTERSIZE', 'BACK_FILTTHRESH', 'BACK_SIZE', 'BACK_TYPE', 'CELESTIAL_TYPE' ,'CENTER_TYPE', 'CENTER', 'COMBINE',  'COMBINE_BUFSIZE', 
                     'COMBINE_TYPE', 'COPY_KEYWORDS' ,'FSCALASTRO_TYPE', 'FSCALE_DEFAULT', 'GAIN_DEFAULT' ,'GAIN_KEYWORD' ,'IMAGEOUT_NAME' ,'IMAGE_SIZE', 'MEM_MAX' ,'OVERSAMPLING', 
                     'PIXEL_SCALE', 'PIXELSCALE_TYPE' ,'PROJECTION_ERR', 'PROJECTION_TYPE' ,'RESAMPLE', 'RESAMPLING_TYPE', 'SUBTRACT_BACK', 'WRITE_FILEINFO' ,'VERBOSE_TYPE', 'WRITE_XML', 'XML_NAME']
-    
     BACK_DEFAULT, BACK_FILTERSIZE, BACK_FILTTHRESH, BACK_SIZE, BACK_TYPE, CELESTIAL_TYPE, CENTER_TYPE, CENTERI, COMBINEI,    COMBINE_BUFSIZE, COMBINE_TYPE, COPY_KEYWORDS, FSCALASTRO_TYPE, FSCALE_DEFAULT, GAIN_DEFAULT, GAIN_KEYWORD, IMAGEOUT_NAME, IMAGE_SIZE, MEM_MAX, OVERSAMPLING, PIXEL_SCALE, PIXELSCALE_TYPE,PROJECTION_ERR, PROJECTION_TYPE, RESAMPLE, RESAMPLING_TYPE, SUBTRACT_BACK, WRITE_FILEINFO, VERBOSE_TYPE, WRITE_XML, XML_NAME = params
     
 
     d = DS9(xpapoint)
     filename = getfilename(d)
     paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+    params[19] = os.path.join(os.path.dirname(paths[0]),params[19])
 
     if which('swarp') is None:
         from tkinter import messagebox
@@ -11039,8 +11669,10 @@ def DS9SWARP(xpapoint):
         os.chdir(os.path.dirname(paths[0]))
         os.system("sleep 0.1")
         os.system("swarp -d >default.swarp")
-        print("swarp %s  -IMAGEOUT_NAME %s -c default.swarp "%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
-        os.system("swarp %s  -IMAGEOUT_NAME %s -c default.swarp "%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ) )#+ ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+        #print("swarp %s  -IMAGEOUT_NAME %s -c default.swarp "%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+        print("swarp %s  -c default.swarp -"%(' '.join(paths)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+        os.system("swarp %s  -c default.swarp -"%(' '.join(paths)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+        #os.system("swarp %s  -IMAGEOUT_NAME %s -c default.swarp "%(' '.join(paths), os.path.join(os.path.dirname(paths[0]), 'coadd.fits') ) )#+ ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
 #        os.system("swarp %s  -c default.swarp "%(' '.join(paths))+ ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) + ' -IMAGEOUT_NAME %s'%(os.path.join(os.path.dirname(paths[0]), 'coadd.fits')))
         os.system("rm default.swarp")
     return
@@ -11087,24 +11719,917 @@ def DS9Lephare(xpapoint):
     return
 
 
-def DS9PSFEX(xpapoint):
+
+
+def PlotFilters(filts,pathf):
+    #filts = ['cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb']
+    #pathf = '/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/filt/'
+    fig, ax1 = plt.subplots()#figsize=(12, 6))
+    #ax1.tick_params('y', colors='b')
+    for filt in filts:
+        print(os.path.basename(pathf)[:-3])
+        path = os.path.join(pathf,filt)
+        a=Table.read(path,format='ascii',data_start=1)
+        #print(a)
+        a = a[a['col2']/a['col2'].max()>0.01]
+        ax1.fill_between(a['col1'],a['col2']/a['col2'].max(),label=os.path.basename(path)[:-3],alpha=0.3)
+        #plt.show()
+    plt.xlabel('Wavelength [A]')
+    ax2 = ax1.twinx()
+    files  = []#glob.glob('/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/sed/GAL/COSMOS_SED/SB*0.sed')
+    for file in files:
+        a=Table.read(file,format='ascii')
+        plt.semilogy(a['col1'],a['col2'],alpha=1,label=os.path.basename(file),linewidth=2)
+    plt.xlim(2000,25000)
+    ax2.set_ylim(1e-4,3e-2)
+    ax1.set_ylim(ymin=0)
+    #ax2.set_ylim(1e-3,1e-2)
+    ax2.set_ylabel('SED Fluxes')
+    ax1.set_ylabel('Normalized transmission')
+    ax1.legend(loc='lower left')
+    ax2.legend()
+    plt.show()
+    return
+
+
+
+def PlotSED(file='/Users/Vincent/Nextcloud/Work/LePhare/work/lib_bin/LAB_GAL_COSMOS_MODIF.doc', pathlp = '/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509', filts=[]):
+    #filts = ['cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb']
+    #pathf = '/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/filt/'
+    files = np.genfromtxt(file, skip_header=10, dtype=str,skip_footer=5,usecols=(4))
+    type_ = np.genfromtxt(file, skip_header=1, max_rows=1,usecols=(1),dtype=str)
+    fig, ax1 = plt.subplots()#figsize=(12, 6))
+    #ax1.tick_params('y', colors='b')
+    #for filt in filts:
+        #print(os.path.basename(pathf)[:-3])
+        #path = os.path.join(pathf,filt)
+        #a=Table.read(path,format='ascii',data_start=1)
+        #print(a)
+        #a = a[a['col2']/a['col2'].max()>0.01]
+        #ax1.fill_between(a['col1'],a['col2']/a['col2'].max(),label=os.path.basename(path)[:-3],alpha=0.3)
+        #plt.show()
+    #plt.xlabel('Wavelength [A]')
+    #ax2 = ax1.twinx()
+    for file_ in files:
+        if type_=='G':
+            name = 'gal'
+            a=Table.read(os.path.join(pathlp,'sed/GAL', file_),format='ascii')
+        if type_=='S':
+            name = 'star'
+            a=Table.read(os.path.join(pathlp,'sed/STAR', file_),format='ascii')
+        if type_=='Q':
+            name = 'qso'
+            a=Table.read(os.path.join(pathlp,'sed/QSO', file_),format='ascii')
+        mask = (a['col1']>2000) & (a['col1']<25000)
+        ax1.semilogy(a['col1'][mask],a['col2'][mask]/a['col2'][mask].max(),alpha=1,label=os.path.basename(file_),linewidth=1.5)
+    #plt.xlim(2000,25000)
+    #ax2.set_ylim(1e-4,3e-2)
+    #ax1.set_ylim(ymin=0)
+    #ax2.set_ylim(1e-3,1e-2)
+    plt.tilte(name)
+    plt.ylabel('SED Fluxes')
+    plt.ylabel('Normalized transmission')
+    plt.legend(loc=(1,0),fontsize=5)
+    plt.savefig(file[:-4] )
+    plt.close()
+    #plt.show()
+    return
+
+
+def DS9LephareFilter(xpapoint):
     from shutil import which
    
-    params = sys.argv[-28:]
-    param_names =  ['ENTRY_PATH' ,  'BASIS_TYPE' ,  'BASIS_NUMBER' ,  'PSF_SAMPLING' ,  'PSF_ACCURACY' ,  'PSF_SIZE' ,  'CENTER_KEYS' ,  'PHOTFLUX_KEY' ,  'PHOTFLUXERR_KEY' ,  
-                    'PSFVAR_KEYS' ,  'PSFVAR_GROUPS' ,  'PSFVAR_DEGREES', 'SAMPLE_AUTOSELECT' ,  'SAMPLEVAR_TYPE' ,  'SAMPLE_FWHMRANGE' ,  'SAMPLE_VARIABILITY' ,  'SAMPLE_MINSN' ,  
-                    'SAMPLE_MAXELLIP' ,  'CHECKPLOT_DEV' ,  'CHECKPLOT_TYPE' ,  'CHECKPLOT_NAME', 'CHECKIMAGE_TYPE' ,  'CHECKIMAGE_NAME' ,  'PSF_DIR' ,'VERBOSE_TYPE' ,  'WRITE_XML' ,  'XML_NAME' ,  'NTHREADS']
+    params = sys.argv[-7:]
+    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'FILTER_LIST' ,  'TRANS_TYPE' ,  'FILTER_CALIB' ,  'FILTER_FILE']
     param_dict = {}
     for key, val in zip(param_names, params):
         param_dict[key] = val
     print(param_dict)
+    if param_dict['PARAM_FILE'] == '-':
+        param_dict['PARAM_FILE'] = ''
+    else:
+        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
+
+    for key in list(param_dict.keys())[3:]:
+        if str(param_dict[key]) == '-':
+            del param_dict[key]
+            
+    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
+
+
+    #d = DS9(xpapoint)
+    filter_  = param_dict['LEPHARE_DIR'] + '/source/filter'
+    if which(filter_) is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+    else:
+#        print(os.path.dirname(paths[0]))
+#        print(os.getcwd())
+#        os.chdir(os.path.dirname(paths[0]))
+#        print(os.getcwd())
+#        os.system("sleep 0.1")
+        print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3:]]) ))
+        os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3:]]) ))
+        #os.system("psfex %s -%s -c default.psfex"%(' '.join(paths),  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[1:]]) ))
+        os.system("sleep 1")
+        try:
+            PlotFilters(filts=param_dict['FILTER_LIST'].split(','),pathf=param_dict['LEPHARE_DIR']+'/filt/')
+        except KeyError:
+            pass
+
+    return
+
+def DS9LephareMagGal(xpapoint):
+    from shutil import which
+   
+    params = sys.argv[-20:]
+    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'STAR_c' ,  'QSO_c' ,  'GALAXY_c' ,  'STAR_LIB_IN',
+                    'STAR_LIB_OUT' ,  'QSO_LIB_IN' ,'QSO_LIB_OUT' ,  'GAL_LIB_IN' ,  'GAL_LIB_OUT' , 'MAGTYPE' ,  'Z_STEP',
+                    'COSMOLOGY' ,  'MOD_EXTINC' ,'EXTINC_LAW' ,  'EB_V' ,  'EM_LINES' , 'Z_FORM']
+    param_dict = {}
+    for key, val in zip(param_names, params):
+        param_dict[key] = val
+    print(param_dict)
+    if param_dict['PARAM_FILE'] == '-':
+        param_dict['PARAM_FILE'] = ''
+    else:
+        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
+
+
+    for key in list(param_dict.keys())[6:]:
+        if str(param_dict[key]) == '-':
+            del param_dict[key]
+            
+            
+    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
+
+
+    #d = DS9(xpapoint)
+    filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_star'
+    if which(filter_) is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+    else:
+#        print(os.path.dirname(paths[0]))
+#        print(os.getcwd())
+#        os.chdir(os.path.dirname(paths[0]))
+#        print(os.getcwd())
+#        os.system("sleep 0.1")
+        if bool(int(param_dict['STAR_c'])):
+            filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_star'
+            print("%s %s -t S -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+            os.system("%s %s -t S -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+
+        if bool(int(param_dict['QSO_c'])):
+            filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_gal'
+            print("%s %s -t Q -%s -MOD_EXTINC 0,1000 -EB_V 0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4 -EXTINC_LAW  SMC_prevot.dat"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+            os.system("%s %s -t Q -%s -MOD_EXTINC 0,1000 -EB_V 0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4 -EXTINC_LAW  SMC_prevot.dat"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+        if bool(int(param_dict['GALAXY_c'])):
+            filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_gal'
+            print("%s %s -t G -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+            os.system("%s %s -t G -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+    
+    return
+
+
+
+def DS9LephareLF(xpapoint):
+    import time
+    from shutil import which
+   
+    params = sys.argv[-21:]
+    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'MF',  'LF_ESTI' ,  'LF_INPUT' ,  'LF_OUTPUT' ,  'ZPHOTLIB', 'LF_AREA' ,  'LF_WEIGHT' ,  'USE_WEIGHT',
+                    'LF_ZBIN' ,  'LF_NBSTEP' ,'LF_RM_BIAS' ,  'LF_SELECT_IN' ,  'LF_SELECT_RG' ,  'STY_DCHI2' ,'STY_FIX_ALPHA' ,  'STY_FIX_MSTAR' ,  'SWML_CONSTRAIN']
+    param_dict = {}
+    for key, val in zip(param_names, params):
+        param_dict[key] = val
+    print(param_dict)
+    if param_dict['PARAM_FILE'] == '-':
+        param_dict['PARAM_FILE'] = ''
+    else:
+        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
+
+
+    for key in list(param_dict.keys())[3:]:
+        if str(param_dict[key]) == '-':
+            del param_dict[key]
+            
+            
+    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
+
+
+    #d = DS9(xpapoint)
+    filter_  = param_dict['LEPHARE_DIR'] + '/source/LF'
+    if which(filter_) is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+    else:
+        print("%s -t G  %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
+        os.system("%s -t G  %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
+        #os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
+    return
+
+
+def PlotFL_from_ALF(xpapoint, general_path = sys.argv[-1]):
+    """
+    """
+    from decimal import Decimal
+
+    a_FUV = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
+    phi_FUV = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
+    M_FUV = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
+
+    a_U = -np.array([1.42,1.22,1.18,1.15,1.25,1.35,1.39,1.43,1.43])
+    phi_U = 1e-3 * np.array([3.6, 5.6, 5.1, 5.3, 4.7, 3, 2.2, 2.2, 2.2])
+    M_U = - np.array([19.87, 20.04, 20.13, 20.44, 20.84, 21.24, 21.677, 21.677, 21.677])
+    
+    info = glob.glob(general_path + '/*.info')[0]
+    zs = np.genfromtxt(info, skip_header=15, max_rows=9,usecols=(1,2),delimiter='  ')#, unpack=True)
+    paths = glob.glob(general_path + '/*.dat')#[:1]
+    paths.sort()
+    paths.sort(key = lambda s: len(s))
+    fig, axes = plt.subplots(int(len(zs)/3),3, figsize=(15,10),sharex=True, sharey=True)
+    lx = np.linspace(-13,-24,100)
+    for i, ax in enumerate(axes.ravel()[:len(zs)+1]):
+        coeffs = [phi_U[i],a_U[i],M_U[i]]
+        ax.plot(lx,(schechter_vincent(lx,coeffs)),c='grey',lw=1,label='Moutard: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffs ]))
+        fitLF(path = paths[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax)
+        ax.set_title('z = %0.2f - %0.2f'%(zs[i][0],zs[i][1]), fontsize=10)
+        
+#    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    #plt.xlabel('Mabs_{U}')
+    #plt.ylabel('log N (mag^{-1} MPC^{-3}')
+    fig=axes[0,0].figure
+    fig.text(0.5,0.04, 'Mabs_{U}', ha="center", va="center")
+    fig.text(0.05,0.5, 'log N (mag^{-1} MPC^{-3}', ha="center", va="center", rotation=90)
+
+    plt.savefig(os.path.join(general_path,'Luminosity'))
+    plt.show()
+    return
+
+def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat',mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=None) : 
+    from astropy.io import ascii
+    from pyswarm import pso
+    from decimal import Decimal
+    LF_rod0 = ascii.read(path)
+    LIRrod_0 = LF_rod0['col1']
+    phirod_0 = LF_rod0['col2']
+    errmrod_0 = LF_rod0['col3']
+    errprod_0 = LF_rod0['col4']
+    mask = LIRrod_0<mag_lim
+    coeffrod_0 , chirod_0 = pso(likelihood,do,up,args=[LIRrod_0[mask],phirod_0[mask],errmrod_0[mask]],maxiter=500)
+    lx = np.linspace(-13,-24,100)
+    if ax is None:
+        fig = plt.figure()#figsize=(12,4.5))
+        ax = fig.add_subplot(111)
+    ax.plot(lx,(schechter_vincent(lx,coeffrod_0)),c='blue',lw=2,label='PSO: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffrod_0 ]))
+    #ax.plot(lx,(schechter_vincent(lx,[4e-3,-1.4,-19])),c='grey',lw=1,label='Literature: Pi=0.004,a=-1.4,M=-19')
+    ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='+',lw=3,c='orange',label='LF UV')
+    ax.plot(LIRrod_0[mask],phirod_0[mask],'o',lw=3,c='black',label='Fit mask')
+    ax.set_xlim((-14,-25));ax.set_ylim((-6,0))
+    ax.legend(loc='lower left',fontsize=6)
+    
+    return coeffrod_0 , chirod_0
+
+
+
+
+
+def res(P,x,y,err):
+    ps,a,ls = P
+    return (y-schechter_vincent(x,P))/(err)
+
+
+
+def schechter_vincent(x,P=[3.6,-1.4,19.8],e=2.718281828):
+    Phi,alpha,M = P
+    #M, x = x, M
+    #return 0.4 * np.log(10) * Phi * 10 ** (0.4*(x-M)*(alpha+1)) * np.exp(-10 ** (0.4*(x-M))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls))
+    return np.log10(0.4 * np.log(10) * Phi * 10 ** (0.4*(M-x)*(alpha+1)) *(e**(-pow(10,0.4*(M-x))))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls)))
+
+def schechter_vincent_(x,Phi,alpha,M):
+    #Phi,alpha,M = P
+    #M, x = x, M
+    #return 0.4 * np.log(10) * Phi * 10 ** (0.4*(x-M)*(alpha+1)) * np.exp(-10 ** (0.4*(x-M))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls))
+    return np.log10(0.4 * np.log(10) * Phi * 10 ** (0.4*(M-x)*(alpha+1)) *(2.718281828**(-pow(10,0.4*(M-x))))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls)))
+
+
+def likelihood(P,x,y,err):
+    ps,a,m = P
+    return sum(res(P,x,y,err)**2)
+
+
+def DS9LephareLimits(xpapoint):
+    from shutil import which
+   
+    params = sys.argv[-14:]
+    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'LIMITS_INPUT',  'LIMITS_OUTPUT' ,  'ZPHOTLIB', 'LF_MABS_REF' ,  'LF_MAPP_SEL' ,  'LF_MAPP_CUT',
+                    'LIMITS_ZBIN' ,  'MF_METHOD' ,'MF_MODEL' ,  'MF_M2L' ,  'MF_CONVERS']
+    param_dict = {}
+    for key, val in zip(param_names, params):
+        param_dict[key] = val
+    print(param_dict)
+    if param_dict['PARAM_FILE'] == '-':
+        param_dict['PARAM_FILE'] = ''
+    else:
+        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
+
+
+    for key in list(param_dict.keys())[3:]:
+        if str(param_dict[key]) == '-':
+            del param_dict[key]
+            
+            
+    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
+
+
+    #d = DS9(xpapoint)
+    filter_  = param_dict['LEPHARE_DIR'] + '/source/limits'
+    if which(filter_) is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+    else:
+
+        print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
+        os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
+
+    return
+
+
+
+
+def DivideCatalog(path, tmpFOlder='/tmp',id_ = 'ID'):
+    import multiprocessing
+    import astropy
+    n=multiprocessing.cpu_count()+1
+    #path = '/Users/Vincent/Documents/Work/sextractorCatalogs/subcats/1/TotalMergedCatalog_9813_corr_ugrizy_Laigle_Moutard_only_mag.in'
+    try:
+        cat = Table.read(path)
+    except astropy.io.registry.IORegistryError:
+        cat = Table.read(path, format='ascii')
+
+    #cat = cat[cat['ZSPEC']>0]
+    #cat.write('/Users/Vincent/Nextcloud/Work/These/HSC/Catalogs/sub_cat/TotalMergedCatalog_9813_SNR5_complete_clean_only_mag_v3_spectro.in',format='ascii')
+#    a = np.linspace(cat['RA'].min(),cat['RA'].max(),n)
+    
+    a = np.linspace(cat[id_].min(),cat[id_].max(),n)
+    for i, ra in enumerate(a[:-1]):
+        print(i)
+        if ra==a.max():
+            
+            tab = cat[cat[id_]>ra]
+        else:
+            tab = cat[(cat[id_]<=a[i+1]) & (cat[id_]>a[i])]
+        tab.rename_column(id_,'#%s'%(id_))
+        tab.write(os.path.join(tmpFOlder, os.path.basename(path).split('.')[0] + '_%i.in'%(i)),format='ascii', overwrite=True)
+    return
+
+
+
+
+def add_filters(fieldsname, filts, table):
+    dep_on_field = [ field for field in fieldsname if '()' in field  ]  
+    new_fieldsname = fieldsname
+    for field in dep_on_field:
+        print(field)
+        index = new_fieldsname.index(field);print(index)
+        c, d = new_fieldsname[:index], new_fieldsname[index+1:]
+        fieldfilt = [filt+'_'+field[:-2] for filt in filts]
+        print(fieldfilt)
+        new_fieldsname = c + fieldfilt + d
+    if 'STRING_INPUT' in new_fieldsname:
+        index = new_fieldsname.index('STRING_INPUT');print(index)
+        c, d = new_fieldsname[:index], new_fieldsname[index+1:]
+        new_fieldsname = c + ['STRING_INPUT_%i'%(i) for i in range(len(table.colnames)-len(new_fieldsname)+1)] + d
+    return new_fieldsname, dep_on_field
+
+
+ 
+def ComputeTotalMagnitude2(cat, k_band=False, all_bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']):
+    #plt.scatter(cat['MAG_AUTO_HSC_G'],cat['MAG_AUTO_HSC_R'])
+    from astropy.table import Column, MaskedColumn
+    
+    print('Compute weight')
+    weight_U =  1 / (np.square(cat['FLUXERR_ISO_MegaCam_u']) + np.square(cat['FLUXERR_AUTO_MegaCam_u'])) 
+    weight_G =  1 / (np.square(cat['FLUXERR_ISO_HSC_G']) + np.square(cat['FLUXERR_AUTO_HSC_G'])) 
+    weight_R =  1 / (np.square(cat['FLUXERR_ISO_HSC_R']) + np.square(cat['FLUXERR_AUTO_HSC_R'])) 
+    weight_I =  1 / (np.square(cat['FLUXERR_ISO_HSC_I']) + np.square(cat['FLUXERR_AUTO_HSC_I'])) 
+    weight_Ks =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_Ks']) + np.square(cat['FLUXERR_AUTO_VIRCAM_Ks'])) 
+
+    weight_U[ abs(cat['MAG_AUTO_MegaCam_u'] - cat['MAG_ISO_MegaCam_u'])>20 ] = 0
+    weight_G[ abs(cat['MAG_AUTO_HSC_G'] - cat['MAG_ISO_HSC_G'])>20 ] = 0
+    weight_R[ abs(cat['MAG_AUTO_HSC_R'] - cat['MAG_ISO_HSC_R'])>20 ] = 0
+    weight_I[ abs(cat['MAG_AUTO_HSC_I'] - cat['MAG_ISO_HSC_I'])>20 ] = 0
+    weight_Ks[ abs(cat['MAG_AUTO_VIRCAM_Ks'] - cat['MAG_ISO_VIRCAM_Ks'])>20 ] = 0
+#    if k_band is False:
+#        weight_Ks = np.zeros(len(cat))
+
+    cat['WEIGHT'] = weight_U + weight_G + weight_R + weight_I + weight_Ks
+
+    cat['weight_U'] =   weight_U/cat['WEIGHT'] 
+    cat['weight_G'] =   weight_G/cat['WEIGHT']  
+    cat['weight_R'] =   weight_R/cat['WEIGHT']  
+    cat['weight_I'] =   weight_I/cat['WEIGHT']  
+    cat['weight_Ks'] =   weight_Ks/cat['WEIGHT']  
+    
+    print('Compute scaling factor')  
+    
+    cat['SCALING_FACTOR'] = 0.0
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_MegaCam_u'] - cat['MAG_ISO_MegaCam_u']) * cat['weight_U']
+    cat['SCALING_FACTOR'] +=  (cat['MAG_AUTO_HSC_G'] - cat['MAG_ISO_HSC_G']) * cat['weight_G']
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_R'] - cat['MAG_ISO_HSC_R']) * cat['weight_R']
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_I'] - cat['MAG_ISO_HSC_I']) * cat['weight_I']
+
+    #cat['SCALING_FACTOR_ks'] = cat['SCALING_FACTOR'].copy()
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_Ks'] - cat['MAG_ISO_VIRCAM_Ks']) * cat['weight_Ks'] 
+    
+    cat['SCALING_FACTOR'][cat['WEIGHT']==0] = 0#; cat['SCALING_FACTOR_ks'][cat['WEIGHT']==0] = 0
+    print('Compute total factor')
+    #print('% -of object with positive coorection = %0.1f \%'%(100*len(cat['SCALING_FACTOR'][cat['SCALING_FACTOR']>0])/len(cat['SCALING_FACTOR'])))
+    #cat['SCALING_FACTOR'][cat['SCALING_FACTOR']>0] = 0     
+    for band in all_bands:  
+        band = band.replace('-','_')
+#        cat['TOTAL_MAG_' + band] = np.array(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR'],dtype='float16')
+#        cat['MAGERR_ISO_' + band] = np.array(cat['MAGERR_ISO_' + band],dtype='float16')
+        #cat.remove_column('TOTAL_MAG_' + band)
+        #new_col_ks =MaskedColumn(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR_ks'], name='TOTAL_MAG_ks_' + band)
+        new_col=MaskedColumn(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR'], name='TOTAL_MAG_' + band)
+        cat.add_column(new_col) 
+        #cat.add_column(new_col_ks) 
+        a = np.array(cat['MAGERR_ISO_' + band],dtype='float16') 
+        cat.remove_column('MAGERR_ISO_' + band)
+        cat.add_column(MaskedColumn(a, name='MAGERR_ISO_' + band)) 
+
+#        cat['TOTAL_MAG_' + band] = np.around(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR'],8)
+#        cat['MAGERR_ISO_' + band] = np.around(cat['MAGERR_ISO_' + band],8)
+        cat['TOTAL_MAG_' + band][(cat['TOTAL_MAG_' + band]>50) | (cat['TOTAL_MAG_' + band]<-50) | (cat['TOTAL_MAG_' + band]<-50)] = -99
+        #cat['TOTAL_MAG_ks_' + band][(cat['TOTAL_MAG_ks_' + band]>50) | (cat['TOTAL_MAG_ks_' + band]<-50) | (cat['TOTAL_MAG_ks_' + band]<-50)] = -99
+        cat['MAGERR_ISO_' + band][cat['MAGERR_ISO_' + band]==99] = -99
+        cat['MAGERR_ISO_' + band][cat['MAGERR_ISO_' + band]>1000] = 1000
+    return
+
+
+
+
+
+
+def CleanCat(cat, bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']):
+    from astropy.table import Column, MaskedColumn, Table
+    cols2del = ['FLUX_ISO',
+                 'FLUXERR_ISO',
+                 'FLUX_AUTO',
+                 'FLUXERR_AUTO',
+                 'MAG_AUTO',
+                 'MAGERR_AUTO',
+                 'MAG_ISO',
+                 'MAG_APER',
+                 'MAGERR_APER',                 
+#                 'MU_MAX',
+                 'FLUX_APER_12pix',
+                 'FLUXERR_APER_12pix',
+                 'FLUX_APER_18pix',
+                 'FLUXERR_APER_18pix',
+                 'FLUX_APER_24pix',
+                 'FLUXERR_APER_24pix',
+                 'FLUX_RADIUS_0.25',
+                 'FLUX_RADIUS_0.5',
+                 'FLUX_RADIUS_0.75']
+
+    col2del2 =   ['NUMBER',
+                 'X_IMAGE',
+                 'Y_IMAGE',
+                 'A_WORLD',
+                 'B_WORLD',
+                 'KRON_RADIUS',
+                 'THETA_WORLD',
+                 'THETA_IMAGE',
+                 'BACKGROUND_MegaCam_u',
+                 'THRESHOLD',
+                 'A_IMAGE',
+                 'B_IMAGE',
+                 'FWHM_IMAGE',
+                 'FLAGS_MegaCam_u',
+                 'CLASS_STAR_MegaCam_u',
+                 'ELONGATION',
+                 'ELLIPTICITY',
+                 'TRACT',
+                 'PATCH',
+                 'BACKGROUND_HSC_Y',
+                 'FLAGS_HSC_Y',
+                 'CLASS_STAR_HSC_Y',
+                 'BACKGROUND_HSC_R',
+                 'FLAGS_HSC_R',
+                 'CLASS_STAR_HSC_R',
+                 'BACKGROUND_VIRCAM_J',
+                 'FLAGS_VIRCAM_J',
+                 'CLASS_STAR_VIRCAM_J',
+                 'BACKGROUND_HSC_I',
+                 'FLAGS_HSC_I',
+                 'CLASS_STAR_HSC_I',
+                 'BACKGROUND_HSC_G',
+                 'FLAGS_HSC_G',
+                 'CLASS_STAR_HSC_G',
+                 'BACKGROUND_HSC_Z',
+                 'FLAGS_HSC_Z',
+                 'CLASS_STAR_HSC_Z',
+                 'BACKGROUND_VIRCAM_Y',
+                 'FLAGS_VIRCAM_Y',
+                 'CLASS_STAR_VIRCAM_Y',
+                 'BACKGROUND_VIRCAM_H',
+                 'FLAGS_VIRCAM_H',
+                 'CLASS_STAR_VIRCAM_H',
+                 'BACKGROUND_VIRCAM_Ks',
+                 'FLAGS_VIRCAM_Ks',
+                 'CLASS_STAR_VIRCAM_Ks',
+                 'BACKGROUND_MegaCam_uS',
+                 'FLAGS_MegaCam_uS',
+                 'CLASS_STAR_MegaCam_uS']
+    for band in bands:
+        band = band.replace('-','_')
+        for col in cols2del:
+            try:
+                cat.remove_column(col + '_%s'%(band))
+            except KeyError:
+                pass
+    for col in col2del2:
+        try:    
+            cat.remove_column(col)
+        except KeyError:
+            pass
+    try:
+        cat.add_column(Column(np.ones(len(cat))*2**len(bands)-1, name='CONTEXT',dtype=int), index=23) 
+    except ValueError:
+        pass
+    try:
+        cat.add_column(Column(np.ones(len(cat))*-99, name='ZSPEC'), index=24) 
+    except ValueError:
+        pass
+    try:
+        cat.add_column(Column(np.arange(len(cat)), name='#ID'), index=25) 
+    except ValueError:
+        pass
+    #cat['CONTEXT'] = 1023
+    #cat['ZSPEC'] = -99
+    cat_2 =   cat['#ID',
+                 'TOTAL_MAG_MegaCam_u',
+                 'TOTAL_MAG_MegaCam_uS',
+                 'TOTAL_MAG_HSC_G',
+                 'TOTAL_MAG_HSC_R',
+                 'TOTAL_MAG_HSC_I',
+                 'TOTAL_MAG_HSC_Z',
+                 'TOTAL_MAG_HSC_Y',
+                 'TOTAL_MAG_VIRCAM_Y',
+                 'TOTAL_MAG_VIRCAM_J',
+                 'TOTAL_MAG_VIRCAM_H',
+                 'TOTAL_MAG_VIRCAM_Ks',
+                 'MAGERR_ISO_MegaCam_u',
+                 'MAGERR_ISO_MegaCam_uS',
+                 'MAGERR_ISO_HSC_G',
+                 'MAGERR_ISO_HSC_R',
+                 'MAGERR_ISO_HSC_I',
+                 'MAGERR_ISO_HSC_Z',
+                 'MAGERR_ISO_HSC_Y',
+                 'MAGERR_ISO_VIRCAM_Y',
+                 'MAGERR_ISO_VIRCAM_J',
+                 'MAGERR_ISO_VIRCAM_H',
+                 'MAGERR_ISO_VIRCAM_Ks',
+                 'CONTEXT',
+                 'ZSPEC',
+                 'RA',
+                 'DEC',
+                 'WEIGHT',
+                 'SCALING_FACTOR']
+#    cat_2.rename_column('RA','alpha')
+#    cat_2.rename_column('DEC','delta')
+#    cat_2['fl'] = 0
+#    cat_2['mask'] = 0
+    return cat_2
+
+
+def DS9FormatCatalogForLephare(path, all_bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']):
+    import astropy
+    from astropy.table import Table
+    from astropy.table import Column
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord    #path = sys.argv[3]
+    try:
+        table = Table.read(path)
+    except astropy.io.registry.IORegistryError:
+        table = Table.read(path, format='ascii') 
+    dict_format = {}
+    for band in all_bands:
+         band = band.replace('-','_')
+         dict_format['TOTAL_MAG_' + band] = '%0.8e'
+         dict_format['MAGERR_ISO_' + band] ='%0.8e'
+    
+    ComputeTotalMagnitude2(table, all_bands=all_bands)  
+    table.write(path[:-5]+'_mag.fits',overwrite=True)
+    #plot_comptages_correction(path=path[:-5]+'_%s_mag.fits'%(ks))
+
+        
+    table_2 = CleanCat(table)
+    #cat_2 = RenameCols(cat_2)
+    name = path[:-5]+'_only_mag.in'
+    zspec = Table.read('/Users/Vincent/Documents/Work/Catalogs/spectro/HSC_ZSPEC_PHOT.fits')
+    zspec = zspec[zspec['PHOTO']==1]
+#    for ra, dec, z in zip(zspec['RA'],zspec['DEC'],zspec['zspec']):
+#        print(ra,dec,z)
+
+    c = SkyCoord(ra=zspec['RA']*u.degree, dec=zspec['DEC']*u.degree)
+    catalog = SkyCoord(ra=table_2['RA']*u.degree, dec=table_2['DEC']*u.degree) 
+    idx, d2d, d3d = c.match_to_catalog_sky(catalog) 
+    print('TEST: %0.1f = %0.1f +/- %0.1f'%(zspec[0]['RA']*3600,table_2[idx[0]]['RA']*3600, float(d2d[0].arcsec)))
+    zspec['zspec'][300*np.array(d2d)>1] = -99.0
+    table_2['ZSPEC'][idx] = zspec['zspec']
+    
+    
+#    astropy.io.ascii.write(table_2, path[:-5]+'_%s.in'%(ks), formats=dict_format,overwrite=True)
+    #table_2.remove_column('MAGERR_ISO_FUV')
+    table_2.add_column(Column(name='TOTAL_MAG_NUV', data=np.ones(len(table_2))*-99.0), index=12) 
+    table_2.add_column(Column(name='MAGERR_ISO_NUV', data=np.ones(len(table_2))*-99.0), index=24) 
+
+    table_2.add_column(Column(name='TOTAL_MAG_FUV', data=np.ones(len(table_2))*-99.0), index=13) 
+    table_2.add_column(Column(name='MAGERR_ISO_FUV', data=np.ones(len(table_2))*-99.0), index=26) 
+    table_2['CONTEXT'] =2**np.sum(['TOTAL_MAG_' in name for name in table_2.colnames])-1
+    astropy.io.ascii.write(table_2, name, formats=dict_format,overwrite=True)
+    return
+
+ 
+    
+def plot_comptages_correction(path,bands=['MegaCam-u','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks'],dm=0.1):
+
+    from fpdf import FPDF
+    pdf = FPDF()
+    # imagelist is the list with all image filenames
+    cat = Table.read(path)
+    names=['/tmp/%s.png'%(band.replace('-','_')) for band in bands] 
+    for band in bands:
+        band = band.replace('-','_')
+        plt.figure(figsize=(8,8))
+        mask =(cat['MAG_AUTO_'+band] < 50)
+        subcat = cat[mask]
+        density_correction = len(subcat)/len(cat) * (cat['RA'].max()-cat['RA'].min()) * (cat['DEC'].max()-cat['DEC'].min())
+#        plt.hist(subcat['TOTAL_MAG_'+band],bins=np.arange(23,27.5,dm),alpha=0.3, label='TOTAL',log=True, weights=np.ones(len(subcat))*density_correction)
+#        plt.hist(subcat['MAG_ISO_'+band],bins=np.arange(23,27.5,dm),alpha=0.3, label='ISO',log=True, weights=np.ones(len(subcat))*density_correction)
+#        plt.hist(subcat['MAG_AUTO_'+band],bins=np.arange(23,27.5,dm),alpha=0.3, label='AUTO',log=True, weights=np.ones(len(subcat))*density_correction)
+
+        val1, bins = np.histogram(subcat['TOTAL_MAG_'+band],bins=np.arange(23,27.5,dm), weights=np.ones(len(subcat))*density_correction)
+        val2, bins = np.histogram(subcat['MAG_ISO_'+band],bins=np.arange(23,27.5,dm), weights=np.ones(len(subcat))*density_correction)
+        val3, bins = np.histogram(subcat['MAG_AUTO_'+band],bins=np.arange(23,27.5,dm), weights=np.ones(len(subcat))*density_correction)
+        val4, bins = np.histogram(subcat['TOTAL_MAG_ks_'+band],bins=np.arange(23,27.5,dm), weights=np.ones(len(subcat))*density_correction)
+        binc = (bins[:-1] + bins[1:])/2
+        plt.plot(binc, np.log10(val1), label='TOTAL')
+        plt.plot(binc, np.log10(val2), label='ISO')
+        plt.plot(binc, np.log10(val3), label='AUTO')
+        plt.plot(binc, np.log10(val4), label='TOTAL_ks')
+
+        plt.title(band)
+        plt.xlabel('Magnitude')
+        plt.xlabel('Number of objects per square degree')
+        plt.legend()
+        plt.savefig('/tmp/%s.png'%(band))
+        plt.show()
+    for image in names:
+        pdf.add_page()
+        pdf.image(image)#,x,y,w,h)
+    pdf.output(path[:-5] + '_comptage_all_with_out_ks.pdf', "F")
+    return
+
+
+
+def DS9LephareZphot(xpapoint, tmpFolder='/tmp'):
+    from astropy.table import Table, vstack
+    from shutil import which
+    import subprocess
+    import multiprocessing
+   
+    params = sys.argv[-6:]
+    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'ZPHOTLIB' ,  'CAT_IN' ,  'CAT_OUT' ]
+    param_dict = {}
+    for key, val in zip(param_names, params):
+        param_dict[key] = val
+    print(param_dict)
+    if param_dict['PARAM_FILE'] == '-':
+        param_dict['PARAM_FILE'] = ''
+    else:
+        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
+
+
+    for key in list(param_dict.keys())[6:]:
+        if str(param_dict[key]) == '-':
+            del param_dict[key]
+    if os.stat(param_dict['CAT_IN']).st_size > 10000000:
+        DivideCatalog(param_dict['CAT_IN'], tmpFOlder=tmpFolder)
+    
+        
+
+    filter_  = param_dict['LEPHARE_DIR'] + '/source/zphota'
+    if which(filter_) is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+    else:
+        if os.stat(param_dict['CAT_IN']).st_size > 10000000:
+            files = glob.glob(os.path.join(tmpFolder,os.path.basename(param_dict['CAT_IN']).split('.')[0]+'*.in'))
+            files.sort()
+            output_files = []
+            jobs = []
+            for i, file in enumerate(files):
+                output_file = file.split('.')[0] + '_zphot.out'
+                output_files.append(output_file)
+                #print("'\n%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s '%(file, output_file)) 
+                p = multiprocessing.Process(target=RunZphot, args=(filter_, param_dict, file, output_file,i,))
+                jobs.append(p)
+                p.start()
+            for job in jobs:
+                job.join()
+                subprocess.Popen("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_OUT ' + output_file,shell=True)
+            for path in output_files:
+                print(path)
+                new_table, filts, dep_on_field  = readLPtables(path)
+    
+            cats = [Table.read(path.split('.')[0]+'_col.out', format='ascii') for path in output_files]
+            final_cat = vstack(cats)
+            #final_cat.rename_col('IDENT','#IDENT')
+            #Table.write(final_cat,os.path.dirname(path)+'/Merged_Lephare_output_cat_lp.out', format='ascii')
+            Table.write(final_cat,param_dict['CAT_OUT'].split('.')[0]+'.fits',overwrite=True)
+            Table.write(final_cat,param_dict['CAT_OUT'] , format='ascii',overwrite=True)
+            open(os.path.dirname(param_dict['CAT_OUT']) + '/zphot_param.txt', "w").writelines([l for l in open(output_files[0]).readlines() if "#" in l])
+
+        else:
+            for key in list(param_dict.keys())[3:]:
+                if str(param_dict[key]) == '-':
+                    del param_dict[key]
+            print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3:]]) ))
+            os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3:]]) ))
+            print(param_dict['CAT_OUT'])
+            new_table, filts, dep_on_field  = readLPtables(param_dict['CAT_OUT'])
+            open(os.path.dirname(param_dict['CAT_OUT']) + '/zphot_param.txt', "w").writelines([l for l in open(param_dict['CAT_OUT']).readlines() if "#" in l])
+
+            #new_table.rename_col('IDENT','#IDENT')
+
+    return
+
+
+
+def RunZphot(filter_, param_dict, file, output_file,i):
+    #print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > /tmp/test_zphot_%i.log'%(file, output_file,i))
+    os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > /tmp/test_zphot_%i.log'%(file, output_file,i))
+    return
+
+
+
+def readLPtables(path = '/Users/Vincent/Nextcloud/Work/LePhare/zphot_BC03_phys.out'):
+    """
+    """
+    a = Table.read(path,format='ascii',data_start=1)
+    #a.remove_columns('col59')
+    new_table = a.copy()
+    comment = [info for info in a.meta['comments']]
+    filts = comment[10].split(' ')[3:]
+    comment = ' '.join(comment)    
+    b, comment = comment.split('IDEN')
+    comment, c = comment.split(' , #')
+    fields = [field for field in comment.split(' , ')]
+    #fieldsnumber = [fn.split(' ')[-1] for fn in fields]
+    fieldsname = [fn.split(' ')[0] for fn in fields]
+    new_fieldsname, dep_on_field = add_filters(fieldsname, filts,a)
+    for i, field in enumerate(new_fieldsname):
+        print(i+1,field)
+        new_table.rename_column('col%i'%(int(i+1)), field)
+#    for i, field in zip(fieldsnumber, fieldsname):
+#        new_table.rename_column('col%i'%(int(i)), field)
+    new_table.rename_column('T','##IDENT')
+    name, ext = os.path.basename(path).split('.')
+    #new_table.meta = {}
+    new_table.write(os.path.dirname(path) + '/' +  name + '_col.' + ext, format='ascii', overwrite=True,comment=False)
+    return   new_table, filts, dep_on_field 
+
+
+def DS9LephareSedToLib(xpapoint):
+    import time
+    from shutil import which
+   
+    params = sys.argv[-14:]
+    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'STAR_c' ,  'QSO_c' ,  'GALAXY_c' ,  'STAR_SED',
+                    'STAR_LIB' ,  'QSO_SED' ,'QSO_LIB' ,  'GAL_SED' ,  'GAL_LIB' , 'SEL_AGE' ,  'AGE_RANGE' ]
+    param_dict = {}
+    for key, val in zip(param_names, params):
+        param_dict[key] = val
+    print(param_dict)
+    if param_dict['PARAM_FILE'] == '-':
+        param_dict['PARAM_FILE'] = ''
+    else:
+        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
+
+
+    for key in list(param_dict.keys())[6:]:
+        if str(param_dict[key]) == '-':
+            del param_dict[key]
+            
+            
+    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
+
+
+    #d = DS9(xpapoint)
+    filter_  = param_dict['LEPHARE_DIR'] + '/source/sedtolib'
+    if which(filter_) is None:
+        from tkinter import messagebox
+        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+    else:
+#        print(os.path.dirname(paths[0]))
+#        print(os.getcwd())
+#        os.chdir(os.path.dirname(paths[0]))
+#        print(os.getcwd())
+#        os.system("sleep 0.1")
+        if bool(int(param_dict['STAR_c'])):
+            print("%s %s -t S -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+            os.system("%s %s -t S -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+
+        if bool(int(param_dict['QSO_c'])):
+            print("%s %s -t Q -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+            os.system("%s %s -t Q -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+        if bool(int(param_dict['GALAXY_c'])):
+            print("%s %s -t G -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+            os.system("%s %s -t G -%s "%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+
+    if ('STAR_LIB' in dict.keys(param_dict)) | ('QSO_LIB' in dict.keys(param_dict)) | ('GAL_LIB' in dict.keys(param_dict)) :
+        time.sleep(6)
+    if (bool(int(param_dict['STAR_c']))) & ('STAR_LIB' in dict.keys(param_dict)):    
+        PlotSED(file=os.path.join(param_dict['LEPHARE_WORK'],'lib_bin',param_dict['STAR_LIB']+'.doc'), pathlp = param_dict['LEPHARE_DIR'], filts=[])      
+    if (bool(int(param_dict['QSO_c']))) & ('QSO_LIB' in dict.keys(param_dict)): 
+        PlotSED(file=os.path.join(param_dict['LEPHARE_WORK'],'lib_bin',param_dict['QSO_LIB']+'.doc'), pathlp = param_dict['LEPHARE_DIR'], filts=[])      
+    if (bool(int(param_dict['GALAXY_c']))) & ('GAL_LIB' in dict.keys(param_dict)): 
+        PlotSED(file=os.path.join(param_dict['LEPHARE_WORK'],'lib_bin',param_dict['GAL_LIB']+'.doc'), pathlp = param_dict['LEPHARE_DIR'], filts=[])      
+    return
+
+
+
+def DS9PSFEX(xpapoint):
+    from astropy.table import Table
+    from shutil import which
+    from astropy.io import fits
+   
+    params = sys.argv[-30:]
+    param_names =  ['ENTRY_PATH' ,  'BASIS_TYPE' ,  'BASIS_NUMBER' ,  'PSF_SAMPLING' ,  'PSF_ACCURACY' ,  'PSF_SIZE' ,  'CENTER_KEYS' ,  'PHOTFLUX_KEY' ,  'PHOTFLUXERR_KEY' ,  
+                    'PSFVAR_KEYS' ,  'PSFVAR_GROUPS' ,  'PSFVAR_DEGREES', 'SAMPLE_AUTOSELECT' ,  'SAMPLEVAR_TYPE' ,  'SAMPLE_FWHMRANGE' ,  'SAMPLE_VARIABILITY' ,  'SAMPLE_MINSN' ,  
+                    'SAMPLE_MAXELLIP' ,  'CHECKPLOT_DEV' ,  'CHECKPLOT_TYPE' ,  'CHECKPLOT_NAME', 'CHECKIMAGE_TYPE' ,  'CHECKIMAGE_NAME' ,  'PSF_DIR' ,'HOMOBASIS_TYPE',  'HOMOPSF_PARAMS', 'VERBOSE_TYPE' ,  'WRITE_XML' ,  'XML_NAME' ,  'NTHREADS']
+    param_dict = {}
+    for key, val in zip(param_names, params):
+        param_dict[key] = val
+        print(bcolors.BLACK_RED + '%s : %s'%(key,param_dict[key]) +  bcolors.END )
+    #print(param_dict)
     
 
     d = DS9(xpapoint)
 #    filename = getfilename(d)
 #    paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.aargv[-5:]))
-    paths = glob.glob(param_dict['ENTRY_PATH'])
+    param_dict['ENTRY_PATH'] = glob.glob(param_dict['ENTRY_PATH'])
     #print(param_dict['ENTRY_PATH'],paths)
+    new_list = []
+    if type(param_dict['ENTRY_PATH']) is str:
+        param_dict['ENTRY_PATH'] = [param_dict['ENTRY_PATH']]
+
+    for path in param_dict['ENTRY_PATH']:
+        a = Table.read(path, format="fits", hdu='LDAC_OBJECTS')
+        hdu1 = fits.open(path)
+        mask = (a['CLASS_STAR']>0.97) & (a['MAG_AUTO']>19) & (a['MAG_AUTO']<24) #& ((a['MU_MAX']-a['MAG_AUTO'])<-0.3)
+        threshold = FindCompactnessThreshold(a[mask])
+        mask = np.ones(len(a),dtype=bool)#(a['CLASS_STAR']>0.97) & (a['MAG_AUTO']>19) & (a['MAG_AUTO']<24) & ((a['MU_MAX']-a['MAG_AUTO'])<threshold+0.2) & ((a['MU_MAX']-a['MAG_AUTO'])>threshold-0.3)
+        #(a['MAG_AUTO']<24)&((a['MU_MAX']-a['MAG_AUTO'])<0.1)&((a['MU_MAX']-a['MAG_AUTO'])>-0.1)
+        print('Number of objects : %i => %i'%(len(a),len(a[mask])))
+        plt.scatter(a['MAG_AUTO'],a['MU_MAX']-a['MAG_AUTO'],s=2, label='All objects')
+        plt.hlines(threshold,-15, 30, linewidth=1, linestyle='dotted')
+        plt.scatter(a[mask]['MAG_AUTO'],a[mask]['MU_MAX']-a[mask]['MAG_AUTO'],s=2, label='Star selections')
+        plt.title('Number of objects : %i => %i'%(len(a),len(a[mask])))
+        plt.legend()
+        plt.xlabel('MAG_AUTO')
+        plt.ylabel('MU_MAX - MAG_AUTO')
+        plt.ylim((-5,5));plt.xlim((15,30))
+        plt.savefig(path[:-5])
+        if len(param_dict['ENTRY_PATH'])>1:
+            plt.close()
+        else:
+            plt.show()
+
+#        plt.scatter(a['MAG_AUTO'],a['MU_MAX'],s=1)
+#        plt.scatter(a[mask]['MAG_AUTO'],a[mask]['MU_MAX'],s=1)
+#        plt.ylim((10,30));plt.xlim((10,30))
+#        plt.show()
+
+
+        name = path[:-5] + '_.fits'#os.path.join('/tmp',os.path.basename(path))
+        hdu1[2].data = hdu1[2].data[mask]
+        hdu1.writeto(name, overwrite=True)
+        hdu1.close()
+        
+#        hdulist = convert_table_to_ldac(a_new) 
+#        hdulist.writeto(name, overwrite=True) 
+        #save_table_as_ldac(a_new, name, overwrite=True)
+        new_list.append(name)
+    paths = new_list
+
+    if type(param_dict['ENTRY_PATH']) is str:
+        param_dict['XML_NAME'] = os.path.dirname(paths[0]) + '/psfex.xml'
     
     if which('psfex') is None:
         from tkinter import messagebox
@@ -11116,13 +12641,138 @@ def DS9PSFEX(xpapoint):
         print(os.getcwd())
         os.system("sleep 0.1")
         os.system("psfex -d > default.psfex")
-        print("psfex %s -%s -c default.psfex"%(' '.join(paths),  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[1:]]) ))
-        os.system("psfex %s -%s -c default.psfex"%(' '.join(paths),  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[1:]]) ))
+        print("psfex %s -c default.psfex -%s -HOMOKERNEL_SUFFIX %s_homo.fits "%(' '.join(paths),  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[1:]]) , param_dict['HOMOPSF_PARAMS'].replace(',','-') ))
+        os.system("psfex %s -c default.psfex -%s -HOMOKERNEL_SUFFIX %s_homo.fits "%(' '.join(paths),  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[1:]]) , param_dict['HOMOPSF_PARAMS'].replace(',','-') ))
         os.system("rm default.psfex")
+
     if (xpapoint is not None) & (len(paths)==1):
         d.set('frame new')
-        d.set('file ' + os.path.dirname(paths[0]) + '/snap_'+ os.path.basename(paths[0]))
+        d.set('file ' +paths[0][:-5] + '%s_homo.fits'%(param_dict['HOMOPSF_PARAMS'].replace(',','-')))
+#    for path in paths:
+#        os.remove(path)
+#
+#    table = Table.read('/Users/Vincent/Documents/Work/sextractor/DetectionImages/Photometric_Catalogs/calexp-HSC-Y-9813-2-4_cat.xml',table_id=0)
+#    table = Table.read('/Users/Vincent/Documents/Work/sextractor/DetectionImages/Photometric_Catalogs/psf_all_bands_just_for_stars.xml',table_id=0)
+#    
+#    x = np.linspace(0,1.8,50)
+#    plt.figure()
+#    plt.plot(1,1,c='black',linestyle='dotted', label='Gaussian')
+#    plt.plot(1,1,c='black',linestyle='dashed', label='Moffat')
+#    for cat in table:
+#        p = plt.plot(x, gaus(x,1,0,cat['FWHM_WCS_Mean']/2.35,0,0),linestyle='dotted', label='_nolegend_')
+#        plt.fill_between(x, gaus(x,1,0,cat['FWHM_WCS_Min']/2.35,0,0),gaus(x,1,0,cat['FWHM_WCS_Max']/2.35,0,0),alpha=0.3, color=p[0].get_color(), label='_nolegend_')
+#        
+#        std = cat['FWHM_WCS_Mean']/(2*np.sqrt(2**(1/cat['MoffatBeta_Mean'])-1))
+#        
+#        plt.plot(x, Moffat1D(x,1,std,cat['MoffatBeta_Mean']), linestyle='dashed', color=p[0].get_color(), label=' '.join(str(cat['Catalog_Name']).split('-')[1:3]) + ': FWHM = %0.2f - Beta = %0.1f'%(cat['FWHM_WCS_Mean'],cat['MoffatBeta_Mean']))
+#        plt.fill_between(x, Moffat1D(x,1,std,cat['MoffatBeta_Max']),Moffat1D(x,1,std,cat['MoffatBeta_Min']),alpha=0.3, color=p[0].get_color(), label='_nolegend_')
+#        
+#        plt.title('%s stars'%(int(cat['NStars_Loaded_Total'])))
+#    plt.legend()
+#    plt.show()
     return
+
+
+
+
+
+def Moffat1D(x, amp, std, alpha):
+    return amp*np.power((1+np.square(x/std)),-alpha)
+
+
+def gaus(x, a, b, sigma, lam, alpha):
+    """1D gaussian centered on zero
+    """
+    gaus = a**2 * np.exp(-np.square(x / sigma) / 2) 
+    return gaus 
+
+def exp(x, a, b, sigma, lam, alpha):
+    """1D exponential centered on zero
+    """
+    exp =  b**2 * np.exp(-(x/lam)**(1**2))
+    return exp
+
+
+def gausexp(x, a, b, sigma, lam, alpha):
+    """1D gaussian + exponential centered on zero
+    """
+    gaus = a**2 * np.exp(-np.square(x / sigma) / 2) 
+    exp =  b**2 * np.exp(-(x/lam)**(1**2))
+    return gaus + exp  
+
+def FindCompactnessThreshold(b):
+    values, bins, ax = plt.hist(b['MU_MAX']-b['MAG_AUTO'],bins=100)
+    binsc = (bins[:-1] + bins[1:])/2
+    return binsc[np.argmax(values)] 
+
+def convert_table_to_ldac(tbl):
+    """
+    Convert an astropy table to a fits_ldac
+    
+    Parameters
+    ----------
+    tbl: `astropy.table.Table`
+        Table to convert to ldac format
+    Returns
+    -------
+    hdulist: `astropy.io.fits.HDUList`
+        FITS_LDAC hdulist that can be read by astromatic software
+    """
+    from astropy.io import fits
+    import tempfile
+    f = tempfile.NamedTemporaryFile(suffix='.fits', mode='rb+')
+    tbl.write(f.name, format='fits',overwrite=True)
+    f.seek(0)
+    hdulist = fits.open(f.name, mode='update')
+    tbl1, tbl2 = convert_hdu_to_ldac(hdulist[1])
+    new_hdulist = [hdulist[0], tbl1, tbl2]
+    new_hdulist = fits.HDUList(new_hdulist)
+    return new_hdulist
+
+def convert_hdu_to_ldac(hdu):
+    """
+    Convert an hdu table to a fits_ldac table (format used by astromatic suite)
+    
+    Parameters
+    ----------
+    hdu: `astropy.io.fits.BinTableHDU` or `astropy.io.fits.TableHDU`
+        HDUList to convert to fits_ldac HDUList
+    
+    Returns
+    -------
+    tbl1: `astropy.io.fits.BinTableHDU`
+        Header info for fits table (LDAC_IMHEAD)
+    tbl2: `astropy.io.fits.BinTableHDU`
+        Data table (LDAC_OBJECTS)
+    """
+    from astropy.io import fits
+    import numpy as np
+    tblhdr = np.array([hdu.header.tostring(',')])
+    col1 = fits.Column(name='Field Header Card', array=tblhdr, format='13200A')
+    cols = fits.ColDefs([col1])
+    tbl1 = fits.BinTableHDU.from_columns(cols)
+    tbl1.header['TDIM1'] = '(80, {0})'.format(len(hdu.header))
+    tbl1.header['EXTNAME'] = 'LDAC_IMHEAD'
+    tbl2 = fits.BinTableHDU(hdu.data)
+    tbl2.header['EXTNAME'] = 'LDAC_OBJECTS'
+    return (tbl1, tbl2)
+
+def save_table_as_ldac(tbl, filename, **kwargs):
+    """
+    Save a table as a fits LDAC file
+    
+    Parameters
+    ----------
+    tbl: `astropy.table.Table`
+        Table to save
+    filename: str
+        Filename to save table
+    kwargs:
+        Keyword arguments to pass to hdulist.writeto
+    """
+    hdulist = convert_table_to_ldac(tbl)
+    hdulist.writeto(filename, **kwargs)
+
 
 def DS9saveColor(xpapoint, filename=None):
     from shutil import which
@@ -11152,90 +12802,253 @@ def DS9saveColor(xpapoint, filename=None):
     
 def RunSextractorHSC_CLAUDS(xpapoint, path=None):
     from shutil import which
+    from astropy.io import fits
+    from multiprocessing import Process, Queue, Manager, Pipe
+    jobs = []
+    manager = Manager()
+    return_dict = manager.dict()
     if path is None:
         d = DS9(xpapoint)
         filename = getfilename(d)
     else:
         filename = path
-    if 'MegaCam' in os.path.basename(filename) or 'VIRCAM' in os.path.basename(filename):
-        MAG_ZEROPOINT_real = 30
-    else:
-        MAG_ZEROPOINT_real = 27
+        d=None
+    paths = Charge_path_new(filename) if len(sys.argv) > 5 else [filename]
+    for filename in paths:
+        if 'MegaCam' in os.path.basename(filename) or 'VIRCAM' in os.path.basename(filename):
+            MAG_ZEROPOINT_real = 30
+        else:
+            MAG_ZEROPOINT_real = 27
+        dn = os.path.dirname(filename)
+        fn = os.path.basename(filename)
+        
+        if os.path.isfile(sys.argv[-35-5]) is False:
+            folder_name = 'DetectionImages'
+            DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
+        else:
+            DETECTION_IMAGE = sys.argv[-35-5]
+            folder_name = os.path.basename(os.path.dirname(DETECTION_IMAGE))
+            
+        sepCoadd_2(filename,scale=1.)
+        PHOTOMETRIC_NAME = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_data.fits').replace(',','-')
+        VAR_IMAGE = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_vari.fits').replace(',','-')
+        FLAG_IMAGE = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_mask.fits').replace(',','-')
+     
+        
+        if not os.path.exists(os.path.join(os.path.dirname(dn),folder_name, 'Photometric_Catalogs')):
+            os.makedirs(os.path.join(os.path.dirname(dn),folder_name,'Photometric_Catalogs'))
+        if not os.path.exists(os.path.join(os.path.dirname(dn),folder_name,'reg')):
+            os.makedirs(os.path.join(os.path.dirname(dn),folder_name,'reg'))
+        if not os.path.exists(os.path.join(os.path.dirname(dn),folder_name,'Plots')):
+            os.makedirs(os.path.join(os.path.dirname(dn),folder_name,'Plots'))
+        
+        if which('sex') is None:
+            from tkinter import messagebox
+            messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take some time. On a mac run 'brew install brewsci/science/sextrator' """)     
+    
+        try:
+            param_dir = resource_filename('DS9FireBall', 'Sextractor')
+        except:
+            param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
+    
+    
+    #    params = [CATALOG_NAME,'FITS_1.0',os.path.join(param_dir,'sex.param') , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'N',
+    #     '/usr/share/sextractor/gauss_4.0_7x7.conv' ,64, 0.0003 ,'Y', '1_PARAM',
+    #     'CORRECT', 'NONE,MAP_VAR', 'NONE,'+VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
+    #     '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT, 0, 0.8,
+    #     os.path.join(param_dir,'default.nnw'), 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
+    #     'NONE', 'check.fits']    
+        try:
+            given_params = np.array(sys.argv[-34-5:-1-5], dtype='<U256')#str)
+            print(given_params)
+            #DETECTION_IMAGE = sys.argv[-34]
+            CATALOG_NAME, CATALOG_TYPE,  PARAMETERS_NAME,  DETECT_TYPE,  DETECT_MINAREA = given_params[:5]
+            THRESH_TYPE,  DETECT_THRESH,  ANALYSIS_THRESH,  FILTER,  FILTER_NAME,  DEBLEND_NTHRESH = given_params[5:5+6]
+            DEBLEND_MINCONT,  CLEAN,  CLEAN_PARAM,  MASK_TYPE,  WEIGHT_TYPE, WEIGHT_IMAGE,  PHOT_APERTURES = given_params[5+6:5+6+7]
+            PHOT_AUTOPARAMS,  PHOT_PETROPARAMS,  PHOT_FLUXFRAC,  MAG_ZEROPOINT,  PIXEL_SCALE,  SEEING_FWHM = given_params[5+6+7:5+6+7+6]
+            STARNNW_NAME,  BACK_TYPE,  BACK_SIZE,  BACK_FILTERSIZE,  BACKPHOTO_TYPE,  BACKPHOTO_THICK = given_params[5+6+7+6:5+6+7+6+6]
+            BACK_FILTTHRESH,  CHECKIMAGE_TYPE, CHECKIMAGE_NAME = given_params[-3:]
+        
+            if CATALOG_NAME=='-':
+                CATALOG_NAME = os.path.join(os.path.dirname(DETECTION_IMAGE),'Photometric_Catalogs',fn[:-5].replace(',','-')+'_cat.fits')
+        
+            FILTER ='Y' if  FILTER=='1' else 'N'
+            CLEAN ='Y' if CLEAN=='1' else 'N'
+        
+        
+            params = [CATALOG_NAME,CATALOG_TYPE,os.path.join(param_dir,PARAMETERS_NAME) , DETECT_TYPE, DETECT_MINAREA ,THRESH_TYPE , DETECT_THRESH, ANALYSIS_THRESH, FILTER,
+            os.path.join(param_dir,FILTER_NAME),DEBLEND_NTHRESH, DEBLEND_MINCONT ,CLEAN, CLEAN_PARAM,
+            MASK_TYPE, WEIGHT_TYPE, VAR_IMAGE, PHOT_APERTURES, PHOT_AUTOPARAMS, PHOT_PETROPARAMS,
+            PHOT_FLUXFRAC, MAG_ZEROPOINT_real, PIXEL_SCALE, SEEING_FWHM,
+            os.path.join(param_dir,STARNNW_NAME), BACK_TYPE, BACK_SIZE, BACK_FILTERSIZE, BACKPHOTO_TYPE, BACKPHOTO_THICK, BACK_FILTTHRESH,
+            CHECKIMAGE_TYPE, CHECKIMAGE_NAME]    
+        except ValueError:
+            print('No arguments given, taking, default CLAUDS ones !!!')
+            params = [CATALOG_NAME,'FITS_1.0',os.path.join(param_dir,'sex.param') , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'N',
+            os.path.join(param_dir,'gauss_4.0_7x7.conv'),64, 0.0003 ,'Y', '1_PARAM',
+            'CORRECT', 'NONE,MAP_VAR', 'NONE,'+VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
+            '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT_real, 0, 0.8,
+            os.path.join(param_dir,'default.nnw'), 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
+            'NONE', 'check.fits'] 
+    
+    
+        param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
+
+
+        p = Process(target=RunFunction, args=(SextractorHSC_CLAUDS,[d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, filename, param_names,FLAG_IMAGE, params, folder_name],return_dict,))
+        jobs.append(p)
+        p.start()
+
+
+    for job in jobs:
+        job.join()
+    return
+
+
+#
+#        print(bcolors.BLACK_RED +'Image used for detection  = ' + str(DETECTION_IMAGE) + bcolors.END)
+#        print(bcolors.BLACK_RED + 'Image used for photometry  = '+ str(PHOTOMETRIC_NAME) + bcolors.END)
+#        band = '_'.join(os.path.basename(PHOTOMETRIC_NAME).split('-')[1:3])
+#        print(bcolors.GREEN_WHITE + """
+#              ********************************************************************
+#                                         Parameters sextractor:
+#              ********************************************************************"""+ bcolors.END)
+#        print(bcolors.BLACK_RED + '\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]) + bcolors.END)
+#        os.system('sex -d > default.sex')
+#    
+#        print('Running sextractor')
+#        print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+#        os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+#            
+#        if (os.path.isfile(CATALOG_NAME)) & (path is None):
+#            from astropy.table import vstack
+#            flag = fits.open(FLAG_IMAGE)[0].data
+#            print(datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S"))
+#            
+#            cat = Table.read(CATALOG_NAME, format="fits", hdu='LDAC_OBJECTS')
+#            print('\n\n',CATALOG_NAME)
+#            cat['CLAUDS_FLAG'] = flag[np.array(cat['Y_IMAGE'],dtype=int),np.array(cat['X_IMAGE'],dtype=int)]
+#            #mask = (cat['CLAUDS_FLAG']==0) | (cat['CLAUDS_FLAG']==32)
+#            #cat = cat[mask]
+#            #cat.write(CATALOG_NAME,overwrite=True)
+#            print(datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S"))
+#            
+#            #cat.sort('MAG_AUTO')
+#            cat_ = cat#[:int(sys.argv[-1])]
+#            
+#            ########cat = cat[cat['MAGERR_AUTO']<float(sys.argv[-1])]
+#            cat1 = cat_[cat_['MAG_AUTO']>=cat_['MAG_ISO']]
+#            cat2 = cat_[cat_['MAG_AUTO']compac<cat_['MAG_ISO']]
+#            cat3 = vstack((cat1,cat2))
+#            #x, y = [list(cat1['X_IMAGE'])+list(cat2['X_IMAGE'])], [list(cat2['X_IMAGE'])+list(cat2['X_IMAGE'])]
+#            #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
+#            savename = os.path.join(os.path.dirname(DETECTION_IMAGE),'reg', fn.replace(',','-')[:-5])
+#            create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=savename ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+#            #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+#            d.set('regions ' + savename + '.reg')
+#    
+#            d.set('pan to 2000 2000 image')
+#            d.set('tile no')
+#            d.set('zoom 1')
+#            d.set('saveimage jpeg %s 50'%(os.path.join(os.path.dirname(dn),folder_name,'Plots',fn[:-5].replace(',','-')+'.jpeg'))) 
+#    
+#        
+#    
+#    
+#            fig, (ax0,ax1) = plt.subplots(2,3)
+#            ax0[0].hist(cat['MAG_ISO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_ISO',log=True, color='darkgreen')
+#            ax0[0].hist(cat['MAG_AUTO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_AUTO',log=True, color='lime')
+#            ax0[0].legend()
+#            ax0[1].plot(cat1['MAG_AUTO'],cat1['MAG_AUTO']-cat1['MAG_ISO'],'.',alpha=0.3,markersize=2, c='limegreen')
+#            ax0[1].plot(cat2['MAG_AUTO'],cat2['MAG_AUTO']-cat2['MAG_ISO'],'.',alpha=0.3,markersize=2, c='mediumspringgreen');ax0[1].set_ylim((-8,8));ax0[1].set_xlim((12,35))
+#            ax0[1].set_ylabel('MAG_AUTO-MAG_ISO')
+#            ax0[2].plot(cat['MAG_AUTO'],cat['CLASS_STAR'],'.',alpha=0.3,markersize=2, c='forestgreen');ax0[2].set_xlim((15,33))
+#            ax0[2].set_ylabel('CLASS_STAR')    
+#            ax1[0].plot(cat['MAG_AUTO'],cat['MAGERR_AUTO'],'.',alpha=0.3,markersize=2,c='green',label='MAG_AUTO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
+#            ax1[0].plot(cat['MAG_ISO'],cat['MAGERR_ISO'],'.',alpha=0.3,markersize=2,c='springgreen',label='MAG_ISO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
+#            ax1[0].legend()
+#            ax1[0].set_ylabel('MAGERR')
+#            ax1[1].plot(cat['MAG_AUTO'],cat['MU_MAX'],'.',alpha=0.3,markersize=2,c='seagreen');ax1[1].set_xlim((13,33));ax1[1].set_ylim((16,28))
+#            ax1[1].set_xlabel('MAG_AUTO')
+#            ax1[1].set_ylabel('MU_MAX')
+#            ax1[2].plot(cat['MAG_AUTO'],cat['MU_MAX']-cat['MAG_AUTO'],'.',alpha=0.3,markersize=2,c='mediumseagreen');ax1[2].set_xlim((13,33));ax1[2].set_ylim((-5,5))
+#            ax1[2].set_ylabel('MU_MAX - MAG_AUTO')
+#            fig.tight_layout()
+#            fig.savefig(os.path.join(os.path.dirname(dn),folder_name,'Plots',fn[:-5].replace(',','-')+'.png'))
+#            #plt.show()
+#    
+#                    
+#    
+#        else:
+#            print('Can not find the output sextractor catalog...')
+#            
+#            
+#    
+#        FormatSextrectorCatalog(CATALOG_NAME)
+#        for file in glob.glob(os.path.dirname(dn) + '/tmp/' + fn[:-5] + '*.fits' ):
+#            os.remove(file)
+#    
+#
+#        try:
+#            Laigle = Table.read(dn + '/COSMOS2015_Laigle+_v1.1.fits')
+#            Moutard = Table.read(dn + '/UV_CLAUDS_HSC_s16a_uddd_deep_COSMOS_kNNZP_MixPHZ_PHYSPARAM.fits')
+#        except FileNotFoundError:
+#            return
+#        else:
+#            mask1 = (Moutard['RA']>cat['ALPHA_J2000'].min()) & (Moutard['RA']<cat['ALPHA_J2000'].max()) & (Moutard['DEC']>cat['DELTA_J2000'].min()) & (Moutard['DEC']<cat['DELTA_J2000'].max())
+#            mask2 = (Laigle['ALPHA_J2000']>cat['ALPHA_J2000'].min()) & (Laigle['ALPHA_J2000']<cat['ALPHA_J2000'].max()) & (Laigle['DELTA_J2000']>cat['DELTA_J2000'].min()) & (Laigle['DELTA_J2000']<cat['DELTA_J2000'].max())
+#            Moutard = Moutard[mask1]
+#            Laigle = Laigle[mask2]
+#            laigle, moutard = '1', '1'
+#            if band == 'MegaCam_uS':
+#                laigle, moutard = 'u_MAG_AUTO', 'uS'
+#            if band == 'MegaCam_uS':
+#                moutard = 'u'
+#            if band == 'HSC_G':
+#                moutard = 'g'
+#            if band == 'HSC_R':
+#                moutard = 'r'
+#            if band == 'HSC_Z':
+#                moutard = 'z'
+#            if band == 'HSC_Y':
+#                laigle, moutard = 'yHSC_MAG_AUTO', 'y'
+#    
+#            if band == 'HSC_Y':
+#                laigle, moutard = 'yHSC_MAG_AUTO', 'y'
+#            if band == 'VIRCAM_Y':
+#                laigle = 'Y_MAG_AUTO'
+#            if band == 'VIRCAM_H':
+#                laigle = 'H_MAG_AUTO'
+#            if band == 'VIRCAM_Ks':
+#                laigle = 'Ks_MAG_AUTO'
+#                
+#            
+#            plt.figure(figsize=(8,8))
+#            plt.hist(cat['MAG_AUTO'],bins=np.arange(21,29,0.09),alpha=0.3, label='Picouet AUTO',log=True)
+#            plt.hist(cat['MAG_ISO'],bins=np.arange(21,29,0.09),alpha=0.3, label='Picouet ISO',log=True)
+#            try:
+#                plt.hist(Laigle[laigle],bins=np.arange(21,29,0.09),alpha=0.3, label='Laigle',log=True, histtype='step', linewidth=3)
+#            except (NameError, KeyError):
+#                pass
+#            try:
+#                plt.hist(Moutard[moutard],bins=np.arange(21,29,0.09),alpha=0.3, label='Moutard',log=True, histtype='step', linewidth=3)
+#            except (NameError, KeyError):
+#                pass
+#            plt.title(band)
+#            plt.xlabel('Magnitude')
+#            plt.ylim(ymin=1)
+#            plt.legend()
+#            plt.savefig(os.path.join(os.path.dirname(dn),folder_name, 'Plots',fn[:-5].replace(',','-')+'LaigleMoutard.png'))
+#            #plt.show()
+                
+    return
+
+
+def SextractorHSC_CLAUDS(d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, filename, param_names,FLAG_IMAGE, params, folder_name):
+    from astropy.table import vstack
+    from astropy.io import fits
     dn = os.path.dirname(filename)
-    fn = os.path.basename(filename)
-    if os.path.isfile(sys.argv[-35]) is False:
-        DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
-    else:
-        DETECTION_IMAGE = sys.argv[-35]
-    sepCoadd_2(filename,scale=1.)
-    PHOTOMETRIC_NAME = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_data.fits').replace(',','-')
-    VAR_IMAGE = (os.path.dirname(os.path.dirname(filename)) + '/tmp/' + os.path.basename(filename)[:-5]+'_vari.fits').replace(',','-')
-    if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs')):
-        os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs'))
-    if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/reg')):
-        os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/reg'))
-    if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages/Plots')):
-        os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages/Plots'))
-    
-    if which('sex') is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take some time. On a mac run 'brew install brewsci/science/sextrator' """)     
-
-    try:
-        param_dir = resource_filename('DS9FireBall', 'Sextractor')
-    except:
-        param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
-
-
-#    params = [CATALOG_NAME,'FITS_1.0',os.path.join(param_dir,'sex.param') , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'N',
-#     '/usr/share/sextractor/gauss_4.0_7x7.conv' ,64, 0.0003 ,'Y', '1_PARAM',
-#     'CORRECT', 'NONE,MAP_VAR', 'NONE,'+VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
-#     '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT, 0, 0.8,
-#     os.path.join(param_dir,'default.nnw'), 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
-#     'NONE', 'check.fits']    
-    try:
-        given_params = np.array(sys.argv[-34:-1], dtype='<U256')#str)
-        print(given_params)
-        #DETECTION_IMAGE = sys.argv[-34]
-        CATALOG_NAME, CATALOG_TYPE,  PARAMETERS_NAME,  DETECT_TYPE,  DETECT_MINAREA = given_params[:5]
-        THRESH_TYPE,  DETECT_THRESH,  ANALYSIS_THRESH,  FILTER,  FILTER_NAME,  DEBLEND_NTHRESH = given_params[5:5+6]
-        DEBLEND_MINCONT,  CLEAN,  CLEAN_PARAM,  MASK_TYPE,  WEIGHT_TYPE, WEIGHT_IMAGE,  PHOT_APERTURES = given_params[5+6:5+6+7]
-        PHOT_AUTOPARAMS,  PHOT_PETROPARAMS,  PHOT_FLUXFRAC,  MAG_ZEROPOINT,  PIXEL_SCALE,  SEEING_FWHM = given_params[5+6+7:5+6+7+6]
-        STARNNW_NAME,  BACK_TYPE,  BACK_SIZE,  BACK_FILTERSIZE,  BACKPHOTO_TYPE,  BACKPHOTO_THICK = given_params[5+6+7+6:5+6+7+6+6]
-        BACK_FILTTHRESH,  CHECKIMAGE_TYPE, CHECKIMAGE_NAME = given_params[-3:]
-    
-        if CATALOG_NAME=='-':
-            CATALOG_NAME = os.path.join(os.path.dirname(dn),'DetectionImages/Photometric_Catalogs',fn[:-5].replace(',','-')+'_cat.fits')
-    
-        FILTER ='Y' if  FILTER=='1' else 'N'
-        CLEAN ='Y' if CLEAN=='1' else 'N'
-    
-    
-        params = [CATALOG_NAME,CATALOG_TYPE,os.path.join(param_dir,PARAMETERS_NAME) , DETECT_TYPE, DETECT_MINAREA ,THRESH_TYPE , DETECT_THRESH, ANALYSIS_THRESH, FILTER,
-        os.path.join(param_dir,FILTER_NAME),DEBLEND_NTHRESH, DEBLEND_MINCONT ,CLEAN, CLEAN_PARAM,
-        MASK_TYPE, WEIGHT_TYPE, VAR_IMAGE, PHOT_APERTURES, PHOT_AUTOPARAMS, PHOT_PETROPARAMS,
-        PHOT_FLUXFRAC, MAG_ZEROPOINT_real, PIXEL_SCALE, SEEING_FWHM,
-        os.path.join(param_dir,STARNNW_NAME), BACK_TYPE, BACK_SIZE, BACK_FILTERSIZE, BACKPHOTO_TYPE, BACKPHOTO_THICK, BACK_FILTTHRESH,
-        CHECKIMAGE_TYPE, CHECKIMAGE_NAME]    
-    except ValueError:
-        print('No arguments given, taking, default CLAUDS ones !!!')
-        params = [CATALOG_NAME,'FITS_1.0',os.path.join(param_dir,'sex.param') , 'CCD', 10 ,'RELATIVE' ,0.8, 2.0, 'N',
-        os.path.join(param_dir,'gauss_4.0_7x7.conv'),64, 0.0003 ,'Y', '1_PARAM',
-        'CORRECT', 'NONE,MAP_VAR', 'NONE,'+VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
-        '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT_real, 0, 0.8,
-        os.path.join(param_dir,'default.nnw'), 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
-        'NONE', 'check.fits'] 
-
-
-    param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
-
-    #params[8]='Y' if  params[8]=='1' else 'N'
-    #params[12]='Y' if params[12]=='1' else 'N'
-
-    #if DETECTION_IMAGE == '-':
-    #    DETECTION_IMAGE = None
-    #else:
-    #    DETECTION_IMAGE = ',' + DETECTION_IMAGE
+    fn = os.path.basename(filename)    
     print(bcolors.BLACK_RED +'Image used for detection  = ' + str(DETECTION_IMAGE) + bcolors.END)
     print(bcolors.BLACK_RED + 'Image used for photometry  = '+ str(PHOTOMETRIC_NAME) + bcolors.END)
     band = '_'.join(os.path.basename(PHOTOMETRIC_NAME).split('-')[1:3])
@@ -11245,17 +13058,23 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
           ********************************************************************"""+ bcolors.END)
     print(bcolors.BLACK_RED + '\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]) + bcolors.END)
     os.system('sex -d > default.sex')
-
-    #if os.path.isfile(CATALOG_NAME) is False:
+    
     print('Running sextractor')
     print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
     os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         
-    if (os.path.isfile(CATALOG_NAME)) & (path is None):
-
-        from astropy.table import vstack
-        cat = Table.read(CATALOG_NAME)
+    if (os.path.isfile(CATALOG_NAME)) & (d is not None):
+        flag = fits.open(FLAG_IMAGE)[0].data
+        print(datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S"))
+        
+        cat = Table.read(CATALOG_NAME, format="fits", hdu='LDAC_OBJECTS')
         print('\n\n',CATALOG_NAME)
+        cat['CLAUDS_FLAG'] = flag[np.array(cat['Y_IMAGE'],dtype=int),np.array(cat['X_IMAGE'],dtype=int)]
+        #mask = (cat['CLAUDS_FLAG']==0) | (cat['CLAUDS_FLAG']==32)
+        #cat = cat[mask]
+        #cat.write(CATALOG_NAME,overwrite=True)
+        print(datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S"))
+        
         #cat.sort('MAG_AUTO')
         cat_ = cat#[:int(sys.argv[-1])]
         
@@ -11265,18 +13084,19 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         cat3 = vstack((cat1,cat2))
         #x, y = [list(cat1['X_IMAGE'])+list(cat2['X_IMAGE'])], [list(cat2['X_IMAGE'])+list(cat2['X_IMAGE'])]
         #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
-        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+        savename = os.path.join(os.path.dirname(DETECTION_IMAGE),'reg', fn.replace(',','-')[:-5])
+        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=savename ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
-        d.set('regions ' + os.path.dirname(dn) + '/DetectionImages/reg/' + fn.replace(',','-')[:-5] + '.reg')
-
-        d.set('pan to 2000 2000 image')
-        d.set('tile no')
-        d.set('zoom 1')
-        d.set('saveimage jpeg %s 50'%(os.path.join(os.path.dirname(dn),'DetectionImages/Plots/',fn[:-5].replace(',','-')+'.jpeg'))) 
-
+        d.set('regions ' + savename + '.reg')
+#    
+#        d.set('pan to 2000 2000 image')
+#        d.set('tile no')
+#        d.set('zoom 1')
+#        d.set('saveimage jpeg %s 50'%(os.path.join(os.path.dirname(dn),folder_name,'Plots',fn[:-5].replace(',','-')+'.jpeg'))) 
+#    
+#    
     
-
-
+    
         fig, (ax0,ax1) = plt.subplots(2,3)
         ax0[0].hist(cat['MAG_ISO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_ISO',log=True, color='darkgreen')
         ax0[0].hist(cat['MAG_AUTO'],bins=np.arange(22,27.5,0.03),alpha=0.3, label='MAG_AUTO',log=True, color='lime')
@@ -11284,37 +13104,87 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         ax0[1].plot(cat1['MAG_AUTO'],cat1['MAG_AUTO']-cat1['MAG_ISO'],'.',alpha=0.3,markersize=2, c='limegreen')
         ax0[1].plot(cat2['MAG_AUTO'],cat2['MAG_AUTO']-cat2['MAG_ISO'],'.',alpha=0.3,markersize=2, c='mediumspringgreen');ax0[1].set_ylim((-8,8));ax0[1].set_xlim((12,35))
         ax0[1].set_ylabel('MAG_AUTO-MAG_ISO')
-            
         ax0[2].plot(cat['MAG_AUTO'],cat['CLASS_STAR'],'.',alpha=0.3,markersize=2, c='forestgreen');ax0[2].set_xlim((15,33))
-        ax0[2].set_ylabel('CLASS_STAR')
-        
+        ax0[2].set_ylabel('CLASS_STAR')    
         ax1[0].plot(cat['MAG_AUTO'],cat['MAGERR_AUTO'],'.',alpha=0.3,markersize=2,c='green',label='MAG_AUTO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
         ax1[0].plot(cat['MAG_ISO'],cat['MAGERR_ISO'],'.',alpha=0.3,markersize=2,c='springgreen',label='MAG_ISO');ax1[0].set_xlim((15,33));ax1[0].set_ylim((-0.2,3))
         ax1[0].legend()
         ax1[0].set_ylabel('MAGERR')
-    
         ax1[1].plot(cat['MAG_AUTO'],cat['MU_MAX'],'.',alpha=0.3,markersize=2,c='seagreen');ax1[1].set_xlim((13,33));ax1[1].set_ylim((16,28))
         ax1[1].set_xlabel('MAG_AUTO')
         ax1[1].set_ylabel('MU_MAX')
         ax1[2].plot(cat['MAG_AUTO'],cat['MU_MAX']-cat['MAG_AUTO'],'.',alpha=0.3,markersize=2,c='mediumseagreen');ax1[2].set_xlim((13,33));ax1[2].set_ylim((-5,5))
         ax1[2].set_ylabel('MU_MAX - MAG_AUTO')
         fig.tight_layout()
-        fig.savefig(os.path.join(os.path.dirname(dn),'DetectionImages/Plots/',fn[:-5].replace(',','-')+'.png'))
+        fig.savefig(os.path.join(os.path.dirname(dn),folder_name,'Plots',fn[:-5].replace(',','-')+'.png'))
         #plt.show()
-
+    
                 
-
+    
     else:
         print('Can not find the output sextractor catalog...')
         
         
-
+    
     FormatSextrectorCatalog(CATALOG_NAME)
     for file in glob.glob(os.path.dirname(dn) + '/tmp/' + fn[:-5] + '*.fits' ):
         os.remove(file)
+#    
+#    
+#    try:
+#        Laigle = Table.read(dn + '/COSMOS2015_Laigle+_v1.1.fits')
+#        Moutard = Table.read(dn + '/UV_CLAUDS_HSC_s16a_uddd_deep_COSMOS_kNNZP_MixPHZ_PHYSPARAM.fits')
+#    except FileNotFoundError:
+#        return
+#    else:
+#        mask1 = (Moutard['RA']>cat['ALPHA_J2000'].min()) & (Moutard['RA']<cat['ALPHA_J2000'].max()) & (Moutard['DEC']>cat['DELTA_J2000'].min()) & (Moutard['DEC']<cat['DELTA_J2000'].max())
+#        mask2 = (Laigle['ALPHA_J2000']>cat['ALPHA_J2000'].min()) & (Laigle['ALPHA_J2000']<cat['ALPHA_J2000'].max()) & (Laigle['DELTA_J2000']>cat['DELTA_J2000'].min()) & (Laigle['DELTA_J2000']<cat['DELTA_J2000'].max())
+#        Moutard = Moutard[mask1]
+#        Laigle = Laigle[mask2]
+#        laigle, moutard = '1', '1'
+#        if band == 'MegaCam_uS':
+#            laigle, moutard = 'u_MAG_AUTO', 'uS'
+#        if band == 'MegaCam_uS':
+#            moutard = 'u'
+#        if band == 'HSC_G':
+#            moutard = 'g'
+#        if band == 'HSC_R':
+#            moutard = 'r'
+#        if band == 'HSC_Z':
+#            moutard = 'z'
+#        if band == 'HSC_Y':
+#            laigle, moutard = 'yHSC_MAG_AUTO', 'y'
+#    
+#        if band == 'HSC_Y':
+#            laigle, moutard = 'yHSC_MAG_AUTO', 'y'
+#        if band == 'VIRCAM_Y':
+#            laigle = 'Y_MAG_AUTO'
+#        if band == 'VIRCAM_H':
+#            laigle = 'H_MAG_AUTO'
+#        if band == 'VIRCAM_Ks':
+#            laigle = 'Ks_MAG_AUTO'
+#            
+#        
+#        plt.figure(figsize=(8,8))
+#        plt.hist(cat['MAG_AUTO'],bins=np.arange(21,29,0.09),alpha=0.3, label='Picouet AUTO',log=True)
+#        plt.hist(cat['MAG_ISO'],bins=np.arange(21,29,0.09),alpha=0.3, label='Picouet ISO',log=True)
+#        try:
+#            plt.hist(Laigle[laigle],bins=np.arange(21,29,0.09),alpha=0.3, label='Laigle',log=True, histtype='step', linewidth=3)
+#        except (NameError, KeyError):
+#            pass
+#        try:
+#            plt.hist(Moutard[moutard],bins=np.arange(21,29,0.09),alpha=0.3, label='Moutard',log=True, histtype='step', linewidth=3)
+#        except (NameError, KeyError):
+#            pass
+#        plt.title(band)
+#        plt.xlabel('Magnitude')
+#        plt.ylim(ymin=1)
+#        plt.legend()
+#        plt.savefig(os.path.join(os.path.dirname(dn),folder_name, 'Plots',fn[:-5].replace(',','-')+'LaigleMoutard.png'))
+    return
 
-    bands_thibaud = ['u', 'uS','g','r','z','y']
-    bands_laigle = ['u','yHSC','Y','H', 'Ks']
+def AnalyzeSextractorCatalog():
+
     try:
         Laigle = Table.read(dn + '/COSMOS2015_Laigle+_v1.1.fits')
         Moutard = Table.read(dn + '/UV_CLAUDS_HSC_s16a_uddd_deep_COSMOS_kNNZP_MixPHZ_PHYSPARAM.fits')
@@ -11325,6 +13195,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         mask2 = (Laigle['ALPHA_J2000']>cat['ALPHA_J2000'].min()) & (Laigle['ALPHA_J2000']<cat['ALPHA_J2000'].max()) & (Laigle['DELTA_J2000']>cat['DELTA_J2000'].min()) & (Laigle['DELTA_J2000']<cat['DELTA_J2000'].max())
         Moutard = Moutard[mask1]
         Laigle = Laigle[mask2]
+        laigle, moutard = '1', '1'
         if band == 'MegaCam_uS':
             laigle, moutard = 'u_MAG_AUTO', 'uS'
         if band == 'MegaCam_uS':
@@ -11337,7 +13208,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
             moutard = 'z'
         if band == 'HSC_Y':
             laigle, moutard = 'yHSC_MAG_AUTO', 'y'
-
+    
         if band == 'HSC_Y':
             laigle, moutard = 'yHSC_MAG_AUTO', 'y'
         if band == 'VIRCAM_Y':
@@ -11347,31 +13218,23 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         if band == 'VIRCAM_Ks':
             laigle = 'Ks_MAG_AUTO'
             
-            
-#        if band == 'MegaCam_uS':
-#            laigle, moutard = 'u_MAG_AUTO', 'uS'
-#        if band == 'MegaCam_uS':
-#            laigle, moutard = 'u_MAG_AUTO', 'uS'
-#        if band == 'MegaCam_uS':
-#            laigle, moutard = 'u_MAG_AUTO', 'uS'
-
+        
         plt.figure(figsize=(8,8))
         plt.hist(cat['MAG_AUTO'],bins=np.arange(21,29,0.09),alpha=0.3, label='Picouet AUTO',log=True)
         plt.hist(cat['MAG_ISO'],bins=np.arange(21,29,0.09),alpha=0.3, label='Picouet ISO',log=True)
         try:
             plt.hist(Laigle[laigle],bins=np.arange(21,29,0.09),alpha=0.3, label='Laigle',log=True, histtype='step', linewidth=3)
-        except NameError:
+        except (NameError, KeyError):
             pass
         try:
             plt.hist(Moutard[moutard],bins=np.arange(21,29,0.09),alpha=0.3, label='Moutard',log=True, histtype='step', linewidth=3)
-        except NameError:
+        except (NameError, KeyError):
             pass
         plt.title(band)
         plt.xlabel('Magnitude')
+        plt.ylim(ymin=1)
         plt.legend()
-        plt.savefig(os.path.join(os.path.dirname(dn),'DetectionImages/Plots/',fn[:-5].replace(',','-')+'LaigleMoutard.png'))
-        #plt.show()
-            
+        plt.savefig(os.path.join(os.path.dirname(dn),folder_name, 'Plots',fn[:-5].replace(',','-')+'LaigleMoutard.png'))
     return
 
 def patchMultiCat(catalog):
@@ -11423,7 +13286,7 @@ def patchMultiCat(catalog):
     for bandCat  in bandcats[1:]:
         bTab = Table(fits.getdata(bandCat,1))
         for col in bTab.colnames:
-            if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','FWHM_IMAGE','ELONGATION','ELLIPTICITY']:
+            if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','ELONGATION','ELLIPTICITY']:#,'FWHM_IMAGE'
                 tab[col.replace('-','_')] = bTab[col]    
     ### DEPRECATED###    
     #################
@@ -11440,11 +13303,12 @@ def patchMultiCat(catalog):
     
 
         
-def StackPhotometricTables(tract=''):
+def StackPhotometricTables(tract='',folder = '/Users/Vincent/Documents/Work/sextractor/DetectionImages_ugrizyk_corr/Photometric_Catalogs/Not_Convolved/'):
     #files = glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/Catalogs/BandMergedCatalogs/calexp-*%i*_cat.fits'%(tract))
     import glob
-    from astropy.table import Table, vstack
-    files = glob.glob('/data/deepZ/HSC_CLAUDS/DetectionImages/Photometric_Catalogs/BandMergedCatalogs/calexp-*%i*_cat.fits'%(tract))
+    from astropy.table import Table, vstack, hstack
+    files = glob.glob('/data/deepZ/HSC_CLAUDS/DetectionImages/Photometric_Catalogs/BandMergedCatalogs/calexp-*%s*_cat.fits'%(tract))
+    files = glob.glob(os.path.join(folder,'calexp-*%s*_cat.fits'%(tract)))
     tables = []
     for file in files:
         print(file)
@@ -11459,10 +13323,12 @@ def StackPhotometricTables(tract=''):
 #        if len(table)>0: 
 #            print(0)
     print('Stacking tables...')
-    stack_table = vstack(tables)
+    stack_table = hstack(tables)
     del tables
     del table
-    stack_table.write('/data/deepZ/HSC_CLAUDS/DetectionImages/Photometric_Catalogs/BandMergedCatalogs/TotalMergedCatalog_%i.fits'%(tract))#tres tres long...
+    if not os.path.exists(os.path.join(folder,'BandMergedCatalogs')):
+        os.makedirs(os.path.join(folder,'BandMergedCatalogs'))
+    stack_table.write(os.path.join(folder,'BandMergedCatalogs/TotalMergedCatalog_%s.fits'%(tract)),overwrite=True)#tres tres long...
     return 
         
 
@@ -11532,12 +13398,13 @@ def FormatSextrectorCatalog(outCat, apertures=['12pix','18pix','24pix'],flux_rad
         zp = 30
     else:
         zp = 27
-    data = fits.getdata(outCat,1)
-    tab = Table(data)    
+    #data = fits.getdata(outCat,1)
+    tab = Table.read(outCat, format="fits", hdu='LDAC_OBJECTS')
+    #tab = Table(data)#, format="fits", hdu='LDAC_OBJECTS')
     
     # Add filter to flux column names
     for col in tab.colnames:
-        if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','FLUX_APER','FLUXERR_APER','FLUX_RADIUS','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','FWHM_IMAGE','ELONGATION','ELLIPTICITY']:
+        if col not in ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD','FLUX_APER','FLUXERR_APER','FLUX_RADIUS','ALPHA_J2000','DELTA_J2000','A_WORLD','B_WORLD','THETA_WORLD','KRON_RADIUS','THETA_IMAGE','A_IMAGE','B_IMAGE','THRESHOLD','ELONGATION','ELLIPTICITY']:#,'FWHM_IMAGE'
             tab.rename_column(col,col+'_'+band.replace('-','_'))
     # Change RA/DEC
     tab.rename_column('ALPHA_J2000','RA')
@@ -11602,6 +13469,7 @@ def createWCStractfromHeader(path):
 def CreateBigImage(paths=glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/TRACT/calexp*-9813-*.fits'),save_path='/tmp/test_99.fits', dtype='float32'):
     from astropy.io import fits
     n = len(paths)
+    n=81
     new_image = np.zeros((4100*int(np.sqrt(n)),4200*int(np.sqrt(n))), dtype=dtype)
     for path in paths:
         print(path)
@@ -11609,7 +13477,9 @@ def CreateBigImage(paths=glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/TRAC
         w0, x0, y0, x, y = createWCStractfromHeader(path)
         for i0,j0, i, j in zip(x0,y0, x,y):
             new_image[j,i] = image[j0,i0]
-    fitswrite(new_image,save_path)
+    #imshow(new_image[x.min():x.max(),y.min():y.max()])
+    imshow(new_image[y.min():y.max(),x.min():x.max()])
+    fitswrite(new_image[y.min():y.max(),20000:x.max()],save_path)
     return new_image
 
 
@@ -11713,7 +13583,7 @@ def main():
                     'throughslit': DS9throughslit, 'meanvar': DS9meanvar,
                     'xy_calib': DS9XYAnalysis,'SourcePhotometry':SourcePhotometry,'DS9MeasureDispersion':DS9MeasureDispersion,
                     
-                    'AnalyzeOSSmearing':DS9AnalyzeOSSmearing,'Concolve2d':Concolve2d,
+                    'AnalyzeOSSmearing':DS9AnalyzeOSSmearing,'Convolve2d':Convolve2d,
                     #Flight Functions
                     'ReplaceWithNans': DS9replaceNaNs,'InterpolateNaNs': DS9InterpolateNaNs,
                     'OverscanCorrection': DS9OverscanCorrection, 'Trimming': DS9Trimming,
@@ -11739,7 +13609,7 @@ def main():
                     
                     #Create test images
                     'DS9createImage': DS9createImage, 'FollowProbabilityLaw': FollowProbabilityLaw,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
-                    'ApplyRealisation': ApplyRealisation,'SimulateFIREBallemCCD':SimulateFIREBallemCCD,
+                    'ApplyRealisation': ApplyRealisation,'SimulateFIREBallemCCD':SimulateFIREBallemCCD,'DS9FormatCatalogForLephare':DS9FormatCatalogForLephare,
                     
                      #Others
                     'test':DS9tsuite, 'ChangeConfig':ChangeConfig,'ComputeReadNoise':ComputeReadNoise,'ComputeGainHistogram':ComputeGainHistogram,
@@ -11747,7 +13617,13 @@ def main():
                     
                     #sofwares
                     'DS9SWARP':DS9SWARP,'DS9SaveOnlyImage':DS9SaveOnlyImage,'CreateMultiColorImage':CreateMultiColorImage,
-                    'DS9PSFEX': DS9PSFEX, 'DS9Lephare': DS9Lephare
+                    'DS9PSFEX': DS9PSFEX, 'DS9LephareFilter': DS9LephareFilter,'PlotSpectraDataCube':PlotSpectraDataCube,
+                    'StackDataDubeSpectrally': StackDataDubeSpectrally,
+                    'DS9LephareSedToLib':DS9LephareSedToLib,'DS9LephareMagGal':DS9LephareMagGal,'DS9LephareZphot':DS9LephareZphot,
+                    'DS9PlotRedshiftGaussian':DS9PlotRedshiftGaussian,'DS9PlotColor':DS9PlotColor, 'DS9LephareLimits':DS9LephareLimits,
+                    'DS9LephareLF':DS9LephareLF, 'PlotFL_from_ALF':PlotFL_from_ALF,'GalaxyStarsClassification':GalaxyStarsClassification,
+                    'get_depth_image': get_depth_image,
+
              }
 
     xpapoint = sys.argv[1]
