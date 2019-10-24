@@ -9950,19 +9950,19 @@ def Choose_backend(function):
                 return
 
 
-def DS9LoadCSV(xpapoint):
-    from astropy.table import Table
-    #from .focustest import create_DS9regions2
-    d = DS9(xpapoint)
-    filename = getfilename(d)#filename = d.get('file')
-#    if len(sys.argv) > 3:
-#    else:
-#        path = [d.get("file")]
-    sources = Table.read(filename[:-5] + '.csv')
-    create_DS9regions2(sources['xcentroid'],sources['ycentroid'], radius=10, form = 'circle',save=True,color = 'yellow', savename='/tmp/centers')
-    d.set('region delete all')
-    d.set('region {}'.format('/tmp/centers.reg'))                                        
-    return
+#def DS9LoadCSV(xpapoint):
+#    from astropy.table import Table
+#    #from .focustest import create_DS9regions2
+#    d = DS9(xpapoint)
+#    filename = getfilename(d)#filename = d.get('file')
+##    if len(sys.argv) > 3:
+##    else:
+##        path = [d.get("file")]
+#    sources = Table.read(filename[:-5] + '.csv')
+#    create_DS9regions2(sources['xcentroid'],sources['ycentroid'], radius=10, form = 'circle',save=True,color = 'yellow', savename='/tmp/centers')
+#    d.set('region delete all')
+#    d.set('region {}'.format('/tmp/centers.reg'))                                        
+#    return
 
 
 def DS9ExtractSources(xpapoint):
