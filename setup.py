@@ -10,15 +10,9 @@ requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
             'astropy >=1.3',
             'pyds9',
             'photutils',
-            'PyQt5','tkinter','mpl_toolkits',
-            'os','glob','sys','tqdm','shutil',
-            'time','datetime',
-            'pkg_resources','urllib',
-            'subprocess',
-            'collections',
-            'decimal','re',            
-            'multiprocessing',
-            'errno',            
+            'PyQt5',#'mpl_toolkits',#tkinter
+            'tqdm',#'shutil','os','glob','sys','time'
+            'datetime',#pkgp_resources'#,'urllib','subprocess','collections','multiprocessing','errno',            
             'PIL', 
             'pyswarm'
             #'importlib','pkgutil'

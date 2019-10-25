@@ -31,6 +31,9 @@ import matplotlib.pyplot as plt
 #get_ipython().magic(u'matplotlib inline')
 #import tkinter as tk
 #root = tk.Tk()
+
+#os.environ["DS9Function"] = os.path.join(os.path.dirname(__file__),'doc/ref/index.html')
+
 width = 23#root.winfo_screenmmwidth() / 25.4
 height = 14#root.winfo_screenmmheight() / 25.4
 
@@ -892,7 +895,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300):
         images = [data[Yinf:Yinf+size,Xinf:Xinf+size] for Xinf, Yinf in zip(xinfs, yinfs)]
         print('Test: number of images = %s'%(len(images)))
     else:
-        images = [getdata()]
+        images = [getdata(xpapoint)]
  # 
 #    try:
 #        Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
@@ -982,7 +985,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300):
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Pixel value')
-        ax.axis('equal')
+        #ax.axis('equal')
         ax.axis('tight')
         ax.text(popt[1],popt[2], np.nanmax(image),s='amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]))    
         plt.show()
@@ -1188,6 +1191,8 @@ def DS9setup2(xpapoint, config=my_conf):
         •If the image contains some ghost/second pass spots. . .
     """
     #from astropy.io import fits
+    scale, cuts, color, invert, grid = sys.argv[-5:]
+    cuts = np.array(cuts.split('-'),dtype=float)
     d = DS9(xpapoint)
     if d.get("fits height") == '2069':
         print('Detector image')
@@ -1204,20 +1209,30 @@ def DS9setup2(xpapoint, config=my_conf):
     #print(image)
     
 #    if d.get("lock bin") == 'no':
-    d.set("grid no") 
+    d.set("cmap %s"%(color))
+    d.set("scale %s"%(scale))
+
+
+    if grid=='1':
+        d.set("grid yes") 
+    elif grid=='0':
+        d.set("grid no") 
+    if invert=='1':
+        d.set("cmap invert yes") 
+    elif invert=='0':
+        d.set("cmap invert no") 
 #        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
 #              np.percentile(fitsimage[0].data,99.6)))
     #d.set("scale limits {} {} ".format(np.nanpercentile(image,50),np.nanpercentile(image,99.95)))
-    d.set("scale limits {} {} ".format(np.nanmedian(image),np.nanpercentile(image,99)))
+    d.set("scale limits {} {} ".format(np.percentile(image,cuts[0]),np.nanpercentile(image,cuts[1])))
 #    d.set("scale asinh")
-    d.set("scale log")
     #d.set("cmap grey")
-    d.set("cmap cool")
+    
 #        d.set("smooth yes")
 #        d.set("cmap Cubehelix0")
 #        d.set("smooth radius {}".format(2))
 #        d.set("smooth yes")
-    d.set("lock bin yes")
+#    d.set("lock bin yes")
 
     return 
 
@@ -1269,7 +1284,12 @@ def process_region(regions, win,quick=False, config=my_conf):
 #        quick=False
     
     for i, region in enumerate(regions):
-        name, info = region.split('(')
+        try:
+            name, info = region.split('(')
+        except ValueError:
+            from tkinter import messagebox
+            messagebox.showwarning( title = 'Region error', message="""It seems that you did not create a region. Please create a region and rerun the analysis""")     
+            #sys.exit() 
         coords = [float(c) for c in info.split(')')[0].split(',')]
         #print('Region %i: %s'%(i, region))
         if quick:
@@ -1441,7 +1461,7 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf):
         return process_region([rows[-1]], win,quick=quick)
 #getregion(d, all=True)
         
-def create_PA(A=15.45,B=13.75,C=14.95,pas=0.15,nombre=11):
+def create_PA(A=15.45,B=13.75,C=14.95,pas=0.15,nombre=11):  
     """Return encoder steps of FB2 tip-tilds focus
     """
     a = np.linspace(A-int(nombre/2)*pas, A+int(nombre/2)*pas, nombre)
@@ -5113,6 +5133,8 @@ def DS9stack_new(xpapoint, dtype=float, std=False, Type=None, clipping=None):
         Type = np.nanmedian
     else:
         Type = np.nanmean
+    if clipping=='-':
+        clipping = 1e5
     image, name = StackImagesPath(paths, Type=Type,clipping=float(clipping), dtype=dtype, std=std) 
     d.set('tile yes')
     d.set('frame new')
@@ -5125,8 +5147,11 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
     """
     from astropy.io import fits
     import re
+    fitsfile = fits.open(paths[0])
+    sizes = [sys.getsizeof(elem.data) for elem in fitsfile]#[1]
+    i = np.argmax(sizes)
     Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
-    stds = np.array([np.nanstd(fits.open(image)[0].data[Xinf:Xsup, Yinf:Ysup]) for image in paths])
+    stds = np.array([np.nanstd(fits.open(image)[i].data[Xinf:Xsup, Yinf:Ysup]) for image in paths])
     plt.figure()
     plt.hist(stds)
     plt.title( 'Stds - M = %0.2f  -  Sigma = %0.3f'%(np.nanmean(stds), np.nanstd(stds)));plt.xlabel('Stds');plt.ylabel('Frequecy')
@@ -5141,9 +5166,8 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
         print('std = ', stds)
     n=len(paths)
     paths.sort()
-    image = fits.open(paths[0])
     #name_images = [os.path.basename(path) for path in paths]
-    lx,ly = image[0].data.shape
+    lx,ly = fitsfile[i].data.shape
     stack = np.zeros((lx,ly),dtype=dtype)
     if std:
         for i,file in enumerate(paths[index]):
@@ -5151,7 +5175,7 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
                 with fits.open(file) as f:
                     print(file, stds[i])
                     #f[0].data[~np.isfinite(f[0].data)] = stack[~np.isfinite(f[0].data)]
-                    stack[:,:] += f[0].data/stds[i]
+                    stack[:,:] += f[i].data/stds[i]
                     del(f)
             except TypeError as e:
                 print(e)
@@ -5161,8 +5185,11 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
         stack = np.array(Type(np.array([fits.open(file)[0].data for file in paths[index]]), axis=0), dtype=dtype)
     elif Type == np.nanmean:
         stack = Type(np.array([fits.open(file)[0].data for file in paths[index]]),dtype=dtype, axis=0)
-    numbers = [int(re.findall(r'\d+',os.path.basename(filename))[-1]) for filename in paths[index]]
-    images = '-'.join(list(np.array(numbers,dtype=str))) 
+    try:
+        numbers = [int(re.findall(r'\d+',os.path.basename(filename))[-1]) for filename in paths[index]]
+    except IndexError:
+        numbers = paths
+    images = ' - '.join(list(np.array(numbers,dtype=str))) 
     print(paths,numbers)
 #    if cond_bckd:
 #        index = FlagHighBackgroundImages(stack, std=1)
@@ -5174,8 +5201,8 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
     
     #print('All these images have not been taken into account because of hight background', '\n'.join(list(np.array(name_images)[~index]))  )
     #image[0].data = np.nanmean(stack[:,:,index],axis=2)#,dtype='uint16')#AddParts2Image(np.nanmean(stack,axis=2)) 
-    image[0].data = stack#,dtype='uint16')#AddParts2Image(np.nanmean(stack,axis=2)) 
-    image[0].header['STK_NB'] = images# '-'.join(re.findall(r'\d+',images))#'-'.join(list(np.array(name_images)[index]))   
+    fitsfile[i].data = stack#,dtype='uint16')#AddParts2Image(np.nanmean(stack,axis=2)) 
+    fitsfile[i].header['STK_NB'] = images# '-'.join(re.findall(r'\d+',images))#'-'.join(list(np.array(name_images)[index]))   
     try:
         name = '{}/StackedImage_{}-{}{}.fits'.format(os.path.dirname(paths[0]), int(os.path.basename(paths[0])[5:5+6]), int(os.path.basename(paths[-1])[5:5+6]),fname)
 #        name = '{}/StackedImage_{}-{}{}.fits'.format(os.path.dirname(paths[0]),np.min(numbers), np.max(numbers),fname)
@@ -5183,10 +5210,10 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
         name = '{}/StackedImage_{}-{}{}'.format(os.path.dirname(paths[0]), os.path.basename(paths[0]).split('.')[0], os.path.basename(paths[-1]),fname)       
 #        name = '{}/StackedImage_{}-{}{}'.format(os.path.dirname(paths[0]), np.min(numbers), np.max(numbers),fname)       
     print('Image saved : %s'%(name))
-    fitswrite(image[0], name)
+    fitswrite(fitsfile[i], name)
     print('n = ', n)
 
-    return image  , name
+    return fitsfile  , name
 
 
 def DS9focus(xpapoint, Plot=True):
@@ -6027,20 +6054,21 @@ def DS9Region2Catalog(xpapoint, name=None, new_name=None):
     """
     from astropy.table import Table
     d = DS9(xpapoint)
+    new_name = sys.argv[-1]
     if name is not None:
         d.set('regions ' + name)
     regions = getregion(d, all=True, quick=False)
     #print(regions)
-    filename = getfilename(d)
+    #filename = getfilename(d)
     try:
         x, y = np.array([r.xc for r in regions]), np.array([r.yc for r in regions])
-    except AttributeError:
+    except AttributeErrors:
         x, y = np.array([r.xc for r in [regions]]), np.array([r.yc for r in [regions]])
     cat = Table((x-1,y-1),names=('xcentroid','ycentroid'))    
     print(cat)
     if new_name is None:
-        new_name = '/tmp/regions.csv'
-    csvwrite(cat, new_name)
+        new_name = '/tmp/regions'
+    csvwrite(cat, new_name + '.csv')
     return cat
 
 
@@ -14075,6 +14103,9 @@ def Convertissor(xpapoint):
     return
 
 
+def Help(xpapoint):
+    return '/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html'
+
 def main():
     """Main function where the arguments are defined and the other functions called
     """
@@ -14139,7 +14170,7 @@ def main():
                     'DS9PhotonTransferCurve':DS9PhotonTransferCurve,'DS9Desmearing':DS9Desmearing_hot_pixel,'DS9DeconvolveSmearing2':DS9DeconvolveSmearing2,
                     'DS9SmearingWithIntensity': DS9SmearingWithIntensity, 
                     #Photutils
-                    'LoadRegions': DS9LoadCSV, 'BackgroundEstimationPhot': DS9BackgroundEstimationPhot, 'ExtractSources':DS9ExtractSources,
+                    'BackgroundEstimationPhot': DS9BackgroundEstimationPhot, 'ExtractSources':DS9ExtractSources,
                     'Centroiding': Centroiding,#'PSFphotometry': PSFphotometry,'PSFmatching':PSFmatching,'Datasets': Datasets
                     'GroupingAlgorithm': GroupingAlgorithm, 'AperturePhotometry': AperturePhotometry,'BuildingEPSF': BuildingEPSF,
                     'MorphologicalProperties': MorphologicalProperties, 'EllipticalIsophoteAnalysis': EllipticalIsophoteAnalysis,
@@ -14159,7 +14190,7 @@ def main():
                     'DS9LephareSedToLib':DS9LephareSedToLib,'DS9LephareMagGal':DS9LephareMagGal,'DS9LephareZphot':DS9LephareZphot,
                     'DS9PlotRedshiftGaussian':DS9PlotRedshiftGaussian,'DS9PlotColor':DS9PlotColor, 'DS9LephareLimits':DS9LephareLimits,
                     'DS9LephareLF':DS9LephareLF, 'PlotFL_from_ALF':PlotFL_from_ALF,'GalaxyStarsClassification':GalaxyStarsClassification,
-                    'get_depth_image': get_depth_image,'CosmologyCalculator':CosmologyCalculator,'Convertissor': Convertissor,
+                    'get_depth_image': get_depth_image,'CosmologyCalculator':CosmologyCalculator,'Convertissor': Convertissor,'Help':Help
 
              }
 
