@@ -1498,8 +1498,7 @@ def throughfocus(center, files,x=None,
     from astropy.table import Table, vstack
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
-    from .focustest import AnalyzeSpot
-    from .focustest import estimateBackground
+    #from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     fwhm = []
     EE50 = []
@@ -1632,12 +1631,30 @@ def throughfocus(center, files,x=None,
         opt6 = [0,0,0]
         bestx6 = np.nan
         pass
+    import matplotlib.ticker as mtick
+
+    axes[3,1].yaxis.set_label_position("right")
+    axes[2,1].yaxis.set_label_position("right")
+    axes[1,1].yaxis.set_label_position("right")
+    axes[0,1].yaxis.set_label_position("right")
+
+    axes[3,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))#Axes.ticklabel_format
+    axes[2,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
+    axes[1,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
+    axes[0,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
+    
+
+    axes[3,1].yaxis.tick_right()
+    axes[2,1].yaxis.tick_right()
+    axes[1,1].yaxis.tick_right()
+    axes[0,1].yaxis.tick_right()
+
 
    
 
     name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
+    fig.suptitle(name, y=1)
     fig.tight_layout()
-    fig.suptitle(name, y=1.01)
     fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
     print(name) 
     t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
@@ -1688,8 +1705,8 @@ def throughfocus(center, files,x=None,
             except:
                 axes[i].set_xlabel(int(subname))
                 pass
-        fig.suptitle(name)
-        fig.subplots_adjust(top=0.88)   
+        fig.suptitle(name,y=1)
+        #fig.subplots_adjust(top=0.88)   
         fig.tight_layout()
         #plt.axis('equal')
         fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
@@ -1720,8 +1737,8 @@ def throughfocusWCS(center, files,x=None,
     from astropy.table import Table, vstack
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
-    from .focustest import AnalyzeSpot
-    from .focustest import estimateBackground
+    #from .focustest import AnalyzeSpot
+    #from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     fwhm = []
     EE50 = []
@@ -1913,7 +1930,13 @@ def throughfocusWCS(center, files,x=None,
     axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
     axes[3,1].set_ylabel('y center')
    
+    mean = np.nanmean(np.array([ENC(bestx1,ENCa),ENC(bestx2,ENCa),
+               ENC(bestx3,ENCa),ENC(bestx4,ENCa),
+               ENC(bestx6,ENCa)]))
+    print(mean)
+    name = '%s - %i - %i - %s - %0.3f'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
 
+    fig.suptitle(name, y=0.99)
     fig.tight_layout()
 
     t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
@@ -1923,14 +1946,8 @@ def throughfocusWCS(center, files,x=None,
                ENC(bestx1,ENCa),ENC(bestx2,ENCa),
                ENC(bestx3,ENCa),ENC(bestx4,ENCa),
                ENC(bestx6,ENCa)))
-    mean = np.nanmean(np.array([ENC(bestx1,ENCa),ENC(bestx2,ENCa),
-               ENC(bestx3,ENCa),ENC(bestx4,ENCa),
-               ENC(bestx6,ENCa)]))
-    print(mean)
-    name = '%s - %i - %i - %s - %0.3f'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
     #name = '%s - %i - %i'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
     print(name) 
-    fig.suptitle(name, y=0.99)
     fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
     if Plot:        
         plt.show()
@@ -1980,8 +1997,7 @@ def throughfocus2(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     from astropy.io import fits
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
-    from .focustest import AnalyzeSpot
-    from .focustest import estimateBackground
+    #from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     from astropy.table import Table, vstack
     fwhm = []
@@ -2118,6 +2134,42 @@ def throughfocus2(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     return t#fwhm, EE50, EE80
 
 
+def AnalyzeSpot(data, center, size=40, n=1.5,radius=40, fit=True, center_type='barycentre', radius_ext=12, platescale=None,fibersize = 100,SigmaMax=4):
+  """Function used to plot the radial profile and the encircled energy of a spot,
+  Latex is not necessary
+  """
+  from scipy import interpolate
+
+  from scipy.optimize import curve_fit
+  rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, radius=radius, n=n, center_type=center_type)
+  profile = profile[:size]#(a[:n] - min(a[:n]) ) / np.nansum((a[:n] - min(a[:n]) ))
+  #popt, pcov = curve_fit(ConvolveDiskGaus2D, np.linspace(0,size,size), profile, p0=[2,2,2])#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):  3.85  
+  fiber = fibersize / (2*1.08*(1/0.083))
+  if fiber == 0:
+      gaus = lambda x, a, sigma: a**2 * np.exp(-np.square(x / sigma) / 2)
+      popt, pcov = curve_fit(gaus, rmean[:size], profile, p0=[1, 2])#,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
+  else:
+      popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[1,fiber,2, np.nanmean(profile)],bounds=([0,0.95*fiber-1e-5,1,-1],[2,1.05*fiber+1e-5,SigmaMax,1]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):      
+  EE_interp = interpolate.interp1d(rsurf[:size], EE[:size],kind='cubic')
+  ninterp = 10
+  xnew = np.linspace(rsurf[:size].min(),rsurf[:size].max(),ninterp*len(rsurf[:size]))
+  mina = min(xnew[EE_interp(xnew)[:ninterp*size]>79])
+  minb = min(xnew[EE_interp(xnew)[:ninterp*size]>49])
+  if fiber == 0:
+      flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
+      d = {"Flux":flux,"SizeSource":0,"Sigma":abs(popt[1]),"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+      print("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
+  else:
+      d = {"Flux":0,"SizeSource":popt[1],"Sigma":abs(popt[2]),"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+      print("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
+
+#  if fiber == 0:
+#      d = {"SizeSource":0,"Sigma":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+#      print("SizeSource = {}\nFWHM = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(0,popt[1],minb,mina,platescale,NewCenter))
+#  else:
+#      d = {"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+#      print("SizeSource = {}\nFWHM = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
+  return d
 
 def DS9throughfocus(xpapoint, Plot=True):
     # """How to use: Open an image of the through focus which is close to the focus.  Click on region. Then click
@@ -2132,16 +2184,16 @@ def DS9throughfocus(xpapoint, Plot=True):
     # EE80
     # """
     from astropy.io import fits
-    from .focustest import AnalyzeSpot
-
+    #from .focustest import AnalyzeSpot
+    
     print('''\n\n\n\n      START THROUGHFOCUS \n\n\n\n''')
     d = DS9(xpapoint)
     filename = getfilename(d)#d.get("file ")
     #if len(sys.argv) > 3: path = Charge_path_new(filename, entry_point=3)
     path = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+    WCS = bool(int(sys.argv[3]))
     try:
-        ENCa_center, pas = sys.argv[4].split('-')
-        ENCa_center, pas = float(ENCa_center), float(pas)
+        ENCa_center, pas = np.array(sys.argv[4].split('-'),dtype=float)
     except ValueError:
         print('No actuator given, taking header ones for guider images, none for detector images')
         ENCa_center, pas = None, None
@@ -2150,7 +2202,7 @@ def DS9throughfocus(xpapoint, Plot=True):
         ENCa_center, pas = None, None        
     x = np.arange(len(path))
     
-    a = getregion(d)
+    a = getregion(d)[0]
     image = fits.open(filename)[0]
     rp = AnalyzeSpot(image.data,center = [np.int(a.xc),
                      np.int(a.yc)],fibersize=0)
@@ -2164,7 +2216,7 @@ def DS9throughfocus(xpapoint, Plot=True):
         Type = 'guider'
     else:
         Type = 'detector'        
-    if d.get('wcs lock frame') == 'wcs':
+    if WCS:
         from astropy import wcs
         print ('Using WCS')
         w = wcs.WCS(image.header)
@@ -2239,11 +2291,11 @@ def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None,
     print(center_type)
     spot = DS9plot_rp_convolved(data=fitsfile.data,
                                 center = [np.int(a.xc),np.int(a.yc)],
-                                fibersize=fibersize, center_type=center_type,log=log)    
-    try:
-        plt.title('{} - {} - {}'.format(os.path.basename(filename),[np.int(a.xc),np.int(a.yc)],fitsfile.header['DATE']),y=0.99)
-    except KeyError:
-        print('No date in header')
+                                fibersize=fibersize, center_type=center_type,log=log, name = filename)    
+#    try:
+#        plt.title('{} - {} - {}'.format(os.path.basename(filename),[np.int(a.xc),np.int(a.yc)],fitsfile.header['DATE']),y=0.99)
+#    except KeyError:
+#        print('No date in header')
     if Plot:
         plt.show()
     d.set('regions command "circle %0.3f %0.3f %0.3f # color=red"' % (spot['Center'][0]+1,spot['Center'][1]+1,40))
@@ -2339,7 +2391,7 @@ def estimateBackground(data, center, radius=30, n=1.8):
 
 
 
-def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=False,angle=30, radius=40, ptype='linear', fit=True, center_type='barycentre', maxplot=0.013, minplot=-1e-5, radius_ext=12, platescale=None,fibersize = 100,SigmaMax=4, DS9backUp = DS9_BackUp_path, config=my_conf):
+def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=False,angle=30, radius=40, ptype='linear', fit=True, center_type='barycentre', maxplot=0.013, minplot=-1e-5, radius_ext=12, platescale=None,fibersize = 100,SigmaMax=4, DS9backUp = DS9_BackUp_path, config=my_conf, name=''):
   """Function used to plot the radial profile and the encircled energy of a spot,
   Latex is not necessary
   """
@@ -2416,7 +2468,6 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   ax2.set_ylim((0, 110))
   ax2.set_ylabel('Encircled Energy', color='r', fontsize=12)
   ax2.tick_params('y', colors='r')
-  fig.tight_layout()
   ax1.xaxis.grid(True)
   ax1.tick_params(axis='x', labelsize=12)
   ax1.tick_params(axis='y', labelsize=12)
@@ -2433,6 +2484,8 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
                   fontsize=14,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       print("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
+  plt.title('{} - {}'.format(os.path.basename(name),np.round(NewCenter,1)),y=1)
+  fig.tight_layout()
   plt.savefig(DS9backUp + 'Plots/%s_RdialProfile.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss")) )
   csvwrite(np.vstack((rmean[:size], profile,ConvolveDiskGaus2D(rmean[:size], *popt))).T, DS9backUp + 'CSVs/%s_RadialProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
   csvwrite(np.vstack((rsurf, EE)).T, DS9backUp + 'CSVs/%s_EnergyProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
@@ -5262,46 +5315,49 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
     from astropy.io import fits
-    from .focustest import estimateBackground
+    #from .focustest import estimateBackground
     from .focustest import Gaussian
     from scipy.optimize import curve_fit
 
     print('''\n\n\n\n      START THROUGHSLIT \n\n\n\n''')
-    try:
-        entry = sys.argv[3]#'2-15'#'2-7-8-9-11-14-15'#'2-15'#'2-4-6-8-9'#sys.argv[3]
-        numbers = entry.split('-')#[::-1]
-        if len(numbers) == 2:
-            n1,n2 = entry.split('-')
-            n1,n2 = int(n1), int(n2)
-            numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
-        print(numbers)
-        
-    except IndexError:
-        n1=''
-        n2=''
-        numbers=None
+#    try:
+#        entry = sys.argv[3]#'2-15'#'2-7-8-9-11-14-15'#'2-15'#'2-4-6-8-9'#sys.argv[3]
+#        numbers = entry.split('-')#[::-1]
+#        if len(numbers) == 2:
+#            n1,n2 = entry.split('-')
+#            n1,n2 = int(n1), int(n2)
+#            numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
+#        print(numbers)
+#        
+#    except IndexError:
+#        n1=''
+#        n2=''
+#        numbers=None
+
     d = DS9(xpapoint)
     filename = getfilename(d)#ffilename = d.get("file")
-    path = []
-    if (type(numbers) == list) or (type(numbers) == np.ndarray):
-        print('Specified numbers are integers, opening corresponding files ...')
-        for number in numbers:
-            print (number)
-            #path = os.path.dirname(filename) + '/image%06d.fits' % (number)
-            path.append(os.path.dirname(filename) + '/image%06d.fits' % (int(number)))
-            x = [int(i) for i in numbers]
-        print (x)
-    else:
-        print('Not numbers, taking all the .fits images from the current repository')
-        path = glob.glob(os.path.dirname(filename) + '/*.fits')
-        x = np.arange(len(path))
-    #    with fits.open(path) as f:
-    #        files.append(f[0].data)        
-    #    os.path.dirname(filename)
-    #path = np.sort(path)
+    path = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+#    path = []
+#    if (type(numbers) == list) or (type(numbers) == np.ndarray):
+#        print('Specified numbers are integers, opening corresponding files ...')
+#        for number in numbers:
+#            print (number)
+#            #path = os.path.dirname(filename) + '/image%06d.fits' % (number)
+#            path.append(os.path.dirname(filename) + '/image%06d.fits' % (int(number)))
+#            x = [int(i) for i in numbers]
+#        print (x)
+#    else:
+#        print('Not numbers, taking all the .fits images from the current repository')
+#        path = glob.glob(os.path.dirname(filename) + '/*.fits')
+#        
+#    #    with fits.open(path) as f:
+#    #        files.append(f[0].data)        
+#    #    os.path.dirname(filename)
+#    #path = np.sort(path)
     path.sort()
+    x = np.arange(len(path))
     #print("\n".join(path)) 
-    a = getregion(d)
+    a = getregion(d)[0]
     radius = 15
     print('Sum pixel is used (another estimator may be prefarable)')
     fluxes=[]
@@ -5331,7 +5387,7 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     plt.grid(linestyle='dotted')
     plt.xlabel('# image')
     plt.title('Best image : {}'.format(maxf))
-    plt.ylabel('Sum pixel') 
+    plt.ylabel('Estimated flux (Sum pixel)') 
     name = 'Through slit analysis\n%0.3f - %s - %s'%(maxf,[int(a.xc),int(a.yc)],fitsfile.header['DATE'])
     print(name) 
     plt.title(name)
@@ -5574,7 +5630,11 @@ def giveValue(x,y):
     x = int(x) if x%1>0.5 else int(x)-1
     y = int(y) if y%1>0.5 else int(y)-1
     return x, y
-
+def ConvolveBoxPSF(x, amp=1, l=40, x0=0, sigma2=40, offset=0):
+    a = special.erf((l - (x - x0))/np.sqrt(2*sigma2))
+    b = special.erf((l + (x - x0))/np.sqrt(2*sigma2))
+    function = amp * ( a + b )/4*l
+    return offset + function
 
 def DS9center(xpapoint,Plot=True):
     """How to use:
@@ -5599,16 +5659,17 @@ def DS9center(xpapoint,Plot=True):
     """
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
+    from photutils import centroid_com, centroid_1dg, centroid_2dg
     #from astropy.io import fits
-    from .focustest import ConvolveBoxPSF
-    from .focustest import create_DS9regions
+    #from .focustest import ConvolveBoxPSF
+    #from .focustest import create_DS9regions
     #from .focustest import create_DS9regions2
-    from .focustest import estimateBackground
+    #from .focustest import estimateBackground
     from scipy.optimize import curve_fit
-    from .focustest import Gaussian
+    #from .focustest import Gaussian
     d = DS9(xpapoint)#DS9(xpapoint)
     #filename = getfilename(d)#ffilename = d.get("file")
-    region = getregion(d)
+    region = getregion(d)[0]
 
     if hasattr(region, 'h'):
         xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
@@ -5680,77 +5741,83 @@ def DS9center(xpapoint,Plot=True):
             plt.show()
         
     if hasattr(region, 'r'):
-        xc, yc, r = int(region.xc), int(region.yc), int(region.r)
-        Xinf = yc - r -1#int(region.yc - region.r)
-        Xsup = yc + r -1#int(region.yc + region.r)
-        Yinf = xc - r -1#int(region.xc - region.r)
-        Ysup = xc + r -1#int(region.xc + region.r)
+
+        method, bck = sys.argv[-2:]
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
         data = d.get_fits()[0].data
-        image = data[Xinf:Xsup,Yinf:Ysup]
+        image = data[Yinf:Ysup,Xinf:Xsup]
         print('2D fitting with 100 microns fibre, to be updated by allowing each fiber size')
-        background =  estimateBackground(data,[region.yc,region.xc],20,1.8 )
-        image = image - background
+        if bool(int(bck)):
+            print('Subtracting background...')
+            background =  estimateBackground(data,[region.yc,region.xc],20,1.8 )
+            image = image - background
         lx, ly = image.shape
-        x = np.linspace(0,lx-1,lx)
-        y = np.linspace(0,ly-1,ly)
-        x, y = np.meshgrid(x,y)
-        yo,xo = np.where(image == image.max())#ndimage.measurements.center_of_mass(image)
-        maxx, maxy = xc - (lx/2 - xo), yc - (ly/2 - yo)
-        print ('maxx, maxy = {}, {}'.format(maxx,maxy))
-#        d.set('regions command "circle %i %i %0.1f # color=yellow"' % (maxy,maxx,1))
-#        try:
-#            os.remove('/tmp/centers.reg')
-#        except OSError:
-#            pass
-#        create_DS9regions2([maxx],[maxy-10], form = '# text',
-#                           save=True,color = 'yellow', savename='/tmp/centers',
-#                           text = ['%0.2f - %0.2f' % (maxx,maxy)])
-#        d.set('regions /tmp/centers.reg')
-        bounds = ([1e-1*np.nanmax(image), xo-10 , yo-10, 0.5,0.5,-1e5], [10*np.nanmax(image), xo+10 , yo+10, 10,10,1e5])#(-np.inf, np.inf)#
-        Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
-        print ('bounds = ',bounds)
-        print('\nParam = ', Param)
-        try:
-            popt,pcov = curve_fit(twoD_Gaussian,(x,y),image.flat,
-                                  Param,bounds=bounds)
-            print('\nFitted parameters = ', popt)
-        except RuntimeError:
-            print('Optimal parameters not found: Number of calls to function has reached maxfev = 1400.')
-            sys.exit() 
-        fit = twoD_Gaussian((x,y),*popt).reshape((ly,lx))
-        #imshow(twoD_Gaussian((x,y), *Param).reshape((ly,lx)));colorbar()
-        #imshow(image);colorbar()
-        #imshow(fit);colorbar()
-        newCenterx = xc - (lx/2 - popt[1])#region.xc - (lx/2 - popt[1])
-        newCentery = yc - (ly/2 - popt[2])#region.yc - (ly/2 - popt[2])
+        xc, yc = region.xc, region.yc
+        
+        if method == 'Center-of-mass': 
+            xn, yn = centroid_com(image)
+        
+        if method == '2x1D-Gaussian-fitting': 
+            xn, yn = centroid_1dg(image)
+            
+        if method == '2D-Gaussian-fitting': 
+            xn, yn = centroid_2dg(image)
+            
+        if method == 'Maximum': 
+            yn, xn = np.where(image==np.nanmax(image))[0][0], np.where(image==np.nanmax(image))[1][0]
+        
+        elif  method == 'Gaussian-Picouet': 
+            x = np.linspace(0,lx-1,lx)
+            y = np.linspace(0,ly-1,ly)
+            x, y = np.meshgrid(x,y)
+            yo,xo = np.where(image == image.max())#ndimage.measurements.center_of_mass(image)
+            maxx, maxy = xc - (lx/2 - xo), yc - (ly/2 - yo)
+            print ('maxx, maxy = {}, {}'.format(maxx,maxy))
+    
+            bounds = ([1e-1*np.nanmax(image), xo-10 , yo-10, 0.5,0.5,-1e5], [10*np.nanmax(image), xo+10 , yo+10, 10,10,1e5])#(-np.inf, np.inf)#
+            Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
+            print ('bounds = ',bounds)
+            print('\nParam = ', Param)
+            try:
+                popt,pcov = curve_fit(twoD_Gaussian,(x,y),image.flat,
+                                      Param,bounds=bounds)
+                print('\nFitted parameters = ', popt)
+            except RuntimeError:
+                print('Optimal parameters not found: Number of calls to function has reached maxfev = 1400.')
+                sys.exit() 
+            print(np.diag(pcov))
+
+            fit = twoD_Gaussian((x,y),*popt).reshape((ly,lx))
+            xn, yn = popt[1], popt[2]
+
+            if Plot:
+                plt.figure()
+                plt.plot(image[int(yo), :], 'bo',label='Spatial direction')
+                plt.plot(fit[int(yo), :],color='b')#,label='Spatial direction')
+                plt.plot(image[:,int(xo)], 'ro',label='Spatial direction')
+                plt.plot(fit[:,int(xo)],color='r')#,label='Spatial direction')
+                plt.ylabel('Fitted profiles')
+                plt.figtext(0.66,0.55,'Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
+                plt.legend()
+                plt.show()
+
+
+        newCenterx = xc - (lx/2 - xn)#region.xc - (lx/2 - popt[1])
+        newCentery = yc - (ly/2 - yn)#region.yc - (ly/2 - popt[2])
         print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
 
-        print(np.diag(pcov))
-
-        #plt.show()
-#        d.set('regions command "text %i %i # text={%0.2f}"' % (newCenterx+10,newCentery+10,newCentery))
 
         d.set('regions delete select')
 
-        #d.set('regions command "circle %0.2f %0.2f %0.2f # color=yellow"' % (newCenterx,newCentery,5))
         try:
             os.remove('/tmp/centers.reg')
         except OSError:
             pass
-#        create_DS9regions2([newCenterx],[newCentery-10], form = '# text',
-#                           save=True,color = 'yellow', savename='/tmp/centers',
-#                           text = ['%0.2f - %0.2f' % (newCenterx,newCentery)])
+
         create_DS9regions([newCenterx-1],[newCentery-1], radius=5, save=True, savename="/tmp/centers", form=['circle'], color=['white'], ID=[['%0.2f - %0.2f' % (newCenterx,newCentery)]])
         
         d.set('regions /tmp/centers.reg')
-        if Plot:
-            plt.plot(image[int(yo), :], 'bo',label='Spatial direction')
-            plt.plot(fit[int(yo), :],color='b')#,label='Spatial direction')
-            plt.plot(image[:,int(xo)], 'ro',label='Spatial direction')
-            plt.plot(fit[:,int(xo)],color='r')#,label='Spatial direction')
-            plt.ylabel('Fitted profiles')
-            plt.figtext(0.66,0.55,'Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
-            plt.legend()
+
     return newCenterx, newCentery
 
 def t2s(h,m,s,d=0):
@@ -14065,8 +14132,8 @@ def CosmologyCalculator(xpapoint):
         ax3[2].hlines(1/(cosmo.arcsec_per_kpc_comoving(redshift)).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
         ax3[2].vlines(redshift,0,1/(cosmo.arcsec_per_kpc_comoving(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
   
-    
-    plt.suptitle('%s : H0=%s, Om0=%0.3f, Ode0=%0.3f, Tcmb0=%s, Neff=%0.2f, Ob0=%0.3f'%(cosmology,cosmo.H0, cosmo.Om0, cosmo.Ode0, cosmo.Tcmb0, cosmo.Neff, cosmo.Ob0),y=1)
+    print('%s : H0=%s, Om0=%s, Ode0=%s, Tcmb0=%s, Neff=%s, Ob0=%s'%(cosmology,cosmo.H0, cosmo.Om0, cosmo.Ode0, cosmo.Tcmb0, cosmo.Neff, cosmo.Ob0))
+    plt.suptitle('%s : H0=%s, Om0=%0.3f, Ode0=%0.3f, Tcmb0=%s, Neff=%0.2f, Ob0=%s'%(cosmology,cosmo.H0, cosmo.Om0, cosmo.Ode0, cosmo.Tcmb0, cosmo.Neff, cosmo.Ob0),y=1)
     plt.tight_layout()
     plt.show()
     
