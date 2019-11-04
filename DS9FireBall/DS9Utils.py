@@ -25,7 +25,8 @@ else:
 
 #import matplotlib; matplotlib.use('TkAgg')  
 import matplotlib.pyplot as plt
-
+#from .DS9Utils_ok import *
+ 
 
     
 #get_ipython().magic(u'matplotlib inline')
@@ -132,7 +133,301 @@ def ChangeConfig(xpapoint):
     
    
     
+
+def FitsExt(fitsimage):
+    ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
+    print('Taking extension: ',ext)
+    return ext
+
+
+def DS9RemoveImage(xpapoint):
+    """Substract an image, for instance bias or dark image, to the image
+    in DS9. Can take care of several images
+    """
+    d = DS9(xpapoint)
+    filename = getfilename(d)
+    path2remove, exp, eval_ = sys.argv[3:6]
+    #exp = sys.argv[4]
+    #a, b = sys.argv[4].split(',')
+    print('Expression to be evaluated: ', exp)
+    #a, b = float(a), float(b)
+    #if len(sys.argv) > 5: path = Charge_path_new(filename, entry_point=5)
+    path = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+
+        
+    for filename in path:
+        print(filename)
+        result, name = ExecCommand(filename, path2remove=path2remove, exp=exp, eval_=bool(int(eval_))) 
+                                        
+    if len(path) < 2:
+        d.set('frame new')
+        d.set('tile yes')
+        d.set('file ' + name)  
+    return
+
+
+
+def ExecCommand(filename, path2remove, exp, config=my_conf, eval_=False):
+    """Combine two images and an evaluable expression 
+    """
+    import numpy as np
+    from simpleeval import simple_eval, EvalWithCompoundTypes
+    import astropy
+    from astropy.io import fits
+    from astropy.convolution import Gaussian2DKernel, convolve
+    type_ = 'exec'
+    fitsimage = fits.open(filename)
+    ext = FitsExt(fitsimage) 
+    fitsimage = fitsimage[ext]
+    ds9 = fitsimage.data
+    if os.path.isfile(path2remove) is False:
+        if 'image'in exp:
+            from tkinter import messagebox
+            messagebox.showwarning( "File error","Image not found, please verify your path!")     
+        else:
+            image = 0
+    else:
+        fitsimage2 = fits.open(path2remove)[ext]
+        image = fitsimage2.data
+
+    #fitsimage.data = image - a * image2substract - b 
+    #fitsimage.data = simple_eval(exp, names={"ds9": ds9, "image": image, "np":np})
+    names = {"ds9": ds9, "image": image, "np":np}
+    functions = {"convolve":convolve}
+    print('Expression = ',exp)
+    if type_ == 'eval': 
+        try:
+            fitsimage.data = EvalWithCompoundTypes(exp, names=names, functions=functions).eval(exp)
+        except (TypeError) as e:
+            if eval_:
+                print('Simple_eval did not work: ', e)
+                try:
+                    fitsimage.data = eval(exp)
+                    print('Using eval!')
+                except SyntaxError:
+                    print('Using exec!')
+                    print(ds9)
+                    exec(exp, globals=globals(), locals=locals())
+                    print(ds9)
+                    fitsimage.data = ds9
+                    
+            else:
+                print(e)
+                sys.exit()
+    else:
+        print('Using exec!')
+        print(ds9)
+        #import IPython; IPython.embed()
+        ldict={'ds9':ds9,'image':image,'convolve':convolve}
+        #exec("import IPython;IPython.embed()", globals(), ldict)#, locals(),locals())
+        exec(exp, globals(), ldict)#, locals(),locals())
+        #IPython.embed()
+        ds9 = ldict['ds9']
+        print(ds9)
+        fitsimage.data = ds9#ds9
+    name = filename[:-5] + '_modified.fits'
+    #exp1, exp2 = int(fitsimage.header[my_conf.exptime[0]]), int(fitsimage2.header[my_conf.exptime[0]])
+    fitsimage.header['DS9'] = filename
+    fitsimage.header['IMAGE'] = path2remove
+    try:
+        fitsimage.header['COMMAND'] = exp
+    except ValueError as e:
+        print(e)
+        print(len(exp))
+        fitsimage.header.remove('COMMAND')
+    fitsimage.writeto(name, overwrite=True)
+    return fitsimage.data, name  
+
+def DS9setup2(xpapoint, config=my_conf):
+    """This function aims at giving a quick and general visualisation of the image by applying specific thresholding
+        and smoothing parameters. This allows to detect easily:
+        •Different spot that the image contains
+        •The background low frequency/medium variation
+        •If a spot saturates
+        •If the image contains some ghost/second pass spots. . .
+    """
+    #from astropy.io import fits
+    scale, cuts, smooth, color, invert, grid = sys.argv[-6:]
+    cuts = np.array(cuts.split('-'),dtype=float)
+    d = DS9(xpapoint)
+
+    image_area = [0,-1,0,-1]
+    Yinf, Ysup,Xinf, Xsup = image_area
+    print(Yinf, Ysup,Xinf, Xsup)
+    #filename = getfilename(d)
+    #fitsimage = fits.open(filename)[0].data#d.get_pyfits()[0].data#d.get_fits()[0].data#d.get_arr2np()
+    fitsimage = d.get_pyfits()[0].data#d.get_fits()[0].data#d.get_arr2np()
+    #print(fitsimage)
+    image = fitsimage[Yinf: Ysup,Xinf: Xsup]#[Xinf: Xsup, Yinf: Ysup]
+
+    d.set("cmap %s"%(color))
+    d.set("scale %s"%(scale))
+
+
+    if grid=='1':
+        d.set("grid yes") 
+    elif grid=='0':
+        d.set("grid no") 
+    if invert=='1':
+        d.set("cmap invert yes") 
+    elif invert=='0':
+        d.set("cmap invert no") 
+    if smooth!='0':
+        d.set("smooth function boxcar") 
+        d.set("smooth radius %i"%(int(smooth))) 
+
+    d.set("scale limits {} {} ".format(np.nanpercentile(image,cuts[0]),np.nanpercentile(image,cuts[1])))
+    return 
+
+
+
+def DS9lock(xpapoint):
+    """Lock all the images in DS9 together in frame, smooth, limits, colorbar
+    """
+    d = DS9(xpapoint)
+    l = sys.argv[-5:]
+    ll = np.array(l,dtype='U3')
+    print(l,ll)
+    l = np.array(l,dtype=int)
+    ll[l==1]='yes'
+    ll[l==0]='no'
+    if ll[0] == 'no':
+        d.set("lock frame %s"%(ll[0]))
+    else:
+        d.set("lock frame physical")
+        
+    d.set("lock scalelimits  %s"%(ll[1]))
+    if ll[2] == 'no':
+        d.set("lock crosshair %s"%(ll[2]))
+    else:
+        d.set("lock crosshair physical")
+    d.set("lock smooth  %s"%(ll[3]))
+    d.set("lock colorbar  %s"%(ll[4]))
+
+    return
+
+
+###################################################################################
 def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/', config=my_conf):
+    from astropy.table import Table
+    #import pandas as pd
+    #cat, query, fields = sys.rgv[-3:]
+    #cat, query, fields = '/Users/Vincent/Nextcloud/FIREBALL/2019-01+MarseilleTestsImages/GeneralHeaderCatalog.csv', "(EXPTIME > 5  | EXPTIME < 100) & EMGAIN == 9200", 'EXPTIME,EMGAIN'
+    cat, bumber, fields, query = sys.argv[-4:]
+    fields = np.array(fields.split(','),dtype=str)
+    print('cat, bumber, fields, query = ',cat, bumber, fields, query )
+    try:
+        cat = Table.read(cat)
+    except:
+        print('Impossible to open table, verify your path.')
+    #b = Table.read('/Users/Vincent/Nextcloud/Work/FIREBall/Target_selection/2020Palestine/2019_with_flux_24092019.fits')
+    df = cat.to_pandas()
+    new_table = df.query(query)    
+    t2 = Table.from_pandas(new_table) 
+    print(t2)
+    
+    print('SELECTED FIELD  %s'%(fields))
+
+    path_date = dpath+datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
+    if not os.path.exists(path_date):
+        os.makedirs(path_date)       
+
+    numbers = cat[list(fields)].as_array()
+    for line,numbers in zip(cat, numbers):
+        filename = line['PATH']
+        print(fields)
+        number = list(numbers)#np.array(list(line[fields]))
+        print(numbers)
+        f = '/'.join(['%s_%s'%(a,b) for a,b in zip(fields,number)])
+        new_path = os.path.join(path_date,f)
+        print(new_path)
+        if not os.path.exists(new_path):
+            os.makedirs(new_path) 
+        print('Copying file',os.path.basename(filename))
+        symlink_force(filename,new_path + '/%s'%(os.path.basename(filename)))    
+#    paths = [path_date]
+#    for path in paths:
+#        for i in range(len(fields)):
+#            values = values[i]#np.unique(t2[fields[i]])
+#            paths = create_repositories(path, fields[i], values)
+#        
+#        for value in values:
+#            npath = os.path.join(path, field + '_' + value)
+#            os.makedirs(npath)     
+    return t2
+
+def create_repositories(path, field, values):
+    paths = []
+    for value in values:
+        npath = os.path.join(path, '%s_%s'%(field, value))
+        #os.makedirs(npath)  
+        print(npath)
+        paths.append(npath)
+    return paths
+
+#fields = np.array(['EMGAIN', 'EXPTIME'])
+#numbers = np.array(list(line['EMGAIN', 'EXPTIME']))
+#
+#        
+#
+#
+#fields = 'a', 'b', 'c'
+#values = [[1,2],[10,20,30],[100]]
+#
+#print('/tmp/%s_5s')
+#print('/'.join(fields))
+#path = ''
+def CatalogForGazpar(path):
+    from astropy.table import Table, Column
+    #path='/Users/Vincent/Documents/Work/sextractorCatalogs/subcats/3_with_ext/TotalMergedCatalog_9813_corr_ugrizy_only_mag.in'
+    a = Table.read(path, format='ascii')
+    a.remove_column('CONTEXT')
+    fl = np.ones(len(a))
+    fl[a['ZSPEC']>0] = 0 
+    a.add_column(Column(name='fl', data=fl), index=28)
+    a.remove_columns(['WEIGHT','SCALING_FACTOR'])
+    a.rename_column('RA','alpha')
+    a.rename_column('DEC','delta')
+    a['mask']=0
+    
+    
+    a =         a['ID',
+                 'TOTAL_MAG_MegaCam_u_ext',
+                 'MAGERR_ISO_MegaCam_u',
+                 'TOTAL_MAG_MegaCam_uS_ext',
+                 'MAGERR_ISO_MegaCam_uS',
+                 'TOTAL_MAG_HSC_G_ext',
+                 'MAGERR_ISO_HSC_G',
+                 'TOTAL_MAG_HSC_R_ext',
+                 'MAGERR_ISO_HSC_R',
+                 'TOTAL_MAG_HSC_I_ext',
+                 'MAGERR_ISO_HSC_I',
+                 'TOTAL_MAG_HSC_Z_ext',
+                 'MAGERR_ISO_HSC_Z',
+                 'TOTAL_MAG_HSC_Y_ext',
+                 'MAGERR_ISO_HSC_Y',
+                 'TOTAL_MAG_VIRCAM_Y_ext',
+                 'MAGERR_ISO_VIRCAM_Y',
+                 'TOTAL_MAG_VIRCAM_J_ext',
+                 'MAGERR_ISO_VIRCAM_J',
+                 'TOTAL_MAG_VIRCAM_H_ext',
+                 'MAGERR_ISO_VIRCAM_H',
+                 'TOTAL_MAG_VIRCAM_Ks_ext',
+                 'MAGERR_ISO_VIRCAM_Ks',
+                 'TOTAL_MAG_NUV_ext',
+                 'MAGERR_ISO_NUV',
+                 'TOTAL_MAG_FUV_ext',
+                 'MAGERR_ISO_FUV',
+                 'ZSPEC',
+                 'fl',
+                 'RA',
+                 'DEC',
+                 'mask']
+    
+    a.write(path[:-3]+'_gazpar.in', format='ascii',overwrite=True)
+    return
+    
+def DS9createSubset_old(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/', config=my_conf):
     """
     """
     from astropy.table import Table
@@ -195,7 +490,7 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     
     
     
-    t=cat.copy()
+
 #    index_hist = ReturnIndex(t, fields=[fieldGain,fieldExp, fieldTemp, fieldDate],values=[EMGAIN,EXPTIME,TEMP, date])
     index_hist = ReturnIndex(t, fields=new_fields, values=new_values)
     
@@ -291,136 +586,136 @@ def Transform(value):
     return result
     
 
-    
-def DS9createSubset_old(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/'):
-
-    """
-
-    """
-
-    from astropy.table import Table
-
-    try:
-
-        cat, number, gain, folder, exp, temp = sys.argv[3:3+6]
-
-        gain, folder, exp, temp = np.array(np.array([gain, folder, exp, temp],dtype=int),dtype=bool)
-
-        print('gain, folder, exp, temp = ',gain, folder, exp, temp)
-
-    except:
-
-        pass
-
-    
-
-    vgain, vdate, vexp, vtemp = sys.argv[-4:]
-
-    print('vgain, vdate, vexp, vtemp =',vgain, vdate, vexp, vtemp)
-
-    try:
-
-        cat = Table.read(cat)
-
-    except:
-
-        print('Impossible to open table, verify your path.')
-
-    print(cat)
-
-    print(cat['FPATH'])
-
-    
-
-    fieldTemp = 'EMCCDBAC'
-
-    fieldExp = 'EXPTIME'
-
-    fieldGain = 'EMGAIN'
-
-    fieldDate = 'date'
-
-    EMGAIN = Transform(vgain)
-
-    EXPTIME = Transform(vexp)
-
-    TEMP = Transform(vtemp)
-
-    date = Transform(vdate)
-
-    t=cat.copy()
-
-    index_hist = ReturnIndex(t, fields=[fieldGain,fieldExp, fieldTemp, fieldDate],values=[EMGAIN,EXPTIME,TEMP, date])
-
-    cat = cat[index_hist]
-
-    gains = cat[fieldGain]
-
-    fpath = cat['FPATH']
-
-    exps = cat[fieldExp]
-
-    temps = np.round(cat[fieldTemp].astype(float),1)
-
-    if gain:
-
-        gains = np.unique(gains)
-
-    if folder:
-
-        fpath = np.unique(fpath)
-
-        if type(fpath)==str:
-
-            fpath = [fpath] 
-
-    if exp:
-
-        exps = np.unique(cat[fieldExp])
-
-    if temp:
-
-        temps = np.unique(temps)
-
-    path_date = dpath+datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
-
-    
-
-    if not os.path.exists(path_date):
-
-        os.makedirs(path_date)       
-
-        
-
-    print(fpath)
-
-    print(gains)
-
-    print(exps)
-
-    print(temps)
-
-    for path in np.unique(fpath):
-        gainsi = np.unique(cat[([path in cati['PATH'] for cati in cat]) ][fieldGain])
-        for gain in np.unique(gainsi):
-            expsi = np.unique(cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) ][fieldExp])
-            for exp in np.unique(expsi):
-
-                tempsi = np.unique(cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp)][fieldTemp])
-                tempsi = np.round(tempsi,1)
-                for temp in np.unique(tempsi):
-                    print('GAIN = %i, exposure  = %i, temp = %0.2f and path=%s'%(float(gain), float(exp), float(temp), path))
-                    files = cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp) & (np.round(cat[fieldTemp].astype(float),1) == temp) ]['PATH']
-                    folders = cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp) & (np.round(cat[fieldTemp].astype(float),1) == temp) ]['FPATH']
-                    if len(files) > 0:
-                        for folder,file in zip(folders[-int(number):], files[-int(number):]):
-                            try:
-                                os.makedirs(path_date+'/%s/%s'%(os.path.basename(os.path.dirname(folder)),os.path.basename(folder)))  
-                            except FileExistsError:
-                                pass
-                            print('Copying file',os.path.basename(file))
-                            symlink_force(file,path_date+'/%s/%s/%s'%(os.path.basename(os.path.dirname(folder)),os.path.basename(folder),os.path.basename(file)))
-    return
+#    
+#def DS9createSubset_old(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/'):
+#
+#    """
+#
+#    """
+#
+#    from astropy.table import Table
+#
+#    try:
+#
+#        cat, number, gain, folder, exp, temp = sys.argv[3:3+6]
+#
+#        gain, folder, exp, temp = np.array(np.array([gain, folder, exp, temp],dtype=int),dtype=bool)
+#
+#        print('gain, folder, exp, temp = ',gain, folder, exp, temp)
+#
+#    except:
+#
+#        pass
+#
+#    
+#
+#    vgain, vdate, vexp, vtemp = sys.argv[-4:]
+#
+#    print('vgain, vdate, vexp, vtemp =',vgain, vdate, vexp, vtemp)
+#
+#    try:
+#
+#        cat = Table.read(cat)
+#
+#    except:
+#
+#        print('Impossible to open table, verify your path.')
+#
+#    print(cat)
+#
+#    print(cat['FPATH'])
+#
+#    
+#
+#    fieldTemp = 'EMCCDBAC'
+#
+#    fieldExp = 'EXPTIME'
+#
+#    fieldGain = 'EMGAIN'
+#
+#    fieldDate = 'date'
+#
+#    EMGAIN = Transform(vgain)
+#
+#    EXPTIME = Transform(vexp)
+#
+#    TEMP = Transform(vtemp)
+#
+#    date = Transform(vdate)
+#
+#    t=cat.copy()
+#
+#    index_hist = ReturnIndex(t, fields=[fieldGain,fieldExp, fieldTemp, fieldDate],values=[EMGAIN,EXPTIME,TEMP, date])
+#
+#    cat = cat[index_hist]
+#
+#    gains = cat[fieldGain]
+#
+#    fpath = cat['FPATH']
+#
+#    exps = cat[fieldExp]
+#
+#    temps = np.round(cat[fieldTemp].astype(float),1)
+#
+#    if gain:
+#
+#        gains = np.unique(gains)
+#
+#    if folder:
+#
+#        fpath = np.unique(fpath)
+#
+#        if type(fpath)==str:
+#
+#            fpath = [fpath] 
+#
+#    if exp:
+#
+#        exps = np.unique(cat[fieldExp])
+#
+#    if temp:
+#
+#        temps = np.unique(temps)
+#
+#    path_date = dpath+datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
+#
+#    
+#
+#    if not os.path.exists(path_date):
+#
+#        os.makedirs(path_date)       
+#
+#        
+#
+#    print(fpath)
+#
+#    print(gains)
+#
+#    print(exps)
+#
+#    print(temps)
+#
+#    for path in np.unique(fpath):
+#        gainsi = np.unique(cat[([path in cati['PATH'] for cati in cat]) ][fieldGain])
+#        for gain in np.unique(gainsi):
+#            expsi = np.unique(cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) ][fieldExp])
+#            for exp in np.unique(expsi):
+#
+#                tempsi = np.unique(cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp)][fieldTemp])
+#                tempsi = np.round(tempsi,1)
+#                for temp in np.unique(tempsi):
+#                    print('GAIN = %i, exposure  = %i, temp = %0.2f and path=%s'%(float(gain), float(exp), float(temp), path))
+#                    files = cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp) & (np.round(cat[fieldTemp].astype(float),1) == temp) ]['PATH']
+#                    folders = cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp) & (np.round(cat[fieldTemp].astype(float),1) == temp) ]['FPATH']
+#                    if len(files) > 0:
+#                        for folder,file in zip(folders[-int(number):], files[-int(number):]):
+#                            try:
+#                                os.makedirs(path_date+'/%s/%s'%(os.path.basename(os.path.dirname(folder)),os.path.basename(folder)))  
+#                            except FileExistsError:
+#                                pass
+#                            print('Copying file',os.path.basename(file))
+#                            symlink_force(file,path_date+'/%s/%s/%s'%(os.path.basename(os.path.dirname(folder)),os.path.basename(folder),os.path.basename(file)))
+#    return
 
 
 
@@ -1148,7 +1443,7 @@ def DS9guider(xpapoint):
 #    #                  choices=('ul', 'ev'), help='Scale bounds: lower/upper or estimate/error')
 #    parser.add_option('--scale-lower', dest='scale_lower', type=float, help='Scale lower-bound')
 #    parser.add_option('--scale-upper', dest='scale_upper', type=float, help='Scale upper-bound')
-#    parser.add_option('--scale-est', dest='scale_est', type=float, help='Scale estimate')
+#    parser.add_option('--scale-est', smoothdest='scale_est', type=float, help='Scale estimate')
 #    parser.add_option('--scale-err', dest='scale_err', type=float, help='Scale estimate error (in PERCENT), eg "10" if you estimate can be off by 10%')
 #    parser.add_option('--ra', dest='center_ra', type=float, help='RA center')
 #    parser.add_option('--dec', dest='center_dec', type=float, help='Dec center')
@@ -1182,59 +1477,6 @@ def CreateWCS(PathExec, filename, Newfilename):
 
 
 
-def DS9setup2(xpapoint, config=my_conf):
-    """This function aims at giving a quick and general visualisation of the image by applying specific thresholding
-        and smoothing parameters. This allows to detect easily:
-        •Different spot that the image contains
-        •The background low frequency/medium variation
-        •If a spot saturates
-        •If the image contains some ghost/second pass spots. . .
-    """
-    #from astropy.io import fits
-    scale, cuts, color, invert, grid = sys.argv[-5:]
-    cuts = np.array(cuts.split('-'),dtype=float)
-    d = DS9(xpapoint)
-    if d.get("fits height") == '2069':
-        print('Detector image')
-        image_area = my_conf.physical_region#[10,2000,1172,2100]
-    else:
-        image_area = [0,-1,0,-1]
-    Yinf, Ysup,Xinf, Xsup = image_area
-    print(Yinf, Ysup,Xinf, Xsup)
-    #filename = getfilename(d)
-    #fitsimage = fits.open(filename)[0].data#d.get_pyfits()[0].data#d.get_fits()[0].data#d.get_arr2np()
-    fitsimage = d.get_pyfits()[0].data#d.get_fits()[0].data#d.get_arr2np()
-    #print(fitsimage)
-    image = fitsimage[Yinf: Ysup,Xinf: Xsup]#[Xinf: Xsup, Yinf: Ysup]
-    #print(image)
-    
-#    if d.get("lock bin") == 'no':
-    d.set("cmap %s"%(color))
-    d.set("scale %s"%(scale))
-
-
-    if grid=='1':
-        d.set("grid yes") 
-    elif grid=='0':
-        d.set("grid no") 
-    if invert=='1':
-        d.set("cmap invert yes") 
-    elif invert=='0':
-        d.set("cmap invert no") 
-#        d.set("scale limits {} {} ".format(np.percentile(fitsimage[0].data,9),
-#              np.percentile(fitsimage[0].data,99.6)))
-    #d.set("scale limits {} {} ".format(np.nanpercentile(image,50),np.nanpercentile(image,99.95)))
-    d.set("scale limits {} {} ".format(np.percentile(image,cuts[0]),np.nanpercentile(image,cuts[1])))
-#    d.set("scale asinh")
-    #d.set("cmap grey")
-    
-#        d.set("smooth yes")
-#        d.set("cmap Cubehelix0")
-#        d.set("smooth radius {}".format(2))
-#        d.set("smooth yes")
-#    d.set("lock bin yes")
-
-    return 
 
 
 def DS9originalSettings(xpapoint):
@@ -1511,12 +1753,13 @@ def throughfocus(center, files,x=None,
     sec=[]
     images=[]
     ENCa = []
+    ext = FitsExt(fits.open(files[0]))
     for file in files:
         print (file)
         filename = file
         with fits.open(filename) as f:
             #stack[:,:,i] = f[0].data
-            fitsfile = f[0]
+            fitsfile = f[ext]
             image = fitsfile.data
         time = fitsfile.header['DATE']
         if Type == 'guider':    
@@ -1751,12 +1994,13 @@ def throughfocusWCS(center, files,x=None,
     sec=[]
     images=[]
     ENCa = []
+    ext = FitsExt(fits.open(files[0]))
     for file in files:
         print (file)
         filename = file
         with fits.open(filename) as f:
             #stack[:,:,i] = f[0].data
-            fitsfile = f[0]
+            fitsfile = f[i]
             image = fitsfile.data
         header = fitsfile.header
         time = header['DATE']
@@ -3355,7 +3599,7 @@ def DS9PlotRedshiftGaussian(xpapoint):
     ax1.set_xlabel('(Z_SPEC - Z_ML)/(1+Z_SPEC)')
     ax2.set_xlabel('(Z_SPEC - Z_ML)/(1+Z_SPEC)')
     fig.tight_layout()
-    fig.suptitle(os.path.basename(path[:-4]),y=1,fontsize=18)
+    fig.suptitle(os.path.basename(path[:-4]+'redshift'),y=1,fontsize=18)
     fig.savefig(path[:-4])
     plt.show()
     return
@@ -3877,7 +4121,7 @@ def csvwrite(table, filename, verbose=True, config=my_conf):
         filename = '/tmp/' + os.path.basename(filename)
         print(bcolors.BLACK_RED + 'Instead writing new file in : ' + filename + bcolors.END)
         table.write(filename, overwrite=True, format='csv')
-    verboseprint('Table saved: %s'%(filename),verbose=my_conf.verbose)
+    verboseprint('Table saved: %s'%(filename),verbose=True)#my_conf.verbose)
     return table
 
 def gaussian(x, amp, x0, sigma):
@@ -5078,83 +5322,83 @@ def stackImages(path,all=False, DS=0, function = 'mean', numbers=None, save=True
     return image.data, name
 
 
-def DS9stack(xpapoint):
-    """This function aims at stacking images with or without dark substraction (no interpolation of the dark for now).
-    By pressing ’s’ a window ask for the detector images to stack: just write the first and the last number of the
-    images (separated by ’-’ no space as in figure 5). If the images are not consecutive you have to write all the
-    numbers (eg. ’13-26-86-89’). Do the same for the dark, put only one number if there is only one dark image
-    or press directly ’ok’ if there is not any dark image. The stack image is saved in the repository containing the
-    DS9 image with the number of the images stacked and the dark images used + ’stack.fits’.
-    """
-    from astropy.io import fits
-    d = DS9(xpapoint)
-    filename = d.get("file")
-    fitsimage = fits.open(filename)[0]
-    if fitsimage.header['BITPIX'] == -32:
-        Type = 'guider'  
-    else:
-        Type = 'detector' 
-    print('Type = ', Type)
-
-    if Type == 'guider':
-        files = Charge_path(filename)
-        print(files)
-        n = len(files)
-        image = fitsimage
-        lx,ly = image.data.shape
-        stack = np.zeros((lx,ly,n),dtype='uint16')
-        print('\nReading fits files...')
-        numbers = []
-        for i,file in enumerate(files):
-            name = os.path.basename(file) 
-            numbers.append(int(name[5:12]))
-            with fits.open(file) as f:
-                stack[:,:,i] = f[0].data
-        image.data = np.nanmean(stack,axis=2)
-        fname = os.path.dirname(filename)                
-        filename = '{}/StackedImage_{}-{}.fits'.format(fname, np.array(numbers).min(), np.array(numbers).max())
-        image.writeto(filename ,overwrite=True)
-        print('Images stacked:',filename)            
-        
-    if Type == 'detector':
-        entry = sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
-        print('Images to stack = ', entry)
-        try:
-            number_dark = sys.argv[4] #''#sys.argv[4] #''#'sys.argv[4] #'365'#'365-374'#''#sys.argv[4] 
-        except:
-            number_dark = ''
-        print('Dark to remove = ', number_dark)
-        numbers = entry.split('-')
-    
-        if len(numbers) == 2:
-            print('2 numbers given for the stack')
-            n1, n2 = entry.split('-')
-            n1, n2 = int(n1), int(n2)
-            numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
-        print('Numbers used: {}'.format(numbers))           
-    
-        path = os.path.dirname(filename)
-        try:
-            d1,d2 = number_dark.split('-') 
-            print('2 numbers given for the dark')
-            print(d1,d2)
-            dark = stackImages(path,all=False, DS=0, function = 'mean', numbers=np.arange(int(d1),int(d2)), save=True, name="Dark")[0]
-            Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=np.array([int(number) for number in numbers]), save=True, name="DarkSubtracted")#, name="Dark_{}-{}".format(int(d1),int(d2)))
-        except ValueError:
-            d1 = number_dark
-            if d1 == '':
-                dark = 0
-                print('No dark')
-                Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="NoDark")
-            else:
-                dark = fits.open(path + '/image%06d.fits' % (int(d1)))[0].data
-                Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="Dark_{}".format(d1))
-
-    d.set('tile yes')
-    d.set('frame new')
-    d.set("file {}".format(filename))   
-    d.set("lock frame physical")
-    return
+#def DS9stack(xpapoint):
+#    """This function aims at stacking images with or without dark substraction (no interpolation of the dark for now).
+#    By pressing ’s’ a window ask for the detector images to stack: just write the first and the last number of the
+#    images (separated by ’-’ no space as in figure 5). If the images are not consecutive you have to write all the
+#    numbers (eg. ’13-26-86-89’). Do the same for the dark, put only one number if there is only one dark image
+#    or press directly ’ok’ if there is not any dark image. The stack image is saved in the repository containing the
+#    DS9 image with the number of the images stacked and the dark images used + ’stack.fits’.
+#    """
+#    from astropy.io import fits
+#    d = DS9(xpapoint)
+#    filename = d.get("file")
+#    fitsimage = fits.open(filename)[0]
+#    if fitsimage.header['BITPIX'] == -32:
+#        Type = 'guider'  
+#    else:
+#        Type = 'detector' 
+#    print('Type = ', Type)
+#
+#    if Type == 'guider':
+#        files = Charge_path(filename)
+#        print(files)
+#        n = len(files)
+#        image = fitsimage
+#        lx,ly = image.data.shape
+#        stack = np.zeros((lx,ly,n),dtype='uint16')
+#        print('\nReading fits files...')
+#        numbers = []
+#        for i,file in enumerate(files):
+#            name = os.path.basename(file) 
+#            numbers.append(int(name[5:12]))
+#            with fits.open(file) as f:
+#                stack[:,:,i] = f[0].data
+#        image.data = np.nanmean(stack,axis=2)
+#        fname = os.path.dirname(filename)                
+#        filename = '{}/StackedImage_{}-{}.fits'.format(fname, np.array(numbers).min(), np.array(numbers).max())
+#        image.writeto(filename ,overwrite=True)
+#        print('Images stacked:',filename)            
+#        
+#    if Type == 'detector':
+#        entry = sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# sys.argv[3]#'325-334'# 
+#        print('Images to stack = ', entry)
+#        try:
+#            number_dark = sys.argv[4] #''#sys.argv[4] #''#'sys.argv[4] #'365'#'365-374'#''#sys.argv[4] 
+#        except:
+#            number_dark = ''
+#        print('Dark to remove = ', number_dark)
+#        numbers = entry.split('-')
+#    
+#        if len(numbers) == 2:
+#            print('2 numbers given for the stack')
+#            n1, n2 = entry.split('-')
+#            n1, n2 = int(n1), int(n2)
+#            numbers = np.arange(int(min(n1,n2)),int(max(n1,n2)+1)) 
+#        print('Numbers used: {}'.format(numbers))           
+#    
+#        path = os.path.dirname(filename)
+#        try:
+#            d1,d2 = number_dark.split('-') 
+#            print('2 numbers given for the dark')
+#            print(d1,d2)
+#            dark = stackImages(path,all=False, DS=0, function = 'mean', numbers=np.arange(int(d1),int(d2)), save=True, name="Dark")[0]
+#            Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=np.array([int(number) for number in numbers]), save=True, name="DarkSubtracted")#, name="Dark_{}-{}".format(int(d1),int(d2)))
+#        except ValueError:
+#            d1 = number_dark
+#            if d1 == '':
+#                dark = 0
+#                print('No dark')
+#                Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="NoDark")
+#            else:
+#                dark = fits.open(path + '/image%06d.fits' % (int(d1)))[0].data
+#                Image, filename = stackImages(path,all=False, DS=dark, function = 'mean', numbers=numbers, save=True, name="Dark_{}".format(d1))
+#
+#    d.set('tile yes')
+#    d.set('frame new')
+#    d.set("file {}".format(filename))   
+#    d.set("lock frame physical")
+#    return
 
 def FlagHighBackgroundImages(stack, std=1, config=my_conf):
     """
@@ -5201,8 +5445,9 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
     from astropy.io import fits
     import re
     fitsfile = fits.open(paths[0])
-    sizes = [sys.getsizeof(elem.data) for elem in fitsfile]#[1]
-    i = np.argmax(sizes)
+    #sizes = [sys.getsizeof(elem.data) for elem in fitsfile]#[1]
+    #i = np.argmax(sizes)
+    i = FitsExt(fitsfile)
     Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
     stds = np.array([np.nanstd(fits.open(image)[i].data[Xinf:Xsup, Yinf:Ysup]) for image in paths])
     plt.figure()
@@ -5223,6 +5468,7 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
     lx,ly = fitsfile[i].data.shape
     stack = np.zeros((lx,ly),dtype=dtype)
     if std:
+        print('Using std method')
         for i,file in enumerate(paths[index]):
             try:
                 with fits.open(file) as f:
@@ -5235,9 +5481,11 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
                 n -= 1
         stack = stack/n
     elif Type == np.nanmedian:
-        stack = np.array(Type(np.array([fits.open(file)[0].data for file in paths[index]]), axis=0), dtype=dtype)
+        print('Using std nanmedian')
+        stack = np.array(Type(np.array([fits.open(file)[i].data for file in paths[index]]), axis=0), dtype=dtype)
     elif Type == np.nanmean:
-        stack = Type(np.array([fits.open(file)[0].data for file in paths[index]]),dtype=dtype, axis=0)
+        print('Using std nanmean')
+        stack = Type(np.array([fits.open(file)[i].data for file in paths[index]]),dtype=dtype, axis=0)
     try:
         numbers = [int(re.findall(r'\d+',os.path.basename(filename))[-1]) for filename in paths[index]]
     except IndexError:
@@ -5254,8 +5502,10 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
     
     #print('All these images have not been taken into account because of hight background', '\n'.join(list(np.array(name_images)[~index]))  )
     #image[0].data = np.nanmean(stack[:,:,index],axis=2)#,dtype='uint16')#AddParts2Image(np.nanmean(stack,axis=2)) 
-    fitsfile[i].data = stack#,dtype='uint16')#AddParts2Image(np.nanmean(stack,axis=2)) 
-    fitsfile[i].header['STK_NB'] = images# '-'.join(re.findall(r'\d+',images))#'-'.join(list(np.array(name_images)[index]))   
+    new_fitsfile = fitsfile[i]
+    print(new_fitsfile.data, stack)
+    new_fitsfile.data = stack#,dtype='uint16')#AddParts2Image(np.nanmean(stack,axis=2)) 
+    new_fitsfile.header['STK_NB'] = images# '-'.join(re.findall(r'\d+',images))#'-'.join(list(np.array(name_images)[index]))   
     try:
         name = '{}/StackedImage_{}-{}{}.fits'.format(os.path.dirname(paths[0]), int(os.path.basename(paths[0])[5:5+6]), int(os.path.basename(paths[-1])[5:5+6]),fname)
 #        name = '{}/StackedImage_{}-{}{}.fits'.format(os.path.dirname(paths[0]),np.min(numbers), np.max(numbers),fname)
@@ -5263,7 +5513,12 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
         name = '{}/StackedImage_{}-{}{}'.format(os.path.dirname(paths[0]), os.path.basename(paths[0]).split('.')[0], os.path.basename(paths[-1]),fname)       
 #        name = '{}/StackedImage_{}-{}{}'.format(os.path.dirname(paths[0]), np.min(numbers), np.max(numbers),fname)       
     print('Image saved : %s'%(name))
-    fitswrite(fitsfile[i], name)
+    try:
+        fitswrite(new_fitsfile, name)
+    except RuntimeError as e:
+        print('Unknown error to be fixed: ', e)
+        fitswrite(new_fitsfile.data, name)
+        
     print('n = ', n)
 
     return fitsfile  , name
@@ -5361,10 +5616,11 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     radius = 15
     print('Sum pixel is used (another estimator may be prefarable)')
     fluxes=[]
-    
+    ext = FitsExt(fits.open(path[0]))
+
     for file in path:
         print (file)
-        fitsfile = fits.open(file)[0]
+        fitsfile = fits.open(file)[ext]
         image = fitsfile.data
         #plt.figure(figsize=(sizefig,sizefig))
         #plt.imshow(image[int(a.yc)-radius:int(a.yc)+radius, int(a.xc)-radius:int(a.xc)+radius])#;plt.colorbar();plt.show()
@@ -5498,43 +5754,7 @@ def DS9meanvar(xpapoint):
 
  
 
-def DS9lock(xpapoint):
-    """Lock all the images in DS9 together in frame, smooth, limits, colorbar
-    """
-    d = DS9(xpapoint)
-    #lock = d.get("lock scalelimits")
-    l = sys.argv[-5:]
-    ll = np.array(l,dtype='U3')
-    print(l,ll)
-    l = np.array(l,dtype=int)
-    ll[l==1]='yes'
-    ll[l==0]='no'
-    if ll[0] == 'no':
-        d.set("lock frame %s"%(ll[0]))
-    else:
-        d.set("lock frame physical")
-        
-    d.set("lock scalelimits  %s"%(ll[1]))
-    if ll[2] == 'no':
-        d.set("lock crosshair %s"%(ll[2]))
-    else:
-        d.set("lock crosshair physical")
-    d.set("lock smooth  %s"%(ll[3]))
-    d.set("lock colorbar  %s"%(ll[4]))
-#    if lock == 'yes':
-#        d.set("lock frame no")
-#        d.set("lock scalelimits no")
-#        d.set("lock crosshair no")
-#        d.set("lock smooth no")
-#        d.set("lock colorbar no")
-#    if lock == 'no':
-#        d.set("lock frame physical")
-#        d.set("lock scalelimits yes")
-#        d.set("crosshair lock physical")
-#        d.set("lock crosshair physical")
-#        d.set("lock smooth yes")
-#        d.set("lock colorbar yes")
-    return
+
 
 
 def DS9inverse(xpapoint):
@@ -7380,31 +7600,6 @@ def distance(x1,y1,x2,y2):
     """
     return np.sqrt(np.square(x1-x2)+np.square(y1-y2))
 
-def DS9RemoveImage(xpapoint):
-    """Substract an image, for instance bias or dark image, to the image
-    in DS9. Can take care of several images
-    """
-    d = DS9(xpapoint)
-    filename = getfilename(d)
-    path2remove = sys.argv[3]
-    a, b = sys.argv[4].split(',')
-    print(a,b)
-    a, b = float(a), float(b)
-    #if len(sys.argv) > 5: path = Charge_path_new(filename, entry_point=5)
-    path = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-
-        
-    for filename in path:
-        print(filename)
-        result, name = SubstractImage(filename, path2remove=path2remove, a=a, b=b) 
-                                        
-    if len(path) < 2:
-        d.set('frame new')
-        d.set('tile yes')
-        d.set('file ' + name)  
-    return
-
-
 
 def DS9_2D_autocorrelation(xpapoint):
     """Return 2D_autocorrelation plot
@@ -7484,7 +7679,9 @@ def TwoD_FFT(filename, save=True, area=None, plot_flag=True, DS9backUp = DS9_Bac
     """
     from astropy.io import fits
     from scipy import fftpack
-    data = fits.open(filename)[0].data
+    fitsfile = fits.open(filename)
+    ext = FitsExt(fitsfile)
+    data = fitsfile[ext].data
     template = np.copy(data[area[0]:area[1], area[2]:area[3]]).astype('uint64')
     F = fftpack.fftshift( fftpack.fft2(template) )
     psd2D = np.abs(F)**2
@@ -7501,7 +7698,8 @@ def TwoD_autocorrelation(filename, save=True, area=None, plot_flag=True, DS9back
     """
     from scipy import signal#from scipy import misc
     from astropy.io import fits
-    fitsimage = fits.open(filename)[0]
+    fitsimage = fits.open(filename)
+    fitsimage = fitsimage[FitsExt(fitsimage)]
     data = fitsimage.data 
 
     if area is None:
@@ -7685,21 +7883,7 @@ def AnalyzeImage(filename, save=True, area=None, plot_flag=True, config=my_conf)
     return
 
 
-def SubstractImage(filename, path2remove, a , b, config=my_conf):
-    """Substract an image, for instance bias or dark images,
-    and save it
-    """
-    from astropy.io import fits
-    fitsimage = fits.open(filename)[0]
-    image = fitsimage.data
-    fitsimage2 = fits.open(path2remove)[0]
-    image2substract = fitsimage2.data
-    fitsimage.data = image - a * image2substract - b 
-    name = filename[:-5] + '_subtracted_' + os.path.basename(path2remove)
-    exp1, exp2 = int(fitsimage.header[my_conf.exptime[0]]), int(fitsimage2.header[my_conf.exptime[0]])
-    fitsimage.header[my_conf.exptime[0]] = np.nanmax([exp2,exp1]) - a * (np.nanmin([exp2,exp1]))
-    fitswrite(fitsimage, name)
-    return fitsimage.data, name    
+  
 
 def DS9NoiseMinimization(xpapoint, radius=200, config=my_conf):
     """Substract a linear combination of images
@@ -8674,7 +8858,7 @@ def ApplyTotalReductionPipeline(filename, masterBias, masterDark, masterFlat):
     Dark_OScorr, Dark_OScorrName = ApplyOverscanCorrection(masterDark.filename(), stddev=3, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20])
     
     
-    Dark_OScorr_Biascorr = Dark_OScorr.data - Bias_OScorr.data  #SubstractImage(DarkName, Bias_OScorrName)
+    Dark_OScorr_Biascorr = Dark_OScorr.data - Bias_OScorr.data  
     if masterDark[0].header[my_conf.exptime[0]] != 0:
         Dark_OScorr_Biascorr_per_sec = Dark_OScorr_Biascorr / masterDark[0].header[my_conf.exptime[0]]
     else:
@@ -8688,8 +8872,8 @@ def ApplyTotalReductionPipeline(filename, masterBias, masterDark, masterFlat):
             masterFlat = fits.open(masterFlat)
             
         Flat_OScorr, Flat_OScorrName = ApplyOverscanCorrection(masterFlat, stddev=3, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20])
-        Flat_OScorr_Biascorr = Flat_OScorr - Bias_OScorr#SubstractImage(DarkName, Bias_OScorrName)
-        Flat_OScorr_Biascorr_Darkcorr = Flat_OScorr_Biascorr - (Dark_OScorr_Biascorr * masterFlat[0].header[my_conf.exptime[0]])#SubstractImage(DarkName, Bias_OScorrName)
+        Flat_OScorr_Biascorr = Flat_OScorr - Bias_OScorr
+        Flat_OScorr_Biascorr_Darkcorr = Flat_OScorr_Biascorr - (Dark_OScorr_Biascorr * masterFlat[0].header[my_conf.exptime[0]])
     else:
         name = '_OScorr_Biascorr_Darkcorr.fits'
         Flat_OScorr_Biascorr_Darkcorr = 0
@@ -8737,7 +8921,8 @@ def ApplyTrimming(path, area=[0,-0,1053,2133], config=my_conf):
     """Apply overscan correction in the specified region, given the two overscann areas
     """
     from astropy.io import fits
-    fitsimage = fits.open(path)[0]
+    fitsimage = fits.open(path)
+    fitsimage = fitsimage[FitsExt(fitsimage)]
     image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
     #image = image[area[0]:area[1],area[2]:area[3]]
     fitsimage.data = image
@@ -9108,8 +9293,8 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, filename=None, info=True, redo=
             files = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
     if os.path.isdir(sys.argv[-1]):
         fname = sys.argv[-1]
-    elif filename is not None:
-        fname = filename
+    #elif filename is not None:
+    #    fname = filename
     else:
         fname = os.path.dirname(os.path.dirname(files[0]))
 #            if filename is None:
@@ -9124,7 +9309,7 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, filename=None, info=True, redo=
         if onlystacks:
             t1s = [CreateCatalog(glob.glob(path + '/StackedImage*.fits')) for path in paths if (len(glob.glob(path + '/StackedImage*.fits'))>0)] 
         else:
-            t1s = [CreateCatalog(glob.glob(path + '/image*.fits')) for path in paths if (len(glob.glob(path + '/image*.fits'))>0)] 
+            t1s = [CreateCatalog(glob.glob(path + '/*.fits')) for path in paths if (len(glob.glob(path + '/*.fits'))>0)] 
         
     else:
         t1s = [CreateCatalog(files)]
@@ -9290,7 +9475,7 @@ def CreateCatalog(files, config=my_conf):
     warnings.simplefilter('ignore', UserWarning)
     files.sort()
     path = files[0]
-    header = fits.getheader(path)
+    header = fits.getheader(path,0)
     fields = list(set(header.keys())) + ['PATH'] + ['FPATH'] 
     #t = Table(names=fields,dtype=('S20,'*len(fields)).split(',')[:-1])#,dtype=('S10,'*30).split(',')[:-1])
     t = Table(names=fields,dtype=('S20,'*len(fields[:-2])).split(',')[:-1] + ['S200'] + ['S200'])#,dtype=('S10,'*30).split(',')[:-1])
@@ -9363,6 +9548,8 @@ def FluxDeffect(filename, Plot=False, config=my_conf):
     texp = fitsimage.header[my_conf.exptime[0]]
     flux = (np.nanmean(fitsimage.data[1158-25:1158+25,2071-50:2071+50]) - np.nanmean(fitsimage.data[1158-25+50:1158+25+50,2071-50:2071+50]))/texp
     return {'Flux':flux}
+
+
 
 
 
@@ -10176,6 +10363,7 @@ def getfilename(ds9, config=my_conf):
     print(new_filename)
     #print('Simlink = ',os.path.islink(new_filename))
     return new_filename    
+
 
 
 def DS9CreateHistrogram(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
@@ -12536,17 +12724,17 @@ def CleanCat(cat, bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z
     #cat['CONTEXT'] = 1023
     #cat['ZSPEC'] = -99
     cat_2 =   cat['#ID',
-                 'TOTAL_MAG_MegaCam_u',
-                 'TOTAL_MAG_MegaCam_uS',
-                 'TOTAL_MAG_HSC_G',
-                 'TOTAL_MAG_HSC_R',
-                 'TOTAL_MAG_HSC_I',
-                 'TOTAL_MAG_HSC_Z',
-                 'TOTAL_MAG_HSC_Y',
-                 'TOTAL_MAG_VIRCAM_Y',
-                 'TOTAL_MAG_VIRCAM_J',
-                 'TOTAL_MAG_VIRCAM_H',
-                 'TOTAL_MAG_VIRCAM_Ks',
+                 'TOTAL_MAG_MegaCam_u_ext',
+                 'TOTAL_MAG_MegaCam_uS_ext',
+                 'TOTAL_MAG_HSC_G_ext',
+                 'TOTAL_MAG_HSC_R_ext',
+                 'TOTAL_MAG_HSC_I_ext',
+                 'TOTAL_MAG_HSC_Z_ext',
+                 'TOTAL_MAG_HSC_Y_ext',
+                 'TOTAL_MAG_VIRCAM_Y_ext',
+                 'TOTAL_MAG_VIRCAM_J_ext',
+                 'TOTAL_MAG_VIRCAM_H_ext',
+                 'TOTAL_MAG_VIRCAM_Ks_ext',
                  'MAGERR_ISO_MegaCam_u',
                  'MAGERR_ISO_MegaCam_uS',
                  'MAGERR_ISO_HSC_G',
@@ -12585,10 +12773,12 @@ def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','Mega
     dict_format = {}
     for band in all_bands:
          band = band.replace('-','_')
-         dict_format['TOTAL_MAG_' + band] = '%0.8e'
+         dict_format['TOTAL_MAG_' + band + '_ext'] = '%0.8e'
          dict_format['MAGERR_ISO_' + band] ='%0.8e'
     
-    ComputeTotalMagnitude2(table, all_bands=all_bands)  
+    ComputeTotalMagnitude2(table, all_bands=all_bands)
+    
+    AddExtinction(table,extinction_map='/Users/Vincent/Documents/Work/Thibault/CATALOGUES_s16a/s16a_uddd_COSMOS_unique_tot.fits')
     table.write(path[:-5]+'_mag.fits',overwrite=True)
     #plot_comptages_correction(path=path[:-5]+'_%s_mag.fits'%(ks))
 
@@ -12613,17 +12803,53 @@ def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','Mega
     #table_2.remove_column('MAGERR_ISO_FUV')
     
     
-#    table_2.add_column(Column(name='TOTAL_MAG_NUV', data=np.ones(len(table_2))*-99.0), index=12) 
-#    table_2.add_column(Column(name='MAGERR_ISO_NUV', data=np.ones(len(table_2))*-99.0), index=24) 
-#
-#    table_2.add_column(Column(name='TOTAL_MAG_FUV', data=np.ones(len(table_2))*-99.0), index=13) 
-#    table_2.add_column(Column(name='MAGERR_ISO_FUV', data=np.ones(len(table_2))*-99.0), index=26) 
+    table_2.add_column(Column(name='TOTAL_MAG_NUV_ext', data=np.ones(len(table_2))*-99.0), index=12) 
+    table_2.add_column(Column(name='MAGERR_ISO_NUV', data=np.ones(len(table_2))*-99.0), index=24) 
+
+    table_2.add_column(Column(name='TOTAL_MAG_FUV_ext', data=np.ones(len(table_2))*-99.0), index=13) 
+    table_2.add_column(Column(name='MAGERR_ISO_FUV', data=np.ones(len(table_2))*-99.0), index=26) 
     table_2['CONTEXT'] =2**np.sum(['TOTAL_MAG_' in name for name in table_2.colnames])-1
     astropy.io.ascii.write(table_2, name, formats=dict_format,overwrite=True)
     return
 
- 
-    
+def AddExtinction(table,extinction_map):
+    from astropy.table import Table
+    from astropy.coordinates import SkyCoord    #path = sys.argv[3]
+    from astropy import units as u
+    #table = Table.read('/Users/Vincent/Documents/Work/sextractorCatalogs/TotalMergedCatalog_9813_corr_ugrizy.fits')
+    extinction_map = Table.read(extinction_map)['RA','DEC','EB_V']
+    ext_u=4.799
+    ext_uS=4.670
+    ext_g=3.656
+    ext_r=2.699
+    ext_i=1.988
+    ext_z=1.513
+    ext_Y=1.296
+    ext_Yv=1.210
+    ext_J=0.871
+    ext_H=0.562
+    ext_K=0.365
+    ext_NUV=8.612
+    ext_FUV=8.290 
+
+    c = SkyCoord(ra=extinction_map['RA']*u.degree, dec=extinction_map['DEC']*u.degree)
+    catalog = SkyCoord(ra=table['RA']*u.degree, dec=table['DEC']*u.degree) 
+    idx, d2d, d3d = catalog.match_to_catalog_sky(c) 
+    #mask = 3600*np.array(d2d)<0.2
+    table['EB_V'] = extinction_map['EB_V'][idx]
+    cat = table#.copy()
+    cat['TOTAL_MAG_MegaCam_u_ext'] = cat['TOTAL_MAG_MegaCam_u'] - ext_u*cat['EB_V']
+    cat['TOTAL_MAG_MegaCam_uS_ext'] = cat['TOTAL_MAG_MegaCam_uS'] - ext_uS*cat['EB_V']
+    cat['TOTAL_MAG_HSC_G_ext'] = cat['TOTAL_MAG_HSC_G'] - ext_g*cat['EB_V']
+    cat['TOTAL_MAG_HSC_R_ext'] = cat['TOTAL_MAG_HSC_R'] - ext_r*cat['EB_V']
+    cat['TOTAL_MAG_HSC_I_ext'] = cat['TOTAL_MAG_HSC_I'] - ext_i*cat['EB_V']
+    cat['TOTAL_MAG_HSC_Z_ext'] = cat['TOTAL_MAG_HSC_Z'] - ext_z*cat['EB_V']
+    cat['TOTAL_MAG_HSC_Y_ext'] = cat['TOTAL_MAG_HSC_Y'] - ext_Yv*cat['EB_V']
+    cat['TOTAL_MAG_VIRCAM_Y_ext'] = cat['TOTAL_MAG_VIRCAM_Y'] - ext_r*cat['EB_V']
+    cat['TOTAL_MAG_VIRCAM_J_ext'] = cat['TOTAL_MAG_VIRCAM_J'] - ext_i*cat['EB_V']
+    cat['TOTAL_MAG_VIRCAM_H_ext'] = cat['TOTAL_MAG_VIRCAM_H']  - ext_z*cat['EB_V']
+    cat['TOTAL_MAG_VIRCAM_Ks_ext'] = cat['TOTAL_MAG_VIRCAM_Ks'] - ext_Y*cat['EB_V']
+    return cat
 def plot_comptages_correction(path,bands=['MegaCam-u','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks'],dm=0.1):
 
     from fpdf import FPDF
@@ -13403,9 +13629,7 @@ def SextractorHSC_CLAUDS(d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, file
             cat_['MAG_APER_3s_Laigle'] = Laigle['yHSC_MAG_APER3'][idx_]
             DS9PlotColor(xpapoint=None, path=CATALOG_NAME, f1='MAG_APER_3s_Laigle', f2='MAG_APER_3s_HSC_Y', f3='MAG_APER_3s_Laigle', bins=[20, 22, 24, 26], table=cat_)
 #            cat_['MAG_APER_2s_Laigle'] = Laigle['yHSC_MAG_APER2'][idx_]
-#            DS9PlotColor(xpapoint=None, path=CATALOG_NAME, f1='MAG_APER_2s_Laigle', f2='MAG_APER_2s_HSC_Y', f3='MAG_APER_2s_Laigle', bins=[20, 22, 24, 26], table=cat_)
-#
-#            
+#            DS9PlotColor(xpapoint=None, path=CATALOG_NAME, f1='MAG_APER_2s_Laigle', f2='MAG_APER_2s_HSC_Y', f3='MAG_APER_2s_Laigle', bins=[20, 22, 24, 26], table=cat_)            
         if band == 'VIRCAM_H':
         
             cat_['MAG_APER_3s_Laigle_H'] = Laigle['H_MAG_APER3'][idx_]
@@ -13414,13 +13638,16 @@ def SextractorHSC_CLAUDS(d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, file
     
     return
 
-def VerifyMatching(catalog, c, Plot=False):
-    size = 0.005
+def MacthCatalog(catalog, c, Plot=False):
+    """
+    Catalog is the one we have and we want to add a value from c to catalog with a limit of lim arcseconds
+    """
     idx, d2d, d3d = catalog.match_to_catalog_sky(c) 
-    ra_c = np.mean(c.ra.deg)
-    dec_c = np.mean(c.dec.deg)
-    mask = (catalog.ra.deg>ra_c-2*size) & (catalog.ra.deg<ra_c+2*size) & (catalog.dec.deg>dec_c-size) & (catalog.dec.deg<dec_c+size)
     if Plot:
+        size = 0.005
+        ra_c = np.mean(c.ra.deg)
+        dec_c = np.mean(c.dec.deg)
+        mask = (catalog.ra.deg>ra_c-2*size) & (catalog.ra.deg<ra_c+2*size) & (catalog.dec.deg>dec_c-size) & (catalog.dec.deg<dec_c+size)
         plt.figure()
         plt.plot(catalog.ra.deg,catalog.dec.deg,'o',label='Catalog to match')
         plt.plot(c.ra.deg,c.dec.deg,'x',label='Values to add')
@@ -13433,7 +13660,7 @@ def VerifyMatching(catalog, c, Plot=False):
         plt.ylim((dec_c-size,dec_c+size))
         plt.legend()
         plt.show()
-
+    return
 
 def AnalyzeSextractorCatalog():
 
