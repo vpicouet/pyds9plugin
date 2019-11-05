@@ -9273,49 +9273,28 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, filename=None, info=True, redo=
     10ms per image for header info, 50ms per Mo so 240Go-> 
     """
     from astropy.table import vstack
-    if sys.argv[3] == '1':
-        info=True
-    elif sys.argv[3] == '0':
-        info = False
     if sys.argv[4] == '1':
-        onlystacks=True
-        print('Running analysis only on stacked images' )
-        name = '_on_stack'
+        info=True
     elif sys.argv[4] == '0':
-        onlystacks = False
-
+        info = False
+    extentsions = np.array(sys.argv[5].split(','),dtype=int)
     if xpapoint:
         d = DS9(xpapoint)
         if filename is None:
             filename = getfilename(d)        
         if files is None:
             #if len(sys.argv) > 5: files = Charge_path_new(filename, entry_point=5)
-            files = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-    if os.path.isdir(sys.argv[-1]):
-        fname = sys.argv[-1]
-    #elif filename is not None:
-    #    fname = filename
-    else:
-        fname = os.path.dirname(os.path.dirname(files[0]))
-#            if filename is None:
-#                filename = getfilename(d)
-#            if len(sys.argv) > 3:
-#                print('Not folder given, analyzing numbers...')
+            files =   glob.glob( sys.argv[3], recursive=True) #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+
+    fname = os.path.dirname(os.path.dirname(files[0]))
+
     paths = np.unique([os.path.dirname(f) for f in files ])
     print(files)
-#    if redo:
-    print('Redoing all the calculation')
     if len(paths) > 1:
-        if onlystacks:
-            t1s = [CreateCatalog(glob.glob(path + '/StackedImage*.fits')) for path in paths if (len(glob.glob(path + '/StackedImage*.fits'))>0)] 
-        else:
-            t1s = [CreateCatalog(glob.glob(path + '/*.fits')) for path in paths if (len(glob.glob(path + '/*.fits'))>0)] 
-        
+        t1s = [CreateCatalog_new(files, ext=extentsions)]#[CreateCatalog_new(glob.glob(path + '/*.fits')) for path in paths if (len(glob.glob(path + '/*.fits'))>0)] 
     else:
-        t1s = [CreateCatalog(files)]
-#    else:
-#        print('Not recomputing catalog')
-#        t1s = [CreateCatalog(glob.glob(path + '/image*.fits')) for path in paths if (len(glob.glob(path + '/image*.fits'))>0) & (os.path.isfile(path + '/HeaderCatalog.csv') is False)] 
+        t1s = [CreateCatalog_new(files, ext=extentsions)]
+
     if len(t1s)>1:
         t1 = vstack(t1s)
         csvwrite(t1, os.path.join(fname,'TotalMergedCatalog.csv') )
@@ -9465,80 +9444,90 @@ def RetrieveTimeFormat(time):
  
 
 
-def CreateCatalog(files, config=my_conf):
+def CreateCatalog_new(files, ext=0, config=my_conf):
     """
     """
-    from astropy.table import Table, Column
+    from astropy.table import Table, Column, hstack
     from astropy.io import fits
     import warnings
     from tqdm import tqdm
     warnings.simplefilter('ignore', UserWarning)
     files.sort()
     path = files[0]
-    header = fits.getheader(path,0)
-    fields = list(set(header.keys())) + ['PATH'] + ['FPATH'] 
-    #t = Table(names=fields,dtype=('S20,'*len(fields)).split(',')[:-1])#,dtype=('S10,'*30).split(',')[:-1])
-    t = Table(names=fields,dtype=('S20,'*len(fields[:-2])).split(',')[:-1] + ['S200'] + ['S200'])#,dtype=('S10,'*30).split(',')[:-1])
-    #files = glob.glob(os.path.dirname(path) + '/*.fits')
-    #files.sort()
-    for i in tqdm(range(len(files))):
-        file = files[i]
-        t.add_row()
-        t['PATH'][i] = file
-        t['FPATH'][i] = os.path.dirname(file)
-        #print(100*i/len(files),'%')
-        header = fits.getheader(file)
-        fields_image = list(set(header.keys())) 
-        for field in fields_image:
-            if field in fields:
-                try:
-                    t[field][i] = float(header[field])
-                except (TypeError, ValueError) as e:
-                    verboseprint(e, verbose=config.verbose)
-                    try:
-                        t[field][i] = header[field]
-                    except ValueError as e:
-                        verboseprint(e, verbose=config.verbose)
-                        t[field][i] = -1 
-                    except KeyError as e:
-                        verboseprint(e, verbose=config.verbose)
-                        pass 
-    t['index'] = np.arange(len(t))
-    #t.remove_columns(['EXTEND','SIMPLE','NAXIS','COMMENT','NAXIS3','SHUTTER','VSS','BITPIX','BSCALE'])
-    for col in ['EXTEND','SIMPLE','NAXIS','ROS','NAXIS1','NAXIS2','NAXIS3','BSCALE','COMMENT','COMMENT']:
-        try:
-            t.remove_column(col)
-        except KeyError:
-            pass
-    try:
-        dates = [int(''.join(date.split('T')[0].split('-')[:3])[2:]) for date in t['DATE']]
-        t.add_columns([Column(name='date', data=dates)])
-    except KeyError:
-        print('No date in this header')
-        pass
+    #header = fits.getheader(path,0)
+    fitsimage = fits.open(path)
+    config.verbose = True
 
-    csvwrite(t,os.path.dirname(path) + '/HeaderCatalog.csv')
-    #t.write(os.path.dirname(path) + '/HeaderCatalog.csv', overwrite=True)
-    try:
+#    fields = list(itertools.chain.from_iterable(list([list(set(fits.getheader(path,i).keys())) for i in range(len(fitsimage))]))) + ['PATH'] + ['FPATH']  
+#    t = Table(names=fields,dtype=('S20,'*len(fields[:-2])).split(',')[:-1] + ['S200'] + ['S200'])#,dtype=('S10,'*30).split(',')[:-1])
 
+
+
+        #fields = list(itertools.chain.from_iterable(list([list(set(fits.getheader(path,i).keys())) for i in range(len(fitsimage))]))) + ['PATH'] + ['FPATH'] 
+        #t = Table(names=fields,dtype=('S20,'*len(fields)).split(',')[:-1])#,dtype=('S10,'*30).split(',')[:-1])
+        #files = glob.glob(os.path.dirname(path) + '/*.fits')
+        #files.sort()
+
+
+
+    
+    file_header = []
+    for n in ext:
+        if n < len(fitsimage):
+            keys = list(dict.fromkeys( fits.getheader(files[0],n).keys()))
         
-        file = open(os.path.dirname(path) + '/Info.log','w') 
-        file.write('##########################################################################\n') 
-        file.write('\nNumber of images : %i'%(len(t))) 
-        file.write('\nGains: ' + '-'.join([gain for gain in np.unique(t[my_conf.gain[0]])]))
-        file.write('\nExposures: ' + '-'.join([exp for exp in np.unique(t[my_conf.exptime[0]])]))
-        file.write('\nTemps: ' + '-'.join([te for te in np.unique(t[my_conf.temperature[0]])]))
-        try:
-            file.write('\nTemps emCCD: ' + ','.join([np.str(te) for te in np.unique(np.round(np.array(t['EMCCDBAC'],dtype=float),1))]))
-        except KeyError:
-            pass
-        file.write('\nNumber of images per gain and exposure: %0.2f'%(len(t[(t[my_conf.gain[0]]==t[my_conf.gain[0]][0]) & (t[my_conf.exptime[0]]==t[my_conf.exptime[0]][0])])) )
-        file.write('\n\n##########################################################################')      
-        file.close() 
+            htable = Table(names=keys,dtype=('S20,'*len(keys[:])).split(',')[:-1])
+            #a.add_row()
+            for i, path  in enumerate(files):
+                print(i)
+                try:
+                    header = fits.getheader(path,n)
+                    keys_ = list(dict.fromkeys( header.keys()))
+                    values = [header[key] for key in keys_]
+                    htable.add_row()
+                    for key in keys_:
+                        if key in keys:
+                            try:
+                                htable[key][i] = float(header[key])#;print('File %i entered'%(i))
+                            except (ValueError,TypeError) as e:
+                                print(key, header[key])
+                                print(e)
+                                try:
+                                    htable[key][i] = header[key]#;print('File %i entered'%(i))
+                                except ValueError as e:
+                                    print(e)
+                                    print(key, values)
+                except IndexError:
+                    pass
+            file_header.append(htable)
+    table_header = hstack(file_header) 
+    table_header.add_column(Column(np.arange(len(table_header)),name='INDEX'), index=0, rename_duplicate=True)
+    table_header.add_column(Column(files,name='PATH'), index=1, rename_duplicate=True)
+    table_header.add_column(Column([os.path.basename(file) for file in files]),name='FILENAME', index=2, rename_duplicate=True)
+    table_header.add_column(Column([os.path.basename(os.path.dirname(file)) for file in files]),name='DIRNAME', index=3, rename_duplicate=True)
 
-    except:
-         pass
-    return t
+    #import IPython; IPython.embed()
+    csvwrite(hstack(table_header),os.path.dirname(path) + '/HeaderCatalog.csv')
+#    try:
+#
+#        
+#        file = open(os.path.dirname(path) + '/Info.log','w') 
+#        file.write('##########################################################################\n') 
+#        file.write('\nNumber of images : %i'%(len(t))) 
+#        file.write('\nGains: ' + '-'.join([gain for gain in np.unique(t[my_conf.gain[0]])]))
+#        file.write('\nExposures: ' + '-'.join([exp for exp in np.unique(t[my_conf.exptime[0]])]))
+#        file.write('\nTemps: ' + '-'.join([te for te in np.unique(t[my_conf.temperature[0]])]))
+#        try:
+#            file.write('\nTemps emCCD: ' + ','.join([np.str(te) for te in np.unique(np.round(np.array(t['EMCCDBAC'],dtype=float),1))]))
+#        except KeyError:
+#            pass
+#        file.write('\nNumber of images per gain and exposure: %0.2f'%(len(t[(t[my_conf.gain[0]]==t[my_conf.gain[0]][0]) & (t[my_conf.exptime[0]]==t[my_conf.exptime[0]][0])])) )
+#        file.write('\n\n##########################################################################')      
+#        file.close() 
+#
+#    except:
+#         pass
+    return table_header
 
 
 
@@ -9553,7 +9542,121 @@ def FluxDeffect(filename, Plot=False, config=my_conf):
 
 
 
+
 def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
+    """
+    """
+    from astropy.table import Table
+    from astropy.io import fits
+    from astropy.table import hstack
+    from tqdm import tqdm
+    files = t1['PATH']
+    path = files[0]
+    fields = ['OverscannRight', 'OverscannLeft', 'Gtot_var_int_w_OS',
+              'TopImage', 'BottomImage', 'MeanADUValue', 'SaturatedPixels','MeanFlux','OS_SMEARING1','OS_SMEARING2',
+              'stdXY', 'stdY', 'stdX', 'MeanADUValueTR', 'MeanADUValueBR', 'MeanADUValueBL', 'MeanADUValueTL','Gtot_var_int_wo_OS',
+              'Smearing_coeff_phys','GainFactorVarIntens','GainFactorHist','BrightSpotFlux','Top2BottomDiff_OSL','Top2BottomDiff_OSR',
+              'Col2ColDiff', 'Line2lineDiff',  'Col2ColDiff_OSR', 'Line2lineDiff_OSR', 'ReadNoise','emGainHist']
+    #t = Table(names=fields,dtype=('S20,'*len(fields)).split(',')[:-1])#,dtype=('S10,'*30).split(',')[:-1])
+    t = Table(names=fields,dtype=('float,'*len(fields)).split(',')[:-1])#,dtype=('S10,'*30).split(',')[:-1])
+
+    Xinf, Xsup, Yinf, Ysup = 1, -1, 1, -1#config.physical_region
+    for i in tqdm(range(len(files))):
+        file = files[i]
+        t.add_row()
+        fitsimage = fits.open(file)
+        data = fitsimage[FitsExt(fitsimage)].data
+        lx, ly = data.shape
+#        try:
+#            texp = fits.getheader(file)[my_conf.exptime[0]]
+#        except KeyError:
+#            texp = fits.getheader(file)[my_conf.exptime[1]]
+        column = np.nanmean(data[Yinf:Ysup,Xinf:Xsup], axis=1)
+        line = np.nanmean(data[Yinf:Ysup,Xinf:Xsup], axis=0)
+        #offset = 20
+        #OSR1 = [offset,-offset,offset,400]
+        #OSR2 = [offset,-offset,2200,2400]
+        #OSR = data[OSR2[0]:OSR2[1],OSR2[2]:OSR2[3]]
+        #OSL = data[OSR1[0]:OSR1[1],OSR1[2]:OSR1[3]]
+        t[i]['Col2ColDiff'] =  np.nanmedian(line[::2]) - np.nanmedian(line[1::2])#np.nanmedian(abs(line[1:] - line[:-1])) np.nanmedian(a[::2])
+        t[i]['Col2ColDiff_OSR'] =   np.nanmedian(np.nanmean(OSR,axis=0)[::2]) - np.nanmedian(np.nanmean(OSR,axis=0)[1::2])#np.nanmedian(abs(line[1:] - line[:-1])) 
+        t[i]['Line2lineDiff'] = np.nanmedian(column[::2]) - np.nanmedian(column[1::2])#np.nanmedian(abs(column[1:] - column[:-1])) 
+        t[i]['Line2lineDiff_OSR'] =np.nanmedian(np.nanmean(OSR,axis=1)[::2]) - np.nanmedian(np.nanmean(OSR,axis=1)[1::2]) #np.nanmedian(abs(column[1:] - column[:-1])) 
+        t[i]['OverscannRight'] = np.nanmean(OSR)
+        t[i]['OverscannLeft'] = np.nanmean(OSL)
+        t[i]['TopImage'] = np.nanmean(column[:20])
+        t[i]['BottomImage'] = np.nanmean(column[-20:])
+        t[i]['Top2BottomDiff_OSL'] = np.nanmean(OSL[:20,:]) - np.nanmean(OSL[-20:,:])
+        t[i]['Top2BottomDiff_OSR'] = np.nanmean(OSR[:20,:]) - np.nanmean(OSR[-20:,:])
+        t[i]['MeanFlux'] =  t[i]['MeanADUValue']/texp
+#        t[i]['MeanADUValueTR'] =  np.nanmean((data - ComputeOSlevel1(data))[1000:1950,1600:2100])
+#        t[i]['MeanADUValueBR'] =  np.nanmean((data - ComputeOSlevel1(data))[2:1000,1600:2100])
+#        t[i]['MeanADUValueBL'] =  np.nanmean((data - ComputeOSlevel1(data))[2:1000,1100:1600])
+#        t[i]['MeanADUValueTL'] =  np.nanmean((data - ComputeOSlevel1(data))[1000:1950,1100:1600])
+        t[i]['SaturatedPixels'] = 100*float(np.sum(data[Yinf:Ysup,Xinf:Xsup]>2**16-10)) / np.sum(data[Yinf:Ysup,Xinf:Xsup]>0)
+        t[i]['stdXY'] = np.nanstd(data[Yinf:Ysup,Xinf:Xsup])
+        t[i]['BrightSpotFlux'] = (np.nanmean(data[1158-25:1158+25,2071-50:2071+50]) - np.nanmean(data[1158-25+50:1158+25+50,2071-50:2071+50]))/texp
+        emgain = ComputeEmGain(file, None,True,False,None,None,[40,40],False,[1053,2133,500,2000])
+        
+        
+        
+        
+        t[i]['Gtot_var_int_w_OS'],t[i]['Gtot_var_int_wo_OS'] = emgain['EMG_var_int_w_OS'], emgain['EMG_var_int_wo_OS']
+        t[i]['Smearing_coeff_phys'] = SmearingProfileAutocorr(file,None,DS9_BackUp_path,'',False,'x')['Exp_coeff']
+        t[i]['GainFactorVarIntens'] = 1/Smearing2Noise(t[i]['Smearing_coeff_phys'])['Var_smear']
+        t[i]['GainFactorHist'] =  1/Smearing2Noise(t[i]['Smearing_coeff_phys'])['Hist_smear']
+        t[i]['ReadNoise'] = ComputeReadNoise(path=None, fitsimage=fitsimage, Plot=False)['RON']
+        t[i]['emGainHist'] = ComputeGainHistogram(path=[file], Plot=False)
+
+
+        try:
+            t[i]['stdX'] = np.nanstd(data[int(Yinf + (Ysup - Yinf)/2),Xinf:Xsup])
+            t[i]['stdY'] = np.nanstd(data[Yinf:Ysup,int(Xinf + (Xsup - Xinf)/2)])
+        except IndexError:
+            t[i]['stdX'] = np.nanstd(data[int(lx/2),:])
+            t[i]['stdY'] = np.nanstd(data[:,int(ly/2)])            
+        t[i]['MeanADUValue'] =  np.nanmean((data - ComputeOSlevel1(data))[Yinf:Ysup,Xinf:Xsup])
+#        if write_header:
+#            for field in fields:
+#                try:
+#                    print( t[i][field])
+#                    fits.setval(file, field, value = t[i][field],overwrite=True)
+#                except ValueError as e:
+#                    print(e)
+#                    fits.setval(file, field, value = '%s'%(t[i][field]),overwrite=True)
+#                except KeyError as e:
+#                    print(e)
+#                    fits.setval(file, field, value = 'NaN',overwrite=True)
+#                    
+            
+    new_cat = hstack((t1,t),join_type='inner')
+    print(new_cat.colnames)
+    #t.remove_columns(['EXTEND','SIMPLE','NAXIS','COMMENT','NAXIS3','SHUTTER','VSS','BITPIX','BSCALE'])
+    #new_cat.write(os.path.dirname(path) + '/HeaderCatalog_info.csv', overwrite=True)
+    csvwrite(new_cat,os.path.dirname(path) + '/HeaderCatalog_info.csv')
+    print(new_cat)
+    print(new_cat[my_conf.gain[0]].astype(float)>0)
+    error_cat = new_cat[(new_cat[my_conf.gain[0]].astype(float)>0)&(new_cat['OverscannRight'].astype(float)>4500)]['PATH']
+    if len(error_cat)>0:
+        try:
+            file = open(os.path.dirname(path) + '/Info.log','a') 
+            file.write('\n\n##########################################################################\n')      
+            file.write('ERROR - ERROR - ERROR - ERROR - ERROR - ERROR - ERROR - ERROR - \n') 
+            file.write('\n##########################################################################')      
+            file.write('\nNumber of images with EMGAIN error: %i'%(len(error_cat))) 
+            file.write('\nPath of the images: '+repr(error_cat))
+            file.close() 
+            from tkinter import messagebox
+            messagebox.showwarning( "Header error","At least one image here is not corresponding to its header")     
+        except:
+            pass
+    return new_cat    
+
+
+
+
+
+def CreateCatalogInfo_old(t1, verbose=False, config=my_conf, write_header=True):
     """
     """
     from astropy.table import Table
