@@ -420,8 +420,8 @@ def CatalogForGazpar(path):
                  'MAGERR_ISO_FUV',
                  'ZSPEC',
                  'fl',
-                 'RA',
-                 'DEC',
+                 'alpha',
+                 'delta',
                  'mask']
     
     a.write(path[:-3]+'_gazpar.in', format='ascii',overwrite=True)
@@ -12913,6 +12913,7 @@ def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','Mega
     table_2.add_column(Column(name='MAGERR_ISO_FUV', data=np.ones(len(table_2))*-99.0), index=26) 
     table_2['CONTEXT'] =2**np.sum(['TOTAL_MAG_' in name for name in table_2.colnames])-1
     astropy.io.ascii.write(table_2, name, formats=dict_format,overwrite=True)
+    CatalogForGazpar(name)
     return
 
 def AddExtinction(table,extinction_map):
@@ -12947,12 +12948,14 @@ def AddExtinction(table,extinction_map):
     cat['TOTAL_MAG_HSC_R_ext'] = cat['TOTAL_MAG_HSC_R'] - ext_r*cat['EB_V']
     cat['TOTAL_MAG_HSC_I_ext'] = cat['TOTAL_MAG_HSC_I'] - ext_i*cat['EB_V']
     cat['TOTAL_MAG_HSC_Z_ext'] = cat['TOTAL_MAG_HSC_Z'] - ext_z*cat['EB_V']
-    cat['TOTAL_MAG_HSC_Y_ext'] = cat['TOTAL_MAG_HSC_Y'] - ext_Yv*cat['EB_V']
-    cat['TOTAL_MAG_VIRCAM_Y_ext'] = cat['TOTAL_MAG_VIRCAM_Y'] - ext_r*cat['EB_V']
-    cat['TOTAL_MAG_VIRCAM_J_ext'] = cat['TOTAL_MAG_VIRCAM_J'] - ext_i*cat['EB_V']
-    cat['TOTAL_MAG_VIRCAM_H_ext'] = cat['TOTAL_MAG_VIRCAM_H']  - ext_z*cat['EB_V']
-    cat['TOTAL_MAG_VIRCAM_Ks_ext'] = cat['TOTAL_MAG_VIRCAM_Ks'] - ext_Y*cat['EB_V']
+    cat['TOTAL_MAG_HSC_Y_ext'] = cat['TOTAL_MAG_HSC_Y'] - ext_Y*cat['EB_V']
+    cat['TOTAL_MAG_VIRCAM_Y_ext'] = cat['TOTAL_MAG_VIRCAM_Y'] - ext_Yv*cat['EB_V']
+    cat['TOTAL_MAG_VIRCAM_J_ext'] = cat['TOTAL_MAG_VIRCAM_J'] - ext_J*cat['EB_V']
+    cat['TOTAL_MAG_VIRCAM_H_ext'] = cat['TOTAL_MAG_VIRCAM_H']  - ext_H*cat['EB_V']
+    cat['TOTAL_MAG_VIRCAM_Ks_ext'] = cat['TOTAL_MAG_VIRCAM_Ks'] - ext_K*cat['EB_V']
     return cat
+
+
 def plot_comptages_correction(path,bands=['MegaCam-u','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks'],dm=0.1):
 
     from fpdf import FPDF
@@ -14507,6 +14510,8 @@ def main():
     """Main function where the arguments are defined and the other functions called
     """
     #path = os.path.dirname(os.path.realpath(__file__))
+    #from shutil import which
+    #print(which('DS9Utils'))
     print(__file__)
     print(__package__)
     print('Python version = ', sys.version)
