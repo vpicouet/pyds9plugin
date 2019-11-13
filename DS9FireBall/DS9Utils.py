@@ -276,7 +276,7 @@ def DS9setup2(xpapoint, config=my_conf):
         d.set("smooth function boxcar") 
         d.set("smooth radius %i"%(int(smooth))) 
 
-    d.set("scale limits {} {} ".format(np.nanpercentile(image,cuts[0]),np.nanpercentile(image,cuts[1])))
+    d.set("scale limits  outliars = len(Clauds[np.abs(residuals)>0.15])/len(Clauds){} {} ".format(np.nanpercentile(image,cuts[0]),np.nanpercentile(image,cuts[1])))
     return 
 
 
@@ -325,6 +325,7 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     new_table = df.query(query)    
     t2 = Table.from_pandas(new_table) 
     print(t2)
+    print('SELECTION %i -> %i'%(len(cat),len(t2)))
     
     print('SELECTED FIELD  %s'%(fields))
 
@@ -332,18 +333,18 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     if not os.path.exists(path_date):
         os.makedirs(path_date)       
 
-    numbers = cat[list(fields)].as_array()
-    for line,numbers in zip(cat, numbers):
+    numbers = t2[list(fields)].as_array()
+    for line,numbers in zip(t2, numbers):
         filename = line['PATH']
-        print(fields)
+        #print(fields)
         number = list(numbers)#np.array(list(line[fields]))
-        print(numbers)
+        #print(numbers)
         f = '/'.join(['%s_%s'%(a,b) for a,b in zip(fields,number)])
         new_path = os.path.join(path_date,f)
-        print(new_path)
+        #print(new_path)
         if not os.path.exists(new_path):
             os.makedirs(new_path) 
-        print('Copying file',os.path.basename(filename))
+        #print('Copying file',os.path.basename(filename))
         symlink_force(filename,new_path + '/%s'%(os.path.basename(filename)))    
 #    paths = [path_date]
 #    for path in paths:
@@ -4061,12 +4062,12 @@ def DS9photo_counting(xpapoint, save=True, config=my_conf):
 
 
 
-def fitswrite(fitsimage, filename, verbose=True, config=my_conf):
+def fitswrite(fitsimage, filename, verbose=True, config=my_conf, header=None):
     """
     """
     from astropy.io import fits
     if type(fitsimage) == np.ndarray:
-        fitsimage = fits.HDUList([fits.PrimaryHDU(fitsimage)])[0]
+        fitsimage = fits.HDUList([fits.PrimaryHDU(fitsimage,header=header)])[0]
     if len(filename)==0:
         print('Impossible to save image in filename %s, saving it to /tmp/image.fits'%(filename))
         filename = '/tmp/image.fits'
@@ -5416,10 +5417,13 @@ def DS9stack_new(xpapoint, dtype=float, std=False, Type=None, clipping=None):
     d = DS9(xpapoint)
     filename = d.get("file")
     if Type is None:
-        Type = sys.argv[3]
-        clipping = sys.argv[4]
+        Type = sys.argv[4]
+        clipping = sys.argv[5]
     #if len(sys.argv) > 3+2: paths = Charge_path_new(filename, entry_point=3+2)
-    paths = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+    #paths = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+    paths = glob.glob( sys.argv[3], recursive=True)
+    
+    
     if 'int' in Type:
         dtype = 'uint16'
     if 'float' in Type:
@@ -8927,7 +8931,8 @@ def ApplyTrimming(path, area=[0,-0,1053,2133], config=my_conf):
     #image = image[area[0]:area[1],area[2]:area[3]]
     fitsimage.data = image
     name = path[:-5] + '_Trimm.fits'
-    fitswrite(fitsimage, name)
+    fitswrite(fitsimage.data, name, header=fitsimage.header)
+    #fitsimage.writeto('/tmp/test.fits',overwrite=True)
     return fitsimage, name
 
 def DS9CLcorrelation(xpapoint, config=my_conf):
@@ -9071,8 +9076,8 @@ def BackgroundSubstraction(path, stddev=13, save=False, config=my_conf):
     from scipy import ndimage
     from astropy.convolution import interpolate_replace_nans
     from astropy.convolution import Gaussian2DKernel 
-    if type(path) == str:
-        print(path)
+    #print(type(path) )
+    if (type(path) == str) or (type(path) == np.str_) :
         image = fits.open(path)[0]
     else:
         image = path
@@ -11350,7 +11355,6 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
     
 
                
-    
     #Poisson realisation
     source_im2 = np.random.poisson((Dark + source_im) * exposure)
     
@@ -11408,6 +11412,7 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
         type_ = 'int32'
     else:
         type_ = 'int16'
+    print('Flux = %0.3f, gamma scale = %0.1f, RN = %0.1f'%(Dark * exposure,EmGain , RN))
     print('Saving data in type ' + type_)
 
     imaADU_wo_RN = (image * ConversionGain).round().astype(type_)
@@ -11620,6 +11625,7 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
         exp=True
     if  function == 'DoubleExponiential':
         double_exp=True
+    print('Using general fit new')
     auto_gui.GeneralFit_new(x,y,nb_gaussians=int(nb_gaussians), background=int(background), exp=exp, double_exp=double_exp)
     
 #    if function == 'polynomial1D':
@@ -12147,9 +12153,11 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     print(filename,params[0],filename + '_sex.fits')
     params[8]='Y' if  params[8]=='1' else 'N'
     params[12]='Y' if params[12]=='1' else 'N'
+    if not os.path.exists(os.path.join(dn,'DetectionImages','PhotometricCatalog')):
+        os.makedirs(os.path.join(dn,'DetectionImages','PhotometricCatalog'))     
 
     if CATALOG_NAME=='-':
-        CATALOG_NAME = os.path.join(os.path.dirname(dn),fn[:-5].replace(',','-')+'_cat.fits')
+        CATALOG_NAME = os.path.join(dn,'DetectionImages','PhotometricCatalog',fn[:-5].replace(',','-')+'_cat.fits')
         params[0] = CATALOG_NAME
     params[2] = os.path.join(param_dir,params[2])
     params[9] = os.path.join(param_dir,params[9])
@@ -12186,6 +12194,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     if os.path.isfile(CATALOG_NAME):
         from astropy.table import vstack
         cat = Table.read(CATALOG_NAME)
+        print(CATALOG_NAME)
         cat1 = cat[cat['MAG_AUTO']>=cat['MAG_ISO']]
         cat2 = cat[cat['MAG_AUTO']<cat['MAG_ISO']]
         cat3 = vstack((cat1,cat2))
@@ -12220,7 +12229,7 @@ def DS9SWARP(xpapoint):
 
     if which('swarp') is None:
         from tkinter import messagebox
-        messagebox.showwarning( title = 'SWARP error', message="""SWARP do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        messagebox.showwarning( title = 'SWARP error', message="""SWARP do not seem to be installedin you machine. If you know it is, please add the SWARP executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
     else:
         os.chdir(os.path.dirname(paths[0]))
         os.system("sleep 0.1")
@@ -12258,7 +12267,7 @@ def DS9Lephare(xpapoint):
     
     if which('psfex') is None:
         from tkinter import messagebox
-        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the Lephare executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
     else:
         print(os.path.dirname(paths[0]))
         print(os.getcwd())
@@ -13233,7 +13242,7 @@ def DS9PSFEX(xpapoint):
     
     if which('psfex') is None:
         from tkinter import messagebox
-        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the PSFex executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
     else:
         print(os.path.dirname(paths[0]))
         print(os.getcwd())
@@ -13323,6 +13332,7 @@ def DS9saveColor(xpapoint, filename=None):
     else:
         #print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         #os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        os.chdir(os.path.dirname(path1))
 
         print("stiff %s %s %s -"%(path1, path2, path3) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
         os.system("stiff %s %s %s -"%(path1, path2, path3) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
@@ -13744,7 +13754,7 @@ def SextractorHSC_CLAUDS(d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, file
     
     return
 
-def MacthCatalog(catalog, c, Plot=False):
+def MatchCatalog(catalog, c, Plot=False):
     """
     Catalog is the one we have and we want to add a value from c to catalog with a limit of lim arcseconds
     """
