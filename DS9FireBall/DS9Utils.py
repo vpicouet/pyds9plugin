@@ -23,8 +23,15 @@ except ImportError:
 else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
 
+
+from shutil import which
+print("which('DS9Utils') =", which('DS9Utils'))
+print("__file__ =", __file__)
+print("__package__ =", __package__)
+print('Python version = ', sys.version)
+
+
 #import matplotlib; matplotlib.use('TkAgg')  
-print('Salut')
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -281,7 +288,7 @@ def DS9setup2(xpapoint, config=my_conf):
         d.set("smooth function boxcar") 
         d.set("smooth radius %i"%(int(smooth))) 
 
-    d.set("scale limits  outliars = len(Clauds[np.abs(residuals)>0.15])/len(Clauds){} {} ".format(np.nanpercentile(image,cuts[0]),np.nanpercentile(image,cuts[1])))
+    d.set("scale limits {} {} ".format(np.nanpercentile(image,cuts[0]),np.nanpercentile(image,cuts[1])))
     return 
 
 
@@ -14525,11 +14532,11 @@ def main():
     """Main function where the arguments are defined and the other functions called
     """
     #path = os.path.dirname(os.path.realpath(__file__))
-    #from shutil import which
-    #print(which('DS9Utils'))
-    print(__file__)
-    print(__package__)
-    print('Python version = ', sys.version)
+    from shutil import which
+#    print("which('DS9Utils') =", which('DS9Utils'))
+#    print("__file__ =", __file__)
+#    print("__package__ =", __package__)
+#    print('Python version = ', sys.version)
     CreateFolders()
     if len(sys.argv)==1:
         try:
