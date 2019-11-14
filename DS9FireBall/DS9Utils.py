@@ -24,7 +24,12 @@ else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
 
 #import matplotlib; matplotlib.use('TkAgg')  
+print('Salut')
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+#import matplotlib.pyplot as plt
 #from .DS9Utils_ok import *
  
 
@@ -255,8 +260,8 @@ def DS9setup2(xpapoint, config=my_conf):
     Yinf, Ysup,Xinf, Xsup = image_area
     print(Yinf, Ysup,Xinf, Xsup)
     #filename = getfilename(d)
-    #fitsimage = fits.open(filename)[0].data#d.get_pyfits()[0].data#d.get_fits()[0].data#d.get_arr2np()
-    fitsimage = d.get_pyfits()[0].data#d.get_fits()[0].data#d.get_arr2np()
+    #fitsimage = fits.open(filename)[0].data#d.get_pyfits()[0].data#d.get_pyfits()[0].data#d.get_arr2np()
+    fitsimage = d.get_pyfits()[0].data#d.get_pyfits()[0].data#d.get_arr2np()
     #print(fitsimage)
     image = fitsimage[Yinf: Ysup,Xinf: Xsup]#[Xinf: Xsup, Yinf: Ysup]
 
@@ -1010,7 +1015,7 @@ def DS9MultipleThreshold(xpapoint, config=my_conf):
     path = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
 
     d = DS9(xpapoint)
-    fitsimage = d.get_fits()[0]
+    fitsimage = d.get_pyfits()[0]
     imasum_noprior = np.zeros(fitsimage.data.shape[:])
     imasum_prior = np.zeros(fitsimage.data.shape[:])
     
@@ -1403,7 +1408,7 @@ def DS9guider(xpapoint):
     from astropy.io import fits
     d = DS9(xpapoint)
     filename = getfilename(d)#d.get("file")
-    header = fits.getheader(filename)#d.get_fits()[0].header
+    header = fits.getheader(filename)#d.get_pyfits()[0].header
     if ('WCSAXES' in header):
         print('WCS header existing, checking Image servers')
         d.set("grid")
@@ -1425,7 +1430,7 @@ def DS9guider(xpapoint):
         CreateWCS(PathExec, filename, Newfilename)
         filename = d.set("file {}".format(Newfilename))
         filename = getfilename(d)#d.get("file")
-        header = d.get_fits()[0].header
+        header = d.get_pyfits()[0].header
         if header['WCSAXES'] == 2:
             print('WCS header existing, checking Image servers')
             d.set("grid")
@@ -1608,7 +1613,7 @@ def DS9realignImage(xpapoint):
     except ValueError:
         pass    
     #fitsimage = fits.open(filename)[0]
-    fitsimage = d.get_fits()[0]
+    fitsimage = d.get_pyfits()[0]
     image = fitsimage.data
     xs, ys, angle = FindPixelsPositionsOnVector(vector)
     new_im = RecrateArrayFromIndexList(xs, ys, angle, image)
@@ -2949,7 +2954,7 @@ def Charge_path(filename, entry_point = 3, entry=None):
     #elif len(numbers) > 2:
         
     print('Numbers used: {}'.format(numbers))               
-    fitsimage = fits.open(filename)#d.get_fits()
+    fitsimage = fits.open(filename)#d.get_pyfits()
     number = re.findall(r'\d+',os.path.basename(filename))[-1]
     filen1, filen2 = filename.split(number)
     print(filen1, filen2 )
@@ -3187,7 +3192,7 @@ def getImage(xpapoint):
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
     area = [Yinf, Ysup,Xinf, Xsup]
     #fitsimage = fits.open(filename)[0]
-    fitsimage = d.get_fits()[0]
+    fitsimage = d.get_pyfits()[0]
     image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
     header = fitsimage.header
     return image, header, area, filename
@@ -3279,7 +3284,7 @@ def ContinuumPhotometry_old(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackU
     L = []
     for filename in path:
         print(filename)
-        texp = 1#d.get_fits()[0].header[my_conf.exptime[0]]
+        texp = 1#d.get_pyfits()[0].header[my_conf.exptime[0]]
         
         verboseprint('Type, axis, kernel =',Type, axis, kernel, verbose=config.verbose)
         if Type == 'ProjectionRegion':
@@ -3799,7 +3804,7 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
     L = []
     for filename in path:
         print(filename)
-        texp = 1#d.get_fits()[0].header[my_conf.exptime[0]]
+        texp = 1#d.get_pyfits()[0].header[my_conf.exptime[0]]
         
         verboseprint('Type, axis, kernel =',Type, axis, kernel, verbose=config.verbose)
         if Type == 'ProjectionRegion':
@@ -4198,7 +4203,7 @@ def create_multiImage(xpapoint, w=None, n=30, rapport=1.8, continuum=False):
     print('Field, Frame, w = ', field, Frame, w)
     d = DS9(xpapoint)
     #filename = d.get("file")
-    fitsfile = d.get_fits()#fits.open(filename)
+    fitsfile = d.get_pyfits()#fits.open(filename)
     image = fitsfile[0].data    
     
     x, y, redshift, slit, mag, w = returnXY(field, w=w, frame=Frame)  
@@ -4394,7 +4399,7 @@ def DS9plot_spectra(xpapoint, w=None, n=4, rapport=1.8, continuum=False, DS9back
     
     d = DS9(xpapoint)
     filename = d.get("file")
-    fitsfile = d.get_fits()#fits.open(filename)
+    fitsfile = d.get_pyfits()#fits.open(filename)
     image = fitsfile[0].data    
     x, y, redshift, slit, mag, w = returnXY(field, w=w, frame=Frame,keyword=ObjType,mag_min=mag_min, mag_max=mag_max)  
 
@@ -5085,7 +5090,7 @@ def Field_regions(xpapoint, mask=''):
 #            for line in header:                
 #                if line in ['USE0','USE1','USE2','USE3','USE4','USE5','USE6','USE7']:
 #                    print(line)
-            header = d.get_fits()[0].header
+            header = d.get_pyfits()[0].header
             pa = int(header['ROTENC'])
             #DS9
             print('Position angle = ',pa)
@@ -5112,7 +5117,7 @@ def Field_regions(xpapoint, mask=''):
 
                     guidingstars = np.zeros((8,3))
                     #namename = getfilename(d)#
-                    header = d.get_fits()[0].header
+                    header = d.get_pyfits()[0].header
                     for i in range(8):
                         guidingstars[i] = header['CY%i'%(i)],header['CX%i'%(i)],header['USE%i'%(i)]
                         if (int(guidingstars[i,2]) ==  257) or (int(guidingstars[i,2]) ==  1):
@@ -5120,7 +5125,7 @@ def Field_regions(xpapoint, mask=''):
                 print('guiding stars = ',guidingstars)
             else:
                 guidingstars = np.zeros((8,3))
-                header = d.get_fits()[0].header
+                header = d.get_pyfits()[0].header
                 for i in range(8):
                     guidingstars[i] = header['CY%i'%(i)],header['CX%i'%(i)],header['USE%i'%(i)]
                     if (int(guidingstars[i,2]) ==  257) or (int(guidingstars[i,2]) ==  1):
@@ -5666,7 +5671,7 @@ def DS9snr(xpapoint):
     n2 = 1.8
     d = DS9(xpapoint)
     #filename = getfilename(d)#ffilename = d.get("file")
-    fitsfile = d.get_fits()#fits.open(filename)
+    fitsfile = d.get_pyfits()#fits.open(filename)
     image = fitsfile[0].data
     
     region = getregion(d)
@@ -5749,7 +5754,7 @@ def DS9meanvar(xpapoint):
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
     area = [Yinf, Ysup, Xinf, Xsup]
     print(area)
-    image = d.get_fits()[0].data[area[0]:area[1],area[2]:area[3]]#picouet
+    image = d.get_pyfits()[0].data[area[0]:area[1],area[2]:area[3]]#picouet
     print ('Image : {}'.format(filename))
     print ('Mean : {}'.format(image.mean()))
     print ('Standard deviation : {}'.format(image.std()))
@@ -5767,7 +5772,7 @@ def DS9inverse(xpapoint):
     #from astropy.io import fits
     d = DS9(xpapoint)#DS9(xpapoint)
     filename = getfilename(d)#ffilename = d.get("file")
-    fitsfile = d.get_fits()[0]#fits.open(filename)[0]
+    fitsfile = d.get_pyfits()[0]#fits.open(filename)[0]
 
     image = fitsfile.data
     new_image = - image + image.max()
@@ -5907,7 +5912,7 @@ def DS9center(xpapoint,Plot=True):
         Xsup = int(np.ceil(yc + h/2 -1))
         Yinf = int(np.floor(xc - w/2 -1))
         Ysup = int(np.ceil(xc + w/2 -1))
-        data = d.get_fits()[0].data
+        data = d.get_pyfits()[0].data
         imagex = data[Xinf-15:Xsup+15,Yinf:Ysup].sum(axis=1)
         imagey = data[Xinf:Xsup,Yinf-15:Ysup+15].sum(axis=0)
         model = ConvolveBoxPSF
@@ -5968,7 +5973,7 @@ def DS9center(xpapoint,Plot=True):
 
         method, bck = sys.argv[-2:]
         Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
-        data = d.get_fits()[0].data
+        data = d.get_pyfits()[0].data
         image = data[Yinf:Ysup,Xinf:Xsup]
         print('2D fitting with 100 microns fibre, to be updated by allowing each fiber size')
         if bool(int(bck)):
@@ -6646,7 +6651,7 @@ def RemoveCRtail(path,T=6*1e4, length=1000,area=[0,2069,1053,2133], config=my_co
     """
     """
     from astropy.io import fits
-    fitsimage =  fits.open(path)[0] #d.get_fits()[0]#fits.open(path)[0] 
+    fitsimage =  fits.open(path)[0] #d.get_pyfits()[0]#fits.open(path)[0] 
     image = fitsimage.data
     cosmicRays = detectCosmics(image,T=T, area=area)
     if len(cosmicRays)==0:
@@ -6688,7 +6693,7 @@ def DS9DetectHotPixels(xpapoint, DS9backUp = DS9_BackUp_path, T1=None, T2=None, 
 
  
     filename = getfilename(d)
-    fitsimage = d.get_fits()[0]#fits.open(path)[0] 
+    fitsimage = d.get_pyfits()[0]#fits.open(path)[0] 
     image = fitsimage.data
     try:
         region = getregion(d, quick=True)
@@ -6731,7 +6736,7 @@ def DS9Desmearing_hot_pixel(xpapoint, DS9backUp = DS9_BackUp_path, T1=None, T2=N
     d=DS9(xpapoint)
     d.set('region delete all')
     filename = getfilename(d)
-    fitsimage = d.get_fits()[0]#fits.open(path)[0] 
+    fitsimage = d.get_pyfits()[0]#fits.open(path)[0] 
     image = fitsimage.data
     ly, lx = image.shape
     table = DS9DetectHotPixels(xpapoint, DS9backUp = DS9_BackUp_path, T1=T1, T2=T2, config=my_conf)
@@ -6765,7 +6770,7 @@ def DS9DeconvolveSmearing(xpapoint, DS9backUp = DS9_BackUp_path,  config=my_conf
     from tqdm import tqdm
     d=DS9(xpapoint)
     filename = getfilename(d)
-    fitsimage = d.get_fits()[0]
+    fitsimage = d.get_pyfits()[0]
     ly, lx = fitsimage.data.shape
     kernel = np.exp(-np.arange(size)/smearing_length)[::-1]
     kernel /= kernel.sum()
@@ -6790,7 +6795,7 @@ def DS9DeconvolveSmearing2(xpapoint=None, filename=None, DS9backUp = DS9_BackUp_
     if xpapoint is not None:
         d=DS9(xpapoint)
         #image = d.get_arr2np()
-        hdu = d.get_fits()
+        hdu = d.get_pyfits()
         d.get('file')[:-5]
         filename = getfilename(d)
     else:
@@ -7043,7 +7048,7 @@ def plotOSregion(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     import matplotlib.pyplot as plt
     d = DS9(xpapoint)
     data = d.get_arr2np()
-    header = d.get_fits()[0].header
+    header = d.get_pyfits()[0].header
     filename = getfilename(d)
     y = np.nanmean(data, axis=0)[:1070][::-1]
     x = np.arange(len(y))
@@ -7227,7 +7232,7 @@ def SmearingProfileAutocorr(filename=None, area=None, DS9backUp=DS9_BackUp_path,
 def DS9SmearingWithIntensity(xpapoint, DS9backUp=DS9_BackUp_path, name='', Plot=True, config=my_conf):
     d = DS9(xpapoint)
     filename = getfilename(d)
-    data = d.get_fits()[0].data#fits.open(path)[0] 
+    data = d.get_pyfits()[0].data#fits.open(path)[0] 
     
     try:
         regions = getregion(d, quick=True)
@@ -9115,7 +9120,7 @@ def DS9ComputeStandardDeviation(xpapoint,radius=50):
     #from .focustest import create_DS9regions2
     d = DS9(xpapoint)
     #path = getfilename(d)#d.get("file")
-    fitsimage = d.get_fits()[0]#fits.open(path)[0] 
+    fitsimage = d.get_pyfits()[0]#fits.open(path)[0] 
     areas = CreateAreas(fitsimage.data, area=None, radius=radius)
     lx, ly = fitsimage.data.shape
     image3D = residual([0,0], fitsimage.data, np.zeros((lx,ly,2)), areas, radius)
@@ -9916,7 +9921,7 @@ def PlotSpatial2(filename, field, save=True, plot_flag=True, DS9backUp = DS9_Bac
     from astropy.io import fits
     from scipy.optimize import curve_fit
     #print('Entry = ', field)
-    fitsfile = fits.open(filename)#d.get_fits()#fits.open(filename)
+    fitsfile = fits.open(filename)#d.get_pyfits()#fits.open(filename)
     image = fitsfile[0].data    
     x, y, redshift, slit, mag, w = returnXY(field,keyword=None, frame='observedframe')  
     new_im = image[0:1870,1070:2100]
@@ -9955,7 +9960,7 @@ def PlotSpatial1(filename, field, save=True, plot_flag=True, DS9backUp = DS9_Bac
     from astropy.io import fits
     from scipy.optimize import curve_fit
     #print('Entry = ', field)
-    fitsfile = fits.open(filename)#d.get_fits()#fits.open(filename)
+    fitsfile = fits.open(filename)#d.get_pyfits()#fits.open(filename)
     image = fitsfile[0].data    
     x, y, redshift, slit, mag, w = returnXY(field,keyword=None, frame='observedframe')  
     new_im = image[0:1870,1070:2100]
@@ -10156,7 +10161,7 @@ def DS9replaceNaNs(xpapoint):
     d = DS9(xpapoint)#DS9(xpapoint)
     filename = getfilename(d)#d.get("file")
     regions = getregion(d, all=True)
-    fitsimage = d.get_fits()[0]#fits.open(filename)[0]
+    fitsimage = d.get_pyfits()[0]#fits.open(filename)[0]
     image = fitsimage.data.astype(float).copy()
     print(regions)
     try:
@@ -10876,7 +10881,7 @@ def AperturePhotometry(xpapoint):
     from astropy.table import hstack
     d = DS9(xpapoint)
     filename = getfilename(d)#filename = d.get('file')
-    fitsfile = d.get_fits()[0]#fits.open(filename)[0]
+    fitsfile = d.get_pyfits()[0]#fits.open(filename)[0]
     data = fitsfile.data
     try:
         source_catalog_name = sys.argv[3]
@@ -10979,7 +10984,7 @@ def MorphologicalProperties(xpapoint):
 
     d = DS9(xpapoint)
     filename = getfilename(d)#filename = d.get('file')
-    fitsfile = d.get_fits()[0]#fits.open(filename)[0]
+    fitsfile = d.get_pyfits()[0]#fits.open(filename)[0]
     data = fitsfile.data
 
     bkg_estimator = MedianBackground()
@@ -11049,7 +11054,7 @@ def EllipticalIsophoteAnalysis(xpapoint):
     region = getregion(d)
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
     area = [Yinf, Ysup,Xinf, Xsup]
-    data = d.get_fits()[0].data[area[0]:area[1],area[2]:area[3]]#fits.open(filename)[0].data[area[0]:area[1],area[2]:area[3]]#picouet  
+    data = d.get_pyfits()[0].data[area[0]:area[1],area[2]:area[3]]#fits.open(filename)[0].data[area[0]:area[1],area[2]:area[3]]#picouet  
     geometry = EllipseGeometry(x0=75, y0=75, sma=20, eps=0.5,
                            pa=20.*np.pi/180.)
 #    plt.imshow(data);plt.show()
@@ -11098,7 +11103,7 @@ def Centroiding(xpapoint):
     region = getregion(d)
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
     area = [Yinf, Ysup,Xinf, Xsup]
-    data = d.get_fits()[0][area[0]:area[1],area[2]:area[3]] #fits.open(filename)[0].data[area[0]:area[1],area[2]:area[3]]#picouet 
+    data = d.get_pyfits()[0][area[0]:area[1],area[2]:area[3]] #fits.open(filename)[0].data[area[0]:area[1],area[2]:area[3]]#picouet 
     x1, y1 = centroid_com(data)
     print((x1, y1))    
     x2, y2 = centroid_1dg(data)
@@ -11599,7 +11604,7 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
         Yinf, Ysup, Xinf, Xsup = Lims_from_region(None,coords=region)#[131,1973,2212,2562]
         image_area = [Yinf, Ysup,Xinf, Xsup]
         print(Yinf, Ysup,Xinf, Xsup)    
-    data = d.get_fits()[0].data[Xinf: Xsup,Yinf: Ysup]
+    data = d.get_pyfits()[0].data[Xinf: Xsup,Yinf: Ysup]
     if axis=='y':
         y = np.nanmean(data,axis=1);x = np.arange(len(y))
         index = np.isfinite(y)
@@ -11664,9 +11669,9 @@ def BackgroundMeasurement(xpapoint, config=my_conf):
         print('Number of frame = ',n)
         d.set('frame first')
         for frame in range(n):
-            data = d.get_fits()[0].data
+            data = d.get_pyfits()[0].data
             try:
-                texp = float(d.get_fits()[0].header[my_conf.exptime[0]])
+                texp = float(d.get_pyfits()[0].header[my_conf.exptime[0]])
             except KeyError as e:
                 print(e)
             else:
@@ -11698,9 +11703,9 @@ def BackgroundMeasurement(xpapoint, config=my_conf):
                 d.set('region {}'.format('/tmp/centers3.reg')) 
             d.set('frame next')
     else:
-        data = d.get_fits()[0].data
+        data = d.get_pyfits()[0].data
         try:
-            texp = float(d.get_fits()[0].header[my_conf.exptime[0]])
+            texp = float(d.get_pyfits()[0].header[my_conf.exptime[0]])
         except KeyError as e:
             print(e)
         else:
@@ -11741,8 +11746,8 @@ def SourcePhotometry(xpapoint, config=my_conf):
     from decimal import Decimal
     #x, y = x+93, y-93
     d = DS9(xpapoint)
-    data = d.get_fits()[0].data
-    texp = d.get_fits()[0].header[my_conf.exptime[0]]
+    data = d.get_pyfits()[0].data
+    texp = d.get_pyfits()[0].header[my_conf.exptime[0]]
     r = getregion(d, all=False)
     y, x = np.indices((data.shape))
     radius = np.sqrt((x - r.xc)**2 + (y - r.yc)**2)
