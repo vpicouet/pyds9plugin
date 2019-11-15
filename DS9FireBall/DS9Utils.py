@@ -1149,6 +1149,8 @@ def getdata(xpapoint, Plot=False):
     d = DS9(xpapoint)
     region = getregion(d, quick=True)
     #filename = getfilename(d)
+        
+
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
     data = d.get_pyfits()[0].data
     if len(data.shape) == 2:
@@ -1158,7 +1160,8 @@ def getdata(xpapoint, Plot=False):
             plt.colorbar()
     if len(data.shape) == 3:
         data = data[:,Yinf:Ysup,Xinf:Xsup]
-
+#    if hasattr(region, 'r'):
+#        data[data>region.r] = np.nan
 
     return data
 
@@ -3201,9 +3204,49 @@ def getImage(xpapoint):
     #fitsimage = fits.open(filename)[0]
     fitsimage = d.get_pyfits()[0]
     image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
+    print('Region =', region)
+    if hasattr(region[0], 'r'):
+        print('Region = Circle Radius = ',region[0].r)
+        image = np.array(image, dtype=float)
+        y, x = np.indices((image.shape))
+        lx, ly = image.shape
+        r = np.sqrt((x - lx/2)**2 + (y - ly/2)**2)
+        image[r>int(region[0].r)] = np.nan
+        print(image)
+
     header = fitsimage.header
     return image, header, area, filename
+ 
     
+
+def set_axes_equal(ax):
+    '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
+    cubes as cubes, etc..  This is one possible solution to Matplotlib's
+    ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+
+    Input
+      ax: a matplotlib axis, e.g., as output from plt.gca().
+    '''
+
+    x_limits = ax.get_xlim3d()
+    y_limits = ax.get_ylim3d()
+    z_limits = ax.get_zlim3d()
+
+    x_range = abs(x_limits[1] - x_limits[0])
+    x_middle = np.nanmean(x_limits)
+    y_range = abs(y_limits[1] - y_limits[0])
+    y_middle = np.nanmean(y_limits)
+    z_range = abs(z_limits[1] - z_limits[0])
+    z_middle = np.nanmean(z_limits)
+
+    # The plot bounding box is a sphere in the sense of the infinity
+    # norm, hence I call half the max range the plot radius.
+    plot_radius = 0.5*max([x_range, y_range, z_range])
+
+    ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+    #ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+    return
 
 def PlotArea3D(xpapoint):
     """
@@ -3213,6 +3256,7 @@ def PlotArea3D(xpapoint):
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D #Needed even if not used
+    from matplotlib import cm
     #from .polynomial import polyfit2d
     log = np.bool(int(sys.argv[-2]))
     smooth = sys.argv[-1]
@@ -3241,8 +3285,16 @@ def PlotArea3D(xpapoint):
     #imager = image.ravel()
     if log:
         image = np.log10(image - image.min() +1)
+        
+    max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), image.max()-image.min()]).max() / 2.0
+    #mid_x = (X.max()+X.min()) * 0.5;mid_y = (Y.max()+Y.min()) * 0.5
+    
+    #fig = plt.figure()
+    #ax = fig.gca(projection='3d')
     fig = plt.figure()
-    ax = fig.gca(projection='3d')
+    ax = fig.gca(projection='3d', adjustable='box')
+    #ax.set_aspect('equal')
+
     ax.scatter(X, Y, image, c='r', s=200/len(x))#1.1)#, cstride=1, alpha=0.2)
     ax.plot_surface(X, Y, image,rstride=1, cstride=1, shade=True, alpha=0.2)#, cstride=1, alpha=0.2)
     #coeff = polyfit2d(x, y, imager, [4,4])
@@ -3250,7 +3302,12 @@ def PlotArea3D(xpapoint):
     plt.title('3D plot - %s - area = %s'%(os.path.basename(filename),area))
     plt.xlabel('X')
     plt.ylabel('Y')
-    ax.set_zlim((0.9 * image.min(), 1.1 * image.max()))
+    print(image)
+    print(0.9 * np.nanmin(image), 1.1 * np.nanmax(image))
+    ax.set_zlim((0.9 * np.nanmin(image), 1.1 * np.nanmax(image)))
+    #ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    #ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    set_axes_equal(ax)
     ax.set_zlabel('Pixels ADU value')
     #ax.axis('equal')
     ax.axis('tight')
@@ -12507,7 +12564,7 @@ def DS9LephareLF(xpapoint):
     return
 
 
-def PlotFL_from_ALF(xpapoint, general_path = sys.argv[-1]):
+def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
     """
     """
     from decimal import Decimal
@@ -12544,7 +12601,60 @@ def PlotFL_from_ALF(xpapoint, general_path = sys.argv[-1]):
     plt.show()
     return
 
-def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat',mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=None) : 
+
+def PlotFL_from_ALF(xpapoint, general_path = sys.argv[-2], filter_=sys.argv[-1]):
+    """
+    """
+    from decimal import Decimal
+    if filter_ == 'FUV':
+        a = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
+        phi = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
+        M = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
+   
+    if filter_ == 'NUV':#to be changes
+        a= -np.array([1.40,1.31,1.36,1.40,1.39,1.39,1.4,1.4,1.4])
+        phi = 1e-3 * np.array([5.1, 6, 4.6, 4.2, 4.7, 3.1, 2.7, 1.7, 1.7])
+        M = - np.array([18.51, 18.80, 19.03, 19.41, 19.86, 20.37, 20.62, 21.15, 21.15])
+
+    else:#U
+        a= -np.array([1.42,1.22,1.18,1.15,1.25,1.35,1.39,1.43,1.43])
+        phi = 1e-3 * np.array([3.6, 5.6, 5.1, 5.3, 4.7, 3, 2.2, 2.2, 2.2])
+        M = - np.array([19.87, 20.04, 20.13, 20.44, 20.84, 21.24, 21.677, 21.677, 21.677])
+    
+
+    
+    info_swml = glob.glob(general_path + '/*swml*.info')[0]
+    info_vmax = glob.glob(general_path + '/*vmax*.info')[0]
+    zs = np.genfromtxt(info_vmax, skip_header=15, max_rows=8,usecols=(1,2),delimiter='  ')#, unpack=True)
+    paths_swml = glob.glob(general_path + '/*swml*.dat');paths_swml.sort()
+    paths_vmax = glob.glob(general_path + '/*vmax*.dat');paths_vmax.sort()
+    #paths_swml.sort(key = lambda s: len(s))
+    #paths_vmax.sort(key = lambda s: len(s))
+    fig, axes = plt.subplots(int(len(zs)/3),3, figsize=(15,10),sharex=True, sharey=True)
+    lx = np.linspace(-13,-24,100)
+    for i, ax in enumerate(axes.ravel()[:len(zs)+1]):
+        print(os.path.basename(paths_swml[i]),os.path.basename(paths_vmax[i]))
+        coeffs = [phi[i],a[i],M[i]]
+        ax.plot(lx,(schechter_vincent(lx,coeffs)),c='grey',lw=1,label='M: '+ ', '.join([ '%.3E' % Decimal(a) for a in coeffs ]))
+        fitLF(path = paths_swml[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='orange', label='SWML LF')
+        fitLF(path = paths_vmax[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='red', label='VMAX LF')
+        ax.set_title('z = %0.2f - %0.2f'%(zs[i][0],zs[i][1]), fontsize=10)
+        
+#    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    #plt.xlabel('Mabs_{U}')
+    #plt.ylabel('log N (mag^{-1} MPC^{-3}')
+    fig=axes[0,0].figure
+    fig.text(0.5,0.04, '%s absolution magnitude'%(filter_), ha="center", va="center")
+    fig.text(0.05,0.5, 'log N (mag^{-1} MPC^{-3}', ha="center", va="center", rotation=90)
+
+    plt.savefig(os.path.join(general_path,'Luminosity'),dpi=300)
+    plt.show()
+    return
+
+
+
+
+def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat',mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=None,color='black', label=None) : 
     from astropy.io import ascii
     from pyswarm import pso
     from decimal import Decimal
@@ -12553,16 +12663,16 @@ def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat
     phirod_0 = LF_rod0['col2']
     errmrod_0 = LF_rod0['col3']
     errprod_0 = LF_rod0['col4']
-    mask = LIRrod_0<mag_lim
+    mask = True#LIRrod_0<mag_lim
     coeffrod_0 , chirod_0 = pso(likelihood,do,up,args=[LIRrod_0[mask],phirod_0[mask],errmrod_0[mask]],maxiter=500)
     lx = np.linspace(-13,-24,100)
     if ax is None:
         fig = plt.figure()#figsize=(12,4.5))
         ax = fig.add_subplot(111)
-    ax.plot(lx,(schechter_vincent(lx,coeffrod_0)),c='blue',lw=2,label='PSO: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffrod_0 ]))
+    ax.plot(lx,(schechter_vincent(lx,coeffrod_0)),c=color,lw=2,label='Fit: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffrod_0 ]))
     #ax.plot(lx,(schechter_vincent(lx,[4e-3,-1.4,-19])),c='grey',lw=1,label='Literature: Pi=0.004,a=-1.4,M=-19')
-    ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='+',lw=3,c='orange',label='LF UV')
-    ax.plot(LIRrod_0[mask],phirod_0[mask],'o',lw=3,c='black',label='Fit mask')
+    ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='+',lw=1,c=color,label=label)
+    #ax.plot(LIRrod_0[~mask],phirod_0[~mask],'o',lw=3,c='black',label='Fit mask')
     ax.set_xlim((-14,-25));ax.set_ylim((-6,0))
     ax.legend(loc='lower left',fontsize=6)
     
