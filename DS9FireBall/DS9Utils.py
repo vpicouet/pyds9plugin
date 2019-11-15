@@ -12602,7 +12602,7 @@ def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
     return
 
 
-def PlotFL_from_ALF(xpapoint, general_path = sys.argv[-2], filter_=sys.argv[-1]):
+def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U'):
     """
     """
     from decimal import Decimal
@@ -14664,70 +14664,75 @@ def main():
     
     print(datetime.datetime.now())
     start = time.time()
+    DictFunction_Generic = {'setup':DS9setup2,'Update':DS9Update,'fitsgaussian2D': fitsgaussian2D, 'DS9createSubset':DS9createSubset,
+                             'DS9Catalog2Region':DS9Catalog2Region, 'AddHeaderField':AddHeaderField,'BackgroundFit1D':BackgroundFit1D,
+                             'Help':Help, 'test':DS9tsuite, 'ChangeConfig':ChangeConfig, 'next':DS9next, 'previous':DS9previous, 
+                             'stack': DS9stack_new,'lock': DS9lock, 'open':DS9open, 'CreateHeaderCatalog':DS9CreateHeaderCatalog,
+                             'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
+                             'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings, }
+                   
 
-    DictFunction = {
-                    #GENERIC FUNCTIONS
-                    'setup':DS9setup2,'Update':DS9Update,
-                    'inverse': DS9inverse,'AddHeaderFieldCat':AddHeaderFieldCat,
-                    'next':DS9next, 'previous':DS9previous, 'ImageAnalysis': DS9AnalyzeImage,
-                    'stack': DS9stack_new,'lock': DS9lock, 'open':DS9open, 'CreateHeaderCatalog':DS9CreateHeaderCatalog,
-                    'StackAllImages': StackAllImages, 'DS9Catalog2Region':DS9Catalog2Region, 'AddHeaderField':AddHeaderField,
-                    'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'BackgroundMeasurement':BackgroundMeasurement,
-                    'DS9realignImage':DS9realignImage,'DS9createSubset':DS9createSubset,'DS9Visualization':DS9Visualization,
-                    'BackgroundFit1D':BackgroundFit1D,'DS9CreateHistrogram':DS9CreateHistrogram,'DS9save':DS9save,'DS9saveColor':DS9saveColor,
-                    'fitsgaussian2D': fitsgaussian2D, 'AddGaussian2d' :AddGaussian2d,
+    DictFunction_Delete = {'AddGaussian2d' :AddGaussian2d, 'DS9CreateHistrogram':DS9CreateHistrogram,
+                           'DS9saveColor':DS9saveColor,'DS9AddToCatalog':DS9AddToCatalog,  
+                           'meanvar': DS9meanvar,'snr': DS9snr, 'inverse': DS9inverse, 'DS9save':DS9save,
+                           'FollowProbabilityLaw': FollowProbabilityLaw,'ApplyRealisation': ApplyRealisation,
+                           'AddHeaderFieldCat':AddHeaderFieldCat,'StackAllImages': StackAllImages,'DS9realignImage':DS9realignImage,'DS9Visualization':DS9Visualization,
+                            'SubstractImage': DS9RemoveImage,'DS9createImage': DS9createImage,'DS9ComputeDirectEmGain':DS9ComputeDirectEmGain, 
+                            'ComputeStandardDeviation': DS9ComputeStandardDeviation,}
 
-                    #AIT Functions
-                    'centering':DS9center, 'radial_profile':DS9rp,
-                    'throughfocus':DS9throughfocus, 'regions': Field_regions,
+    DictFunction_AIT = {'centering':DS9center, 'radial_profile':DS9rp,
+                    'throughfocus':DS9throughfocus, 
                     'throughfocus_visualisation':DS9visualisation_throughfocus, 
-                    'snr': DS9snr, 'focus': DS9focus,'DS9AddToCatalog':DS9AddToCatalog,
-                    'throughslit': DS9throughslit, 'meanvar': DS9meanvar,
-                    'xy_calib': DS9XYAnalysis,'SourcePhotometry':SourcePhotometry,'DS9MeasureDispersion':DS9MeasureDispersion,
-                    
-                    'AnalyzeOSSmearing':DS9AnalyzeOSSmearing,'Convolve2d':Convolve2d,
-                    #Flight Functions
-                    'ReplaceWithNans': DS9replaceNaNs,'InterpolateNaNs': DS9InterpolateNaNs,
-                    'OverscanCorrection': DS9OverscanCorrection, 'Trimming': DS9Trimming,
-                    'SubstractImage': DS9RemoveImage, 'TotalReduction': DS9TotalReductionPipeline_new,
-                    'photo_counting':DS9photo_counting, 'WCS':DS9guider, 'Remove_Cosmics': DS9removeCRtails2,
-                    'BackgroundSubstraction': DS9SubstractBackground, 
-                    'ColumnLineCorrelation': DS9CLcorrelation, 'OriginalSettings': DS9originalSettings,
-                    'NoiseMinimization': DS9NoiseMinimization, 'SmearingProfile': DS9SmearingProfile,
-                    'lya_multi_image':create_multiImage, 'DS9plot_spectra':DS9plot_spectra,
-                    'ComputeEmGain': DS9ComputeEmGain, 'DS9ComputeDirectEmGain':DS9ComputeDirectEmGain, '2D_autocorrelation': DS9_2D_autocorrelation,
-                    'HistogramDifferences': DS9HistogramDifferences, 'ComputeStandardDeviation': DS9ComputeStandardDeviation,
-                    'PlotSpatial': DS9PlotSpatial, 'PlotArea3D':PlotArea3D, 'ContinuumPhotometry':ContinuumPhotometry,
-                    'HistogramSums': HistogramSums, 'DS9DetectCosmics':DS9DetectCosmics, 'DetectHotPixels':DS9DetectHotPixels,
-                    'DS9MultipleThreshold': DS9MultipleThreshold, 'DS9removeCRtails_CS':DS9removeCRtails_CS,'DS9_2D_FFT':DS9_2D_FFT,
-                    'ComputeCIC':ComputeCIC,'DS9SmearingProfileAutocorr':DS9SmearingProfileAutocorr, 'AnalyseDark':AnalyseDark,
-                    'DS9PhotonTransferCurve':DS9PhotonTransferCurve,'DS9Desmearing':DS9Desmearing_hot_pixel,'DS9DeconvolveSmearing2':DS9DeconvolveSmearing2,
-                    'DS9SmearingWithIntensity': DS9SmearingWithIntensity, 
-                    #Photutils
+                    'throughslit': DS9throughslit, 'Convolve2d':Convolve2d,
                     'BackgroundEstimationPhot': DS9BackgroundEstimationPhot, 'ExtractSources':DS9ExtractSources,
                     'Centroiding': Centroiding,#'PSFphotometry': PSFphotometry,'PSFmatching':PSFmatching,'Datasets': Datasets
                     'GroupingAlgorithm': GroupingAlgorithm, 'AperturePhotometry': AperturePhotometry,'BuildingEPSF': BuildingEPSF,
-                    'MorphologicalProperties': MorphologicalProperties, 'EllipticalIsophoteAnalysis': EllipticalIsophoteAnalysis,
-                    
-                    #Create test images
-                    'DS9createImage': DS9createImage, 'FollowProbabilityLaw': FollowProbabilityLaw,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
-                    'ApplyRealisation': ApplyRealisation,'SimulateFIREBallemCCD':SimulateFIREBallemCCD,'DS9FormatCatalogForLephare':DS9FormatCatalogForLephare,
-                    
-                     #Others
-                    'test':DS9tsuite, 'ChangeConfig':ChangeConfig,'ComputeReadNoise':ComputeReadNoise,'ComputeGainHistogram':ComputeGainHistogram,
-                    'DS9CreateDetectionImages': DS9CreateDetectionImages,'RunSextractorHSC_CLAUDS':RunSextractorHSC_CLAUDS,'RunSextractor':RunSextractor,
-                    
-                    #sofwares
-                    'DS9SWARP':DS9SWARP,'DS9SaveOnlyImage':DS9SaveOnlyImage,'CreateMultiColorImage':CreateMultiColorImage,
-                    'DS9PSFEX': DS9PSFEX, 'DS9LephareFilter': DS9LephareFilter,'PlotSpectraDataCube':PlotSpectraDataCube,
-                    'StackDataDubeSpectrally': StackDataDubeSpectrally,
+                    'MorphologicalProperties': MorphologicalProperties, 'EllipticalIsophoteAnalysis': EllipticalIsophoteAnalysis,            
+                    'ReplaceWithNans': DS9replaceNaNs,'InterpolateNaNs': DS9InterpolateNaNs,'Trimming': DS9Trimming,
+                    'ColumnLineCorrelation': DS9CLcorrelation,
+                    'DS9_2D_FFT':DS9_2D_FFT,'2D_autocorrelation': DS9_2D_autocorrelation,
+                     }
+
+    DictFunction_Calc = {'CosmologyCalculator':CosmologyCalculator,'Convertissor': Convertissor}
+    
+    
+    DictFunction_CLAUDS = {'DS9SaveOnlyImage':DS9SaveOnlyImage,'CreateMultiColorImage':CreateMultiColorImage,
+                     'DS9LephareFilter': DS9LephareFilter,
                     'DS9LephareSedToLib':DS9LephareSedToLib,'DS9LephareMagGal':DS9LephareMagGal,'DS9LephareZphot':DS9LephareZphot,
                     'DS9PlotRedshiftGaussian':DS9PlotRedshiftGaussian,'DS9PlotColor':DS9PlotColor, 'DS9LephareLimits':DS9LephareLimits,
                     'DS9LephareLF':DS9LephareLF, 'PlotFL_from_ALF':PlotFL_from_ALF,'GalaxyStarsClassification':GalaxyStarsClassification,
-                    'get_depth_image': get_depth_image,'CosmologyCalculator':CosmologyCalculator,'Convertissor': Convertissor,'Help':Help
+                    'get_depth_image': get_depth_image,'RunSextractorHSC_CLAUDS':RunSextractorHSC_CLAUDS, 
+                    'DS9CreateDetectionImages': DS9CreateDetectionImages,'DS9FormatCatalogForLephare':DS9FormatCatalogForLephare,
+                    }
+ 
+    DictFunction_SOFT = {'DS9SWARP':DS9SWARP,'DS9PSFEX': DS9PSFEX,'RunSextractor':RunSextractor,
+                         }
+ 
+    
 
-             }
+    DictFunction_FB = {'regions': Field_regions,'xy_calib': DS9XYAnalysis,'DS9MeasureDispersion':DS9MeasureDispersion,
+                       'SourcePhotometry':SourcePhotometry,'focus': DS9focus,'ImageAnalysis': DS9AnalyzeImage, 'StackDataDubeSpectrally': StackDataDubeSpectrally,
+                       'PlotSpectraDataCube':PlotSpectraDataCube, 'ComputeGainHistogram':ComputeGainHistogram,'ComputeReadNoise':ComputeReadNoise,
+                       'BackgroundMeasurement':BackgroundMeasurement,
+                        'AnalyzeOSSmearing':DS9AnalyzeOSSmearing,                    
+                        'OverscanCorrection': DS9OverscanCorrection, 'TotalReduction': DS9TotalReductionPipeline_new,
+                        'photo_counting':DS9photo_counting, 'WCS':DS9guider, 'Remove_Cosmics': DS9removeCRtails2,
+                        'NoiseMinimization': DS9NoiseMinimization, 'SmearingProfile': DS9SmearingProfile,
+                        'lya_multi_image':create_multiImage, 'DS9plot_spectra':DS9plot_spectra,       'SimulateFIREBallemCCD':SimulateFIREBallemCCD,             
+                        'ComputeCIC':ComputeCIC,'DS9SmearingProfileAutocorr':DS9SmearingProfileAutocorr, 'AnalyseDark':AnalyseDark,
+                        'DS9PhotonTransferCurve':DS9PhotonTransferCurve,'DS9Desmearing':DS9Desmearing_hot_pixel,'DS9DeconvolveSmearing2':DS9DeconvolveSmearing2,
+                        'DS9SmearingWithIntensity': DS9SmearingWithIntensity, 
+                        'BackgroundSubstraction': DS9SubstractBackground,
+                        'ComputeEmGain': DS9ComputeEmGain, 
+                        'HistogramDifferences': DS9HistogramDifferences,
+                        'PlotSpatial': DS9PlotSpatial, 'ContinuumPhotometry':ContinuumPhotometry,
+                        'HistogramSums': HistogramSums, 'DS9DetectCosmics':DS9DetectCosmics, 'DetectHotPixels':DS9DetectHotPixels,
+                        'DS9MultipleThreshold': DS9MultipleThreshold, 'DS9removeCRtails_CS':DS9removeCRtails_CS,}
+    
+    DictFunction = {}' 'for d in (DictFunction_Generic, DictFunction_AIT, DictFunction_SOFT, DictFunction_Calc, DictFunction_CLAUDS, DictFunction_SOFT, DictFunction_FB): DictFunction.update(d)
 
+
+#d4 = {}' 'for d in (d1, d2, d3): d4.update(d)
     xpapoint = sys.argv[1]
     function = sys.argv[2]
     Choose_backend(function)
