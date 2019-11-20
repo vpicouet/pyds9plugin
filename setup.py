@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
 	        'numpy >=1.8', 
             'scipy >=0.14', 
-            'matplotlib==2.2.4',
+            'matplotlib==3.1.1',
             'astropy >=1.3',
             'pyds9',
             'photutils',

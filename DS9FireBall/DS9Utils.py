@@ -902,7 +902,7 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
     global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
     image
     """
-    if type(radius) == int:
+    if (type(radius) == int) or (type(radius) == float):
         r, r1 = radius, radius
     else:
         r , r1 = radius
@@ -5887,14 +5887,14 @@ def Lims_from_region(region=None, coords=None,  config=my_conf):
             if hasattr(region, 'h'):
                 xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
             if hasattr(region, 'r'):
-                xc, yc, h, w = int(region.xc), int(region.yc), 2*int(region.r), 2*int(region.r)
+                xc, yc, h, w = float(region.xc), float(region.yc), int(2*region.r), int(2*region.r)
 
         else:
             region = region[0]
             if hasattr(region, 'h'):
                 xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
             if hasattr(region, 'r'):
-                xc, yc, h, w = int(region.xc), int(region.yc), 2*int(region.r), 2*int(region.r)
+                xc, yc, h, w = float(region.xc), float(region.yc), int(2*region.r), int(2*region.r)
 
 
 
@@ -5912,9 +5912,11 @@ def Lims_from_region(region=None, coords=None,  config=my_conf):
     if h <= 2:                                                                          
         h = 2
     Yinf = int(np.floor(yc - h/2 -1))
-    Ysup = int(np.ceil(yc + h/2 -1))
+    Ysup = int(np.ceil(yc + h/2 +1))
     Xinf = int(np.floor(xc - w/2 -1))
-    Xsup = int(np.ceil(xc + w/2 -1))
+    Xsup = int(np.ceil(xc + w/2 +1))
+    verboseprint('Xc, Yc =  = ',region.xc, region.yc, verbose=config.verbose)
+    verboseprint('Xc, Yc =  = ',xc, yc, verbose=config.verbose)
     verboseprint('Xinf, Xsup, Yinf, Ysup = ', Xinf, Xsup, Yinf, Ysup, verbose=config.verbose)
     verboseprint('data[%i:%i,%i:%i]'%(Yinf, Ysup,Xinf, Xsup), verbose=config.verbose)
     return np.max([0,Xinf]), Xsup, np.max([0,Yinf]), Ysup
@@ -6039,13 +6041,14 @@ def DS9center(xpapoint,Plot=True):
         Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
         data = d.get_pyfits()[0].data
         image = data[Yinf:Ysup,Xinf:Xsup]
+        #image = data[Xinf:Xsup,Yinf:Ysup]
+        print(image)
         print('2D fitting with 100 microns fibre, to be updated by allowing each fiber size')
         if bool(int(bck)):
             print('Subtracting background...')
             background =  estimateBackground(data,[region.yc,region.xc],20,1.8 )
             image = image - background
         lx, ly = image.shape
-        xc, yc = region.xc, region.yc
         
         if method == 'Center-of-mass': 
             xn, yn = centroid_com(image)
@@ -6059,7 +6062,8 @@ def DS9center(xpapoint,Plot=True):
         if method == 'Maximum': 
             yn, xn = np.where(image==np.nanmax(image))[0][0], np.where(image==np.nanmax(image))[1][0]
         
-        elif  method == 'Gaussian-Picouet': 
+        elif  method == 'Gaussian-Picouet':
+            xc, yc = int(region.xc), int(region.yc)
             x = np.linspace(0,lx-1,lx)
             y = np.linspace(0,ly-1,ly)
             x, y = np.meshgrid(x,y)
@@ -6093,10 +6097,15 @@ def DS9center(xpapoint,Plot=True):
                 plt.figtext(0.66,0.55,'Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f' % ( np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3]/2.), lx/2 - popt[1] , np.sqrt(np.diag(pcov)[1]), ly/2 - popt[2], np.sqrt(np.diag(pcov)[2])),bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})
                 plt.legend()
                 plt.show()
+        print('Region = ', region.xc, region.yc, region.r)
+        print('Region = ',Yinf,Ysup,Xinf,Xsup)
+        print('lx, ly = ', lx, ly)
+        print('Sub array center = ', xn, yn)
+        #print('Sub array center = ', xn, yn)
+#        xc, yc = int(region.xc), int(region.yc)
 
-
-        newCenterx = xc - (lx/2 - xn)#region.xc - (lx/2 - popt[1])
-        newCentery = yc - (ly/2 - yn)#region.yc - (ly/2 - popt[2])
+        newCenterx = Xinf + xn + 1#region.xc - (lx/2 - popt[1])
+        newCentery = Yinf + yn + 1#region.yc - (ly/2 - popt[2])
         print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
 
 
@@ -6107,7 +6116,7 @@ def DS9center(xpapoint,Plot=True):
         except OSError:
             pass
 
-        create_DS9regions([newCenterx-1],[newCentery-1], radius=5, save=True, savename="/tmp/centers", form=['circle'], color=['white'], ID=[['%0.2f - %0.2f' % (newCenterx,newCentery)]])
+        create_DS9regions([newCenterx-1],[newCentery-1], radius=region.r, save=True, savename="/tmp/centers", form=['circle'], color=['white'], ID=[['%0.2f - %0.2f' % (newCenterx,newCentery)]])
         
         d.set('regions /tmp/centers.reg')
 
@@ -11574,34 +11583,46 @@ def CreateImageFromCatalogObject(xpapoint, nb = int(1e3), path=''):
     from astropy.table import Table
     from tqdm import tqdm
     from astropy.modeling.functional_models import Gaussian2D
-
+    from photutils.datasets import make_100gaussians_image
 
     d = DS9(xpapoint)
-    lx, ly = 1000, 1000
     #if len(sys.argv)>3:
-
+    path = sys.argv[-1]
     if (os.path.isfile(path)):
+        print('Opening sextractor catalog')
         catfile =   path #law = 'standard_exponential'
-        catalog = Table.read(catfile)
-    else:
-        x, y, angle = np.random.randint(lx, size=nb), np.random.randint(ly, size=nb), np.random.rand(nb)*2*np.pi - np.pi
-        peak = np.random.exponential(10, size=nb)
-        sigmax, sigmay = np.random.normal(3, 2, size=nb), np.random.normal(3, 2, size=nb)
-        catalog = Table([x, y, peak, sigmax, sigmay, angle],  names=('x_mean', 'y_mean', 'amplitude','x_stddev','y_stddev', 'theta'))
-        
-    background = 1
-    image = np.ones((lx,ly)) * background
-    for i in tqdm(range(len(catalog))):
-        x = np.linspace(0,lx-1,lx)
-        y = np.linspace(0,ly-1,ly)
-        x, y = np.meshgrid(x,y)
         try:
-            image += Gaussian2D.evaluate(x, y, catalog[i]['peak'], catalog[i]['xcenter'], catalog[i]['ycenter'], catalog[i]['sigmax'],  catalog[i]['sigmay'], catalog[i]['angle'])
-        except KeyError:
-            image += Gaussian2D.evaluate(x, y, catalog[i]['amplitude'], catalog[i]['x_mean'], catalog[i]['y_mean'], catalog[i]['x_stddev'],  catalog[i]['y_stddev'], catalog[i]['theta'])
-    image_real = np.random.poisson(image)
-    fitswrite(image_real,'/tmp/galaxies000000.fits')
-    d.set('file /tmp/galaxies000000.fits')
+            catalog = Table.read(catfile)
+        except  astropy.io.registry.IORegistryError:
+            catalog = Table.read(catfile, format='ascii')
+            
+#    else:
+#        x, y, angle = np.random.randint(lx, size=nb), np.random.randint(ly, size=nb), np.random.rand(nb)*2*np.pi - np.pi
+#        peak = np.random.exponential(10, size=nb)
+#        sigmax, sigmay = np.random.normal(3, 2, size=nb), np.random.normal(3, 2, size=nb)
+#        catalog = Table([x, y, peak, sigmax, sigmay, angle],  names=('x_mean', 'y_mean', 'amplitude','x_stddev','y_stddev', 'theta'))
+#        
+        lx, ly = int(catalog['X_IMAGE'].max()), int(catalog['Y_IMAGE'].max())
+        background = np.median(catalog['BACKGROUND'])
+        image = np.ones((lx,ly)) * background
+        for i in tqdm(range(len(catalog))):
+            x = np.linspace(0,lx-1,lx)
+            y = np.linspace(0,ly-1,ly)
+            x, y = np.meshgrid(x,y)
+            try:
+                #image += Gaussian2D.evaluate(x, y, catalog[i]['peak'], catalog[i]['xcenter'], catalog[i]['ycenter'], catalog[i]['sigmax'],  catalog[i]['sigmay'], catalog[i]['angle'])
+#                image += Gaussian2D.evaluate(x, y, catalog[i]['MAG_AUTO'], catalog[i]['X_IMAGE'], catalog[i]['Y_IMAGE'], catalog[i]['KRON_RADIUS'] * catalog[i]['A_IMAGE'],  catalog[i]['KRON_RADIUS'] * catalog[i]['B_IMAGE'], catalog[i]['THETA_IMAGE']).T
+                image += Gaussian2D.evaluate(x, y, catalog[i]['MAG_AUTO'], catalog[i]['X_IMAGE'], catalog[i]['Y_IMAGE'],  catalog[i]['A_IMAGE'],  catalog[i]['B_IMAGE'], np.pi * catalog[i]['THETA_IMAGE']/180).T
+            except KeyError:
+                image += Gaussian2D.evaluate(x, y, catalog[i]['amplitude'], catalog[i]['x_mean'], catalog[i]['y_mean'], catalog[i]['x_stddev'],  catalog[i]['y_stddev'], catalog[i]['theta'])
+        image_real = np.random.poisson(image).T
+    else:
+        print('No catalog given, creating new image.')
+        image_real =  data = make_100gaussians_image()
+    name = '/tmp/image_%s.fits'%(datetime.datetime.now().strftime("%y%m%d-%HH%MM%S"))
+    fitswrite(image_real,name)
+    d.set('frame new')
+    d.set('file ' + name )
 #    from photutils.datasets import make_gaussian_sources_image
 #    nb = int(1e3)
 #    lx, ly = 1000, 1000
@@ -12896,41 +12917,38 @@ def CleanCat(cat, bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z
                  'B_IMAGE',
                  'FWHM_IMAGE',
                  'FLAGS_MegaCam_u',
-                 'CLASS_STAR_MegaCam_u',
+                 
                  'ELONGATION',
                  'ELLIPTICITY',
                  'TRACT',
                  'PATCH',
                  'BACKGROUND_HSC_Y',
                  'FLAGS_HSC_Y',
-                 'CLASS_STAR_HSC_Y',
+                 
                  'BACKGROUND_HSC_R',
                  'FLAGS_HSC_R',
-                 'CLASS_STAR_HSC_R',
+                 
                  'BACKGROUND_VIRCAM_J',
                  'FLAGS_VIRCAM_J',
-                 'CLASS_STAR_VIRCAM_J',
+                 
                  'BACKGROUND_HSC_I',
                  'FLAGS_HSC_I',
-                 'CLASS_STAR_HSC_I',
                  'BACKGROUND_HSC_G',
                  'FLAGS_HSC_G',
-                 'CLASS_STAR_HSC_G',
                  'BACKGROUND_HSC_Z',
                  'FLAGS_HSC_Z',
-                 'CLASS_STAR_HSC_Z',
                  'BACKGROUND_VIRCAM_Y',
                  'FLAGS_VIRCAM_Y',
-                 'CLASS_STAR_VIRCAM_Y',
                  'BACKGROUND_VIRCAM_H',
                  'FLAGS_VIRCAM_H',
-                 'CLASS_STAR_VIRCAM_H',
+#                 'CLASS_STAR_HSC_Z','CLASS_STAR_HSC_G','CLASS_STAR_HSC_I','CLASS_STAR_HSC_R','CLASS_STAR_HSC_Y','CLASS_STAR_MegaCam_u',
+#                 'CLASS_STAR_VIRCAM_H','CLASS_STAR_VIRCAM_Ks','CLASS_STAR_MegaCam_uS','CLASS_STAR_VIRCAM_Y','CLASS_STAR_VIRCAM_J',
                  'BACKGROUND_VIRCAM_Ks',
                  'FLAGS_VIRCAM_Ks',
-                 'CLASS_STAR_VIRCAM_Ks',
+                 
                  'BACKGROUND_MegaCam_uS',
-                 'FLAGS_MegaCam_uS',
-                 'CLASS_STAR_MegaCam_uS']
+                 'FLAGS_MegaCam_uS'
+                 ]
     for band in bands:
         band = band.replace('-','_')
         for col in cols2del:
@@ -14729,7 +14747,9 @@ def main():
                         'HistogramSums': HistogramSums, 'DS9DetectCosmics':DS9DetectCosmics, 'DetectHotPixels':DS9DetectHotPixels,
                         'DS9MultipleThreshold': DS9MultipleThreshold, 'DS9removeCRtails_CS':DS9removeCRtails_CS,}
     
-    DictFunction = {}' 'for d in (DictFunction_Generic, DictFunction_AIT, DictFunction_SOFT, DictFunction_Calc, DictFunction_CLAUDS, DictFunction_SOFT, DictFunction_FB): DictFunction.update(d)
+    DictFunction = {}
+    for d in (DictFunction_Generic, DictFunction_AIT, DictFunction_SOFT, DictFunction_Calc, DictFunction_CLAUDS, DictFunction_SOFT, DictFunction_FB, DictFunction_Delete): 
+        DictFunction.update(d)
 
 
 #d4 = {}' 'for d in (d1, d2, d3): d4.update(d)
