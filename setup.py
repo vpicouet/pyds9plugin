@@ -33,7 +33,7 @@ requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
 entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 
-data = { "DS9FireBall": ["FireBall.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*"]}
+data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*"]}
 
 
 version = '2.83dev'
@@ -50,7 +50,7 @@ package_data = data,
 include_package_data=True,
 entry_points = entry_points,
 author_email = 'vincent.picouet@lam.fr',
-description  = 'LAM AIT/quicklook functions proposal for FIREBall-2')
+description  = 'DS9 Quick-Look plug-in')
 #elif sys.version_info.major == 2:
 #    setup(
 #        name='DS9FireBall',

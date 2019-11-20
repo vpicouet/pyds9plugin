@@ -3591,7 +3591,7 @@ def DS9PlotRedshiftGaussian(xpapoint):
     from scipy.optimize import curve_fit
     #plt.rc('text', usetex=True)
     #plt.rc('font', family='serif')
-    path, photo, spectro, bins = sys.argv[-4:]
+    path, spectro, photo, bins = sys.argv[-4:]
     bins_ = np.array(bins.split(','),dtype=float)
     #table, name='', photo='PHOTOZ', spectro='ZSPEC'
     try:
@@ -3615,7 +3615,7 @@ def DS9PlotRedshiftGaussian(xpapoint):
     x=np.arange(6)
 
 
-    fig, (ax0,ax1, ax2) = plt.subplots(3, 1, figsize=(10,10))
+    fig, (ax0,ax1, ax2, ax3, ax4) = plt.subplots(3, 1, figsize=(10,10))
     ax0.plot(x,x,c='black')
     #plt.plot(x,0.85*(x),c='black',linestyle='dotted')
     #plt.plot(x,1.15*(x),c='black',linestyle='dotted')
@@ -3673,9 +3673,26 @@ def DS9PlotRedshiftGaussian(xpapoint):
     fig.savefig(path[:-4])
     plt.show()
     return
-    
 
-   
+#    mean,median, std16, std32 = [], [], [], [] 
+#    zs = np.linspace(0,2,10)
+#    for mini, maxi in zip(zs[:-1],zs[1:]):
+#        mask = (Clauds[spectro]<maxi)&(Clauds[spectro]>mini)
+#        sub_tab = Clauds[mask]
+#        print(mini, maxi, len(sub_tab))
+#        
+#        mean.append(np.mean(sub_tab[spectro] - sub_tab[photo]))# for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+#        #hist(sub_tab[f2],bins=50);xlabel('mag of the objectss when they are selected with Laigle magnitude')
+#        median.append(np.median(sub_tab[spectro] - sub_tab[photo]))# for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+#        std16.append(np.percentile(sub_tab[spectro] - sub_tab[photo],16))# for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+#        std32.append(np.percentile(sub_tab[spectro] - sub_tab[photo],84))# for mini, maxi in zip(range_mag[:-1],range_mag[1:])]
+#
+#    #ax0.errorbar((range_mag[:-1]+range_mag[1:])/2,mean,yerr=np.array([-np.array(std16),std32]),fmt='o',c='black')
+#    plt.plot((zs[:-1]+zs[1:])/2,mean,'o',c='blue',label='Mean - %i objetcs'%(len(table)))
+#    plt.plot((zs[:-1]+zs[1:])/2,median,'o',c='red',label='Median')
+#    plt.vlines((zs[:-1]+zs[1:])/2,std16,std32,color='black',label='16 - 82 th percentile')
+#    plt.legend()
+#   
 
 def FlagStars_bzk(table):
 #    mask = abs((table['g_MAG_OBS'] - table['z_MAG_OBS'])/(table['z_MAG_OBS'] - table['K_MAG_OBS']))>3/3.8
@@ -14668,7 +14685,7 @@ def main():
     CreateFolders()
     if len(sys.argv)==1:
         try:
-            AnsDS9path = resource_filename('DS9FireBall','FireBall.ds9.ans')
+            AnsDS9path = resource_filename('DS9FireBall','QuickLookPlugIn.ds9.ans')
         except:
             #sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
             print(__file__)
