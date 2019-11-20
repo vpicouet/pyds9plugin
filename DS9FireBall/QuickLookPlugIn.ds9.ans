@@ -1,0 +1,1886 @@
+param bar
+    @analysis.par
+endparam
+
+
+
+hmenu Generic functions
+
+
+	hmenu Header & data bases
+		Create header data base 
+		*
+		menu
+		DS9Utils $xpa_method CreateHeaderCatalog  $param(Click-Enter-For-Only-DS9-Image-); "$path"  $info $ext 2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Create Image subset
+		*
+		menu
+		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" $number $Fields "$Mask"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Add header field
+		*
+		menu
+		DS9Utils $xpa_method AddHeaderField $param(CreateHeader); $Field $Value $Comment $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	endhmenu
+
+
+
+
+
+
+
+
+
+	hmenu Regions
+
+		Create regions
+		*
+		menu
+		DS9Utils $xpa_method DetectHotPixels "$entry(Thresholds you want for detecting the hot pixels: Thresh1[-Thresh2]. Default value is 20000-4000 [If no threshold is given the function will return the 100 highest pixel in the seleted region])" 2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Import regions from catalog 
+		*
+		menu
+		DS9Utils $xpa_method DS9Catalog2Region  $param(Catalog-to-region); "$path"  $fields $name $form $size   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Export DS9 regions to catalog 
+		*
+		menu
+		#DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(open)"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Mask Regions (NaN)
+		*
+		menu
+		DS9Utils $xpa_method DS9MaskRegions "$entry(Length in pixel for which you want to replace the value by NaNs)"  2>&1 | tee -a /tmp/DS9Utils.log	
+
+
+#		Load Table region
+#		* 
+#		menu
+#		DS9Utils $xpa_method LoadRegions 2>&1 | tee -a /tmp/DS9Utils.log
+
+	endhmenu
+
+	hmenu Setups
+		Change display parameters (S)
+		*
+		menu
+		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  $smooth $color $invert $grid 2>&1 | tee -a /tmp/DS9Utils.log
+		
+		Change display parameters Key
+		*
+		bind S
+		#DS9Utils $xpa_method setup Log 50-99 cool 0 0 2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut $smooth $color   $invert $grid  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Reset display parameters (B)
+		*
+		menu
+		DS9Utils $xpa_method OriginalSettings 2>&1 | tee -a /tmp/DS9Utils.log
+		
+		Reset display parameters Key
+		*
+		bind B
+		DS9Utils $xpa_method OriginalSettings  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Lock/Unlock images (L)
+		*
+		menu
+		DS9Utils $xpa_method lock  $param(Lock); $var1 $var2 $var3 $var4 $var5  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Lock/Unlock images Key
+		*
+		bind L
+		DS9Utils $xpa_method lock $param(Lock); $var1 $var2 $var3 $var4 $var5  2>&1 | tee -a /tmp/DS9Utils.log
+	endhmenu
+
+
+
+
+	hmenu Image processing 
+
+
+
+		Execute Command
+		*
+		menu
+		DS9Utils $xpa_method SubstractImage $param(Arithmetic); $im_path "$exp" $eval $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Fit Background 1D
+		*
+		menu
+		DS9Utils $xpa_method BackgroundFit1D  $param(Background-Fit-1D); $axis $background $law $gaussians $kernel $Value  2>&1 | tee -a /tmp/DS9Utils.log
+		
+		Fit gaussian 2D
+		*
+		menu
+		DS9Utils $xpa_method fitsgaussian2D  $param(Gaussian-Fit-2D); $FWHM $Center $noise  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+#		Inverse image
+#		*
+#		menu
+#		DS9Utils $xpa_method inverse  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		2D convolution
+		*
+		menu
+		DS9Utils $xpa_method Convolve2d $param(Convolution); $type $pat_c $sizex $sizey $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	
+	endhmenu
+
+
+	hmenu Data Cubes Processing 
+
+		Extract spectra from region(s)
+		*
+		menu
+		DS9Utils $xpa_method PlotSpectraDataCube $param(Extract-spectra); $smoothl $smoothl  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Stack data cube spectrally
+		*
+		menu
+		DS9Utils $xpa_method StackDataDubeSpectrally $param(Stack-spectra); $wave $smooth  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+	endhmenu
+
+
+
+
+	Stack images (s)
+	*
+	menu
+	DS9Utils $xpa_method stack $param(Stacking); $Path $stack $clipping  2>&1 | tee -a /tmp/DS9Utils.log
+
+	Stack images Key
+	*
+	bind s
+	DS9Utils $xpa_method stack "$entry(Number of the images to stack: first-last)" "$entry(Number of dark images first-last to stack and  subtract, press enter if no dark)"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	Plot region in 3D 
+	*
+	menu
+	DS9Utils $xpa_method PlotArea3D $param(Plot-3d); $log $kernel   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	Simulate sky image
+	*
+	menu
+	DS9Utils $xpa_method CreateImageFromCatalogObject "$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Put '-' to create random galaxies!)"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+endhmenu
+
+
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+
+
+
+
+
+hmenu Instrumentaiton - AIT
+
+	hmenu Focus
+
+		Throughfocus (t)
+		*
+		menu
+		DS9Utils $xpa_method throughfocus $param(Throughfocus); $WCS $steps $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+
+		Throughfocus Image Key
+		*
+		bind t
+		DS9Utils $xpa_method throughfocus $param(Throughfocus); $WCS $steps $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+
+		Radial Profile (r)
+		*
+		menu
+		DS9Utils $xpa_method radial_profile $param(radial_profile)  $center $diam $log  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Radial Profile Key
+		*
+		bind r
+		DS9Utils $xpa_method radial_profile $param(radial_profile)  $center $diam  $log  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Visualisation Throughfocus
+		*
+		menu
+		DS9Utils $xpa_method throughfocus_visualisation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	endhmenu
+
+
+
+
+
+	hmenu Detector characterization
+
+		Compute gain from fluctuation
+		*
+		menu
+		DS9Utils $xpa_method ComputeEmGain $param(EmGain); $subtract "$path" $box $overscan $limits $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Autocorrelation
+		*
+		menu
+		DS9Utils $xpa_method 2D_autocorrelation $param(autocorr); $type $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		2D Fast Fourrier Transform
+		*
+		menu
+		DS9Utils $xpa_method DS9_2D_FFT $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Column Line Correlation
+		*
+		menu
+		DS9Utils $xpa_method ColumnLineCorrelation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+	endhmenu
+
+
+	Centering (c)
+	*
+	menu
+	DS9Utils $xpa_method centering  $param(Centering); $method $background 2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	Centering (c)
+	*
+	bind c
+	DS9Utils $xpa_method centering  $param(Centering); $method $background 2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	Transit/through-slit analysis
+	*
+	menu
+	DS9Utils $xpa_method throughslit $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+endhmenu
+
+
+
+
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+
+
+
+
+
+
+
+hmenu Astromatic
+
+	SEXTRACTOR
+	*
+	menu
+	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME  $REGION_THRESHOLD  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+	SWARP - WCS images
+	*
+	menu
+	DS9Utils $xpa_method DS9SWARP  $param(SWARP); $BACK_DEFAULT $BACK_FILTERSIZE $BACK_FILTTHRESH $BACK_SIZE $BACK_TYPE $CELESTIAL_TYPE $CENTER_TYPE $CENTERI $COMBINEI  $COMBINE_BUFSIZE $COMBINE_TYPE $COPY_KEYWORDS $FSCALASTRO_TYPE $FSCALE_DEFAULT $GAIN_DEFAULT $GAIN_KEYWORD $IMAGEOUT_NAME $IMAGE_SIZE $MEM_MAX $OVERSAMPLING $PIXEL_SCALE $PIXELSCALE_TYPE $PROJECTION_ERR $PROJECTION_TYPE $RESAMPLE $RESAMPLING_TYPE $SUBTRACT_BACK $WRITE_FILEINFO $VERBOSE_TYPE $WRITE_XML $XML_NAME  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    2>&1 | tee -a /tmp/DS9Utils.log
+
+	STIFF - Color images
+	*
+	menu
+	DS9Utils $xpa_method DS9saveColor  $param(STIFF-Color-image); $var1 $var2 $var3 $BINNING $BITS_PER_CHANNEL $COLOUR_SAT $COPY_HEADER $DESCRIPTION $GAMMA_ $GAMMAFAC $GAMMATYPE $IMAGE_TYPE $MAX_LEVEL $MAX_TYPE $MIN_LEVEL $MIN_TYPE $OUTFILE_NAME $SKY_LEVEL $SKY_TYPE $SATURATION_LEVEL  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	PSFex
+	*
+	menu
+	DS9Utils $xpa_method DS9PSFEX  $param(PSFex); $ENTRY_PATH   $BASIS_TYPE  $BASIS_NUMBER  $PSF_SAMPLING  $PSF_ACCURACY  $PSF_SIZE  $CENTER_KEYS  "'$PHOTFLUX_KEY'"  "'$PHOTFLUXERR_KEY'"   $PSFVAR_KEYS    $PSFVAR_GROUPS       $PSFVAR_DEGREES    	$SAMPLE_AUTOSELECT   $SAMPLEVAR_TYPE   $SAMPLE_FWHMRANGE   $SAMPLE_VARIABILITY   $SAMPLE_MINSN   $SAMPLE_MAXELLIP   $CHECKPLOT_DEV $CHECKPLOT_TYPE  $CHECKPLOT_NAME  	$CHECKIMAGE_TYPE   $CHECKIMAGE_NAME    $PSF_DIR 	   $HOMOBASIS_TYPE $HOMOPSF_PARAMS $VERBOSE_TYPE $WRITE_XML $XML_NAME $NTHREADS  2>&1 | tee -a /tmp/DS9Utils.log
+
+endhmenu
+
+
+
+
+
+hmenu Astronomy calculator
+
+	Cosmolgy calculator
+	*
+	menu
+	DS9Utils $xpa_method CosmologyCalculator $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty 2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	Convertissor
+	*
+	menu
+	DS9Utils $xpa_method Convertissor $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift 2>&1 | tee -a /tmp/DS9Utils.log
+
+endhmenu
+
+
+
+
+
+
+---
+
+
+
+
+
+
+DS9Functions Help !
+*
+web
+#DS9Utils $xpa_method Help
+file:$env(DS9Function)
+#file:DS9Utils $xpa_method Help
+#$env(DS9Function)
+#/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
+
+
+
+
+
+---
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+
+
+
+
+
+hmenu Not to use
+
+
+
+	hmenu Dev
+
+
+
+	Test suite
+	*
+	menu
+	echo "$filename" | $text 
+	#echo "$env(DS9Function)" | $text 
+	#DS9Utils $xpa_method test  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+
+	Parameter
+	*
+	menu
+	#$param(LostInSpace)
+	which DS9Utils
+	#echo $filedialog(save)  | $text #"$filedialog(open)"
+
+
+	Config
+	*
+	menu
+	DS9Utils $xpa_method ChangeConfig  $param(Change-Config); $exptime $temperature $gain $physical_region $extension $date $format_date $verbose $ConversionGain $Autocorr_region_1D $Autocorr_region_2D   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	Add header field from catalog
+	*
+	menu
+	DS9Utils $xpa_method AddHeaderFieldCat $param(CreateHeaderCat); $Field $catalog $timediff "$formatImage" "$formatCat" $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+	Add Measurements to catalog
+	*
+	menu
+	DS9Utils $xpa_method DS9AddToCatalog $param(AddToCatalog); $formatCat $Gain1 $Gain2 $Smearing1 $Smearing2 $HotPixels $AnalyzeOSSmearing  2>&1 | tee -a /tmp/DS9Utils.log	
+
+	endhmenu
+
+
+
+	hmenu Charge images
+
+		Open Image (o)
+		*
+		menu
+		DS9Utils $xpa_method open ""$entry(Path to image to open)""  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Open Image Key
+		*
+		bind o
+		DS9Utils $xpa_method open ""$entry(Path to image to open)""   2>&1 | tee -a /tmp/DS9Utils.log
+
+		Update Image (U)
+		*
+		menu
+		DS9Utils $xpa_method Update  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Update Image Key
+		*
+		bind U
+		DS9Utils $xpa_method Update   2>&1 | tee -a /tmp/DS9Utils.log
+
+		Next Image 
+		*
+		menu
+		DS9Utils $xpa_method next  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Next Image Key
+		*
+		bind n
+		DS9Utils $xpa_method next  2>&1 | tee -a /tmp/DS9Utils.log
+#
+#		Save images in color
+#		*
+#		menu
+#		DS9Utils $xpa_method DS9save  $param(Save); $var1 $var2 $var3 $var4  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	endhmenu
+
+
+
+	SEXTRACTOR for CLAUDS
+	*
+	menu
+	DS9Utils $xpa_method RunSextractorHSC_CLAUDS $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME $REGION_THRESHOLD $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+
+	Lost in space (astrometry.net)
+	*
+	menu
+	DS9Utils $xpa_method   $message(okcancel,WARNING: you are about to run the WCS analysis. If your image does not have any WCS header this function will send the image to the astrometry.net server and run a lost in space algorithm to generate a WCS header - only available with Python2. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. If it converges, it will display on DS9 an image from SDSS at the same location. Please check the log in /tmpDS9Utils.log if it does not converge)  WCS $param(LostInSpace); $scale_units $scale_type $scale_err $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $use_sextractor $crpix_center $parity $image_width $image_height $positional_error   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+	hmenu Photutils
+
+		Extract Sources
+		*
+		menu
+		DS9Utils $xpa_method ExtractSources $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Subtract background
+		*
+		menu
+		DS9Utils $xpa_method BackgroundEstimationPhot $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Grouping algorithm
+		*
+		menu
+		DS9Utils $xpa_method GroupingAlgorithm $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Aperture photometry
+		*
+		menu
+		#DS9Utils $xpa_method AperturePhotometry $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path" |& tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method AperturePhotometry  "$entry(Path of the detection catalog)"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Building an effective PSF
+		*
+		menu
+		DS9Utils $xpa_method BuildingEPSF $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+	#	PSF matching
+	#	*
+	#	menu
+	#	DS9Utils $xpa_method PSFmatching $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		#Centroiding
+		#*
+		#menu
+		#DS9Utils $xpa_method Centroiding  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Morphological Properties
+		*
+		menu
+		DS9Utils $xpa_method MorphologicalProperties $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Elliptical Isophote Analysis
+		*
+		menu
+		DS9Utils $xpa_method EllipticalIsophoteAnalysis  2>&1 | tee -a /tmp/DS9Utils.log
+
+	endhmenu
+
+
+	hmenu Noise contribution
+
+		Compute CIC
+		*
+		menu
+		DS9Utils $xpa_method ComputeCIC  "$entry(Path of the analysis table or numbers of the images on which run the analysis: Ex 10-15, all, 10-13-22, etc.)"    2>&1 | tee -a /tmp/DS9Utils.log
+
+		Compute Dark
+		*
+		menu
+		DS9Utils $xpa_method AnalyseDark  "$entry(Path of the general folder containing all the stacks to be analyzed. In each sub-folders, stacked images will subtracted and exposure devided to asses the dark level.)"   2>&1 | tee -a /tmp/DS9Utils.log
+
+		Compute Read Noise
+		*
+		menu
+		DS9Utils $xpa_method ComputeReadNoise  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Compute emGain Histogram
+		*
+		menu
+		DS9Utils $xpa_method ComputeGainHistogram  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Photon Transfer Curve
+		*
+		menu
+		DS9Utils $xpa_method DS9PhotonTransferCurve  $param(EmGain); $subtract "$path" $box $overscan $limits $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Histogram sums
+		*
+		menu
+		DS9Utils $xpa_method HistogramSums $param(-Click-Enter-For-Only-DS9-Image-); $log $range $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Histogram difference
+		*
+		menu
+		DS9Utils $xpa_method HistogramDifferences "$entry(Path of the image you want to subtract the histogram)"  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+	endhmenu
+
+
+	hmenu Smearing
+
+		Smearing: Hot pixels/CR/OS profile
+		*
+		menu
+		DS9Utils $xpa_method SmearingProfile $param(smearing); $pathc $fields $thresholds $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Smearing profile: Autocorrelation 
+		*
+		menu
+		DS9Utils $xpa_method DS9SmearingProfileAutocorr $param(SmearingAutocorr); $autocorr $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Smearing profile: Over scann 
+		*
+		menu
+		DS9Utils $xpa_method AnalyzeOSSmearing $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Unsmear events
+		*
+		menu
+		DS9Utils $xpa_method DS9Desmearing "$entry(Detection thresholds)"  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+#		Deconvolve smearing
+#		*
+#		menu
+#		DS9Utils $xpa_method DS9DeconvolveSmearing "$entry(Smearing_length)"  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Deconvolve smearing
+		*
+		menu
+		DS9Utils $xpa_method DS9DeconvolveSmearing2 $param(Variable-Smearing-Kernel); $Smearing $RateSmearing $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	endhmenu
+
+
+
+	hmenu Lephare
+
+		Format Catalog For Lephare
+		*
+		menu
+		DS9Utils $xpa_method DS9FormatCatalogForLephare ""$entry(Path of the catalog to be formated)""  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Filters
+		*
+		menu
+		DS9Utils $xpa_method DS9LephareFilter $param(Lephare-Filters); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE $FILTER_LIST $TRANS_TYPE $FILTER_CALIB $FILTER_FILE  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		SED to lib
+		*
+		menu
+		DS9Utils $xpa_method DS9LephareSedToLib $param(Lephare-SedToLib); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE $STAR_c $QSO_c $GALAXY_c $STAR_SED $STAR_LIB $QSO_SED $QSO_LIB $GAL_SED $GAL_LIB $SEL_AGE $AGE_RANGE   2>&1 | tee -a /tmp/DS9Utils.log
+
+		Mag gal
+		*
+		menu
+		DS9Utils $xpa_method DS9LephareMagGal $param(Lephare-MagGal); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE $STAR_c $QSO_c $GALAXY_c $STAR_LIB_IN $STAR_LIB_OUT $QSO_LIB_IN $QSO_LIB_OUT $GAL_LIB_IN $GAL_LIB_OUT $MAGTYPE $Z_STEP  $COSMOLOGY $MOD_EXTINC $EXTINC_LAW $EB_V $EM_LINES $Z_FORM  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Zphot
+		*
+		menu
+		DS9Utils $xpa_method DS9LephareZphot $param(Lephare-Zphot); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE $ZPHOTLIB $CAT_IN $CAT_OUT   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Galaxy stars classification
+		*
+		menu
+		DS9Utils $xpa_method GalaxyStarsClassification $param(Galaxy-star-classification); $path $bzk $chi2 $compactness  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Limits
+		*
+		menu
+		DS9Utils $xpa_method DS9LephareLimits $param(Lephare-Limits); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE	 $LIMITS_INPUT $LIMITS_OUTPUT $ZPHOTLIB $LF_MABS_REF $LF_MAPP_SEL  $LF_MAPP_CUT $LIMITS_ZBIN $MF_METHOD  $MF_MODEL $MF_M2L $MF_CONVERS   2>&1 | tee -a /tmp/DS9Utils.log
+
+	
+		Luminosity functions
+		*
+		menu
+		DS9Utils $xpa_method DS9LephareLF $param(Lephare-LF); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE	 $MF $LF_ESTI $LF_INPUT $LF_OUTPUT $ZPHOTLIB $LF_AREA $LF_WEIGHT  $USE_WEIGHT $LF_ZBIN $LF_NBSTEP  $LF_RM_BIAS $LF_SELECT_1 $LF_SELECT_IN $LF_SELECT_RG $STY_DCHI2  $STY_FIX_ALPHA $STY_FIX_MSTAR $SWML_CONSTRAIN   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Plot LF
+		*
+		menu
+		DS9Utils $xpa_method PlotFL_from_ALF  $param(Plot-LF); $Path $Filter    2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+	endhmenu
+
+
+
+
+
+	hmenu FIREBall specific
+
+		hmenu Plot spectra
+
+			Plot spectra 
+			*
+			menu
+			DS9Utils $xpa_method DS9plot_spectra  $param(Frame); $Field $Frame $Wave $kernel $threshold $type $magnitude  2>&1 | tee -a /tmp/DS9Utils.log
+			
+
+
+			Image spectral feature
+			*
+			menu
+			DS9Utils $xpa_method lya_multi_image   $param(Frame); $Field $Frame $Wave  2>&1 | tee -a /tmp/DS9Utils.log
+			
+
+
+			Plot spatial stack
+			*
+			menu
+			DS9Utils $xpa_method PlotSpatial  $param(Field); $field $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		endhmenu
+
+
+		Show slits regions (R)
+		*
+		menu
+		DS9Utils $xpa_method regions "$entry(Number or field: f1 or F3 or grid, add lya or LYA or Lya for Lya lines: )"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Show slits regions Key
+		*
+		bind R
+		DS9Utils $xpa_method regions "$entry(Number or field: f1 or F3 or grid, add lya or LYA or Lya for Lya lines: )"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		XY Analysis
+		*
+		menu
+		DS9Utils $xpa_method xy_calib  "$entry(Number or field: f1 or F3: )"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Diffuse focus
+		*
+		menu
+		DS9Utils $xpa_method focus  "$entry(Number or field: f1 or F3 or grid, add pa after a space if not the nominal: )"  2>&1 | tee -a /tmp/DS9Utils.log
+
+	---
+	#		Total reduction (Bias, dark, etc.)
+	#		*
+	#		menu
+	#		DS9Utils $xpa_method  TotalReduction    $message(okcancel,WARNING: you are about to run the total reduction piepeline. Please make sure you are aware about the way it works. In particular note that master bias and dark should be stacked images - or folders containing the images - at the same gains/temp. Also make sure the exposure time is saved in the header of your images as 'EXPTIME'. If not flat path is given, flat removal will not be performed. Press ok to continue, cancel to abort.) "$entry(Path master BIAS image, or repository containing bias image to stack)" "$entry(Path master DARK image, or repository containing bias image to stack)" "$entry(Path master FLAT - dome or sky - image, or repository containing bias image to stack)" "$entry(Number of the images  on which run the analysis: first-last eg: 1-10  [Press ENTER for this image])" |& tee -a /tmp/DS9Utils.log
+
+			Total reduction 
+			*
+			menu
+			DS9Utils $xpa_method TotalReduction $param(TotalReduction); $cr $os $bck $d $cc $si $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+			Image Test images
+			*
+			menu
+			DS9Utils $xpa_method TestImages $param(Image-test); $header $size $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Simulate FIREBall emCCD detector
+		*
+		menu
+		DS9Utils $xpa_method SimulateFIREBallemCCD  $param(Detector-Parameters); $size $overscan $OS $ConversionGain $EmGain $n_registers $Bias $RN $pCIC $sCIC $Dark $Smearing $RateSmearing $Exposure $Flux $Source $Rx $Ry  $Name $spectra $cube $threshold $hist  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+	endhmenu
+
+
+
+	Trimming
+	*
+	menu
+	DS9Utils $xpa_method Trimming $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	hmenu Cosmic Rays / Hot pixels 
+
+		Detect cosmics
+		*
+		menu
+		DS9Utils $xpa_method DS9DetectCosmics  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		NEW Detect + Remove cosmic rays 
+		*
+		menu
+		DS9Utils $xpa_method DS9removeCRtails_CS $param(Cosmic-Rays); $threshold $mask $all_line $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+
+		Remove cosmic rays 
+		*
+		menu
+		DS9Utils $xpa_method DS9MaskRegions  $param(ReplaceByNaNs); $top $bottom $left $right $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Cosmics: Replace regions with NaNs
+		*
+		menu
+		DS9Utils $xpa_method ReplaceWithNans   $message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)     2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Interpolate NaNs 
+		*
+		menu
+		DS9Utils $xpa_method InterpolateNaNs $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+
+	endhmenu
+	
+
+
+	hmenu Data reduction
+
+
+
+
+		Overscan Correction (O)
+		*
+		menu
+		DS9Utils $xpa_method OverscanCorrection $param(Overscan-Correction); $line $overscan $limits $column $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+		Generate & subtract background
+		*
+		menu
+		DS9Utils $xpa_method BackgroundSubstraction $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+
+		Photo counting (p)
+		*
+		menu
+		DS9Utils $xpa_method photo_counting "$entry(Threshold k want to apply - k * sigma. Default = 5.5 )" $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Bayesian multi-threshold PC
+		*
+		menu
+		DS9Utils $xpa_method DS9MultipleThreshold $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Noise minimization by image LC image removal (Bias, dark, etc.)
+		*
+		menu
+		DS9Utils $xpa_method NoiseMinimization "$entry(Folder containing the images you want to subtract for noise minimization)"  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Continuum photometry
+		*
+		menu
+		DS9Utils $xpa_method ContinuumPhotometry  $param(Gaussian-Fit-1D); $type $axis $kernel $FWHM $Center $noise  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	endhmenu
+
+
+
+	Add gaussian 2D
+	*
+	menu
+	DS9Utils $xpa_method AddGaussian2d  $param(Add-Gaussian-2D); $Flux $FWHM  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+	Create histogram
+	*
+	menu
+	DS9Utils $xpa_method DS9CreateHistrogram $param(-Click-Enter-For-Only-DS9-Image-); $log $range $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+	#	Follow probability law
+	#	*
+	#	menu
+	#	DS9Utils $xpa_method FollowProbabilityLaw $param(ProbLaw); "$prob"    2>&1 | tee -a /tmp/DS9Utils.log
+	#	Realize image following probability law
+	#	*
+	#	menu
+	#	DS9Utils $xpa_method ApplyRealisation $param(RealLaw); "$prob" 2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
+
+
+
+	hmenu HSC - CLAUDS
+
+		Generate Detection Image
+		*
+		menu
+		DS9Utils $xpa_method DS9CreateDetectionImages $param(Bands-to-use); $corr $U $G $R $I $Z $Y-HSC $Y-VIRCAM $us $H $J $Ks $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Save only images
+		*
+		menu
+		DS9Utils $xpa_method DS9SaveOnlyImage  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Save multi-color images
+		*
+		menu
+		DS9Utils $xpa_method CreateMultiColorImage $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+		Compare Mag color
+		*
+		menu
+		DS9Utils $xpa_method DS9PlotColor $param(Plot-Comparison-Mag); $path $var1 $var2 $var3 $Bins  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Compare redshift
+		*
+		menu
+		DS9Utils $xpa_method DS9PlotRedshiftGaussian $param(Plot-Comparison-Redshift); $path $var1 $var2 $Bins  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Get image depth
+		*
+		menu
+		DS9Utils $xpa_method get_depth_image $param(Get-depth); $mag_zp $aper_size $N_aper $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	endhmenu
+
+
+
+	Mean Var Region
+	*
+	menu
+	DS9Utils $xpa_method meanvar  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+Image Analysis (I)
+*
+menu
+DS9Utils $xpa_method ImageAnalysis $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+Image Analysis Key
+*
+bind I
+DS9Utils $xpa_method ImageAnalysis $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+Image Visualization
+*
+menu
+DS9Utils $xpa_method DS9Visualization $param(Visualization); $fixed $variable $counts $flux $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+Background measurement (b)
+*
+menu
+DS9Utils $xpa_method BackgroundMeasurement   2>&1 | tee -a /tmp/DS9Utils.log
+
+Background measurement (b)
+*
+bind b
+DS9Utils $xpa_method BackgroundMeasurement   2>&1 | tee -a /tmp/DS9Utils.log
+
+
+Stack all the images given a catalog
+*
+menu
+DS9Utils $xpa_method StackAllImages "$entry(Header catalog to stack from, this function will stack images with same exposure/gain/temperature/path)"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+Compute Standard Deviation
+*
+menu
+DS9Utils $xpa_method ComputeStandardDeviation  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+endhmenu
+
+
+
+
+
+
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+
+
+
+
+
+param Get-depth
+mag_zp entry {Magnitude zero point} - {'-' for Auto (CLAUDS): 30 for MegaCam and VIRCAM, 27 for HSC}
+aper_size entry {Aperture size} 2 {Size of the random apertures in arc seconds}
+N_aper entry {number of random apertures} 10000 {Number of random apertures}
+endparam
+
+
+param Plot-Comparison-Redshift
+path entry {Path} - {Catalog path}
+var1 entry {Redshift 1} - {Field name of the redshift 1}
+var2 entry {Redshift 2} - {Field name of the redshift 2}
+Bins entry {Bins} 0,1,2,5 {Bins on wich compute sigma estimator}
+endparam
+
+param Plot-Comparison-Mag
+path entry {Path} - {Catalog path}
+var1 entry {Var_1} - {Var_1 in plot Var_1 - Var_2 in terms of Var_3 }
+var2 entry {Var_2} - {Var_2 in plot Var_1 - Var_2 in terms of Var_3 }
+var3 entry {Var_3} - {Var_3 in plot Var_1 - Var_2 in terms of Var_3 }
+Bins entry {Bins} 20,22,24,26 {Bins on wich compute sigma estimator}
+endparam
+
+
+
+param Setup
+scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization {Scale}
+cut entry {Colormap cut} 50-99.99 {Cuts in percentile}
+smooth entry {Smooth} 0 {Smoothing boxcar radius in pixel}
+color menu {Color} cool|grey|red|green|blue|a|b|bb|he|i8|aips0|sls|hsv|heat|rainbow|standard|staircase {Color}
+invert checkbox {invert} 0 {Invert}
+grid checkbox {Grid} 0 {Display grid}
+endparam
+
+
+param Stack-spectra
+wave entry {Wavelength-range} - {- for all or min-max. eg: 3700-4200 A}
+smooth entry {smooth} 1 {Smoothing kernel size in pixel (int unpair)}
+endparam
+
+
+param Extract-spectra
+smoothl entry {Spectral smoothing} 1 {Smoothing kernel size in pixel}
+smoothx entry {Spatial smoothing} 1 {Smoothing kernel size in pixel}
+endparam
+
+
+
+param Plot-3d
+log checkbox {Log} 0 {Plot in log value}
+kernel entry {Smoothing} - {Smoothing kernel sizes in pixel (x,y), eg: 3 -  1.5,0.9 or - for no smoothing}
+endparam
+
+
+
+
+param SWARP
+BACK_DEFAULT entry {BACK_DEFAULT} 0.0 {Default background value to be subtracted in BACK TYPE MANUAL mode.}
+BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Size in background meshes of the background-filtering mask.}
+BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Difference threshold (in ADUs) for the background-filtering}
+BACK_SIZE entry {BACK_SIZE} 128 {Size in pixels of a background mesh.}
+
+BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {Tells SWarp what background is subtracted from the images}
+CELESTIAL_TYPE menu {CELESTIAL_TYPE} NATIVE|PIXEL|EQUATORIAL|GALACTIC|ECLIPTIC {Celestial coordinate system in output}
+CENTER_TYPE menu {CENTER_TYPE} ALL|MOST|MANUAL {Tells SWarp how to center the output frame}
+CENTERI entry {CENTERI} 0 {Position of the center in CENTER TYPE MANUAL mode. Can be given in floating point notation, in hh:mm:ss or dd:mm:ss}
+COMBINEI entry {COMBINE} Y {}
+COMBINE_BUFSIZE entry {COMBINE_BUFSIZE} 256 {Maximum amount of buffer memory (in MB) used for the co-addition process.}
+COMBINE_TYPE menu {COMBINE_TYPE} MEDIAN|AVERAGE|MIN|MAX|WEIGHTED|CHI2|SUM {Tells SWarp how to combine resampled images}
+COPY_KEYWORDS entry {COPY_KEYWORDS} OBJECT {Coma-separated list of FITS keywords that will be propagated from the input FITS headers to the coadded and resampled image headers.}
+FSCALASTRO_TYPE menu {FSCALASTRO_TYPE} FIXED|NONE|VARIABLE {Tells SWarp how to compute the astrometric part of the flux-rescalin}
+FSCALE_DEFAULT entry {FSCALE_DEFAULT} 1.0 {Default flux scale to adopt for each image if the FSCALE KEYWORD keyword is not found in the}
+GAIN_DEFAULT entry {GAIN_DEFAULT} 0.0 {Default gain conversion factor in e/ADU to adopt for each image if the GAIN keyword is not found in the FITS header. 0 means infinite gain.}
+GAIN_KEYWORD entry {GAIN_KEYWORD} GAIN {FITS keyword that should contain the gain in input images.}
+IMAGEOUT_NAME entry {IMAGEOUT_NAME} coadd.fits {Name of the output image file}
+IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic}
+MEM_MAX entry {MEM_MAX} 256 {Maximum amount of megabytes allowed for storing input images in memory}
+OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0 means automatic.}
+
+PIXEL_SCALE entry {PIXEL_SCALE} 0.0 {Step between pixels in each dimension in PIXELSCALE TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.}
+PIXELSCALE_TYPE menu {PIXELSCALE_TYPE} MEDIAN|MIN|MAX|MANUAL|FIT {Tells SWarp how to adjust the output pixel size}
+
+PROJECTION_ERR entry {PROJECTION_ERR} 0.001 {Maximum position error (in pixels) allowed for bicubic-spline interpolation of the astrometric reprojection. 0 turns off interpolation.}
+PROJECTION_TYPE entry {PROJECTION_TYPE} TAN {Projection system used in output, in standard WCS notation}
+RESAMPLE entry {RESAMPLE} Y {If true, resampling is performed on the input images.}
+RESAMPLING_TYPE menu {RESAMPLING_TYPE} LANCZOS3|NEAREST|BILINEAR|LANCZOS2|LANCZOS4 {Image resampling method}
+
+
+SUBTRACT_BACK entry {SUBTRACT_BACK} Y {If true, input images are background-subtracted prior to resampling. VMEM}
+WRITE_FILEINFO entry {WRITE_FILEINFO} N {If true, extended information about input files is written in the header of the output FITS image.}
+VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {Tells SWarp how well operations should be commented}
+
+
+WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
+XML_NAME entry {XML_NAME} swarp.xml {Filename for XML output}
+endparam
+
+
+
+
+
+param STIFF-Color-image
+var1 entry {path 1} - {Path of the red image eg. ~i (770nm) band}
+var2 entry {path 2} - {Path to the green image eg. ~r (620nm) band}
+var3 entry {path 3} - {Path to the blue image eg. ~g (480nm) band}
+
+BINNING menu {BINNING} 1|2 {Pixel binning factor for both axes, or along each axis.}
+BITS_PER_CHANNEL menu {Background estimator} 8|16 {Number of bits per channel in the output image.}
+
+COLOUR_SAT entry {COLOUR_SAT} 1.0 {Colour saturation factor.}
+COPY_HEADER entry {COPY_HEADER} N {when set to Y, a copy of the (first) FITS image header replaces the content of the ImageDescription tag in the output TIFF file.}
+DESCRIPTION entry {DESCRIPTION} STIFF_image {Description string to include in the output TIFF image header (ImageDescription tag)}
+GAMMA_ entry {GAMMA} 2.2 {Image gamma (exponent of the display intensity transfer curve) for POWER-LAW GAMMA TYPEs.}
+GAMMAFAC entry {GAMMA_FAC} 1.0 {gamma correction factor for the luminance image component.}
+GAMMATYPE menu {GAMMA_TYPE} POWER-LAW|SRGB|REC.709 {Gamma correction type.}
+IMAGE_TYPE menu {IMAGE_TYPE} AUTO|TIFF|TIFF-pyramid {Output image format.}
+MAX_LEVEL entry {MAX_LEVEL} 0.995 {Upper end of image dynamic range (see MAX TYPE).}
+MAX_TYPE menu {MAX_TYPE} QUANTILE|MANUAL {Meaning of the MAX LEVEL parameter}
+MIN_LEVEL entry {MIN_LEVEL} 0.001 {Upper end of image dynamic range (see MIN TYPE).}
+MIN_TYPE menu {MIN_TYPE} GREYLEVEL|QUANTILE|MANUAL {Meaning of the MAX LEVEL parameter}
+OUTFILE_NAME entry {OUTFILE_NAME} stiff.tiff {Output image file name}
+
+SKY_LEVEL entry {SKY_LEVEL} 0.0 {User-specified sky level in SKY TYPE MANUAL mode.(1<n<m_ima)}
+SKY_TYPE menu {SKY_TYPE} AUTO|MANUAL {Sky level determination in each input image.}
+SATURATION_LEVEL entry {SATURATION_LEVEL} 40000.0 {Input image saturation level: colour is set to white if one of the images exceeds that level.}
+endparam
+
+
+
+
+param Bands-to-use
+corr checkbox {Variance correction} 1 {Apply the variance map correction factor}
+U checkbox {U} 1 {U band 		- 365 nm - FWHM=66nm}
+us checkbox {Us} 0 {Us band 		- 365 nm - FWHM=66nm}
+
+#B checkbox {B} 0 {B band 		- 445 nm - FWHM=94nm}
+#V checkbox {V} 0 {V band 		- 551 nm - FWHM=88nm}
+G checkbox {G} 1 {G band 		- 464 nm - FWHM=128nm}
+R checkbox {R} 1 {R band 		- 658 nm - FWHM=138nm}
+
+I checkbox {I} 1 {I band 		- 806 nm - FWHM=149nm}
+Z checkbox {Z} 1 {Z band 		- 900 nm }
+Y-HSC checkbox {Y-HSC} 1 {Y band 		- 1020 nm - FWHM=120nm}
+Y-VIRCAM checkbox {Y-VIRCAM} 0 {Y band 		- 1020 nm - FWHM=120nm}
+J checkbox {J} 0 {J band 		- 1220 nm - FWHM=213nm}
+H checkbox {H} 0 {H band 		- 1630 nm - FWHM=307nm}
+Ks checkbox {Ks} 1 {Ks band 		- 2190 nm - FWHM=390nm}
+#L checkbox {L} 0 {L band 		- 3450 nm - FWHM=472nm}
+
+#M checkbox {Ks} 0 {M band 		- 4750 nm - FWHM=460nm}
+#N checkbox {Ks} 0 {M band 		- 10500 nm - FWHM=2500nm}
+#Q checkbox {Ks} 0 {Q band 		- 21000 nm - FWHM=5800nm}
+endparam
+
+param Variable-Smearing-Kernel
+Smearing entry {Smearing length} 1.5 {Smearing exponential folding length in pixel}
+RateSmearing entry {Smearing length rate} 50000 {Smearing length exponential decrement (0 means constant smearing)}
+endparam
+
+
+param Detector-Parameters
+size entry {Detector size} 3216,2069 {Size of the detector in pixels}
+overscan checkbox {Overscan} 1 {Does the detector contain OS regions}
+OS entry {Overscan limits} 1066,2124 {Pixel number of the overscan regions' positions, put '-' if None}
+ConversionGain entry {Conversion gain} 0.53 {ADU/electron}
+EmGain entry {Amplification gain} 1410 {electron per electron}
+n_registers entry {Number of registers} 604 {Number of amplification register in EMCCD}
+Bias entry {Bias} 3335 {Bias value in ADU - if auto 3000ADU if gain 6000ADU without}
+RN entry {Read noise} 107 {Read noise in e- (std)}
+pCIC entry {CIC} 0.01 {Vertical + horizontal charge induced current in e-/pix/frame}
+sCIC entry {Serial CIC} 0.001 {Serial charge induced current in e-/pix/frame}
+Dark entry {Dark current} 6e-5 {Dark current in e-/pix/sec}
+Smearing entry {Smearing length} 1.5 {Smearing exponential folding length in pixel}
+RateSmearing entry {Smearing length rate} 50000 {Smearing length exponential decrement (0 means constant smearing)}
+Exposure entry {Exposure} 50 {Exposure time in seconds}
+Flux entry {Flux} 1e-3 {Photo-electrons/pixel/seconds}
+threshold entry {photo-counting threshold} 5.5 {Threshold/read noise to apply photo-counting}
+Source menu {Source type} Flat-field|Spectra|Dirac|Slit|Fibre|Field1|Field2|Field3|Field4 {Choose the type of source in entry}
+spectra entry {Spectra} - {Spectra of the source: wavelength[nm] for fist column, flux [erg/s/cm2/A] second column}
+cube entry {Cube} - {Spatio-spectra intensity mock cube}
+Rx entry {Spatial resolution} 8 {FWHM Spatial resolution in pixel}
+Ry entry {Spectral resolution} 8 {FWHM l/dl Spectral resolution in pixel}
+Name entry {Image name} Auto {Name of the image to ba saved in Home/DS9BackUp/CreatedImage/}
+hist entry {Histogram path} - {Histogram csv file to compare to}
+endparam
+
+
+param Change-Config
+exptime entry {Exposure} EXPTIME-EXPOSURE {Image header keywords for exposure}
+temperature entry {Temperature} TEMP {Image header keywords for temperature}
+gain entry {EmGain} EMGAIN {Image header keywords for amplification gain}
+Overscan checkbox {Overscan region} 1 {Check if the detector have an overscan region}
+physical_region entry {Physical limits} 1063-2125-0-2069 {Pixel limits of the physical detector xmin-xmax-ymin-ymax}
+extension entry {Image extension} .fits {Image extension: eg. .FIT, .fits}
+date entry {Format date} 'DATE' {Image header keywords for date}
+format_date entry {Format date} '%y%m%d-%HH%Mm%Ss' {Date format in Image header}
+verbose checkbox {Verbose} 0 {Verbose option}
+ConversionGain entry {ConversionGain} 0.53 {Conversion gain of the detector}
+Autocorr_region_1D entry {Autocorr region 1D} '1500-2000-1500-2000' {}
+Autocorr_region_2D entry {Autocorr region 2D} '1500-2000-1500-2000' {}
+#backup entry {Backup file} False {Path of the file where to save csv/plots/etc}
+endparam
+
+
+param foobar
+var1 entry {Variable 1} default {this is a entry}
+var2 entry {Variable 1} default {this is a entry}
+var2 checkbox {Variable 2} 1 {this is a checkbox}
+var3 checkbox {Variable 3} 2 {thilkns is a checkbox}
+var4 menu {Variable 4} AAA|BBB|CCC {this is a menu}
+endparam
+
+param radial_profile
+center menu {Centring algorithm} Maximum|User|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting {Algorithm used for centering background subtraction precede Center of mass algorithm}
+diam entry {Source diameter[pixels]} 0 {Fiber's diameter - 0 for star}
+log checkbox {Log} 0 {Log or linear plot}
+endparam
+
+
+
+
+param Lock
+var1 checkbox {frame} 1 {frame}
+var2 checkbox {scalelimits} 1 {scalelimits}
+var3 checkbox {crosshair} 1 {crosshair}
+var4 checkbox {smooth} 0 {smooth} 
+var5 checkbox {colorbar} 1 {colorbar} 
+endparam
+
+
+
+
+
+param Throughfocus
+WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
+steps entry {Steps} - {Give first actuator center and step eg: 16.45-0.15. Leave '-' if not needed}
+endparam
+
+param Click-Enter-For-Only-DS9-Image
+all checkbox {All images} 0 {Check this box to run the analysis on all the images of the repository}
+b entry {First image} - {Number of the first image to process}
+e entry {Last image} - {Number of the last image to process}
+list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
+path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/*.fits}
+endparam
+
+
+
+
+param subset_
+cat entry {Header catalog} - {Path of the header catalog to create subset}
+number entry {Number of image} - {Number of images having the same characteristics, Use - for all.}
+Fields entry {Fields} - {Fields for which images must have the save value, order matters for folder creation.}
+Mask entry {Selection} - {Selection to be applied. eg: ((FLUX*EXPTIME>1) & (FLUX*EXPTIME<30)) | (EMGAIN>0) }
+endparam
+
+param autocorr
+type menu {Type} 2D-XY|X|Y {Choose autocorrelation type}
+endparam
+
+
+
+
+
+
+
+
+
+
+
+
+param Click-Enter-For-Only-DS9-Image-
+path entry {Path} - {Path of the images to extract}
+info checkbox {Info} 0 {Analyze each image (Means, vars, so-regions, gain, smearing, etc). Take ~1s/image}
+ext entry {Ext} 0 {Header extensions to be extracted: eg. 0,1,2,3}
+endparam
+
+
+param CreateHeader
+Field entry {Header} - {Header field to which add value}
+Value entry {Value} - {Value to add}
+Comment entry {Comment} - {Comment to add}
+endparam
+
+param SmearingAutocorr
+autocorr menu {Autocorellation} X|2D-xy {Autocorrrelation type}
+endparam
+
+
+
+
+
+
+param ReplaceByNaNs
+top entry {Size y+} 0 {Number of pixels to mask in the y+ direction}
+bottom entry {Size y-} 0 {Number of pixels to mask in the y- direction}
+left entry {Size x-} 4 {Number of pixels to mask in the x- direction}
+right entry {Size x+} 0 {Number of pixels to mask in the x+ direction}
+endparam
+
+
+
+
+
+param LostInSpace
+scale_units menu {scale_units} degwidth|arcminwidth|arcsecperpix {The units for the scale_lower and scale_upper arguments becomes the scale-units argument to solve-field on the server side}
+scale_type menu {scale_type} ul|ev {Set ul if you are going to provide scale_lower and scale_upper arguments, or ev if you are going to provide scale_est and scale_err error percentage  arguments.}
+scale_lower entry {scale_lower} - {The lower-bound of the scale of the image.}
+scale_upper entry {scale_upper} - {The upper-bound of the scale of the image.}
+
+scale_est entry {scale_estimate} - {The estimated scale of the image.}
+scale_err entry {scale_error} - {0 to 100. The error (percentage) on the estimated scale of the image.}
+center_ra entry {center_ra} - {float, 0 to 360, in degrees. The position of the center of the image}
+center_dec entry {center_dec} - {float, -90 to 90, in degrees. The position of the center of the image}
+
+radius entry {radius} 0.3 {float, in degrees.}
+downsample_factor entry {downsample_factor} 2 {float, >1. Downsample (bin) your image by this factor before performing source detection. This often helps with saturated images, noisy images, and large images. 2 and 4 are commonly-useful values.}
+tweak_order menu {tweak_order} 2|1|3|4|5|6 {Polynomial degree order for distortion correction. Orders>2 may produce totally bogus results high-order polynomials are strange beasts.}
+use_sextractor menu {use_sextractor} True|False {Use the SourceExtractor program to detect stars, not our built-in program.}
+
+crpix_center menu {crpix_center} False|True {Set the WCS reference position to be the center pixel in the image. By default the center is the center of the quadrangle of stars used to identify the image.}
+parity menu {parity} 2|1|0 {2 means try both. 0 means that the sign of the determinant of the WCS CD matrix is positive, 1 means negative.}
+image_width entry {image_width} - {int, only necessary if you are submitting an x,y list of source positions}
+image_height entry {image_height} - {int, ditto.}
+positional_error entry {positional_error} 1 {float, expected error on the positions of stars in your image}
+#test $filedialog(open) {fielane} 0 {float}
+endparam
+
+
+
+param Background-Subtraction
+sigma entry {Sigma clipping} 3 {The number of standard deviations to use for both the lower and upper clipping limit}
+bckd menu {Background estimator} MeanBackground|MedianBackground|ModeEstimatorBackground|MMMBackground|SExtractorBackground|BiweightLocationBackground {Different background estimators that can be used}
+rms menu {Background estimator} StdBackgroundRMS|MADStdBackgroundRMS|BiweightScaleBackgroundRMS {Different RMS estimators that can be used}
+filter entry {Filter size} 3,3 {The window size of the 2D median filter to apply to the low-resolution background map}
+box entry {Box size} 40,40 {Size of the box to be used}
+percentile entry {Percentile} 20 {Percentile of the image to exclude in the background estimation}
+mask checkbox {Masking sources} 0 {Check this and fill following entries to detect and mask sources found with these settings}
+snr entry {snr} 3 {The snr per pixel above the background for which to consider a pixel as possibly being part of a source}
+npixels entry {npixels} 3 {The number of connected pixels, each greater than threshold, that an object must have to be detected.}
+dilate entry {dilate} 5 {The size of the square array used to dilate the segmentation image.}
+endparam
+
+
+param Source-Extraction
+erosion-dilatation entry {Erosion-dilatation size} 2 {Percentile of the image to exclude in the background estimation}
+threshold entry {Detection threshold / sigma} 10 {The number of standard deviations above which to select sources. Enter eg. 10,15 to loop on threshold}
+fwhm entry {Sources FWHM} 8 {The full-width half-maximum (FWHM) of the major axis of the Gaussian kernel in pixels. Enter eg. 8,10 to loop on FWHM}
+theta entry {Angle} 0 {The position angle (in degrees) of the major axis of the Gaussian kernel measured counter-clockwise from the positive x axis}
+iters entry {Interation} 5 {The number of iterations to perform sigma clipping, or None to clip until convergence is achieved when calculating the statistics}
+ratio entry {Gaussian ratio} 1 {The ratio of the minor to major axis standard deviations of the Gaussian kernel}
+delete-doublons entry {Minimal distance} 30 {When entering several thresholds/FWHMs, the minimal distance between two sources in order to delete duplicates}
+endparam
+
+
+
+param Stacking
+Path entry {Path} - {Path of the images to stack (glob syntax. eg. /tmp/images00[12]?.fits)}
+stack menu {Stacking type} mean_float|mean_int|median_int|median_float|1/std-wheighted {Type of stacking to perform, mask will only be taken into account with float.}
+clipping entry {Clipping} - {Number of sigma to clip out before staking}
+endparam
+
+
+param Cosmic-Rays
+threshold entry {Detection threshold} 50000 {Detection threshold for cosmic rays}
+mask menu {Masking factor} 1|2|3|4|5|6|7|8|9|10 {Masking factor of the cosmics. The higher the bigger will be the mask}
+all_line checkbox {Masking entirely} 0 {Masking all the line on the left side of the impact}
+tail menu {Tail direction} -x|+x|-y|+y {Direction of the tail of the cosmic to corect for its impact}
+endparam
+
+
+
+
+
+
+
+
+
+
+
+param EmGain
+subtract checkbox {Subtract Image} 0 {Subtract image to have better assesment of the variance}
+number entry {Number/path} - {Number/path's image to subtract, let - to automatically take the +/- consecutive image}
+box entry {Bin's size} 30,30 {Size of the bins on which compute the variance and intensity}
+overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use}
+limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
+endparam
+
+
+
+
+
+
+param Visualization
+fixed checkbox {Fixed scale} 1 {Save the images with a variable scale}
+variable checkbox {Variable scale} 1 {Save the images with a fixed scale to compare different illuminations}
+counts checkbox {Counts} 1 {Save the image in ADU per pixel}
+flux checkbox {Flux} 1 {Save the image in ADU per second per pixel}
+endparam
+
+
+param Background-Fit-1D
+axis menu {Direction} y|x {Variation direction to be analyzed}
+background menu {Background deg} 0|1|2 {Background degree of the fit}
+law menu {Law} None|exponential1D|DoubleExponiential {Law used to fit the background}
+gaussians menu {Number} 0|1|2|3|4|5 {Number of features to fit by gaussian}
+kernel entry {kernel} 1 {int, Convolution kenel}
+Value menu {Value} Linear|Log {Fit in linear or log value}
+endparam
+
+
+param Gaussian-Fit-2D
+FWHM entry {FWHM} - {FWHM limits in pixel for the fit. Eg: 6-7}
+Center checkbox {Center} 0 {Force the fit on the central pixel}
+noise checkbox {Noise measurement} 0 {To do the measurement on 100 random positions}
+endparam
+
+
+param -Click-Enter-For-Only-DS9-Image-
+log checkbox {Log 10} 1 {Plot the histogram in log}
+range entry {Range} 2500-10000 {Range of the histogram, write - for automatic plot}
+all checkbox {All images} 0 {Check this box to run the analysis on all the images of the repository}
+b entry {First image} - {Number of the first image to process}
+e entry {Last image} - {Number of the last image to process}
+list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
+path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/*.fits}
+stack checkbox {Only on stacked} 0 {Run analysis only on stacked images }
+endparam
+
+
+param Convolution
+type menu {Type} Box|Gaussian|Image {Type of the convolution}
+pat_c entry {path} - {Path of the convolution kernel 2D fits image.}
+sizex entry {Size x} 3 {Box's or gaussian's std size in the x direction (must be odd number for box!)}
+sizey entry {Size y} 3 {Box's or gaussian's std size in the y direction (must be odd number for box!)}
+endparam
+
+
+
+param Catalog-to-region
+path entry {Path} - {Path of the detection catalog}
+fields entry {x,y fields} - {Name of the x and y fields: ex = xcentroid,ycentroid}
+name entry {field name} - {field to put in region name: ex = magnitude, name, etc}
+form menu {form of the region} circle|box {fForm of the regions to display}
+size entry {Regions' size} 10 {Size in pixel}
+endparam
+
+
+param SEXTRACTOR
+DETECTION_IMAGE entry {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using ../DetectionImages/}
+CATALOG_NAME entry {CATALOG_NAME} - {Name of the output catalog. eg /tmp/catalog.fits, if -, saved in ../DetectionImages/Photometric_Catalogs/ }
+CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
+PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
+
+DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
+DETECT_MINAREA entry {DETECT_MINAREA} 10 {}
+#DETECT_MAXAREA entry {DETECT_MAXAREA} - {}
+THRESH_TYPE menu {THRESH_TYPE} RELATIVE|0 {}
+DETECT_THRESH entry {DETECT_THRESH} 0.8 {}
+ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
+
+FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
+FILT_NAME entry {FILTER_NAME} gauss_4.0_7x7.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/}
+
+DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 64 {Number of deblending sub-thresholds}
+DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.0003 {Minimum contrast parameter for deblending}
+
+
+CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
+CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency}
+MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
+
+WEIGHT_TYPE menu {WEIGHT_TYPE} NONE,MAP_VAR|MAP_VAR|NONE {}
+WEIGHT_IMAGE entry {WEIGHT_IMAGE} - {}
+#RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 0 {}
+
+#FLAG_IMAGE entry {FLAG_IMAGE} - {}
+#FLAG_TYPE menu {FLAG_TYPE} MAX|MIN|? {}
+
+PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
+PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,4.0 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
+PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,4.0 {MAG_PETRO parameters: <Petrosian_fact>}
+PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95 {flux fraction[s] used for FLUX_RADIUS}
+#SATUR_LEVEL entry {SATUR_LEVEL} - {level (in ADUs) at which arises saturation}
+MAG_ZEROPOINT entry {MAG_ZEROPOINT} 30.0 {magnitude zero-point}
+#MAG_GAMMA entry {MAG_GAMMA} - {gamma of emulsion (for photographic scans)}
+#GAIN entry {GAIN} - {detector gain in e-/ADU}
+PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
+
+SEEING_FWHM entry {SEEING_FWHM} 0.8 {stellar FWHM in arcsec}
+STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
+
+BACK_TYPE entry {BACK_TYPE} AUTO {}
+BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
+BACK_FILTERSIZE entry {BACK_FILTERSIZE} 8,8 {Background filter: <size> or <width>,<height>}
+BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
+BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
+BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
+
+CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
+CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
+
+#MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
+#MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
+#MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
+
+#VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {}
+#WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
+#XML_NAME entry {XML_NAME} sex.xml {Filename for XML output}
+REGION_THRESHOLD entry {DS9 Regions Mag} 1000 {Min,max observed magnitude of the galaxy reghions to display}
+
+endparam
+
+
+
+
+
+param PSFex
+
+ENTRY_PATH entry {ENTRY_CAT} - {Linux path of the FITS_LDAC (!!!) entry catalogs. Can contain * and ?}
+BASIS_TYPE menu {BASIS_TYPE} PIXEL_AUTO|NONE|PIXEL|GAUSS-LAGUERRE|FILE {}
+BASIS_NUMBER entry {BASIS_NUMBER} 20 {NBasis number or parameter}
+PSF_SAMPLING entry {PSF_SAMPLING} 1.0 {Sampling step in pixel units (0.0 = auto)}
+PSF_ACCURACY entry {PSF_ACCURACY} 0.01 {Accuracy to expect from PSF "pixel" values}
+PSF_SIZE entry {PSF_SIZE} 45,45 {Image size of the PSF model}
+
+CENTER_KEYS entry {CENTER_KEYS} X_IMAGE,Y_IMAGE {Catalogue parameters for source pre-centering}
+PHOTFLUX_KEY entry {PHOTFLUX_KEY} FLUX_APER(2) {Catalogue parameter for photometric norm.}
+PHOTFLUXERR_KEY entry {PHOTFLUXERR_KEY} FLUXERR_APER(2) {Catalogue parameter for photometric error}
+PSFVAR_KEYS entry {PSFVAR_KEYS} X_IMAGE,Y_IMAGE {Catalogue or FITS (preceded by :) params}
+PSFVAR_GROUPS entry {PSFVAR_GROUPS} 1,1 {Group tag for each context key}
+PSFVAR_DEGREES entry {PSFVAR_DEGREES} 0|1|2|3|4 {Polynom degree for each group}
+
+
+SAMPLE_AUTOSELECT menu {SAMPLE_AUTOSELECT} Y|N {Automatically select the FWHM?}
+SAMPLEVAR_TYPE menu {SAMPLEVAR_TYPE} SEEING|NONE {File-to-file PSF variability}
+SAMPLE_FWHMRANGE entry {SAMPLE_FWHMRANGE} 2.0,10.0 {Allowed FWHM range}
+SAMPLE_VARIABILITY entry {SAMPLE_VARIABILITY} 0.2 {Allowed FWHM variability (1.0 = 100%)}
+SAMPLE_MINSN entry {SAMPLE_MINSN} 20 {Minimum S/N for a source to be used}
+SAMPLE_MAXELLIP entry {SAMPLE_MAXELLIP} 0.3 {Maximum (A-B)/(A+B) for a source to be used}
+
+
+CHECKPLOT_DEV menu {CHECKPLOT_DEV} PNG|XWIN|TK|PS|PSC|XFIG|JPEG|AQT|PDF|SVG {}
+CHECKPLOT_TYPE entry {CHECKPLOT_TYPE} FWHM,ELLIPTICITY,COUNTS,COUNT_FRACTION,CHI2,RESIDUALS {or NONE}
+CHECKPLOT_NAME entry {CHECKPLOT_NAME} fwhm,ellipticity,counts,countfrac,chi2,resi {}
+
+CHECKIMAGE_TYPE entry {CHECKIMAGE_TYPE} CHI,PROTOTYPES,SAMPLES,RESIDUALS,SNAPSHOTS {or MOFFAT,-MOFFAT,-SYMMETRICAL}
+CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} chi.fits,proto.fits,samp.fits,resi.fits,snap.fits {Group tag for each context key}
+PSF_DIR entry {PSF_DIR} . {Where to write PSFs (empty=same as input)}
+
+HOMOBASIS_TYPE menu {HOMOBASIS_TYPE} GAUSS-LAGUERRE|NONE {GAUSS_LAGUERRE or no homogeneisation is computed}
+HOMOPSF_PARAMS entry {HOMOPSF_PARAMS} 5.3,2.5 {Moffat FWHM and B parameter of the idealized target PSF chosen for homogeneisation}
+
+
+VERBOSE_TYPE menu {VERBOSE_TYPE} QUIET|NORMAL|LOG {}
+WRITE_XML menu {WRITE_XML} Y|N {}
+XML_NAME entry {XML_NAME} psfex.xml {Filename for XML output}
+NTHREADS entry {NTHREADS} 2 {Number of simultaneous threads for the SMP version of PSFEx, 0 = automatic}
+endparam
+
+
+
+
+
+param Cosmology
+Cosmo menu {Cosmology} LambdaCDM|wCDM|WMAP5|WMAP7|WMAP9|Planck13|Planck15 {Cosmology to use} #|w0waCDM|w0wzCDM|wpwaCDM
+redshift entry {z} 0.7-3.0 {Redshift or list of redshift eg '1-2-3.5'}
+H0 entry {H0} 70 {Hubble constant at z = 0. If a float, must be in [km/sec/Mpc]}
+Omega_m entry {Omega_m} 0.20 {Omega matter: density of non-relativistic matter in units of the critical density at z=0.}
+Ode0 entry {Ode0} 0.70 {Omega dark energy: density of dark energy in units of the critical density at z=0.}
+Uncertainty entry {Uncertainty} H0:1 {Parameter and uncertainty in % eg. H0:1 or Om0:2.5 or Ode0:1.5}
+endparam
+
+
+
+param Convertissor
+Value entry {Value} 1 {Value to convert}
+Unit1 entry {Unit 1} - {Unit of the value}
+Unit2 entry {Unit 2} - {Unit for convertion}
+Redshift entry {Redshift} - {Only if needed}
+endparam
+
+
+param Distance-Convertissor
+Value entry {Value} 1 {Value to convert}
+Unit1 menu {Unit 1} ---DISTANCE---|angstrom|meter|parsec|astronomical_unit|lightyear|---ENERGY---|Joule|erg|Ry|cal|eV|---MASS---|kg|earthMass|M_e|M_p|Msun|lb|oz|---MAGNITUDE--- {Unit of the value}
+Unit2 menu {Unit 2} ---DISTANCE---|angstrom|meter|parsec|astronomical_unit|lightyear|---ENERGY---|Joule|erg|Ry|cal|eV|---MASS---|kg|earthMass|M_e|M_p|Msun|lb|oz|---MAGNITUDE--- {Unit for conversion}
+Redshift entry {Redshift} - {Only if needed}
+endparam
+
+
+
+
+param Centering
+method menu {Method} Maximum|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting|Gaussian-Picouet {Method for centroiding}
+background checkbox {Background subtraction} 1 {Apply of not background subtraction before centering}
+endparam
+
+
+
+param Arithmetic
+im_path entry {image} - {Path of a second image. Keep '-' if not needed}
+exp entry {Expression} - {Expression for exec method (eg. ds9=ds9-image). See doc for exemples (convolution, adding noise, masking, trimming).}
+eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
+endparam
+
+
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+###########################################################################################################################################
+
+
+param Galaxy-star-classification
+path entry {Path} - {Path of the catalog}
+bzk checkbox {BZK} 1 {BZK diagram estimator}
+chi2 checkbox {Chi2} 1 {Chi2 estimator}
+compactness checkbox {Compactness} 1 {Compactness estimator}
+endparam
+
+
+#param Noise-Calculator
+#BACK_FILTTHRESH entry {Detector type} 0.0 {}
+#baxckground (500/A)
+#fixed pattern noise
+#percentage of data perdue
+#dark
+#cic
+#amplification noise
+#photo ocinting
+#endparam
+
+param Lephare-Filters
+LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
+LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
+PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini {PARAM_FILE}
+FILTER_LIST entry {FILTER_LIST} cfht/CLAUDS/u.pb,cfht/CLAUDS/uS.pb,hsc/gHSC.pb,hsc/rHSC.pb,hsc/iHSC.pb,hsc/zHSC.pb,hsc/yHSC.pb,vista/Y.pb,vista/J.pb,vista/H.pb,vista/K.pb,galex/NUV.pb,galex/FUV.pb {FILTER_LIST}
+TRANS_TYPE menu {TRANS_TYPE} -|1|0 {}
+FILTER_CALIB menu {FILTER_CALIB} -|0|1|2|3|4 {}
+FILTER_FILE entry {FILTER_FILE} - {FILTER_FILE}
+endparam
+
+param Lephare-SedToLib
+LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
+LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
+PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini {PARAM_FILE}
+
+STAR_c checkbox {STAR} 1 {Run stellar library}
+QSO_c checkbox {QSO} 1 {Run quasar library}
+GALAXY_c checkbox {GALAXY} 1 {Run galaxy library}
+
+STAR_SED entry {STAR_SED} - {STAR_SED full path}
+STAR_LIB entry {STAR_LIB} - {STAR_LIB}
+
+QSO_SED entry {QSO_SED} - {STAR_SED full path}
+QSO_LIB entry {QSO_LIB} - {QSO_LIB}
+
+GAL_SED entry {GAL_SED} - {GAL_SED full path}
+GAL_LIB entry {GAL_LIB} - {GAL_LIB}
+SEL_AGE entry {SEL_AGE} - {SEL_AGE}
+AGE_RANGE entry {AGE_RANGE} - {AGE_RANGE}
+endparam
+
+
+param Lephare-MagGal
+LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
+LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
+PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini {PARAM_FILE}
+
+STAR_c checkbox {STAR} 1 {Run stellar library}
+QSO_c checkbox {QSO} 1 {Run quasar library}
+GALAXY_c checkbox {GALAXY} 1 {Run galaxy library}
+
+STAR_LIB_IN entry {STAR_LIB_IN} - {STAR_LIB_IN}
+STAR_LIB_OUT entry {STAR_LIB_OUT} - {STAR_LIB_OUT}
+
+QSO_LIB_IN entry {QSO_LIB_IN} - {QSO_LIB_IN}
+QSO_LIB_OUT entry {QSO_LIB_OUT} - {QSO_LIB_OUT}
+
+GAL_LIB_IN entry {GAL_LIB_IN} - {GAL_LIB_IN}
+GAL_LIB_OUT entry {GAL_LIB_OUT} - {GAL_LIB_OUT}
+
+MAGTYPE menu {MAGTYPE} -|AB|VEGA {MAGTYPE}
+Z_STEP entry {Z_STEP} - {Z_STEP}
+COSMOLOGY entry {COSMOLOGY} - {COSMOLOGY}
+MOD_EXTINC entry {MOD_EXTINC} - {MOD_EXTINC}
+EXTINC_LAW entry {EXTINC_LAW} - {EXTINC_LAW}
+EB_V entry {EB_V} - {EB_V}
+EM_LINES menu {EM_LINES} -|YES|NO {EM_LINES}
+Z_FORM entry {Z_FORM} - {Z_FORM}
+endparam
+
+
+
+param Lephare-Zphot
+LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
+LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
+PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini {PARAM_FILE}
+ZPHOTLIB entry {ZPHOTLIB} - {ZPHOTLIB}
+CAT_IN entry {CAT_IN} - {CAT_IN}
+CAT_OUT entry {CAT_OUT} - {CAT_OUT}
+endparam
+
+param Lephare-Limits
+LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
+LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
+PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini {PARAM_FILE}
+LIMITS_INPUT entry {LIMITS_INPUT} - {LIMITS_INPUT}
+LIMITS_OUTPUT entry {LIMITS_OUTPUT} - {LIMITS_OUTPUT}
+ZPHOTLIB entry {ZPHOTLIB} - {ZPHOTLIB}
+LF_MABS_REF entry {LF_MABS_REF} - {LF_MABS_REF}
+LF_MAPP_SEL entry {LF_MAPP_SEL} - {LF_MAPP_SEL}
+LF_MAPP_CUT entry {LF_MAPP_CUT} - {LF_MAPP_CUT}
+LIMITS_ZBIN entry {LIMITS_ZBIN} - {LIMITS_ZBIN}
+MF_METHOD entry {MF_METHOD} - {MF_METHOD}
+MF_MODEL entry {MF_MODEL} - {MF_MODEL}
+MF_M2L entry {MF_M2L} - {MF_M2L}
+MF_CONVERS entry {MF_CONVERS} - {MF_CONVERS}
+endparam
+
+
+
+param Lephare-LF
+LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
+LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
+PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini {PARAM_FILE}
+MF menu {MF} -|NO|YES {MF}
+LF_ESTI menu {LF_ESTI} -|Vmax|SWML|STY|Vmax,SWML|Vmax,STY|SWML,STY|Vmax,SWML,STY {LF_ESTI}
+LF_INPUT entry {LF_INPUT} - {LF_INPUT}
+LF_OUTPUT entry {LF_OUTPUT} - {LF_OUTPUT}
+ZPHOTLIB entry {ZPHOTLIB} - {ZPHOTLIB}
+LF_AREA entry {LF_AREA} - {LF_AREA}
+LF_WEIGHT entry {LF_WEIGHT} - {LF_WEIGHT}
+USE_WEIGHT menu {USE_WEIGHT} -|YES|NO {USE_WEIGHT}
+LF_ZBIN entry {LF_ZBIN} - {LF_ZBIN}
+LF_NBSTEP entry {LF_NBSTEP} - {LF_NBSTEP}
+LF_MABS_RANGE entry {LF_MABS_RANGE} - {LF_MABS_RANGE}
+LF_RM_BIAS menu {LF_RM_BIAS} -|YES|NO {LF_RM_BIAS}
+LF_SELECT_1 entry {LF_SELECT} - {LF_SELECT}
+LF_SELECT_IN entry {LF_SELECT_IN} - {LF_SELECT_IN}
+LF_SELECT_RG entry {LF_SELECT_RG} - {LF_SELECT_RG}
+STY_DCHI2 entry {STY_DCHI2} - {STY_DCHI2}
+STY_FIX_ALPHA entry {STY_FIX_ALPHA} - {STY_FIX_ALPHA}
+STY_FIX_MSTAR entry {STY_FIX_MSTAR} - {STY_FIX_MSTAR}
+SWML_CONSTRAIN entry {SWML_CONSTRAIN} - {SWML_CONSTRAIN}
+endparam
+
+
+
+
+param Field
+field menu {Masking factor} F1_119|F2_-161|F3_-121|F4_159|None {Name of the field}
+endparam
+
+
+param Frame
+Field menu {Field} F2_-161|F1_119|F3_-121|F4_159 {Name of the field}
+Frame menu {Frame} RestFrame|ObservedFrame {Frame}
+Wave entry {Wavelength center} 1216 {wavelength observed in Angstrom}
+kernel entry {Convolution kernel} 8 {Slit size in pixel to convolve the signal}
+threshold entry {Detection threshold} 5 {Detection theshold / sigma}
+type menu {Object types} All|Lya_Gal|QSO|Lyc_Gal|OVI_Gal {Type of the objects you want to stack, use All for observed frame}
+magnitude entry {Limiting magnitude} 15,23 {Magnitude min, magnitude max}
+endparam
+
+
+param Overscan-Correction
+line menu {Overscan correction} LineByLine|Normal {Overscan correction type}
+overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use to apply the correction}
+limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
+column menu {Column correction} None|ColumnByColumn {If not None will subtract each column by its average value}
+endparam
+
+
+
+
+
+param Save
+var1 entry {path 1} - {Path of the red image eg. R band}
+var2 entry {path 2} - {Path to the green image eg. G band}
+var3 entry {path 3} - {Path to the blue image eg. U band}
+var4 entry {Name to save} /tmp/test.tiff {Name for the image to save. Will be saved in the dame repository}
+endparam
+
+param Gaussian-Fit-1D
+type menu {Datatype} BoxRegion|ProjectionRegion {If projection, other parameters should be ignored and the profile saved in HOME+/DS9BackUp/DS9Curves/ds9.dat}
+axis menu {Direction} y|x {Variation direction to be analyzed if Box}
+kernel entry {Convolution Kernel} 1 {Kernel to be convolved to the signal}
+FWHM entry {FWHM} - {FWHM limits in pixel for the fit. Eg: 6-7}
+Center checkbox {Center} 0 {Force the fit on the central pixel}
+noise checkbox {Noise measurement} 0 {Run the analysis on 200 random position}
+endparam
+
+
+param Add-Gaussian-2D
+Flux entry {Flux} 100 {Flux of the point like source}
+FWHM entry {FWHM} - {FWHM limits in pixel for the fit. Eg: 6-7}
+endparam
+
+param Image-test
+header checkbox {Gain header} 1 {Tcheck if header is compatible with overscan level}
+size checkbox {Image size} 1 {Tcheck that all the images are complete}
+endparam
+
+
+
+
+param ProbLaw
+prob menu {Probability Law} beta|binomial|geometric|pareto|poisson|power|rand|standard_exponential|standard_gamma|standard_normal|standard_t|randint {Please choose a probability law}
+endparam
+
+
+
+param RealLaw
+prob menu {Probability Law} gamma|poisson|pareto|beta|power|geometric {Please choose a probability law}
+endparam
+
+
+
+
+param TotalReduction
+cr checkbox {Cosmic-rays} 1 {Detect and mask cosmic rays impact/tail}
+os checkbox {OS-correction} 1 {Apply OS-correction line by line}
+bck checkbox {Background-Subtraction} 0 {Apply background subtraction}
+d checkbox {Delete} 1 {Delete intermediate files - Only keep raw data and reduced data}
+cc checkbox {Create-Catalog} 1 {Create header + analysis catalog on the reduced data}
+si checkbox {StackImages} 1 {Stack reduced data with same Folder/Exposure/Gain/T}
+endparam
+
+param subset
+cat entry {Header catalog} - {Path of the header catalog to create subset}
+number entry {Number of image} 2 {Number of images having the same characteristics}
+fpath checkbox {Folder} 1 {Images must belong to same folder}
+gain checkbox {Gain} 1 {Images must have the same gain}
+exp checkbox {Exposure} 1 {Images must have the same exposure time}
+temp checkbox {Temperatures} 1 {Images must have the same exposure detector temperature}
+f1 entry {Field} date {Catalog field to select}
+v1 entry {Value} - {Selection: Val / min-max / list. Eg: 190222 / 190222,190224 / 190222,190224,190301 for date}
+f2 entry {Field} EXPTIME {Catalog field to select}
+v2 entry {Value} - {Selection. Eg: 0 / 9000,9200 / 9200,9400,9600}
+f3 entry {Field} EMGAIN {Catalog field to select}
+v3 entry {Value} - {Selection. Eg: 1 / 1,5 / 1,10,100 for exposure}
+f4 entry {Field} EMCCDBAC {Catalog field to select}
+v4 entry {Value} - {Selection. Eg: -109 / -109,-111 / -109,-111,-116 for temp}
+f5 entry {Field} MeanADUValue|EMCCDBAC|date|EXPTIME|EMGAIN {Catalog field to select}
+v5 entry {Value} - {Selection. Eg: 10,100 for ADU value}
+endparam
+
+
+
+param smearing
+pathc entry {Path} - {Path of the .reg/.csv region catalog for stack}
+fields entry {XY fields} - {If csv catalog enter the x, y column names. Eg: xc-yc}
+thresholds entry {Detection thresholds} - {Thresholds to be used to detect hot pixels if no regions are not loaded}
+endparam
+
+
+
+param CreateHeaderCat
+catalog entry {Catalog path} - {Path catalog}
+Field entry {Catalog Field} - {Will be saved with same name in image header}
+timediff entry {Time difference} 0 {-1 if hour Temp is 10 when hour image is 11}
+formatImage entry {Image time format} - {Image time format: Derive it automatically if -}
+formatCat entry {Catalog time format} - {Catalog time format: Derive it automatically if -}
+endparam
+
+
+
+param AddToCatalog
+formatCat entry {Catalog path} - {Path of the catalog to work on}
+Gain1 checkbox {Gain-VarIntens} 0 {Compute total gain from variance intensity diagram}
+Gain2 checkbox {Gain-Hist} 0 {Compute total gain from histogram analysis}
+Smearing1 checkbox {Smearing-Autocorr} 0 {Compute smearing from autocorrelation measurement}
+Smearing2 checkbox {Smearing-Profile} 0 {Compute smearing from hot pixels profile}
+HotPixels checkbox {Hot-Pixels} 0 {Count hot pixels}
+AnalyzeOSSmearing checkbox {OS-smearing} 0 {Analyze OS Smearing}
+endparam
+
+param Plot-LF
+Path entry {Path} - {Path of the folder containing the ALF points}
+Filter menu {Filter} U|FUV|NUV {Number of pixels to mask in the y+ direction}
+endparam
