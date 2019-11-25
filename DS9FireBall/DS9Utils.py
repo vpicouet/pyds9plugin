@@ -13219,7 +13219,7 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
             for i, file in enumerate(files):
                 output_file = file.split('.')[0] + '_zphot.out'
                 output_files.append(output_file)
-                #print("'\n%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s '%(file, output_file)) 
+                print("'\n%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s '%(file, output_file)) 
                 p = multiprocessing.Process(target=RunZphot, args=(filter_, param_dict, file, output_file,i,))
                 jobs.append(p)
                 p.start()
@@ -14696,6 +14696,7 @@ def main():
     """
     #path = os.path.dirname(os.path.realpath(__file__))
     from shutil import which
+    #print('Version = ', DS9FireBall.__version__)
 #    print("which('DS9Utils') =", which('DS9Utils'))
 #    print("__file__ =", __file__)
 #    print("__package__ =", __package__)
@@ -14795,15 +14796,15 @@ def main():
     print(bcolors.BLACK_RED + 'DS9Utils ' + ' '.join(sys.argv[1:]) + bcolors.END)# %s %s '%(xpapoint, function) + ' '.join())
     
     print(bcolors.GREEN_WHITE + """
-          ********************************************************************
-                                     Function = %s
-          ********************************************************************"""%(function)+ bcolors.END)
+          *******************************************************************************************************
+                                                      Function = %s
+          *******************************************************************************************************"""%(function)+ bcolors.END)
     a = DictFunction[function](xpapoint=xpapoint)             
     stop = time.time()
     print(bcolors.BLACK_GREEN + """
-        ********************************************************************
-                            Exited OK, test duration = %0.2fs      
-        ******************************************************************** """%(stop - start) + bcolors.END)
+        *******************************************************************************************************
+                   date : %s     Exited OK, duration = %s      
+        ******************************************************************************************************* """%(datetime.datetime.now().strftime("%y/%m/%d %HH%Mm%S"), str(datetime.timedelta(seconds=np.around(stop - start,1)))[:-5]) + bcolors.END)
     if (type(a) == list) and (type(a[0]) == dict):
         for key in a[0].keys():
 #            if (type(a[0][key])==float) or (type(a[0][key])==int):
