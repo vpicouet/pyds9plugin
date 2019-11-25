@@ -3615,7 +3615,7 @@ def DS9PlotRedshiftGaussian(xpapoint):
     x=np.arange(6)
 
 
-    fig, (ax0,ax1, ax2, ax3, ax4) = plt.subplots(3, 1, figsize=(10,10))
+    fig, (ax0,ax1, ax2) = plt.subplots(3, 1, figsize=(10,15))
     ax0.plot(x,x,c='black')
     #plt.plot(x,0.85*(x),c='black',linestyle='dotted')
     #plt.plot(x,1.15*(x),c='black',linestyle='dotted')
@@ -12295,6 +12295,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
 #        DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
 #    else:
 #        print('Can not find the output sextractor catalog...')
+    colors =  ['White','Red','Green','Cyan','Magenta','Yellow']  
 
     if not os.path.exists(os.path.dirname(filename) + '/DetectionImages/reg/'):
         os.makedirs(os.path.dirname(filename) + '/DetectionImages/reg/')     
@@ -12307,7 +12308,8 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         cat3 = vstack((cat1,cat2))
         #x, y = [list(cat1['X_IMAGE'])+list(cat2['X_IMAGE'])], [list(cat2['X_IMAGE'])+list(cat2['X_IMAGE'])]
         #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
-        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+        #create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = [np.random.choice(colors)]*len(cat3), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
         if path is None:
             d.set('regions ' +os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
@@ -12317,7 +12319,6 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         os.remove(file)
     return
    
-    
 
 def DS9SWARP(xpapoint):
     from shutil import which
@@ -12554,8 +12555,11 @@ def DS9LephareMagGal(xpapoint):
 
         if bool(int(param_dict['QSO_c'])):
             filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_gal'
-            print("%s %s -t Q -%s -MOD_EXTINC 0,1000 -EB_V 0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4 -EXTINC_LAW  SMC_prevot.dat"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-            os.system("%s %s -t Q -%s -MOD_EXTINC 0,1000 -EB_V 0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4 -EXTINC_LAW  SMC_prevot.dat"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+#            print("%s %s -t Q -%s -MOD_EXTINC 0,1000 -EB_V 0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4 -EXTINC_LAW  SMC_prevot.dat"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+#            os.system("%s %s -t Q -%s -MOD_EXTINC 0,1000 -EB_V 0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4 -EXTINC_LAW  SMC_prevot.dat"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+            print("%s %s -t Q -%s  -EB_V 0  "%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+            os.system("%s %s -t Q -%s -EB_V 0   "%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
+
         if bool(int(param_dict['GALAXY_c'])):
             filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_gal'
             print("%s %s -t G -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
@@ -13020,7 +13024,12 @@ def CleanCat(cat, bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z
                  'RA',
                  'DEC',
                  'WEIGHT',
-                 'SCALING_FACTOR']
+                 'SCALING_FACTOR', 
+                 'MU_MAX_MegaCam_u','MU_MAX_MegaCam_uS','MU_MAX_HSC_G','MU_MAX_HSC_R','MU_MAX_HSC_I','MU_MAX_HSC_Z','MU_MAX_HSC_Y',
+                 'MU_MAX_VIRCAM_Y','MU_MAX_VIRCAM_J','MU_MAX_VIRCAM_H','MU_MAX_VIRCAM_Ks',
+                 'CLASS_STAR_MegaCam_u','CLASS_STAR_MegaCam_uS',
+                 'CLASS_STAR_HSC_G','CLASS_STAR_HSC_R','CLASS_STAR_HSC_I', 'CLASS_STAR_HSC_Z','CLASS_STAR_HSC_Y',
+                 'CLASS_STAR_VIRCAM_Y','CLASS_STAR_VIRCAM_J','CLASS_STAR_VIRCAM_H','CLASS_STAR_VIRCAM_Ks']
 #    cat_2.rename_column('RA','alpha')
 #    cat_2.rename_column('DEC','delta')
 #    cat_2['fl'] = 0
@@ -13046,6 +13055,7 @@ def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','Mega
          dict_format['MAGERR_ISO_' + band] ='%0.8e'
     
     ComputeTotalMagnitude2(table, all_bands=all_bands)
+    print('Adding extinction')
     
     AddExtinction(table,extinction_map='/Users/Vincent/Documents/Work/Thibault/CATALOGUES_s16a/s16a_uddd_COSMOS_unique_tot.fits')
     table.write(path[:-5]+'_mag.fits',overwrite=True)
@@ -13054,20 +13064,25 @@ def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','Mega
         
     table_2 = CleanCat(table)
     #cat_2 = RenameCols(cat_2)
-    name = path[:-5]+'_only_mag.in'
+    name = path[:-5]+'_only_mag.txt'
     zspec = Table.read('/Users/Vincent/Documents/Work/Catalogs/spectro/HSC_ZSPEC_PHOT.fits')
-    zspec = zspec[zspec['PHOTO']==1]
+    zspec = zspec[zspec['PHOTO']==0]
 #    for ra, dec, z in zip(zspec['RA'],zspec['DEC'],zspec['zspec']):
 #        print(ra,dec,z)
 
     c = SkyCoord(ra=zspec['RA']*u.degree, dec=zspec['DEC']*u.degree)
     catalog = SkyCoord(ra=table_2['RA']*u.degree, dec=table_2['DEC']*u.degree) 
+    print('Matching catalog with spectroscopic data')
     idx, d2d, d3d = c.match_to_catalog_sky(catalog) 
-    print('TEST: %0.1f = %0.1f +/- %0.1f'%(zspec[0]['RA']*3600,table_2[idx[0]]['RA']*3600, float(d2d[0].arcsec)))
-    zspec['zspec'][300*np.array(d2d)>1] = -99.0
+    #print('TEST: %0.1f = %0.1f +/- %0.1f'%(zspec[0]['RA']*3600,table_2[idx[0]]['RA']*3600, float(d2d[0].arcsec)))
+    for i in range(3):
+        print('TEST: %0.1f = %0.1f +/- %0.1f'%(zspec[360*np.array(d2d)<0.5][i]['RA']*3600,table_2[idx[360*np.array(d2d)<0.5][i]]['RA']*3600, float(d2d[360*np.array(d2d)<0.5][i].arcsec)))
+    
+    
+    zspec['zspec'][360*np.array(d2d)>0.5] = -99.0
     table_2['ZSPEC'][idx] = zspec['zspec']
     
-    
+#hist(d2d.arcsec,bins=np.linspace(-0,4,100));show()
 #    astropy.io.ascii.write(table_2, path[:-5]+'_%s.in'%(ks), formats=dict_format,overwrite=True)
     #table_2.remove_column('MAGERR_ISO_FUV')
     
@@ -13079,6 +13094,7 @@ def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','Mega
     table_2.add_column(Column(name='MAGERR_ISO_FUV', data=np.ones(len(table_2))*-99.0), index=26) 
     table_2['CONTEXT'] =2**np.sum(['TOTAL_MAG_' in name for name in table_2.colnames])-1
     astropy.io.ascii.write(table_2, name, formats=dict_format,overwrite=True)
+    astropy.io.ascii.write(table_2[table_2['ZSPEC']>0], name[:-4] + '_spectro.ini', formats=dict_format,overwrite=True)
     CatalogForGazpar(name)
     return
 
@@ -13163,7 +13179,7 @@ def plot_comptages_correction(path,bands=['MegaCam-u','HSC-G','HSC-R','HSC-I','H
 
 
 
-def DS9LephareZphot(xpapoint, tmpFolder='/tmp'):
+def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
     from astropy.table import Table, vstack
     from shutil import which
     import subprocess
@@ -13184,7 +13200,7 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp'):
     for key in list(param_dict.keys())[6:]:
         if str(param_dict[key]) == '-':
             del param_dict[key]
-    if os.stat(param_dict['CAT_IN']).st_size > 10000000:
+    if os.stat(param_dict['CAT_IN']).st_size > p_lim:
         DivideCatalog(param_dict['CAT_IN'], tmpFOlder=tmpFolder)
     
         
@@ -13194,7 +13210,8 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp'):
         from tkinter import messagebox
         messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
     else:
-        if os.stat(param_dict['CAT_IN']).st_size > 10000000:
+        if os.stat(param_dict['CAT_IN']).st_size > p_lim:
+            print('Parellelizing LePhare')
             files = glob.glob(os.path.join(tmpFolder,os.path.basename(param_dict['CAT_IN']).split('.')[0]+'*.in'))
             files.sort()
             output_files = []
@@ -13222,6 +13239,7 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp'):
             open(os.path.dirname(param_dict['CAT_OUT']) + '/zphot_param.txt', "w").writelines([l for l in open(output_files[0]).readlines() if "#" in l])
 
         else:
+            print('Not Parellelizing LePhare, doing all the calculation at once.')
             for key in list(param_dict.keys())[3:]:
                 if str(param_dict[key]) == '-':
                     del param_dict[key]
