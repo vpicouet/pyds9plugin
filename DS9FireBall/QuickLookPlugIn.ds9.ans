@@ -1473,7 +1473,7 @@ CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
 CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency}
 MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
 
-WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {}
+WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
 WEIGHT_IMAGE entry {WEIGHT_IMAGE} - {}
 #RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 0 {}
 
@@ -1546,7 +1546,7 @@ CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
 CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency}
 MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
 
-WEIGHT_TYPE menu {WEIGHT_TYPE} NONE,MAP_VAR|MAP_VAR|NONE {}
+WEIGHT_TYPE menu {WEIGHT_TYPE} NONE,MAP_VAR|MAP_VAR|NONE {First one for detection image, second one for photometric image}
 WEIGHT_IMAGE entry {WEIGHT_IMAGE} - {}
 #RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 0 {}
 

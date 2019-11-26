@@ -1756,7 +1756,6 @@ def throughfocus(center, files,x=None,
     from astropy.table import Table, vstack
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
-    #from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     fwhm = []
     EE50 = []
@@ -2682,7 +2681,7 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
           #ax1.fill_between(rmean[:size], profile - 1.5*np.abs(profile - gaus(rmean[:size], *popt)), 
           #                 profile + 1.5*np.abs(profile - gaus(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
           popt_m, pcov_m = curve_fit(Moffat1D,rmean[:size], profile,p0=[profile.max(),4,2.5])
-          ax1.plot(rmean[:size], Moffat1D(rmean[:size],*popt_m),label='Moffat fit: A=%0.3f, std=%0.2f, beta=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
+          ax1.plot(rmean[:size], Moffat1D(rmean[:size],*popt_m),label=r'Moffat fit: A=%0.3f, $\alpha$=%0.2f, $\beta$=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
           
   else:
       stddev /= profile.max()
@@ -2694,7 +2693,7 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
       if log:
           ax1.semilogy(np.linspace(0,size,10*size), ConvolveDiskGaus2D(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
       else:
-          ax1.plot(rmean[:size], Moffat1D(rmean[:size],*popt_m),label='Moffat fit: A=%0.3f, std=%0.2f, beta=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
+          ax1.plot(rmean[:size], Moffat1D(rmean[:size],*popt_m),label=r'Moffat fit: A=%0.3f, $\alpha$=%0.2f, $\beta$=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
           ax1.plot(np.linspace(0,size,10*size), ConvolveDiskGaus2D(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
           ax1.fill_between(rmean[:size], profile - 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), profile + 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
   if log:
@@ -2735,12 +2734,12 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   ax1.legend(loc = (0.54,0.05),fontsize=12)
   if fiber == 0:
       flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
-      plt.figtext(0.53,0.53,"Flux = %0.0f\nRadius = %0.3f pix \nSigmaPSF = %0.3f pix \nEE50-80 = %0.2f - %0.2f p" % (flux,0,abs(popt[1]),minb,mina), 
+      plt.figtext(0.53,0.53,"Flux = %0.0f\n$r_{in}$ = %0.1f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (flux,0,abs(popt[1]),minb,mina), 
                   fontsize=14,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":flux,"SizeSource":0,"Sigma":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       print("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
   else:
-      plt.figtext(0.53,0.53,"Amp = %0.3f\nRadius = %0.3f pix \nSigmaPSF = %0.3f pix \nEE50-80 = %0.2f - %0.2f p" % (popt[0],popt[1],popt[2],minb,mina), 
+      plt.figtext(0.53,0.53,"Amp = %0.3f\n$r_{in}$ = %0.3f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (popt[0],popt[1],popt[2],minb,mina), 
                   fontsize=14,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       print("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
@@ -3582,17 +3581,30 @@ def ComputeEstims(zphot,zspec):
     prediction_bias = np.mean(residuals)     
     sigma_mad = 1.4826 * np.median(np.abs(residuals - np.median(residuals)))  
     outliars = len(zphot[np.abs(residuals)>0.15])/len(zphot)
+#    cat = Table.read('/Users/Vincent/Documents/Work/sextractorCatalogs/OnlySpec/Empirical/Cosmos/TotalMergedCatalog_9813_corr_ugrizyk_only_mag_spectro_zphot_col.ini')
+#    mask = (cat['r_MAG_OBS']<22.5)& (cat['ZSPEC']>0)& (cat['ZSPEC']<2)& (cat['Z_ML']>0)& (cat['Z_ML']<2)
+#    zphot, zspec = cat[mask]['Z_ML'], cat[mask]['ZSPEC']
     return residuals, prediction_bias, sigma_mad, outliars
 
 
-def DS9PlotRedshiftGaussian(xpapoint):
+
+def DS9PlotRedshiftGaussian(xpapoint=None, path='', spectro='ZSPEC', photo='Z_ML', bins=[1,2,5]):
     import astropy
-    from decimal import Decimal
+    #from decimal import Decimal
     from scipy.optimize import curve_fit
-    #plt.rc('text', usetex=True)
-    #plt.rc('font', family='serif')
-    path, spectro, photo, bins = sys.argv[-4:]
-    bins_ = np.array(bins.split(','),dtype=float)
+    font = {'family' : 'serif',
+            'weight' : 'bold',
+            'size'   : 20}
+    plt.rc('font', family='serif')
+    plt.rc('xtick', labelsize='small')
+    plt.rc('ytick', labelsize='small')
+    plt.rc('text', usetex=True)
+    rc('font', **font)  
+    if xpapoint is not None:
+        path, spectro, photo, bins = sys.argv[-4:]
+        bins_ = np.array(bins.split(','),dtype=float)
+    else:
+        bins_ = bins
     #table, name='', photo='PHOTOZ', spectro='ZSPEC'
     try:
         table = Table.read(path)
@@ -3615,16 +3627,17 @@ def DS9PlotRedshiftGaussian(xpapoint):
     x=np.arange(6)
 
 
-    fig, (ax0,ax1, ax2) = plt.subplots(3, 1, figsize=(10,15))
+    fig, (ax0,ax1, ax2, ax3) = plt.subplots(4, 1, figsize=(10,15))
     ax0.plot(x,x,c='black')
     #plt.plot(x,0.85*(x),c='black',linestyle='dotted')
     #plt.plot(x,1.15*(x),c='black',linestyle='dotted')
     ax0.plot(x,x + 0.15*(1+x),c='black',linestyle='dotted')
     ax0.plot(x,x - 0.15*(1+x),c='black',linestyle='dotted')
-    ax0.set_xlabel(spectro)
-    ax0.set_ylabel(photo)
+    ax0.set_xlabel('$Z_{ML}$')
+    ax0.set_ylabel('$Z_{SPEC}$')
     ax0.grid(False)
-    plt.figtext(0.75,0.75,'N = %i \nBias = %0.3f \nsigma_mad = %0.1E\nCatastrophic = %0.1f%%' % (len(Clauds), prediction_bias,Decimal(sigma_mad),100*outliars), 
+    plt.figtext(0.75,0.75,#r'$N = %i \nBias = %0.3f \n\sigma_{\Delta_z/1+z} = %s\n\eta = %0.1f\%%$' % (len(Clauds), prediction_bias,latex_float(sigma_mad),100*outliars), 
+                'N = %i \nBias = %0.3f \n$\sigma_{\Delta_z/1+z}$ = %s\n$\eta = %0.1f\%%$' % (len(Clauds), prediction_bias,latex_float(sigma_mad),100*outliars),
                 fontsize=14,bbox={'facecolor':'grey', 'alpha':0, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha    
 
 #    vals, bins, patch = plt.hist((Clauds['ZSPEC'] - Clauds['Z_ML'])/(1+Clauds['ZSPEC']),bins=np.linspace(-0.1,0.1,50),histtype='step',color='grey')
@@ -3636,14 +3649,14 @@ def DS9PlotRedshiftGaussian(xpapoint):
         Clauds_sub = Clauds[(Clauds[spectro]>z1)&(Clauds[spectro]<z2)]
         #print(Clauds_sub)
         residuals, prediction_bias, sigma_mad, outliars = ComputeEstims(Clauds_sub[photo],Clauds_sub[spectro])
-        ax0.plot(Clauds_sub[spectro],Clauds_sub[photo],'.',ms=3, alpha=0.3,label='%i%% - Bias = %0.3f - sigma = %0.1E - Catastrophic = %0.1f%%'%(100*len(Clauds_sub[photo])/len(Clauds[photo]),prediction_bias,Decimal(sigma_mad),100*outliars))
+        ax0.plot(Clauds_sub[spectro],Clauds_sub[photo],'.',ms=3, alpha=0.3,label=r'$%i\%% - B_z = %0.3f - \sigma_{\Delta_z/1+z} = %s - \eta = %0.1f$\%%'%(100*len(Clauds_sub[photo])/len(Clauds[photo]),prediction_bias,latex_float(sigma_mad),100*outliars))
         #print(Clauds_sub)
         vals, bins = np.histogram((Clauds_sub[spectro] - Clauds_sub[photo])/(1+Clauds_sub[spectro]),bins= np.linspace(-0.15,0.15,30),density=True)
         #vals, bins, patch = ax1.hist((Clauds_sub['ZSPEC'] - Clauds_sub['Z_ML'])/(1+Clauds_sub['ZSPEC']),bins=np.linspace(-0.1,0.1,30),density=False, alpha=0.3, stacked=False)#,histtype='step',color='grey'
         bins_c = (bins[:-1] + bins[1:])/2
         popt, pcov = curve_fit(gaussian, bins_c, vals)   
         x = np.linspace(bins.min(),bins.max(),100)
-        p = ax1.fill_between(bins_c,vals, step='mid', alpha=0.3, label=' %0.1f<z<%0.1f - sig = %0.3f' % (z1,z2,abs(popt[2])))
+        p = ax1.fill_between(bins_c,vals, step='mid', alpha=0.3, label='$%0.1f<z<%0.1f - \sigma = %0.3f$' % (z1,z2,abs(popt[2])))
         #ax1.plot(x,gaussian(x,*popt), label='sigma = %0.2f' % (popt[2]),c=patch.get_color())
         
         
@@ -3666,8 +3679,8 @@ def DS9PlotRedshiftGaussian(xpapoint):
     ax2.vlines(0.15,0.8,ax2.get_ylim()[1],linestyle='dotted')
 
     ax1.grid(False);ax2.grid(False)
-    ax1.set_xlabel('(Z_SPEC - Z_ML)/(1+Z_SPEC)')
-    ax2.set_xlabel('(Z_SPEC - Z_ML)/(1+Z_SPEC)')
+    ax1.set_xlabel('$(Z_{SPEC} - Z_{ML})/(1+Z_{SPEC})$')
+    ax2.set_xlabel('$(Z_{SPEC} - Z_{ML})/(1+Z_{SPEC})$')
     fig.tight_layout()
     fig.suptitle(os.path.basename(path[:-4]+'redshift'),y=1,fontsize=18)
     fig.savefig(path[:-4])
@@ -3693,7 +3706,14 @@ def DS9PlotRedshiftGaussian(xpapoint):
 #    plt.vlines((zs[:-1]+zs[1:])/2,std16,std32,color='black',label='16 - 82 th percentile')
 #    plt.legend()
 #   
-
+def latex_float(f):
+    float_str = "{0:.2g}".format(f)
+    if "e" in float_str:
+        base, exponent = float_str.split("e")
+        return r"${0} \times 10^{{{1}}}$".format(base, int(exponent))
+    else:
+        return float_str
+    
 def FlagStars_bzk(table):
 #    mask = abs((table['g_MAG_OBS'] - table['z_MAG_OBS'])/(table['z_MAG_OBS'] - table['K_MAG_OBS']))>3/3.8
     a = table['g_MAG_OBS'] - table['z_MAG_OBS']
@@ -5932,10 +5952,13 @@ def Lims_from_region(region=None, coords=None,  config=my_conf):
     Ysup = int(np.ceil(yc + h/2 +1))
     Xinf = int(np.floor(xc - w/2 -1))
     Xsup = int(np.ceil(xc + w/2 +1))
-    verboseprint('Xc, Yc =  = ',region.xc, region.yc, verbose=config.verbose)
-    verboseprint('Xc, Yc =  = ',xc, yc, verbose=config.verbose)
-    verboseprint('Xinf, Xsup, Yinf, Ysup = ', Xinf, Xsup, Yinf, Ysup, verbose=config.verbose)
-    verboseprint('data[%i:%i,%i:%i]'%(Yinf, Ysup,Xinf, Xsup), verbose=config.verbose)
+    try:
+        verboseprint('Xc, Yc =  = ',region.xc, region.yc, verbose=config.verbose)
+        verboseprint('Xc, Yc =  = ',xc, yc, verbose=config.verbose)
+        verboseprint('Xinf, Xsup, Yinf, Ysup = ', Xinf, Xsup, Yinf, Ysup, verbose=config.verbose)
+        verboseprint('data[%i:%i,%i:%i]'%(Yinf, Ysup,Xinf, Xsup), verbose=config.verbose)
+    except AttributeError:
+        pass
     return np.max([0,Xinf]), Xsup, np.max([0,Yinf]), Ysup
 
 def giveValue(x,y):
@@ -5972,13 +5995,8 @@ def DS9center(xpapoint,Plot=True):
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
     from photutils import centroid_com, centroid_1dg, centroid_2dg
-    #from astropy.io import fits
-    #from .focustest import ConvolveBoxPSF
-    #from .focustest import create_DS9regions
-    #from .focustest import create_DS9regions2
-    #from .focustest import estimateBackground
+
     from scipy.optimize import curve_fit
-    #from .focustest import Gaussian
     d = DS9(xpapoint)#DS9(xpapoint)
     #filename = getfilename(d)#ffilename = d.get("file")
     region = getregion(d)[0]
@@ -6298,7 +6316,6 @@ def calc_emgainGillian(image, area=[0,-1,0,-1],plot_flag=False,save=False, DS9ba
 
 def DS9DetectCosmics(xpapoint,filen=None,T=6*1e4, config=my_conf):
     from astropy.io import fits
-    #from .focustest import create_DS9regions
     d = DS9(xpapoint)
     filename = getfilename(d)
     #if len(sys.argv) > 3: path = Charge_path_new(filename, entry_point=3)
@@ -6404,7 +6421,6 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
     """
     import astropy
     from astropy.table import Table
-    #from .focustest import create_DS9regions2
     if xpapoint is not None:
         d = DS9(xpapoint)
     if name is None:
@@ -6617,6 +6633,7 @@ def RunProcess(process):
     return
 
 def RunFunction(Fonction, args, return_dict):
+    print(*args)
     out = Fonction(*args)
     print(out)
     return_dict['output'] = out
@@ -7987,7 +8004,6 @@ def AnalyzeImage(filename, save=True, area=None, plot_flag=True, config=my_conf)
 def DS9NoiseMinimization(xpapoint, radius=200, config=my_conf):
     """Substract a linear combination of images
     """
-    #from .focustest import create_DS9regions2
     d = DS9(xpapoint)
     filename = getfilename(d)
     #if len(sys.argv) > 4: path = Charge_path_new(filename, entry_point=4)
@@ -8988,7 +9004,7 @@ def ApplyTotalReductionPipeline(filename, masterBias, masterDark, masterFlat):
 
 
 
-def DS9Trimming(xpapoint, config=my_conf):
+def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
     """Crop the image to have only the utility area
     """
     d = DS9(xpapoint)
@@ -9007,7 +9023,7 @@ def DS9Trimming(xpapoint, config=my_conf):
         
     for filename in path:
         print(filename)
-        result, name = ApplyTrimming(filename, area=area) 
+        result, name = ApplyTrimming(filename, area=area, all_ext=False)
     print(name)
     if len(path) < 2:
         d.set('frame new')
@@ -9016,17 +9032,24 @@ def DS9Trimming(xpapoint, config=my_conf):
         d.set('file ' + name)  
     return
 
-def ApplyTrimming(path, area=[0,-0,1053,2133], config=my_conf):
+def ApplyTrimming(path, area=[0,-0,1053,2133], config=my_conf, all_ext=False):
     """Apply overscan correction in the specified region, given the two overscann areas
     """
     from astropy.io import fits
     fitsimage = fits.open(path)
-    fitsimage = fitsimage[FitsExt(fitsimage)]
-    image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
-    #image = image[area[0]:area[1],area[2]:area[3]]
-    fitsimage.data = image
+    fitsimage_ = fitsimage[FitsExt(fitsimage)]
     name = path[:-5] + '_Trimm.fits'
-    fitswrite(fitsimage.data, name, header=fitsimage.header)
+    if all_ext:
+        for i in range(len(fitsimage)):
+            if type(fitsimage[i].data)==np.ndarray :
+                print('Croping extension ', i)
+                fitsimage[i].data = fitsimage[i].data[area[0]:area[1],area[2]:area[3]]
+        fitswrite(fitsimage, name)
+    else:
+        image = fitsimage_.data[area[0]:area[1],area[2]:area[3]]
+    #image = image[area[0]:area[1],area[2]:area[3]]
+        fitsimage_.data = image
+        fitswrite(fitsimage_.data, name, header=fitsimage_.header)
     #fitsimage.writeto('/tmp/test.fits',overwrite=True)
     return fitsimage, name
 
@@ -9206,8 +9229,7 @@ def reject_outliers(data, stddev = 3.):
 def DS9ComputeStandardDeviation(xpapoint,radius=50):
     """
     """
-    #from astropy.io import fits
-    #from .focustest import create_DS9regions2
+
     d = DS9(xpapoint)
     #path = getfilename(d)#d.get("file")
     fitsimage = d.get_pyfits()[0]#fits.open(path)[0] 
@@ -10554,8 +10576,10 @@ def getfilename(ds9, config=my_conf):
         os.makedirs(os.path.dirname(backup_path))
     filename = ds9.get('file')
     
-    if '[IMAGE]' in os.path.basename(filename):
-        filename = filename.split('[IMAGE]')[0]
+#    if '[IMAGE]' in os.path.basename(filename):
+#        filename = filename.split('[IMAGE]')[0]
+    if os.path.basename(filename)[-1] == ']':
+        filename = filename.split('[')[0]
     if len(filename)==0:
         new_filename = filename
     elif filename[0] == '.':
@@ -11676,7 +11700,6 @@ def FB_ADU2Flux(ADU, EMgain=1370, ConversionGain=1.8, dispersion=46.6/10):#old e
     """
     Flux = ADU * ConversionGain * dispersion / EMgain
     return Flux
-    print(FB_ADU2Flux(325/50)/galex2Ph_s_A())
 
 #def(3600*np.arctan(0.010/500)*180/np.pi):
     
@@ -11844,7 +11867,6 @@ def BackgroundMeasurement(xpapoint, config=my_conf):
 def SourcePhotometry(xpapoint, config=my_conf):
     """vtest
     """
-    #from .focustest import create_DS9regions
     from decimal import Decimal
     #x, y = x+93, y-93
     d = DS9(xpapoint)
@@ -12162,7 +12184,11 @@ def PlotSpectraDataCube(xpapoint):
     fits_im = fits.open(filename.split('[')[0])
     header = fits_im[0].header
     x_ = np.arange(1,header['NAXIS3']+1)
-    lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['CD3_3']
+    try:
+        lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['CD3_3']
+    except:
+        lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['NAXIS3']
+        
     #x = np.linspace(header['CRVAL3'] - header['CRVAL3'] * header['CD3_3'], header['NAXIS3'])
     reg = getregion(d,all=True)
     smoothl, smoothx = np.array(sys.argv[-2:],dtype=float)
@@ -12178,7 +12204,7 @@ def PlotSpectraDataCube(xpapoint):
 #    plt.plot(lambda_,sky,label='Sky background')
     #plt.plot(lambda_,spectra,label='Selected spectra')
     plt.legend()
-    plt.xlabel('Wavelength [A]')
+    plt.xlabel(r'$\lambda [\AA]$')
     plt.ylabel('Flux')
     plt.title('Spectra - spectral smoothing = %0.1f - spatial smoothing = %0.1f'%(smoothl, smoothx))
     plt.show()    
@@ -12198,14 +12224,21 @@ def StackDataDubeSpectrally(xpapoint):
     filename = getfilename(d)
     fits_im = fits.open(filename.split('[')[0])
     header = fits_im[0].header
-    x_ = np.arange(1,header['NAXIS3']+1)
-    lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['CD3_3']
     #x = np.linspace(header['CRVAL3'] - header['CRVAL3'] * header['CD3_3'], header['NAXIS3'])
-    reg = getregion(d)
-    x, y, r = reg[0].xc, reg[0].yc, reg[0].r
-    spectra = ndimage.gaussian_filter(fits_im[0].data, sigma=(0, smooth, smooth), order=0)[:,int(x-2*r):int(x+2*r),int(y-2*r):int(y+2*r)]
-    #x_sky, y_sky = np.random.randint(x -r ), np.random.randint(y-r) 
+    if ('Box' in d.get('region')) or ('Circle' in d.get('region')):
+        reg = getregion(d)
+        x, y, r = reg[0].xc, reg[0].yc, reg[0].r
+        spectra = ndimage.gaussian_filter(fits_im[0].data, sigma=(0, smooth, smooth), order=0)[:,int(x-2*r):int(x+2*r),int(y-2*r):int(y+2*r)]
+        #x_sky, y_sky = np.random.randint(x -r ), np.random.randint(y-r) 
+    else:
+        spectra = ndimage.gaussian_filter(fits_im[0].data, sigma=(0, smooth, smooth), order=0)[:,:,:]
     #if sky_subtraction:
+    try:
+        x_ = np.arange(1,header['NAXIS3']+1)
+        lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['NAXIS3']
+    except KeyError:
+        lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['CD3_3']
+        
     try:
         inf, sup = np.array(sys.argv[-2].split('-'),dtype=int)
     except ValueError:
@@ -13037,6 +13070,7 @@ def CleanCat(cat, bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z
     return cat_2
 
 
+
 def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']):
     import astropy
     from astropy.table import Table, Column
@@ -13226,12 +13260,13 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
             for job in jobs:
                 job.join()
                 subprocess.Popen("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_OUT ' + output_file,shell=True)
+            new_tables = []
             for path in output_files:
                 print(path)
-                new_table, filts, dep_on_field  = readLPtables(path)
+                new_tables.append(readLPtables(path)[0])
     
-            cats = [Table.read(path.split('.')[0]+'_col.out', format='ascii') for path in output_files]
-            final_cat = vstack(cats)
+            #cats = [Table.read(path.split('.')[0]+'_col.out', format='ascii') for path in output_files]
+            final_cat = vstack(new_tables)#;final_cat.write('/Users/Vincent/Documents/Work/sextractorCatalogs/subcats/BC03_0/TotalMergedCatalog_9813_corr_ugrizyk_only_mag_Z_ML_zphot_sub.fits')
             #final_cat.rename_col('IDENT','#IDENT')
             #Table.write(final_cat,os.path.dirname(path)+'/Merged_Lephare_output_cat_lp.out', format='ascii')
             Table.write(final_cat,param_dict['CAT_OUT'].split('.')[0]+'.fits',overwrite=True)
@@ -13285,6 +13320,18 @@ def readLPtables(path = '/Users/Vincent/Nextcloud/Work/LePhare/zphot_BC03_phys.o
     new_table.rename_column('T','##IDENT')
     name, ext = os.path.basename(path).split('.')
     #new_table.meta = {}
+    fields = ['RA',
+             'DEC',
+             'WEIGHT',
+             'SCALING_FACTOR', 
+             'MU_MAX_MegaCam_u','MU_MAX_MegaCam_uS','MU_MAX_HSC_G','MU_MAX_HSC_R','MU_MAX_HSC_I','MU_MAX_HSC_Z','MU_MAX_HSC_Y',
+             'MU_MAX_VIRCAM_Y','MU_MAX_VIRCAM_J','MU_MAX_VIRCAM_H','MU_MAX_VIRCAM_Ks',
+             'CLASS_STAR_MegaCam_u','CLASS_STAR_MegaCam_uS',
+             'CLASS_STAR_HSC_G','CLASS_STAR_HSC_R','CLASS_STAR_HSC_I', 'CLASS_STAR_HSC_Z','CLASS_STAR_HSC_Y',
+             'CLASS_STAR_VIRCAM_Y','CLASS_STAR_VIRCAM_J','CLASS_STAR_VIRCAM_H','CLASS_STAR_VIRCAM_Ks']
+    for i in range(len(fields)):
+         new_table.rename_column('STRING_INPUT_%i'%(i),fields[i])
+
     new_table.write(os.path.dirname(path) + '/' +  name + '_col.' + ext, format='ascii', overwrite=True,comment=False)
     return   new_table, filts, dep_on_field 
 
@@ -13539,10 +13586,12 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         fn = os.path.basename(filename)
         
         if os.path.isfile(sys.argv[-35-5]) is False:
+            print('Detection image not given, taking whatr is in DetectionImages', sys.argv[-35-5])
             folder_name = 'DetectionImages'
             DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
-        else:
+        else:        
             DETECTION_IMAGE = sys.argv[-35-5]
+            print('Detection image given, taking whatr is in DetectionImages: ', DETECTION_IMAGE)
             folder_name = os.path.basename(os.path.dirname(DETECTION_IMAGE))
             
         sepCoadd_2(filename,scale=1.)
@@ -13927,6 +13976,25 @@ def SextractorHSC_CLAUDS(d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, file
             DS9PlotColor(xpapoint=None, path=CATALOG_NAME, f1='MAG_APER_3s_Laigle_H', f2='MAG_APER_3s_VIRCAM_H', f3='MAG_APER_3s_Laigle_H', bins=[20, 22, 24, 26], table=cat_)
         
     
+    return
+
+
+def AddFieldAftermatching(FinalCat, ColumnCat, radec1= ['RA','DEC'], radec2= ['RA','DEC'], distance=0.5, field='Z_ML', new_field=None):
+    c = SkyCoord(ra=ColumnCat[radec2[0]]*u.deg, dec=ColumnCat[radec2[1]]*u.deg)
+    catalog = SkyCoord(ra=FinalCat[radec1[0]]*u.deg, dec=FinalCat[radec1[1]]*u.deg) 
+    idx, d2d, d3d = catalog.match_to_catalog_sky(c) 
+    
+    mask = 3600*np.array(d2d)<distance
+    for i in range(10):
+        print(i, ' TEST: %0.1f < +/- %0.1f'%(FinalCat[mask][i][radec1[0]]*3600-ColumnCat[idx[mask][i]][radec2[0]]*3600, float(d2d[mask][i].arcsec)))
+        #print(i, ' TEST: %0.1f = %0.1f +/- %0.1f'%(cat[i]['RA']*3600,Laigle[idx[i]]['ALPHA_J2000']*3600, float(d2d[i].arcsec)))
+    #Laigle['zspec'][~mask] = -99.0
+    
+    FinalCat_ = FinalCat[mask]
+    idx_ = idx[mask]        
+    if new_field is None:
+        new_field = field
+    FinalCat[new_field][mask] = ColumnCat[field][idx_]
     return
 
 def MatchCatalog(catalog, c, Plot=False):
@@ -14696,7 +14764,8 @@ def main():
     """
     #path = os.path.dirname(os.path.realpath(__file__))
     from shutil import which
-    #print('Version = ', DS9FireBall.__version__)
+    import pkg_resources
+    print('Version = ', pkg_resources.require("DS9FireBall")[0].version)
 #    print("which('DS9Utils') =", which('DS9Utils'))
 #    print("__file__ =", __file__)
 #    print("__package__ =", __package__)
@@ -14804,7 +14873,7 @@ def main():
     print(bcolors.BLACK_GREEN + """
         *******************************************************************************************************
                    date : %s     Exited OK, duration = %s      
-        ******************************************************************************************************* """%(datetime.datetime.now().strftime("%y/%m/%d %HH%Mm%S"), str(datetime.timedelta(seconds=np.around(stop - start,1)))[:-5]) + bcolors.END)
+        ******************************************************************************************************* """%(datetime.datetime.now().strftime("%y/%m/%d %HH%Mm%S"), str(datetime.timedelta(seconds=np.around(stop - start,1)))[:9]) + bcolors.END)
     if (type(a) == list) and (type(a[0]) == dict):
         for key in a[0].keys():
 #            if (type(a[0][key])==float) or (type(a[0][key])==int):
