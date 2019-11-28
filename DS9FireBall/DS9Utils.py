@@ -12172,6 +12172,16 @@ def get_depth_image(xpapoint):
         main_coupon(fileInName=filename, fileOutName=None, ext=1, ext_seg=1, mag_zp=mag_zp, sub=None, aper_size=aper_size, verbose=True, plot=True, fileSegName=None, type="image", nomemmap=False, N_aper=N_aper)
     return
 
+def PlotSpec(xpapoint):
+    from .spec import Plot_Spec
+    files = glob.glob(sys.argv[-1])
+    if len(files)==1:
+        odev='screen'
+    else:
+        odev='pdf'
+    for file in files:
+        Plot_Spec(file,odev=odev)
+    return
 
 def PlotSpectraDataCube(xpapoint):
     from astropy.io import fits
@@ -13287,6 +13297,7 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
             #new_table.rename_col('IDENT','#IDENT')
 
     return
+
 
 
 
@@ -14824,7 +14835,7 @@ def main():
                     'DS9LephareSedToLib':DS9LephareSedToLib,'DS9LephareMagGal':DS9LephareMagGal,'DS9LephareZphot':DS9LephareZphot,
                     'DS9PlotRedshiftGaussian':DS9PlotRedshiftGaussian,'DS9PlotColor':DS9PlotColor, 'DS9LephareLimits':DS9LephareLimits,
                     'DS9LephareLF':DS9LephareLF, 'PlotFL_from_ALF':PlotFL_from_ALF,'GalaxyStarsClassification':GalaxyStarsClassification,
-                    'get_depth_image': get_depth_image,'RunSextractorHSC_CLAUDS':RunSextractorHSC_CLAUDS, 
+                    'get_depth_image': get_depth_image,'RunSextractorHSC_CLAUDS':RunSextractorHSC_CLAUDS, 'PlotSpec':PlotSpec,
                     'DS9CreateDetectionImages': DS9CreateDetectionImages,'DS9FormatCatalogForLephare':DS9FormatCatalogForLephare,
                     }
  

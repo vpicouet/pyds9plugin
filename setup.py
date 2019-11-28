@@ -3,6 +3,11 @@ from setuptools import setup, find_packages
 #import sys
 #from pip.req import parse_requirements
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+
+
 requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
 	        'numpy >=1.8', 
             'scipy >=0.14', 
@@ -36,14 +41,16 @@ entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*"]}
 
 
-version = '2.86dev'
+version = '2.87dev'
 
 #if sys.version_info.major == 3:
 setup(
 name='DS9FireBall',
+python_requires='>3.5.2',
 version=version,
 license='Creative Commons Attribution-Noncommercial-Share Alike license',
 install_requires = requires1,
+long_description=long_description,
 #	install_reqs = parse_requirements('requirements.txt', session='hack'),
 packages = find_packages(),
 package_data = data,
@@ -51,20 +58,4 @@ include_package_data=True,
 entry_points = entry_points,
 author_email = 'vincent.picouet@lam.fr',
 description  = 'DS9 Quick-Look plug-in')
-#elif sys.version_info.major == 2:
-#    setup(
-#        name='DS9FireBall',
-#        version=version,
-#        license='Creative Commons Attribution-Noncommercial-Share Alike license',
-#        install_requires = requires2,
-##        install_reqs = parse_requirements('requirements.txt', session='hack'),
-#        packages = find_packages(),
-#        package_data = data,
-#        include_package_data=True,
-#        entry_points = entry_points,
-#        author_email = 'vincent.picouet@lam.fr',
-#        description  = 'LAM AIT/quicklook functions proposal for FIREBall-2')    
-#
-
-
 

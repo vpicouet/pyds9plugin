@@ -683,6 +683,10 @@ hmenu Not to use
 		DS9Utils $xpa_method PlotFL_from_ALF  $param(Plot-LF); $Path $Filter    2>&1 | tee -a /tmp/DS9Utils.log
 
 
+		Plot Spectra
+		*
+		menu
+		DS9Utils $xpa_method PlotSpec  "$entry(Path, can use global pattern)"    2>&1 | tee -a /tmp/DS9Utils.log
 
 
 	endhmenu
