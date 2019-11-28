@@ -41,21 +41,31 @@ entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*"]}
 
 
-version = '2.87dev'
+#version = '2.87dev'
 
-#if sys.version_info.major == 3:
-setup(
-name='DS9FireBall',
-python_requires='>3.5.2',
-version=version,
-license='Creative Commons Attribution-Noncommercial-Share Alike license',
-install_requires = requires1,
-long_description=long_description,
-#	install_reqs = parse_requirements('requirements.txt', session='hack'),
-packages = find_packages(),
-package_data = data,
-include_package_data=True,
-entry_points = entry_points,
-author_email = 'vincent.picouet@lam.fr',
-description  = 'DS9 Quick-Look plug-in')
 
+MAJOR = '2'
+MINOR = '8'
+MICRO = '7dev5'
+version = '%s.%s.%s' % (MAJOR, MINOR, MICRO)
+
+def setup_package():
+    setup(
+    name='DS9FireBall',
+    python_requires='>3.5.2',
+    version=version,
+    license='Creative Commons Attribution-Noncommercial-Share Alike license',
+    install_requires = requires1,#	install_reqs = parse_requirements('requirements.txt', session='hack'),
+    long_description=long_description,
+    url='https://people.lam.fr/picouet.vincent/index.html', 
+    platforms=["Linux", "Mac OS-X", "Unix"],
+    packages = find_packages(),
+    package_data = data,
+    include_package_data=True,
+    entry_points = entry_points,
+    author_email = 'vincent.picouet@lam.fr',
+    description  = 'DS9 Quick-Look plug-in')
+    return
+
+if __name__ == '__main__':
+    setup_package()

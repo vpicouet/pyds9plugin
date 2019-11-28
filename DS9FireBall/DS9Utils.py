@@ -14767,8 +14767,7 @@ def main():
     """
     #path = os.path.dirname(os.path.realpath(__file__))
     from shutil import which
-    import pkg_resources
-    print('Version = ', pkg_resources.require("DS9FireBall")[0].version)
+    #import pkg_resources;print('Version = ', pkg_resources.require("DS9FireBall")[0].version)
 #    print("which('DS9Utils') =", which('DS9Utils'))
 #    print("__file__ =", __file__)
 #    print("__package__ =", __package__)
