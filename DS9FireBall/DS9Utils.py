@@ -324,7 +324,6 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     from astropy.table import Table
     #import pandas as pd
     #cat, query, fields = sys.rgv[-3:]
-    #cat, query, fields = '/Users/Vincent/Nextcloud/FIREBALL/2019-01+MarseilleTestsImages/GeneralHeaderCatalog.csv', "(EXPTIME > 5  | EXPTIME < 100) & EMGAIN == 9200", 'EXPTIME,EMGAIN'
     cat, bumber, fields, query = sys.argv[-4:]
     fields = np.array(fields.split(','),dtype=str)
     print('cat, bumber, fields, query = ',cat, bumber, fields, query )
@@ -332,7 +331,6 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
         cat = Table.read(cat)
     except:
         print('Impossible to open table, verify your path.')
-    #b = Table.read('/Users/Vincent/Nextcloud/Work/FIREBall/Target_selection/2020Palestine/2019_with_flux_24092019.fits')
     df = cat.to_pandas()
     new_table = df.query(query)    
     t2 = Table.from_pandas(new_table) 
@@ -3160,7 +3158,7 @@ def apply_pc(image,bias, sigma,area=0, threshold=5.5):
     image[~idx] = np.zeros(1, dtype = np.uint16)[0]
     return image
 
-def CountCRevent(paths='/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/CosmicRaysFree/image000???.CRv.fits', config=my_conf):
+def CountCRevent(paths=', config=my_conf):
     """
     """
     import glob
@@ -4725,11 +4723,9 @@ def DS9Visualization(xpapoint):
 
 
 def VisualizationDetector3(path,plot_flag=False, save=True, config=my_conf, cbars=['fixed', 'variable'], units=['counts', 'counts_per_second']):
-    #path = '/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/redux/CosmicRaysFree/image000091.CRv_NaNsFree.fits'
     #from astropy.table import Table
     from astropy.io import fits
     from scipy import stats, ndimage
-    #PrincipalCatalog = Table.read('/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/Other_data/FlightPrincipalCatalog_Final_V3_06112018.csv')
 
     #number = int(os.path.basename(path)[5:5+6])
     print(path)
@@ -5031,15 +5027,12 @@ def DS9tsuite(xpapoint, Plot=False):
 #    DS9visualisation_throughfocus(xpapoint)
 #    d.set('frame delete all')
 #    d.set('frame new')
-#    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/FBGuider2018/stack8103716_pa+078_2018-06-11T06-21-24_new.fits')
 #    DS9guider(xpapoint)
 #    d.set('frame delete all')
 #    d.set('frame new')
-#    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180614/photon_counting/image000016.fits')
 #    DS9photo_counting(xpapoint)
 #    d.set('frame delete all')
 #    d.set('frame new')
-#    DS9open(xpapoint,'/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018/AIT-Optical-FTS-201805/180612/image-000025-000034-Zinc-with_dark-161-stack.fits')
 #    create_multiImage(xpapoint)
 #    print('Test completed: OK')
 
@@ -7013,7 +7006,7 @@ def DetectHotPixels(filename, area, DS9backUp = DS9_BackUp_path, T1=None, T2=Non
 
 
 def detectCosmics_new(image,T=6*1e4, T2=None,area=[0,2069,1053,2133], n=3, config=my_conf):
-    """Detect cosmic rays, for FIREBall-2 specfic case it is a simplistic case
+    """Detect cosmic rays, for FB-2 specfic case it is a simplistic case
     where only thresholding is enough
     """
     from astropy.table import Table, Column
@@ -7088,7 +7081,7 @@ def detectCosmics_new(image,T=6*1e4, T2=None,area=[0,2069,1053,2133], n=3, confi
 
        
 def detectCosmics(image,T=6*1e4, T2=None,area=[0,2069,1053,2133], config=my_conf):
-    """Detect cosmic rays, for FIREBall-2 specfic case it is a simplistic case
+    """Detect cosmic rays, for FB-2 specfic case it is a simplistic case
     where only thresholding is enough
     """
     from astropy.table import Table, Column
@@ -8824,7 +8817,7 @@ def PlotComputeEmGain_old(intensity, var, emgain, n, filename, len_area_det, ax=
 
 
 def DS9TotalReductionPipeline_new(xpapoint, delete=True, create=False):
-    """Run the total reduction pipeline defined for fireball
+    """Run the total reduction pipeline defined for FB
     """
     d = DS9(xpapoint)
     filename = getfilename(d)
@@ -8902,7 +8895,6 @@ def ApplyTotalReductionPipeline_new(xpapoint,filename, BackgroundCorrection=Fals
 #    except:
 #        table_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Regions')  + '/HotPixelsFinalV1_190222.reg'
 #    
-#    reg = DS9Region2Catalog(xpapoint,name='/Users/Vincent/Documents/FireBallPipe/Calibration/Regions/test.reg')
 #    InterpolateNaNs(filename_n, stddev=1)
 #    try:
     if osc: 
@@ -8915,7 +8907,7 @@ def ApplyTotalReductionPipeline_new(xpapoint,filename, BackgroundCorrection=Fals
 
 
 def DS9TotalReductionPipeline(xpapoint):
-    """Run the total reduction pipeline defined for fireball
+    """Run the total reduction pipeline defined for FB
     """
     d = DS9(xpapoint)
     filename = getfilename(d)
