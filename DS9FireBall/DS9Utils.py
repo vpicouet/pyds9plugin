@@ -3158,7 +3158,7 @@ def apply_pc(image,bias, sigma,area=0, threshold=5.5):
     image[~idx] = np.zeros(1, dtype = np.uint16)[0]
     return image
 
-def CountCRevent(paths=', config=my_conf):
+def CountCRevent(paths='', config=my_conf):
     """
     """
     import glob
