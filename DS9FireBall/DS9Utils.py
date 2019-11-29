@@ -88,6 +88,59 @@ def CreateFolders(DS9_BackUp_path=DS9_BackUp_path):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/subsets')
     return
 
+def LoadDS9QuickLookPlugin():
+    try:
+        AnsDS9path = resource_filename('DS9FireBall','QuickLookPlugIn.ds9.ans')
+    except:
+        #sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+        print(__file__)
+        pass
+    else:
+
+        if os.path.isdir(os.path.join(os.environ['HOME'], '.ds9')):
+            for file in glob.glob(os.path.join(os.environ['HOME'], '.ds9','*')):
+                if AnsDS9path not in open(file).read():
+                    var = input("Do you want to add the Quick Look plug-in to the DS9 %s fils? [y]/n"%(os.path.basename(file)))
+                    if  var.lower() != 'n':
+                        ds9file = open(file,'a') 
+                        ds9file.write('array set panalysis { user2 {} autoload 1 user3 {} log 1 user4 {} user %s }'%(AnsDS9path))
+                        ds9file.close() 
+                        print(bcolors.BLACK_GREEN + """Plug-in added"""+ bcolors.END)
+                    else:
+                        print(bcolors.BLACK_RED + 'To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
+                        print(bcolors.BLACK_RED + 'And switch on Autoreload' + bcolors.END)
+            sys.exit()
+        else:
+            print(bcolors.BLACK_RED + 'To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
+            print(bcolors.BLACK_RED + 'And switch on Autoreload' + bcolors.END)
+        #sys.exit()
+
+    return
+
+def PresentPlugIn():
+    print(bcolors.BLACK_GREEN + """\n
+                     DS9 Quick Look Plug-in 
+            
+            Written by Vincent PICOUET <vincent.picouet@lam.fr>
+            Copyright 2019
+
+            visit https://people.lam.fr/picouet.vincent
+            
+            DS9 Quick Look Plug-in comes with ABSOLUTELY NO WARRANTY
+            You may redistribute copies of DS9 Quick Look Plug-in 
+            under the terms of the MIT License.
+             
+            To use it run:
+            > ds9 &
+            and play with the analysis commands!
+            """+ bcolors.END)
+#            > SYNTAX: sex <image> [<image2>][-c <configuration_file>][-<keyword> <value>]
+#            > to dump a default configuration file:          sex -d 
+#            > to dump a default extended configuration file: sex -dd 
+#            > to dump a full list of measurement parameters: sex -dp 
+    return
+
+
 class config(object):
     """
     """
@@ -194,8 +247,9 @@ def ExecCommand(filename, path2remove, exp, config=my_conf, eval_=False):
     ds9 = fitsimage.data
     if os.path.isfile(path2remove) is False:
         if 'image'in exp:
-            from tkinter import messagebox
-            messagebox.showwarning( "File error","Image not found, please verify your path!")     
+           # from tkinter import messagebox
+           # messagebox.showwarning( "File error","Image not found, please verify your path!")     
+            d = DS9();d.set('analysis message {Image not found, please verify your path!}')
         else:
             image = 0
     else:
@@ -1543,8 +1597,9 @@ def process_region(regions, win,quick=False, config=my_conf):
         try:
             name, info = region.split('(')
         except ValueError:
-            from tkinter import messagebox
-            messagebox.showwarning( title = 'Region error', message="""It seems that you did not create a region. Please create a region and rerun the analysis""")     
+            #from tkinter import messagebox
+            #messagebox.showwarning( title = 'Region error', message="""It seems that you did not create a region. Please create a region and rerun the analysis""")     
+            d = DS9();d.set('analysis message {It seems that you did not create a region. Please create a region and rerun the analysis}')
             #sys.exit() 
         coords = [float(c) for c in info.split(')')[0].split(',')]
         #print('Region %i: %s'%(i, region))
@@ -2806,12 +2861,34 @@ def DS9open(xpapoint, filename=None):
         d.set("file {}".format(filename))#a = OpenFile(xpaname,filename = filename)
     else:
         print(bcolors.BLACK_RED + 'File not found, please verify your path' + bcolors.END)
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'FIle error', message="""File not found, please verify your path.""")     
-
+        #from tkinter import messagebox
+        #messagebox.showwarning( title = 'FIle error', message="""File not found, please verify your path.""")     
+        d=DS9();d.set('analysis message {File not found, please verify your path.}')
         sys.exit()
     return
 
+
+def ShowMessage(task='yesno'):
+#    try:
+    d=DS9();
+    a = d.set('analysis /Users/Vincent/Github/DS9functions/DS9FireBall/QuickLookMessages.ds9.ans')
+    a = d.set('analysis task %s'%(task))
+    a = d.set('analysis clear load /Users/Vincent/Github/DS9functions/DS9FireBall/QuickLookMessages.ds9.ans')
+    a = d.set('analysis /Users/Vincent/Github/DS9functions/DS9FireBall/QuickLookPlugIn.ds9.ans')
+#    except:
+##        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Message', message="""%s"""%(task))
+    return a
+
+
+def yesno(xpapoint):
+    return sys.argv[-1]
+#a = ShowMessage(message='Test')    
+#print(a)
+#d=DS9();a = d.set('analysis task 0')
+#def yesno(xpapoint):
+#    return sys.argv[-1]
+# d.set('analysis message okcancel {%s}'%('wefvwef'))
 
 def DS9save(xpapoint, filename=None):
     from shutil import which
@@ -2824,14 +2901,16 @@ def DS9save(xpapoint, filename=None):
 #    im2 = np.dstack((a,b,c))
     #mpimg.imsave(os.path.dirname(path1) + '/' + path_save,im2)
     if which('stiff') is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Stiff error', message="""Stiff do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        #from tkinter import messagebox
+        #messagebox.showwarning( title = 'Stiff error', message="""Stiff do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        d = DS9();d.set('analysis message {Stiff do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.}')
+
     else:
         os.system("stiff %s %s %s -OUTFILE_NAME %s"%(path1, path2, path3, path_save))
     #plt.imshow(im2)
     return #im2
 
-  
+
 
 def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end='-', liste='-', patht='-', config=my_conf):
     """From the entry gave in DS9 (either nothing numbers or beginning-end),
@@ -2907,8 +2986,9 @@ def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end
     path = np.sort(path)
     print("\n".join(path))
     if len(path)==0:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Path error', message="Could not find any image, the DS9 loaded image is in the right folder and have a comparable name?")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Path error', message="Could not find any image, the DS9 loaded image is in the right folder and have a comparable name?")     
+        d = DS9();d.set('analysis message {Could not find any image, the DS9 loaded image is in the right folder and have a comparable name?}')
     return path     
                         
 
@@ -3186,9 +3266,9 @@ def CountCRevent(paths='', config=my_conf):
             fitsimage.writeto(path,overwrite=True)
     return
 
+#d.set('analysis message {This is a message}')
 
-
-
+#d.set('analysis load /Users/Vincent/anaconda2/envs/ds9test/lib/python3.6/site-packages/DS9FireBall/QuickLookPlugIn.ds9.ans')
 def getImage(xpapoint):
     """
     """
@@ -9760,8 +9840,9 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
             file.write('\nNumber of images with EMGAIN error: %i'%(len(error_cat))) 
             file.write('\nPath of the images: '+repr(error_cat))
             file.close() 
-            from tkinter import messagebox
-            messagebox.showwarning( "Header error","At least one image here is not corresponding to its header")     
+#            from tkinter import messagebox
+#            messagebox.showwarning( "Header error","At least one image here is not corresponding to its header")     
+            d = DS9();d.set('analysis message {At least one image here is not corresponding to its header}')
         except:
             pass
     return new_cat    
@@ -9875,8 +9956,9 @@ def CreateCatalogInfo_old(t1, verbose=False, config=my_conf, write_header=True):
             file.write('\nNumber of images with EMGAIN error: %i'%(len(error_cat))) 
             file.write('\nPath of the images: '+repr(error_cat))
             file.close() 
-            from tkinter import messagebox
-            messagebox.showwarning( "Header error","At least one image here is not corresponding to its header")     
+#            from tkinter import messagebox
+#            messagebox.showwarning( "Header error","At least one image here is not corresponding to its header")     
+            d = DS9();d.set('analysis message {At least one image here is not corresponding to its header}')
         except:
             pass
     return new_cat    
@@ -11688,7 +11770,7 @@ def galex2Ph_s_A(f200=2.9e-4, atm=0.37, throughput=0.13, QE=0.5, area=7854):
 def FB_ADU2Flux(ADU, EMgain=1370, ConversionGain=1.8, dispersion=46.6/10):#old emgain=453
     """
     Convert FB2 ADUs/sec into photons per seconds per angstrom
-    print((galex2Ph_s_A()-FB_ADU2Flux(225/50))/galex2Ph_s_A())
+    print((galex2Ph_s_A()-FB_ADU2Flux(300/50))/galex2Ph_s_A())
     """
     Flux = ADU * ConversionGain * dispersion / EMgain
     return Flux
@@ -12271,8 +12353,9 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
 
     from shutil import which
     if which('sex') is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        d = DS9();d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     params = np.array(sys.argv[-34:-1], dtype='<U256')#str)
     print(params)
     DETECTION_IMAGE = sys.argv[-35]
@@ -12369,10 +12452,11 @@ def DS9SWARP(xpapoint):
     filename = getfilename(d)
     paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
     params[19] = os.path.join(os.path.dirname(paths[0]),params[19])
-
     if which('swarp') is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'SWARP error', message="""SWARP do not seem to be installedin you machine. If you know it is, please add the SWARP executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'SWARP error', message="""SWARP do not seem to be installedin you machine. If you know it is, please add the SWARP executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        d = DS9();d.set('analysis message {WARP do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
+
     else:
         os.chdir(os.path.dirname(paths[0]))
         os.system("sleep 0.1")
@@ -12409,8 +12493,9 @@ def DS9Lephare(xpapoint):
     #print(param_dict['ENTRY_PATH'],paths)
     
     if which('psfex') is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the Lephare executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the Lephare executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
         print(os.path.dirname(paths[0]))
         print(os.getcwd())
@@ -12528,8 +12613,9 @@ def DS9LephareFilter(xpapoint):
     #d = DS9(xpapoint)
     filter_  = param_dict['LEPHARE_DIR'] + '/source/filter'
     if which(filter_) is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
 #        print(os.path.dirname(paths[0]))
 #        print(os.getcwd())
@@ -12575,8 +12661,9 @@ def DS9LephareMagGal(xpapoint):
     #d = DS9(xpapoint)
     filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_star'
     if which(filter_) is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
 #        print(os.path.dirname(paths[0]))
 #        print(os.getcwd())
@@ -12632,8 +12719,9 @@ def DS9LephareLF(xpapoint):
     #d = DS9(xpapoint)
     filter_  = param_dict['LEPHARE_DIR'] + '/source/LF'
     if which(filter_) is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
         print("%s -t G  %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
         os.system("%s -t G  %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
@@ -12682,6 +12770,8 @@ def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
 def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U'):
     """
     """
+    general_path = sys.argv[-2]
+    filter_ = sys.argv[-1]
     from decimal import Decimal
     if filter_ == 'FUV':
         a = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
@@ -12715,14 +12805,14 @@ def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U'):
         ax.plot(lx,(schechter_vincent(lx,coeffs)),c='grey',lw=1,label='M: '+ ', '.join([ '%.3E' % Decimal(a) for a in coeffs ]))
         fitLF(path = paths_swml[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='orange', label='SWML LF')
         fitLF(path = paths_vmax[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='red', label='VMAX LF')
-        ax.set_title('z = %0.2f - %0.2f'%(zs[i][0],zs[i][1]), fontsize=10)
+        ax.set_title('$%0.2f < z < %0.2f$'%(zs[i][0],zs[i][1]), fontsize=13)
         
 #    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     #plt.xlabel('Mabs_{U}')
     #plt.ylabel('log N (mag^{-1} MPC^{-3}')
     fig=axes[0,0].figure
-    fig.text(0.5,0.04, '%s absolution magnitude'%(filter_), ha="center", va="center")
-    fig.text(0.05,0.5, 'log N (mag^{-1} MPC^{-3}', ha="center", va="center", rotation=90)
+    fig.text(0.5,0.08, '$M_{%s}$'%(filter_), ha="center", va="center",fontsize=18)
+    fig.text(0.08,0.5, '$log \phi/dm/ Mpc^{3}$', ha="center", va="center", rotation=90,fontsize=18)
 
     plt.savefig(os.path.join(general_path,'Luminosity'),dpi=300)
     plt.show()
@@ -12747,13 +12837,13 @@ def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat
         fig = plt.figure()#figsize=(12,4.5))
         ax = fig.add_subplot(111)
     ax.plot(lx,(schechter_vincent(lx,coeffrod_0)),c=color,lw=2,label='Fit: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffrod_0 ]))
-    #ax.plot(lx,(schechter_vincent(lx,[4e-3,-1.4,-19])),c='grey',lw=1,label='Literature: Pi=0.004,a=-1.4,M=-19')
     ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='+',lw=1,c=color,label=label)
+    #ax.plot(lx,(schechter_vincent(lx,[4e-3,-1.4,-19])),c='grey',lw=1,label='Literature: Pi=0.004,a=-1.4,M=-19')
     #ax.plot(LIRrod_0[~mask],phirod_0[~mask],'o',lw=3,c='black',label='Fit mask')
     ax.set_xlim((-14,-25));ax.set_ylim((-6,0))
-    ax.legend(loc='lower left',fontsize=6)
+    ax.legend(loc='lower left',fontsize=8)
     
-    return coeffrod_0 , chirod_0
+    return #coeffrod_0 , chirod_0
 
 
 
@@ -12810,8 +12900,9 @@ def DS9LephareLimits(xpapoint):
     #d = DS9(xpapoint)
     filter_  = param_dict['LEPHARE_DIR'] + '/source/limits'
     if which(filter_) is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
 
         print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
@@ -13243,8 +13334,9 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
 
     filter_  = param_dict['LEPHARE_DIR'] + '/source/zphota'
     if which(filter_) is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
         if os.stat(param_dict['CAT_IN']).st_size > p_lim:
             print('Parellelizing LePhare')
@@ -13367,8 +13459,9 @@ def DS9LephareSedToLib(xpapoint):
     #d = DS9(xpapoint)
     filter_  = param_dict['LEPHARE_DIR'] + '/source/sedtolib'
     if which(filter_) is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
+        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
 #        print(os.path.dirname(paths[0]))
 #        print(os.getcwd())
@@ -13466,8 +13559,9 @@ def DS9PSFEX(xpapoint):
         param_dict['XML_NAME'] = os.path.dirname(paths[0]) + '/psfex.xml'
     
     if which('psfex') is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the PSFex executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the PSFex executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
         print(os.path.dirname(paths[0]))
         print(os.getcwd())
@@ -13552,8 +13646,9 @@ def DS9saveColor(xpapoint, filename=None):
 #    im2 = np.dstack((a,b,c))
     #mpimg.imsave(os.path.dirname(path1) + '/' + path_save,im2)
     if which('stiff') is None:
-        from tkinter import messagebox
-        messagebox.showwarning( title = 'Stiff error', message="""Stiff do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+#        from tkinter import messagebox
+#        messagebox.showwarning( title = 'Stiff error', message="""Stiff do not seem to be installedin you machine. If you know it is, please add the stiff executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
+        d = DS9();d.set('analysis message {Stiff do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
         #print('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         #os.system('sex ' + DETECTION_IMAGE +','+ PHOTOMETRIC_NAME + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
@@ -13611,8 +13706,9 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
             os.makedirs(os.path.join(os.path.dirname(dn),folder_name,'Plots'))
         
         if which('sex') is None:
-            from tkinter import messagebox
-            messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take some time. On a mac run 'brew install brewsci/science/sextrator' """)     
+#            from tkinter import messagebox
+#            messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installedin you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take some time. On a mac run 'brew install brewsci/science/sextrator' """)     
+            d = DS9();d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     
         try:
             param_dir = resource_filename('DS9FireBall', 'Sextractor')
@@ -14753,10 +14849,13 @@ def Convertissor(xpapoint):
 
     print(unit1_,unit1,unit2_,unit2)
     print('%0.2E %s = %0.2E %s'%(Decimal(val), unit1, Decimal((val*unit1).to(unit2)),unit2))
-    from tkinter import messagebox
-    messagebox.showwarning( title = 'Convertissor', message='%0.2E %s = %0.2E %s'%(Decimal(val), unit1, Decimal((val*unit1).to(unit2)),unit2))     
+#    from tkinter import messagebox
+#    messagebox.showwarning( title = 'Convertissor', message='%0.2E %s = %0.2E %s'%(Decimal(val), unit1, Decimal((val*unit1).to(unit2)),unit2))     
+    d = DS9();d.set('analysis message {%0.2E %s = %0.2E %s}'%(Decimal(val), unit1, Decimal((val*unit1).to(unit2)),unit2))
 
     return
+
+
 
 
 def Help(xpapoint):
@@ -14772,18 +14871,13 @@ def main():
 #    print("__file__ =", __file__)
 #    print("__package__ =", __package__)
 #    print('Python version = ', sys.version)
-    CreateFolders()
     if len(sys.argv)==1:
-        try:
-            AnsDS9path = resource_filename('DS9FireBall','QuickLookPlugIn.ds9.ans')
-        except:
-            #sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-            print(__file__)
-            pass
-        else:
-            print(bcolors.BLACK_RED + 'To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
-            print(bcolors.BLACK_RED + 'And switch on Autoreload' + bcolors.END)
-            #sys.exit()
+        PresentPlugIn()
+        CreateFolders()
+        LoadDS9QuickLookPlugin()
+                
+
+
 
     
     
@@ -14794,7 +14888,7 @@ def main():
                              'Help':Help, 'test':DS9tsuite, 'ChangeConfig':ChangeConfig, 'next':DS9next, 'previous':DS9previous, 
                              'stack': DS9stack_new,'lock': DS9lock, 'open':DS9open, 'CreateHeaderCatalog':DS9CreateHeaderCatalog,
                              'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
-                             'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings, }
+                             'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings,'yesno':yesno }
                    
 
     DictFunction_Delete = {'AddGaussian2d' :AddGaussian2d, 'DS9CreateHistrogram':DS9CreateHistrogram,
@@ -14893,7 +14987,7 @@ def main():
             except TypeError:
                 pass
 
-    return 
+    return a
 
 
 

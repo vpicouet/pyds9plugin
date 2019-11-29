@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
 	        'numpy >=1.8', 
             'scipy >=0.14', 
-            'matplotlib>3.1.1',
+            'matplotlib>=3.1.1',
             'astropy >=1.3',
             'pyds9',
             'photutils',
@@ -46,7 +46,7 @@ data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "S
 
 MAJOR = '2'
 MINOR = '8'
-MICRO = '8dev6'
+MICRO = '9dev6'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
