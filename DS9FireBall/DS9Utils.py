@@ -5818,23 +5818,65 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(),3,0])#,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
     xl = np.linspace(x.min(),x.max(),100)
     maxf = xl[np.where(Gaussian(xl,*popt)==np.nanmax(Gaussian(xl,*popt)))[0][0]]#[0]
-    plt.figure()
-    plt.plot(x, fluxesn,'o',label='data')
-    plt.plot(xl, Gaussian(xl,*popt),'--',label='Gaussian fit')
-    plt.legend()
-    plt.plot(np.linspace(maxf, maxf, len(fluxes)), fluxesn/max(fluxesn))
-    plt.grid(linestyle='dotted')
-    plt.xlabel('# image')
-    plt.title('Best image : {}'.format(maxf))
-    plt.ylabel('Estimated flux (Sum pixel)') 
-    name = 'Through slit analysis\n%0.3f - %s - %s'%(maxf,[int(a.xc),int(a.yc)],fitsfile.header['DATE'])
-    print(name) 
-    plt.title(name)
-    plt.savefig(os.path.dirname(file) + '/' + name + '.jpg')
-    plt.show()
-    csvwrite(np.vstack((x, fluxesn,Gaussian(x,*popt))).T, DS9backUp + 'CSVs/%s_ThroughSlit.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
-
+  
+    name =  DS9backUp + 'CSVs/%s_ThroughSlit.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"))
+    csvwrite(np.vstack((x, fluxesn)).T,name )
+    csvwrite(np.vstack((xl, Gaussian(xl,*popt))).T,name[:-4]+'_fit.csv' )
+    plt_=False
+    if plt_:
+        plt.figure()
+        plt.plot(x, fluxesn,'o',label='data')
+        plt.plot(xl, Gaussian(xl,*popt),'--',label='Gaussian fit')
+        plt.legend()
+        plt.plot(np.linspace(maxf, maxf, len(fluxes)), fluxesn/max(fluxesn))
+        plt.grid(linestyle='dotted')
+        plt.xlabel('# image')
+        plt.title('Best image : {}'.format(maxf))
+        plt.ylabel('Estimated flux (Sum pixel)') 
+        name = 'Through slit analysis\n%0.3f - %s - %s'%(maxf,[int(a.xc),int(a.yc)],fitsfile.header['DATE'])
+        print(name) 
+        plt.title(name)
+        plt.savefig(os.path.dirname(file) + '/' + name + '.jpg')
+        plt.show()
+    else:
+        a = Table(np.vstack((x, fluxesn)).T)
+        b = Table(np.vstack((xl, Gaussian(xl,*popt))).T)
+        a.write(name ,format='ascii')
+        b.write(name[:-4]+'_fit.csv' ,format='ascii')
+        d = DS9Plot(path=name[:-4]+'_fit.csv', title='Best_image:{}'.format(maxf), name='Fit', xlabel='# image', ylabel='Estimated_flux', type_='xy', xlim=None, ylim=None,shape='none')
+        DS9Plot(d=d,path=name, title='Best image : {}'.format(maxf), name='Fit', xlabel='# image', ylabel='Estimated flux (Sum pixel)', type_='xy', xlim=None, ylim=None,shape='circle',New=False)
     return 
+
+
+def DS9Plot(d=None,path='', title='', name='', xlabel='', ylabel='', type_='xy', xlim=None, ylim=None,New=True,shape='None'):
+    if d is None:
+        d=DS9()
+    if New:
+        d.set('plot')#line|bar|scatter
+    d.set('plot load %s %s'%(path, type_))
+    d.set("plot title %s"%(title))
+    d.set("plot title x %s"%(xlabel))
+    d.set("plot title y %s"%(ylabel))
+    d.set("plot show yes");#d.set("plot stats yes")
+    d.set("plot shape %s"%(shape))
+    d.set("plot name %s"%(name))
+    d.set("plot legend yes")
+    d.set("plot color red")
+    if xlim is not None:
+        d.set("plot axis x auto no")
+        
+    return d
+# a = Table.read('/Users/Vincent/DS9BackUp/CSVs/191204-10H10_ThroughSlit.csv')
+#DS9Plot(path='/Users/Vincent/DS9BackUp/CSVs/191204-10H16_ThroughSlit_fit.csv')
+# DS9Plot(path='/Users/Vincent/DS9BackUp/CSVs/191204-10H34_ThroughSlit.csv', title='Best_imag', name='Fit', xlabel='# image', ylabel='Estimated_flux', type_='xy', xlim=None, ylim=None)
+# DS9Plot(path='/Users/Vincent/DS9BackUp/CSVs/191204-10H34_ThroughSlit_fit.csv', title='Best_imag', name='Fit', xlabel='# image', ylabel='Estimated_flux', type_='xy', xlim=None, ylim=None,New=False)
+
+
+
+# d.set('plot scatter')#line|bar|scatter
+# d.set('plot load /Users/Vincent/DS9BackUp/CSVs/191204-10H34_ThroughSlit.csv xy')
+# d.set("plot shape circle")
+
 
 def DS9snr(xpapoint):
     """Compute a rough SNR on the selected spot. Needs to be updates
@@ -12902,7 +12944,7 @@ def DS9LephareLimits(xpapoint):
     if which(filter_) is None:
 #        from tkinter import messagebox
 #        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
-        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
+        d = DS9();d.set('analysis message {Limits does not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
 
         print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
@@ -12927,7 +12969,8 @@ def DivideCatalog(path, tmpFOlder='/tmp',id_ = 'ID'):
     #cat.write('/Users/Vincent/Nextcloud/Work/These/HSC/Catalogs/sub_cat/TotalMergedCatalog_9813_SNR5_complete_clean_only_mag_v3_spectro.in',format='ascii')
 #    a = np.linspace(cat['RA'].min(),cat['RA'].max(),n)
     
-    a = np.linspace(cat[id_].min(),cat[id_].max(),n)
+    a = np.linspace(cat[id_].min()-1,cat[id_].max(),n)
+    lens = []
     for i, ra in enumerate(a[:-1]):
         print(i)
         if ra==a.max():
@@ -12935,9 +12978,10 @@ def DivideCatalog(path, tmpFOlder='/tmp',id_ = 'ID'):
             tab = cat[cat[id_]>ra]
         else:
             tab = cat[(cat[id_]<=a[i+1]) & (cat[id_]>a[i])]
+        lens.append(len(tab))
         tab.rename_column(id_,'#%s'%(id_))
         tab.write(os.path.join(tmpFOlder, os.path.basename(path).split('.')[0] + '_%i.in'%(i)),format='ascii', overwrite=True)
-    return
+    return len(cat),np.sum(lens)
 
 
 
@@ -13265,44 +13309,7 @@ def AddExtinction(table,extinction_map):
     return cat
 
 
-def plot_comptages_correction(path,bands=['MegaCam-u','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks'],dm=0.1):
 
-    from fpdf import FPDF
-    pdf = FPDF()
-    # imagelist is the list with all image filenames
-    cat = Table.read(path)
-    names=['/tmp/%s.png'%(band.replace('-','_')) for band in bands] 
-    for band in bands:
-        band = band.replace('-','_')
-        plt.figure(figsize=(8,8))
-        mask =(cat['MAG_AUTO_'+band] < 50)
-        subcat = cat[mask]
-        density_correction = len(subcat)/len(cat) * (cat['RA'].max()-cat['RA'].min()) * (cat['DEC'].max()-cat['DEC'].min())
-#        plt.hist(subcat['TOTAL_MAG_'+band],bins=np.arange(23,27.5,dm),alpha=0.3, label='TOTAL',log=True, weights=np.ones(len(subcat))*density_correction)
-#        plt.hist(subcat['MAG_ISO_'+band],bins=np.arange(23,27.5,dm),alpha=0.3, label='ISO',log=True, weights=np.ones(len(subcat))*density_correction)
-#        plt.hist(subcat['MAG_AUTO_'+band],bins=np.arange(23,27.5,dm),alpha=0.3, label='AUTO',log=True, weights=np.ones(len(subcat))*density_correction)
-
-        val1, bins = np.histogram(subcat['TOTAL_MAG_'+band],bins=np.arange(23,27.5,dm), weights=np.ones(len(subcat))*density_correction)
-        val2, bins = np.histogram(subcat['MAG_ISO_'+band],bins=np.arange(23,27.5,dm), weights=np.ones(len(subcat))*density_correction)
-        val3, bins = np.histogram(subcat['MAG_AUTO_'+band],bins=np.arange(23,27.5,dm), weights=np.ones(len(subcat))*density_correction)
-        val4, bins = np.histogram(subcat['TOTAL_MAG_ks_'+band],bins=np.arange(23,27.5,dm), weights=np.ones(len(subcat))*density_correction)
-        binc = (bins[:-1] + bins[1:])/2
-        plt.plot(binc, np.log10(val1), label='TOTAL')
-        plt.plot(binc, np.log10(val2), label='ISO')
-        plt.plot(binc, np.log10(val3), label='AUTO')
-        plt.plot(binc, np.log10(val4), label='TOTAL_ks')
-
-        plt.title(band)
-        plt.xlabel('Magnitude')
-        plt.xlabel('Number of objects per square degree')
-        plt.legend()
-        plt.savefig('/tmp/%s.png'%(band))
-        plt.show()
-    for image in names:
-        pdf.add_page()
-        pdf.image(image)#,x,y,w,h)
-    pdf.output(path[:-5] + '_comptage_all_with_out_ks.pdf', "F")
-    return
 
 
 
@@ -13347,7 +13354,7 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
             for i, file in enumerate(files):
                 output_file = file.split('.')[0] + '_zphot.out'
                 output_files.append(output_file)
-                print("'\n%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s '%(file, output_file)) 
+                print("\n%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > %s & '%(file, output_file,output_file+'.log')) 
                 p = multiprocessing.Process(target=RunZphot, args=(filter_, param_dict, file, output_file,i,))
                 jobs.append(p)
                 p.start()
@@ -13356,7 +13363,7 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
                 subprocess.Popen("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_OUT ' + output_file,shell=True)
             new_tables = []
             for path in output_files:
-                print(path)
+                print(path)#;new_tables.append(Table.read(path,format= 'ascii'))
                 new_tables.append(readLPtables(path)[0])
     
             #cats = [Table.read(path.split('.')[0]+'_col.out', format='ascii') for path in output_files]
@@ -13387,7 +13394,7 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
 
 def RunZphot(filter_, param_dict, file, output_file,i):
     #print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > /tmp/test_zphot_%i.log'%(file, output_file,i))
-    os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > /tmp/test_zphot_%i.log'%(file, output_file,i))
+    os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > /tmp/test_zphot_%i.log & '%(file, output_file,i))
     return
 
 
@@ -13683,11 +13690,12 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         dn = os.path.dirname(filename)
         fn = os.path.basename(filename)
         
-        if os.path.isfile(sys.argv[-35-5]) is False:
-            print('Detection image not given, taking whatr is in DetectionImages', sys.argv[-35-5])
+        if len(sys.argv)< 35:
+            print('Detection image not given, taking what is in DetectionImages')
             folder_name = 'DetectionImages'
             DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
-        else:        
+            CATALOG_NAME = os.path.join(os.path.dirname(DETECTION_IMAGE),'Photometric_Catalogs',fn[:-5].replace(',','-')+'_cat.fits')
+        elif os.path.isfile(sys.argv[-35-5]):        
             DETECTION_IMAGE = sys.argv[-35-5]
             print('Detection image given, taking whatr is in DetectionImages: ', DETECTION_IMAGE)
             folder_name = os.path.basename(os.path.dirname(DETECTION_IMAGE))
@@ -14505,97 +14513,6 @@ def add_filters(fieldsname, filts, table):
         new_fieldsname = c + ['STRING_INPUT_%i'%(i) for i in range(len(table.colnames)-len(new_fieldsname)+1)] + d
         
     return new_fieldsname, dep_on_field
-
-def OnlyCol4ALF(path, filts, dep_on_field=['MAG_OBS()','ERR_MAG_OBS()','MAG_ABS()', 'MABS_FILT()']):
-    """
-    """
-    #new_table = table['#IDENT', 'Z_BEST', 'MOD_BEST', 'AGE_BEST', 'EBV_BEST', 'EXTLAW_BEST']
-    #new_table = table['MASS_MED', 'AGE_MED', 'SFR_MED', 'SSFR_MED', 'LUM_NUV_BEST', 'LUM_R_BEST', 'LUM_K_BEST']
-    #                  , 'MAG_OBS()', 'ERR_MAG_OBS()', 'MAG_ABS()', 'MABS_FILT()',
-    table = Table.read(path,format='ascii'), 
-    c1 = ['IDENT', 'Z_BEST', 'MOD_BEST', 'AGE_BEST', 'EBV_BEST', 'EXTLAW_BEST']
-    c3 = ['MASS_MED', 'AGE_MED', 'SFR_MED', 'SSFR_MED', 'LUM_NUV_BEST', 'LUM_R_BEST', 'LUM_K_BEST']
-    c2 = [filt+'_'+field[:-2] for field in dep_on_field for filt in filts]
-    ctot = c1 + c2 + c3
-    new_table = table[ctot]      
-    name, ext = os.path.basename(path).split('.')
-    new_table.write(os.path.dirname(path) + '/' +  name + '_col.' + ext, format='ascii', overwrite=True, comment=False)
-    return new_table  
-
-
-def ReturnFilters2use(LF = 'u', filters_info = '/Users/Vincent/Nextcloud/Work/LePhare/work/filt/CLAUDS_MEGACAM_HSC_VISTA_and_FUV.info'):
-    """
-    Check the redshift range we want to plot LF (0->3)
-    Then choose the LF_band for which you want to do the LF
-    Find for each band what redshift is the best adapted to compute the LF_band magnitude
-    
-    """
-    filters = Table.read(filters_info, format='ascii')
-    lamda_LF = float(filters['Lbda_mean'][filters['NAME'] == LF])
-    x = np.linspace(1e3,2.5e4,1e4)
-    filters['Bestz4LF'] = (filters['Lbda_mean']/lamda_LF)-1   
-    #plt.figure()#figsize=(8,6))
-    fig, ax1 = plt.subplots()#figsize=(12, 6))
-    ax2 = ax1.twinx()
-
-    for filteri in filters:
-        ax1.plot(x,gaussian(x, 1, filteri['Lbda_mean']*1e4, 1e4*filteri['FWHM']/2.35), label=filteri['NAME'])
-        ax1.text(filteri['Lbda_mean']*1e4-200,1,'z=%0.1f'%(filteri['Bestz4LF']))
-    #ax1.plot([lamda_LF*1e4,lamda_LF*1e4],[0,1],c='black',label='LF')
-    #plt.xlim((1e3,1.3e4))
-    zs=np.arange(6)
-    ax2.plot((1+zs)*lamda_LF*1e4,zs,label='(1+z) lambda LF',c='black')
-    ax1.legend()
-    ax2.legend(loc='upper left')
-    ax1.set_xlabel('Wavelength [A]')
-    ax1.set_ylabel('Transmission')
-    ax2.set_ylabel('Redshift')
-    z_mid = filters['Bestz4LF'][(filters['Bestz4LF']>0) & (filters['Bestz4LF']<5)]#np.linspace(0.05,np.sqrt(6),len(filters)+1)**2
-    #z_mid = (zs[1:] + zs[:-1])/2
-    filter2use, number2use = [], []
-    for z in z_mid:
-        number2use.append(str(abs(z - filters['Bestz4LF']).argmin()+1))
-        filter2use.append(filters['NAME'][abs(z - filters['Bestz4LF']).argmin()])
-    zs = ['0.0'] + ['%0.3f'%(z) for z in (z_mid[1:] + z_mid[:-1])/2] + ['6.0']
-    #for z in zs:
-    #    z = float(z)
-    ax2.errorbar((1+z_mid)*lamda_LF*1e4, z_mid,yerr=abs(np.array([zs[:-1],zs[1:]],dtype=float)-z_mid),xerr=abs((np.array([zs[:-1],zs[1:]],dtype=float)-z_mid))*lamda_LF*1e4,fmt='o')
-    plt.show()
-    zs_n = [zs[0]] + [str(z) for z in zs[1:-1] for _ in (0, 1)] + [zs[-1]]
-    print('Redshift ranges to use: \n', repr(','.join(zs_n)))
-    print('Filters to use: \n', repr(','.join(number2use)))
-    return zs, filter2use
-
-
-
-
-
-def LF_MAPP_CUT(new_table, filter2use):
-    """
-    Find the most appropriate cut for completeness of the filters
-    """
-    lims = []
-    for filteri in filter2use:
-        hist = np.histogram(new_table[filteri + '_MAG_OBS'], range=(17,30), bins=30)
-        x, y_ = (hist[1][1:]+hist[1][:-1])/2, hist[0]
-        y = y_#np.log10(y_)
-
-        try:
-            inf = x[np.where(y[:y.argmax()]==y[:y.argmax()].min())[-1][-1]]#x[y[:y.argmax()].argmin()]
-        except IndexError:
-            inf = x[np.where(y[:y.argmax()]==y[:y.argmax()].min())[-1]]#x[y[:y.argmax()].argmin()]
-            
-        sup = x[y.argmax()]
-        plt.figure();plt.title('Filter = %s'%(filteri))
-        plt.step(x, y, label='inf=%0.1f \nsup=%0.1f'%(inf,sup))
-        plt.xlabel('MAG OBS');plt.ylabel('Histogram');plt.legend()
-        plt.plot([inf,inf],[0,y.max()])
-        plt.plot([sup,sup],[0,y.max()]);plt.show()
-        lims.append(inf)
-        lims.append(sup)
-    lims = ['%0.1f'%(float(lim)) for lim in lims]
-    print('Magnitude limits to use: \n', repr(','.join(lims)))
-    return ','.join(lims)
     
 #def PlotFL_from_ALF(general_path = '/Users/Vincent/Nextcloud/Work/LePhare/LF'):
 #    """
@@ -14856,6 +14773,8 @@ def Convertissor(xpapoint):
     return
 
 
+
+#DS9Plot(path='/Users/Vincent/DS9BackUp/CSVs/190311-13H13_CR_HP_profile.csv')
 
 
 def Help(xpapoint):
