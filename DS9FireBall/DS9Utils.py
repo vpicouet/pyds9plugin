@@ -118,22 +118,22 @@ def LoadDS9QuickLookPlugin():
     return
 
 def PresentPlugIn():
-    print(bcolors.BLACK_GREEN + """\n
-                     DS9 Quick Look Plug-in 
-            
-            Written by Vincent PICOUET <vincent.picouet@lam.fr>
-            Copyright 2019
-
-            visit https://people.lam.fr/picouet.vincent
-            
-            DS9 Quick Look Plug-in comes with ABSOLUTELY NO WARRANTY
-            You may redistribute copies of DS9 Quick Look Plug-in 
-            under the terms of the MIT License.
-             
-            To use it run:
-            > ds9 &
-            and play with the analysis commands!
-            """+ bcolors.END)
+    print(bcolors.BLACK_GREEN + 
+ """                                                                                 
+                     DS9 Quick Look Plug-in                                      
+                                                                                 
+            Written by Vincent PICOUET <vincent.picouet@lam.fr>                  
+            Copyright 2019                                                       
+            visit https://people.lam.fr/picouet.vincent                          
+                                                                                 
+            DS9 Quick Look Plug-in comes with ABSOLUTELY NO WARRANTY             
+            You may redistribute copies of DS9 Quick Look Plug-in                
+            under the terms of the MIT License.                                  
+                                                                                 
+            To use it run:                                                       
+            > ds9 &                                                              
+            and play with the analysis commands!                                 
+                                                                                 """+ bcolors.END)
 #            > SYNTAX: sex <image> [<image2>][-c <configuration_file>][-<keyword> <value>]
 #            > to dump a default configuration file:          sex -d 
 #            > to dump a default extended configuration file: sex -dd 
@@ -12799,7 +12799,7 @@ def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
         
 #    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     #plt.xlabel('Mabs_{U}')
-    #plt.ylabel('log N (mag^{-1} MPC^{-3}')
+    #plt.ylabel('log N (mag^{-1} MPC^{-3}'), fit=True
     fig=axes[0,0].figure
     fig.text(0.5,0.04, 'Mabs_{U}', ha="center", va="center")
     fig.text(0.05,0.5, 'log N (mag^{-1} MPC^{-3}', ha="center", va="center", rotation=90)
@@ -12809,12 +12809,14 @@ def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
     return
 
 
-def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U'):
+def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U', fit=True):
     """
     """
-    general_path = sys.argv[-2]
-    filter_ = sys.argv[-1]
     from decimal import Decimal
+    if general_path is None:
+        general_path = sys.argv[-2]
+        filter_ = sys.argv[-1]
+
     if filter_ == 'FUV':
         a = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
         phi = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
@@ -12832,11 +12834,11 @@ def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U'):
     
 
     
-    info_swml = glob.glob(general_path + '/*swml*.info')[0]
-    info_vmax = glob.glob(general_path + '/*vmax*.info')[0]
+    info_swml = glob.glob(os.path.join(general_path , '*SWML*.info'))[0]
+    info_vmax = glob.glob(os.path.join(general_path , '*VMAX*.info'))[0]
     zs = np.genfromtxt(info_vmax, skip_header=15, max_rows=8,usecols=(1,2),delimiter='  ')#, unpack=True)
-    paths_swml = glob.glob(general_path + '/*swml*.dat');paths_swml.sort()
-    paths_vmax = glob.glob(general_path + '/*vmax*.dat');paths_vmax.sort()
+    paths_swml = glob.glob(general_path + '/*SWML*.dat');paths_swml.sort()
+    paths_vmax = glob.glob(general_path + '/*VMAX*.dat');paths_vmax.sort()
     #paths_swml.sort(key = lambda s: len(s))
     #paths_vmax.sort(key = lambda s: len(s))
     fig, axes = plt.subplots(int(len(zs)/3),3, figsize=(15,10),sharex=True, sharey=True)
@@ -12845,8 +12847,8 @@ def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U'):
         print(os.path.basename(paths_swml[i]),os.path.basename(paths_vmax[i]))
         coeffs = [phi[i],a[i],M[i]]
         ax.plot(lx,(schechter_vincent(lx,coeffs)),c='grey',lw=1,label='M: '+ ', '.join([ '%.3E' % Decimal(a) for a in coeffs ]))
-        fitLF(path = paths_swml[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='orange', label='SWML LF')
-        fitLF(path = paths_vmax[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='red', label='VMAX LF')
+        fitLF(path = paths_swml[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='orange', label='SWML LF', fit=fit)
+        fitLF(path = paths_vmax[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='red', label='VMAX LF', fit=fit)
         ax.set_title('$%0.2f < z < %0.2f$'%(zs[i][0],zs[i][1]), fontsize=13)
         
 #    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
@@ -12856,34 +12858,40 @@ def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U'):
     fig.text(0.5,0.08, '$M_{%s}$'%(filter_), ha="center", va="center",fontsize=18)
     fig.text(0.08,0.5, '$log \phi/dm/ Mpc^{3}$', ha="center", va="center", rotation=90,fontsize=18)
 
-    plt.savefig(os.path.join(general_path,'Luminosity'),dpi=300)
+    plt.savefig(os.path.join(general_path,'Luminosity_%s'%(filter_)),dpi=300)
     plt.show()
     return
 
 
 
 
-def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat',mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=None,color='black', label=None) : 
+def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat',mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=None,color='black', label=None,fit=True) : 
     from astropy.io import ascii
     from pyswarm import pso
     from decimal import Decimal
-    LF_rod0 = ascii.read(path)
-    LIRrod_0 = LF_rod0['col1']
-    phirod_0 = LF_rod0['col2']
-    errmrod_0 = LF_rod0['col3']
-    errprod_0 = LF_rod0['col4']
-    mask = True#LIRrod_0<mag_lim
-    coeffrod_0 , chirod_0 = pso(likelihood,do,up,args=[LIRrod_0[mask],phirod_0[mask],errmrod_0[mask]],maxiter=500)
-    lx = np.linspace(-13,-24,100)
-    if ax is None:
-        fig = plt.figure()#figsize=(12,4.5))
-        ax = fig.add_subplot(111)
-    ax.plot(lx,(schechter_vincent(lx,coeffrod_0)),c=color,lw=2,label='Fit: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffrod_0 ]))
-    ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='+',lw=1,c=color,label=label)
-    #ax.plot(lx,(schechter_vincent(lx,[4e-3,-1.4,-19])),c='grey',lw=1,label='Literature: Pi=0.004,a=-1.4,M=-19')
-    #ax.plot(LIRrod_0[~mask],phirod_0[~mask],'o',lw=3,c='black',label='Fit mask')
-    ax.set_xlim((-14,-25));ax.set_ylim((-6,0))
-    ax.legend(loc='lower left',fontsize=8)
+    try:
+        LF_rod0 = ascii.read(path)
+    except:
+        pass
+    else:
+        LIRrod_0 = LF_rod0['col1']
+        phirod_0 = LF_rod0['col2']
+        errmrod_0 = LF_rod0['col3']
+        errprod_0 = LF_rod0['col4']
+        mask = True#LIRrod_0<mag_lim
+        if fit:
+            coeffrod_0 , chirod_0 = pso(likelihood,do,up,args=[LIRrod_0[mask],phirod_0[mask],errmrod_0[mask]],maxiter=500)
+        lx = np.linspace(-13,-24,100)
+        if ax is None:
+            fig = plt.figure()#figsize=(12,4.5))
+            ax = fig.add_subplot(111)
+        if fit:
+            ax.plot(lx,(schechter_vincent(lx,coeffrod_0)),c=color,lw=2,label='Fit: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffrod_0 ]))
+        ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='+',lw=1,c=color,label=label)
+        #ax.plot(lx,(schechter_vincent(lx,[4e-3,-1.4,-19])),c='grey',lw=1,label='Literature: Pi=0.004,a=-1.4,M=-19')
+        #ax.plot(LIRrod_0[~mask],phirod_0[~mask],'o',lw=3,c='black',label='Fit mask')
+        ax.set_xlim((-14,-25));ax.set_ylim((-6,0))
+        ax.legend(loc='lower left',fontsize=8)
     
     return #coeffrod_0 , chirod_0
 
@@ -13010,37 +13018,61 @@ def ComputeTotalMagnitude2(cat, k_band=False, all_bands=['MegaCam-u','MegaCam-uS
     
     print('Compute weight')
     weight_U =  1 / (np.square(cat['FLUXERR_ISO_MegaCam_u']) + np.square(cat['FLUXERR_AUTO_MegaCam_u'])) 
+    weight_Us =  1 / (np.square(cat['FLUXERR_ISO_MegaCam_uS']) + np.square(cat['FLUXERR_AUTO_MegaCam_uS'])) 
     weight_G =  1 / (np.square(cat['FLUXERR_ISO_HSC_G']) + np.square(cat['FLUXERR_AUTO_HSC_G'])) 
     weight_R =  1 / (np.square(cat['FLUXERR_ISO_HSC_R']) + np.square(cat['FLUXERR_AUTO_HSC_R'])) 
     weight_I =  1 / (np.square(cat['FLUXERR_ISO_HSC_I']) + np.square(cat['FLUXERR_AUTO_HSC_I'])) 
+    weight_Z =  1 / (np.square(cat['FLUXERR_ISO_HSC_Z']) + np.square(cat['FLUXERR_AUTO_HSC_Z'])) 
+    weight_Y =  1 / (np.square(cat['FLUXERR_ISO_HSC_Y']) + np.square(cat['FLUXERR_AUTO_HSC_Y'])) 
+    weight_Yv =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_Y']) + np.square(cat['FLUXERR_AUTO_VIRCAM_Y'])) 
+    weight_J =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_J']) + np.square(cat['FLUXERR_AUTO_VIRCAM_J'])) 
+    weight_H =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_H']) + np.square(cat['FLUXERR_AUTO_VIRCAM_H'])) 
     weight_Ks =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_Ks']) + np.square(cat['FLUXERR_AUTO_VIRCAM_Ks'])) 
 
     weight_U[ abs(cat['MAG_AUTO_MegaCam_u'] - cat['MAG_ISO_MegaCam_u'])>20 ] = 0
+    weight_Us[ abs(cat['MAG_AUTO_MegaCam_uS'] - cat['MAG_ISO_MegaCam_uS'])>20 ] = 0
     weight_G[ abs(cat['MAG_AUTO_HSC_G'] - cat['MAG_ISO_HSC_G'])>20 ] = 0
     weight_R[ abs(cat['MAG_AUTO_HSC_R'] - cat['MAG_ISO_HSC_R'])>20 ] = 0
     weight_I[ abs(cat['MAG_AUTO_HSC_I'] - cat['MAG_ISO_HSC_I'])>20 ] = 0
+    weight_Z[ abs(cat['MAG_AUTO_HSC_Z'] - cat['MAG_ISO_HSC_Z'])>20 ] = 0
+    weight_Y[ abs(cat['MAG_AUTO_HSC_Y'] - cat['MAG_ISO_HSC_Y'])>20 ] = 0
+    weight_Yv[ abs(cat['MAG_AUTO_VIRCAM_Y'] - cat['MAG_ISO_VIRCAM_Y'])>20 ] = 0
+    weight_J[ abs(cat['MAG_AUTO_VIRCAM_J'] - cat['MAG_ISO_VIRCAM_J'])>20 ] = 0
+    weight_H[ abs(cat['MAG_AUTO_VIRCAM_H'] - cat['MAG_ISO_VIRCAM_H'])>20 ] = 0
     weight_Ks[ abs(cat['MAG_AUTO_VIRCAM_Ks'] - cat['MAG_ISO_VIRCAM_Ks'])>20 ] = 0
 #    if k_band is False:
 #        weight_Ks = np.zeros(len(cat))
 
-    cat['WEIGHT'] = weight_U + weight_G + weight_R + weight_I + weight_Ks
+    cat['WEIGHT'] = weight_U + weight_G + weight_R + weight_I + weight_Z + weight_Ks + weight_Us + weight_Y + weight_Yv + weight_H + weight_J
 
     cat['weight_U'] =   weight_U/cat['WEIGHT'] 
     cat['weight_G'] =   weight_G/cat['WEIGHT']  
     cat['weight_R'] =   weight_R/cat['WEIGHT']  
     cat['weight_I'] =   weight_I/cat['WEIGHT']  
+    cat['weight_Z'] =   weight_Z/cat['WEIGHT']  
     cat['weight_Ks'] =   weight_Ks/cat['WEIGHT']  
+    cat['weight_Us'] =   weight_Us/cat['WEIGHT']  
+    cat['weight_Y'] =   weight_Y/cat['WEIGHT']  
+    cat['weight_Yv'] =   weight_Yv/cat['WEIGHT']  
+    cat['weight_J'] =   weight_J/cat['WEIGHT']  
+    cat['weight_H'] =   weight_H/cat['WEIGHT']  
     
     print('Compute scaling factor')  
     
     cat['SCALING_FACTOR'] = 0.0
     cat['SCALING_FACTOR'] += (cat['MAG_AUTO_MegaCam_u'] - cat['MAG_ISO_MegaCam_u']) * cat['weight_U']
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_MegaCam_uS'] - cat['MAG_ISO_MegaCam_uS']) * cat['weight_Us']
     cat['SCALING_FACTOR'] +=  (cat['MAG_AUTO_HSC_G'] - cat['MAG_ISO_HSC_G']) * cat['weight_G']
     cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_R'] - cat['MAG_ISO_HSC_R']) * cat['weight_R']
     cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_I'] - cat['MAG_ISO_HSC_I']) * cat['weight_I']
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_Z'] - cat['MAG_ISO_HSC_Z']) * cat['weight_Z']
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_Y'] - cat['MAG_ISO_HSC_Y']) * cat['weight_Y']
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_Ks'] - cat['MAG_ISO_VIRCAM_Ks']) * cat['weight_Ks'] 
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_Y'] - cat['MAG_ISO_VIRCAM_Y']) * cat['weight_Y'] 
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_J'] - cat['MAG_ISO_VIRCAM_J']) * cat['weight_J'] 
+    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_H'] - cat['MAG_ISO_VIRCAM_H']) * cat['weight_H'] 
 
     #cat['SCALING_FACTOR_ks'] = cat['SCALING_FACTOR'].copy()
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_Ks'] - cat['MAG_ISO_VIRCAM_Ks']) * cat['weight_Ks'] 
     
     cat['SCALING_FACTOR'][cat['WEIGHT']==0] = 0#; cat['SCALING_FACTOR_ks'][cat['WEIGHT']==0] = 0
     print('Compute total factor')
@@ -13053,7 +13085,11 @@ def ComputeTotalMagnitude2(cat, k_band=False, all_bands=['MegaCam-u','MegaCam-uS
         #cat.remove_column('TOTAL_MAG_' + band)
         #new_col_ks =MaskedColumn(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR_ks'], name='TOTAL_MAG_ks_' + band)
         new_col=MaskedColumn(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR'], name='TOTAL_MAG_' + band)
-        cat.add_column(new_col) 
+        try:
+            cat.add_column(new_col) 
+        except ValueError:
+            cat.remove_column(new_col.name) 
+            cat.add_column(new_col) 
         #cat.add_column(new_col_ks) 
         a = np.array(cat['MAGERR_ISO_' + band],dtype='float16') 
         cat.remove_column('MAGERR_ISO_' + band)
@@ -13209,6 +13245,7 @@ def CleanCat(cat, bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z
 
 
 def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']):
+    #path = '/Users/Vincent/Documents/Work/sextractorCatalogs/TotalMergedCatalog_9813_corr_ugrizyk.fits'
     import astropy
     from astropy.table import Table, Column
     from astropy import units as u
@@ -13265,8 +13302,8 @@ def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','Mega
     table_2.add_column(Column(name='MAGERR_ISO_FUV', data=np.ones(len(table_2))*-99.0), index=26) 
     table_2['CONTEXT'] =2**np.sum(['TOTAL_MAG_' in name for name in table_2.colnames])-1
     astropy.io.ascii.write(table_2, name, formats=dict_format,overwrite=True)
-    astropy.io.ascii.write(table_2[table_2['ZSPEC']>0], name[:-4] + '_spectro.ini', formats=dict_format,overwrite=True)
-    CatalogForGazpar(name)
+    #astropy.io.ascii.write(table_2[table_2['ZSPEC']>0], name[:-4] + '_spectro.ini', formats=dict_format,overwrite=True)
+    #CatalogForGazpar(name)
     return
 
 def AddExtinction(table,extinction_map):
@@ -13363,7 +13400,7 @@ def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
                 subprocess.Popen("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_OUT ' + output_file,shell=True)
             new_tables = []
             for path in output_files:
-                print(path)#;new_tables.append(Table.read(path,format= 'ascii'))
+                print(path);#new_tables.append(Table.read(path,format= 'ascii'))
                 new_tables.append(readLPtables(path)[0])
     
             #cats = [Table.read(path.split('.')[0]+'_col.out', format='ascii') for path in output_files]
