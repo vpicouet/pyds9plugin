@@ -12804,7 +12804,7 @@ def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
     fig.text(0.5,0.04, 'Mabs_{U}', ha="center", va="center")
     fig.text(0.05,0.5, 'log N (mag^{-1} MPC^{-3}', ha="center", va="center", rotation=90)
 
-    plt.savefig(os.path.join(general_path,'Luminosity'))
+    plt.savefig(os.path.join(general_path,'Luminosity'))                
     plt.show()
     return
 

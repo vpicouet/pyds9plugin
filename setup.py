@@ -46,7 +46,7 @@ data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "S
 
 MAJOR = '2'
 MINOR = '8'
-MICRO = '9dev7'
+MICRO = '9dev8'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
