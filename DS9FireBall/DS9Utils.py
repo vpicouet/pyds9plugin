@@ -9509,15 +9509,16 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, filename=None, info=True, redo=
     10ms per image for header info, 50ms per Mo so 240Go-> 
     """
     from astropy.table import vstack
+    print('info, extension = ', sys.argv[4], sys.argv[5])
     if sys.argv[4] == '1':
         info=True
     elif sys.argv[4] == '0':
         info = False
     extentsions = np.array(sys.argv[5].split(','),dtype=int)
     if xpapoint:
-        d = DS9(xpapoint)
-        if filename is None:
-            filename = getfilename(d)        
+        #d = DS9(xpapoint)
+#        if filename is None:
+#            filename = getfilename(d)        
         if files is None:
             #if len(sys.argv) > 5: files = Charge_path_new(filename, entry_point=5)
             files =   glob.glob( sys.argv[3], recursive=True) #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
@@ -9815,23 +9816,23 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
         #OSR = data[OSR2[0]:OSR2[1],OSR2[2]:OSR2[3]]
         #OSL = data[OSR1[0]:OSR1[1],OSR1[2]:OSR1[3]]
         t[i]['Col2ColDiff'] =  np.nanmedian(line[::2]) - np.nanmedian(line[1::2])#np.nanmedian(abs(line[1:] - line[:-1])) np.nanmedian(a[::2])
-        t[i]['Col2ColDiff_OSR'] =   np.nanmedian(np.nanmean(OSR,axis=0)[::2]) - np.nanmedian(np.nanmean(OSR,axis=0)[1::2])#np.nanmedian(abs(line[1:] - line[:-1])) 
+#        t[i]['Col2ColDiff_OSR'] =   np.nanmedian(np.nanmean(OSR,axis=0)[::2]) - np.nanmedian(np.nanmean(OSR,axis=0)[1::2])#np.nanmedian(abs(line[1:] - line[:-1])) 
         t[i]['Line2lineDiff'] = np.nanmedian(column[::2]) - np.nanmedian(column[1::2])#np.nanmedian(abs(column[1:] - column[:-1])) 
-        t[i]['Line2lineDiff_OSR'] =np.nanmedian(np.nanmean(OSR,axis=1)[::2]) - np.nanmedian(np.nanmean(OSR,axis=1)[1::2]) #np.nanmedian(abs(column[1:] - column[:-1])) 
-        t[i]['OverscannRight'] = np.nanmean(OSR)
-        t[i]['OverscannLeft'] = np.nanmean(OSL)
+#        t[i]['Line2lineDiff_OSR'] =np.nanmedian(np.nanmean(OSR,axis=1)[::2]) - np.nanmedian(np.nanmean(OSR,axis=1)[1::2]) #np.nanmedian(abs(column[1:] - column[:-1])) 
+#        t[i]['OverscannRight'] = np.nanmean(OSR)
+#        t[i]['OverscannLeft'] = np.nanmean(OSL)
         t[i]['TopImage'] = np.nanmean(column[:20])
         t[i]['BottomImage'] = np.nanmean(column[-20:])
-        t[i]['Top2BottomDiff_OSL'] = np.nanmean(OSL[:20,:]) - np.nanmean(OSL[-20:,:])
-        t[i]['Top2BottomDiff_OSR'] = np.nanmean(OSR[:20,:]) - np.nanmean(OSR[-20:,:])
-        t[i]['MeanFlux'] =  t[i]['MeanADUValue']/texp
+#        t[i]['Top2BottomDiff_OSL'] = np.nanmean(OSL[:20,:]) - np.nanmean(OSL[-20:,:])
+#        t[i]['Top2BottomDiff_OSR'] = np.nanmean(OSR[:20,:]) - np.nanmean(OSR[-20:,:])
+#        t[i]['MeanFlux'] =  t[i]['MeanADUValue']/texp
 #        t[i]['MeanADUValueTR'] =  np.nanmean((data - ComputeOSlevel1(data))[1000:1950,1600:2100])
 #        t[i]['MeanADUValueBR'] =  np.nanmean((data - ComputeOSlevel1(data))[2:1000,1600:2100])
 #        t[i]['MeanADUValueBL'] =  np.nanmean((data - ComputeOSlevel1(data))[2:1000,1100:1600])
 #        t[i]['MeanADUValueTL'] =  np.nanmean((data - ComputeOSlevel1(data))[1000:1950,1100:1600])
         t[i]['SaturatedPixels'] = 100*float(np.sum(data[Yinf:Ysup,Xinf:Xsup]>2**16-10)) / np.sum(data[Yinf:Ysup,Xinf:Xsup]>0)
         t[i]['stdXY'] = np.nanstd(data[Yinf:Ysup,Xinf:Xsup])
-        t[i]['BrightSpotFlux'] = (np.nanmean(data[1158-25:1158+25,2071-50:2071+50]) - np.nanmean(data[1158-25+50:1158+25+50,2071-50:2071+50]))/texp
+#        t[i]['BrightSpotFlux'] = (np.nanmean(data[1158-25:1158+25,2071-50:2071+50]) - np.nanmean(data[1158-25+50:1158+25+50,2071-50:2071+50]))/texp
         emgain = ComputeEmGain(file, None,True,False,None,None,[40,40],False,[1053,2133,500,2000])
         
         
@@ -10095,7 +10096,7 @@ def ComputeGainHistogram(xpapoint=None,path=None, config=my_conf, sigma=60, Plot
         mask = (bin_center > bias + 2.5  * sigma) & (bin_center < bias + 40 * sigma) & (n > 2) 
         #plt.plot(bin_center[mask],n[mask])
         x, y = bin_center[mask], n_log[mask]
-        y1, x1 = SigmaClipBinned(y,x, sig=1.2, Plot=True, ax=None, log=False)      
+        y1, x1 = SigmaClipBinned(y,x, sig=1.2, Plot=Plot, ax=None, log=False)    
         slope, b = PlotFit1D(x1,y1,deg=1, Plot=Plot)['popt']
         emgain = (-1./slope) * (gain)
         #fits.setval(filename, 'GAINHIST', value = emgain, comment = 'Gain derived from the histogram slope')
