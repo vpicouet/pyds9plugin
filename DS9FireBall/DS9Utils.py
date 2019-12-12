@@ -316,9 +316,13 @@ def DS9setup2(xpapoint, config=my_conf):
     scale, cuts, smooth, color, invert, grid = sys.argv[-6:]
     cuts = np.array(cuts.split('-'),dtype=float)
     d = DS9(xpapoint)
+    region = getregion(d, all=False, quick=True,selected=True)
+    if region is None:
+        image_area = [0,-1,0,-1]
+    else:
+        image_area = Lims_from_region(None,coords=region)
+    Xinf, Xsup, Yinf, Ysup = image_area   
 
-    image_area = [0,-1,0,-1]
-    Yinf, Ysup,Xinf, Xsup = image_area
     print(Yinf, Ysup,Xinf, Xsup)
     #filename = getfilename(d)
     #fitsimage = fits.open(filename)[0].data#d.get_pyfits()[0].data#d.get_pyfits()[0].data#d.get_arr2np()
@@ -1732,7 +1736,7 @@ def RecrateArrayFromIndexList(xs, ys, angle, image):
     
 
 
-def getregion(win, debug=False, all=False, quick=False, config=my_conf):
+def getregion(win, debug=False, all=False, quick=False, config=my_conf,selected=False):
     """ Read a region from a ds9 instance.
 
     Returns a tuple with the data in the region.
@@ -1746,9 +1750,13 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf):
         if len([row for row in regions.split('\n')])>=3:
             verboseprint('Taking only selected region', verbose=config.verbose)
             rows = regions
+        #else:
+        elif selected is False:
+                verboseprint('no region selected', verbose=config.verbose)
+                rows = win.get("regions all")
         else:
-            verboseprint('no region selected', verbose=config.verbose)
-            rows = win.get("regions all")
+            return None
+            
     else:
         verboseprint('Taking all regions', verbose=config.verbose)
         rows = win.get("regions all")
@@ -3541,7 +3549,7 @@ def ContinuumPhotometry_old(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackU
             
         #    plt.plot(x[mask], y[mask], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[mask])/texp))
             #plt.plot(x,  limfit,'--', c='black', label='1/e limit')
-            plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.2f'%(1.155*np.sum(y0[mask])))
+            plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.3f'%(1.155*np.sum(y0[mask])))
             plt.plot(x, fit_fn(x),label='Fitted background',linestyle='dotted',c=p[0].get_color())
             plt.legend()
             plt.title(os.path.basename("%s"%(filename)))
@@ -4110,7 +4118,7 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
             
         #    plt.plot(x[mask], y[mask], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[mask])/texp))
             #plt.plot(x,  limfit,'--', c='black', label='1/e limit')
-            plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.2f'%(1.155*np.sum(y0[mask])))
+            plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.4f'%(1.155*np.sum(y0[mask])))
             plt.plot(x, fit_fn(x),label='Fitted background',linestyle='dotted',c=p[0].get_color())
             plt.legend()
             plt.title(os.path.basename("%s"%(filename)))
@@ -11893,7 +11901,7 @@ def galex2Ph_s_A(f200=2.9e-4, atm=0.37, throughput=0.13, QE=0.5, area=7854):
 
 def FB_ADU2Flux(ADU, EMgain=1370, ConversionGain=1.8, dispersion=46.6/10):#old emgain=453
     """
-    Convert FB2 ADUs/sec into photons per seconds per angstrom
+    Convert FB2 ADUs/sec into e- per seconds per angstrom
     print((galex2Ph_s_A()-FB_ADU2Flux(300/50))/galex2Ph_s_A())
     """
     Flux = ADU * ConversionGain * dispersion / EMgain
