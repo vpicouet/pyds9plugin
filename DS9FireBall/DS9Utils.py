@@ -351,24 +351,24 @@ def DS9lock(xpapoint):
     """Lock all the images in DS9 together in frame, smooth, limits, colorbar
     """
     d = DS9(xpapoint)
-    l = sys.argv[-5:]
+    l = sys.argv[-3:]
     ll = np.array(l,dtype='U3')
     print(l,ll)
     l = np.array(l,dtype=int)
     ll[l==1]='yes'
     ll[l==0]='no'
-    if ll[0] == 'no':
-        d.set("lock frame %s"%(ll[0]))
-    else:
-        d.set("lock frame physical")
+#    if ll[0] == 'no':
+#        d.set("lock frame %s"%(ll[0]))
+#    else:
+    d.set("lock frame %s"%(sys.argv[-5]))
+    d.set("lock crosshair %s"%(sys.argv[-4]))
         
-    d.set("lock scalelimits  %s"%(ll[1]))
-    if ll[2] == 'no':
-        d.set("lock crosshair %s"%(ll[2]))
-    else:
-        d.set("lock crosshair physical")
-    d.set("lock smooth  %s"%(ll[3]))
-    d.set("lock colorbar  %s"%(ll[4]))
+    d.set("lock scalelimits  %s"%(ll[-3]))
+#    if ll[2] == 'no':
+#    else:
+#        d.set("lock crosshair physical")
+    d.set("lock smooth  %s"%(ll[-2]))
+    d.set("lock colorbar  %s"%(ll[-1]))
 
     return
 
@@ -1001,24 +1001,26 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
 
 
 
-def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test",text=0, form='circle', color='green', config=my_conf):
+def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test",text=0, form='circle', color='green', config=my_conf,DS9_offset=[1,1],system='image'):
     """Returns and possibly save DS9 region (circles) around sources with a given radius
     """
     regions = """
         # Region file format: DS9 version 4.1
         global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
-        image
-        """
+        %s
+        """%(system)
+    if system == 'fk5':
+        DS9_offset=[0,0]
     #print ('form = ' + form )
     if form != 'ellipse':
-        if type(radius) == int:
+        if (type(radius) == int) or (type(radius) == float) :
             r1, r2 = radius, radius
         else:
             r1 , r2 = radius
         if form == 'box':
-            rest = ',%.2f,%.2f,%.2f) # color=%s'%(r1,r2,0,color)
+            rest = ',%.5f,%.5f,%.5f) # color=%s'%(r1,r2,0,color)
         if form == 'circle':
-            rest = ',%.2f) # color=%s'%(r1,color)
+            rest = ',%.5f) # color=%s'%(r1,color)
         if form == 'bpanda':
             rest = ',0,360,4,0.1,0.1,%.2f,%.2f,1,0) # color=%s'%(r1,2*r1,color)
         if form == 'annulus':
@@ -1029,7 +1031,7 @@ def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test
         for i, x, y in zip(np.arange(len(xim)),xim, yim):
             if form == '# text':
                 rest = ') color=%s text={%s}'%(color,text[i])          #regions += """\ncircle({},{},{})""".format(posx, posy, radius)
-            regions +="""\n%s(%.2f,%.2f"""%(form,x+1,y+1) + rest
+            regions +="""\n%s(%.5f,%.5f"""%(form,x+DS9_offset[0],y+DS9_offset[1]) + rest
         
         
         
@@ -3356,12 +3358,12 @@ def PlotArea3D(xpapoint):
     
     X,Y = np.indices(image.shape)
     x, y = image.shape
-    x,y = np.meshgrid(np.arange(x),np.arange(y),indexing='ij')
-    x, y = x.ravel(), y.ravel()
+    xm,ym = np.meshgrid(np.arange(x),np.arange(y),indexing='ij')
+    x, y = xm.ravel(), ym.ravel()
 #    pol = polyfit2d(np.arange(image.shape[1]), np.arange(image.shape[0]), image, [5,5])
     #imager = image.ravel()
     if log:
-        image = np.log10(image - image.min() +1)
+        image = np.log10(image - np.nanmin(image) +1)
         
     max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), image.max()-image.min()]).max() / 2.0
     #mid_x = (X.max()+X.min()) * 0.5;mid_y = (Y.max()+Y.min()) * 0.5
@@ -3371,17 +3373,20 @@ def PlotArea3D(xpapoint):
     fig = plt.figure()
     ax = fig.gca(projection='3d', adjustable='box')
     #ax.set_aspect('equal')
-
-    ax.scatter(X, Y, image, c='r', s=200/len(x))#1.1)#, cstride=1, alpha=0.2)
-    ax.plot_surface(X, Y, image,rstride=1, cstride=1, shade=True, alpha=0.2)#, cstride=1, alpha=0.2)
+    X1 = np.reshape(xm, -1)
+    Y1 = np.reshape(ym, -1)
+    Z1 = np.reshape(image, -1)
+    ax.scatter(X1, Y1, Z1, c='r', s=200/len(x))#1.1)#, cstride=1, alpha=0.2)
+    #ax.plot_trisurf(X1, Y1, Z1, cmap='twilight_shifted',vmin=np.nanmin(image),vmax=np.nanmax(image), shade=True, alpha=0.8)
+    ax.plot_surface(X, Y, image, cmap='twilight_shifted',vmin=np.nanmin(image),vmax=np.nanmax(image), shade=True, alpha=0.7)#, cstride=1, alpha=0.2)
     #coeff = polyfit2d(x, y, imager, [4,4])
     #ax.plot_surface(X, Y, popol2D(x, y , coeff).reshape(X.shape) ,rstride=1, cstride=1, shade=True)#,  linewidth=0)
     plt.title('3D plot - %s - area = %s'%(os.path.basename(filename),area))
     plt.xlabel('X')
     plt.ylabel('Y')
     print(image)
-    print(0.9 * np.nanmin(image), 1.1 * np.nanmax(image))
-    ax.set_zlim((0.9 * np.nanmin(image), 1.1 * np.nanmax(image)))
+    #print(0.9 * np.nanmin(image[np.isfinite(image)]), 1.1 * np.nanmax(image[np.isfinite(image)]))
+    ax.set_zlim((0.9 * np.nanmin(image[np.isfinite(image)]), 1.1 * np.nanmax(image[np.isfinite(image)])))
     #ax.set_xlim(mid_x - max_range, mid_x + max_range)
     #ax.set_ylim(mid_y - max_range, mid_y + max_range)
     set_axes_equal(ax)
@@ -6531,10 +6536,16 @@ def DS9removeCRtails2(xpapoint,filen=None, length=20, config=my_conf):
 
 
 
-def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None):
+def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None,system='image'):
     """
     """
+    from astropy.wcs import WCS
+
+#    cat = Table.read('/Users/Vincent/Documents/Work/Thibault/UV_CLAUDS_HSC_s16a_uddd_deep_COSMOS_kNNZP_MixPHZ_PHYSPARAM_masked.fits')
+#    x = 'RA' 
+#    y = 'DEC' 
     import astropy
+    from astropy.io import fits
     from astropy.table import Table
     if xpapoint is not None:
         d = DS9(xpapoint)
@@ -6553,14 +6564,36 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
     if (ID is None) & (sys.argv[5] != '-'):
         ID = sys.argv[5] 
 
-    form = sys.argv[-2] 
-    size = sys.argv[-1] 
-
-    print(cat)
+    form = sys.argv[-3] 
+    size = sys.argv[-2] 
+    wcs = bool(int(sys.argv[-1] ))
+    
+    if wcs:
+        filename = getfilename(d)
+        a = fits.getheader(filename)
+        wcs=WCS(a)
+        corners = [#wcs.pixel_to_world(0,a['NAXIS2']), 
+                   wcs.pixel_to_world(0,a['NAXIS1']), 
+                   #wcs.pixel_to_world(a['NAXIS1'],0), 
+                   wcs.pixel_to_world(a['NAXIS2'],0), 
+                   wcs.pixel_to_world(a['NAXIS1'],a['NAXIS2']), 
+                   wcs.pixel_to_world(0,0)]
+        ra_max = max([corner.ra.deg for corner in corners])
+        ra_min = min([corner.ra.deg for corner in corners])
+        dec_max = max([corner.dec.deg for corner in corners])
+        dec_min = min([corner.dec.deg for corner in corners])
+        cat = cat[(cat[x]<ra_max) & (cat[x]>ra_min) & (cat[y]<dec_max) & (cat[y]>dec_min)]
+        d.set('regions system wcs')
+        d.set('regions sky fk5')
+        d.set('regions skyformat degrees')
+        system='fk5'
+        size=float(size)/3600
+        
+    print(cat[x,y])
     if (sys.argv[5] == '-') & (ID is None):
-        create_DS9regions2(cat[x],cat[y], radius=int(size), form = form, save=True,color = 'yellow', savename='/tmp/centers')
+        create_DS9regions2(cat[x],cat[y], radius=float(size), form = form, save=True,color = 'yellow', savename='/tmp/centers', system=system)
     else:
-        create_DS9regions([cat[x]],[cat[y]], radius=int(size), form = [form],save=True,color = ['yellow'], ID=[np.round(np.array(cat[ID], dtype=float),1)],savename='/tmp/centers')
+        create_DS9regions([cat[x]],[cat[y]], radius=float(size), form = [form],save=True,color = ['yellow'], ID=[np.round(np.array(cat[ID], dtype=float),1)],savename='/tmp/centers', system=system)
    
     if xpapoint is not None:
         d.set('regions /tmp/centers.reg')    
@@ -9137,7 +9170,17 @@ def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
         
     for filename in path:
         print(filename)
-        result, name = ApplyTrimming(filename, area=area, all_ext=False)
+        if 'calexp' in filename:
+            print('CLAUDS')
+            result, name = cropCLAUDS(path=filename, area=area, all_ext=False)
+        else:
+            result, name = ApplyTrimming(filename, area=area, all_ext=False)
+#        try:
+#            result, name = ApplyTrimming(filename, area=area, all_ext=False)
+#        except:
+#            print('CLAUDS')
+#            result, name = cropCLAUDS(path=filename, area=area, all_ext=False)
+            
     print(name)
     if len(path) < 2:
         d.set('frame new')
@@ -9145,6 +9188,44 @@ def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
         d.set("file %s" %(name))  
         d.set('file ' + name)  
     return
+
+
+def cropCLAUDS(path='/Users/Vincent/Documents/Work/sextractor/calexp/calexp-HSC-I-9813-2,4.fits',area=[0,100,0,100], all_ext=False):
+    from astropy.io import fits
+    from astropy.nddata import Cutout2D
+    from astropy.wcs import WCS
+    from astropy.io.fits import ImageHDU
+    a = fits.open(path)
+    size = np.array([area[1]-area[0],area[3]-area[2]])
+    position = (int((area[2]+area[3])/2),int((area[1]+area[0])/2))
+    print(position)
+    print(size)
+    for i in range(4):
+        print(i)
+        try:    
+            di = Cutout2D(a[i].data, position=position,size=size,wcs=WCS(a[i].header))
+            if i ==0:
+                a[i] = fits.PrimaryHDU(data=di.data, header=di.wcs.to_header())
+            else:
+                a[i] = ImageHDU(data=di.data, header=di.wcs.to_header())
+        except (ValueError,IndexError) as e:
+            print(i,e)
+            pass
+#    d1 = Cutout2D(a[1].data, position=position,size=size,wcs=WCS(a[1].header))
+#    d2 = Cutout2D(a[2].data, position=position,size=size,wcs=WCS(a[2].header))
+#    d3 = Cutout2D(a[3].data, position=position,size=size,wcs=WCS(a[3].header))
+#    a[1] = ImageHDU(data=d1.data, header=d1.wcs.to_header())
+#    a[2] = ImageHDU(data=d2.data, header=d2.wcs.to_header())
+#    a[3] = ImageHDU(data=d3.data, header=d3.wcs.to_header())
+#    a[3] = ImageHDU(data=d3.data, header=d3.wcs.to_header())
+#    d0 = Cutout2D(a[0].data, position=position,size=size,wcs=WCS(a[0].header))
+#    hdu = fits.PrimaryHDU(d0.data)
+#    hdu.header+=d0.wcs.to_header()
+#    a[0] = ImageHDU(data=d0.data)
+#    a[0] = fits.PrimaryHDU(data=d0.data, header=d0.wcs.to_header())
+    a.writeto(path[:-5] + '_trim.fits',overwrite=True)
+    return a, path[:-5] + '_trim.fits'
+
 
 def ApplyTrimming(path, area=[0,-0,1053,2133], config=my_conf, all_ext=False):
     """Apply overscan correction in the specified region, given the two overscann areas
@@ -12229,7 +12310,7 @@ def DS9CreateDetectionImages(xpapoint):
     for path in paths:
         createDetectionImages(path, U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks, corr=corr)
     return 
-def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=True, Yvircam=False, Us=False, H=False, J=False, Ks=False, corr=True):
+def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=True, Yvircam=False, Us=False, H=False, J=False, Ks=False, corr=True, remove=True):
     #UGRIZY(HSC)Ks
     from astropy.io import fits
     dn = os.path.dirname(path)
@@ -12242,6 +12323,9 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=Tru
     print('Bands to use : ', bands)
     band_ims = []
     if os.path.isfile(name) is False:
+        
+        
+        print(os.path.join(dn, fn[:7] + '*' + fn[-14:]))
         for file in glob.glob(os.path.join(dn, fn[:7] + '*' + fn[-14:])):
             band_im = '-'.join(file.split('-')[1:3])
             print(band_im)    
@@ -12259,8 +12343,9 @@ def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=Tru
         fits.setval(name, 'VAR_CORR', value = corr, comment = 'Rescaling factor for variance map')
         fits.setval(name, 'BANDS', value = ' - '.join(band_ims), comment = 'Band used for detection image')
         print('Detection image %s created!'%(name))
-        for file in glob.glob(os.path.dirname(dn) + '/tmp/' + '-*'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-')[:-5]+'*.fits' ):
-            os.remove(file)
+        if remove:
+            for file in glob.glob(os.path.dirname(dn) + '/tmp/' + '-*'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-')[:-5]+'*.fits' ):
+                os.remove(file)
     else:
         print('Detection image %s already exists!'%(name))
     return
@@ -12463,6 +12548,8 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     if os.path.isfile(CATALOG_NAME):
         from astropy.table import vstack
         cat = Table.read(CATALOG_NAME)
+        cat= CleanSextractorCatalog(cat)#[:int(sys.argv[-1])]
+
         print(CATALOG_NAME)
         cat1 = cat[cat['MAG_AUTO']>=cat['MAG_ISO']]
         cat2 = cat[cat['MAG_AUTO']<cat['MAG_ISO']]
@@ -13728,9 +13815,13 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
         dn = os.path.dirname(filename)
         fn = os.path.basename(filename)
         
+        folder_name = 'DetectionImages'
         if len(sys.argv)< 35:
             print('Detection image not given, taking what is in DetectionImages')
-            folder_name = 'DetectionImages'
+            DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
+            CATALOG_NAME = os.path.join(os.path.dirname(DETECTION_IMAGE),'Photometric_Catalogs',fn[:-5].replace(',','-')+'_cat.fits')            
+        elif os.path.isfile(sys.argv[-35-5]) is False:
+            print('Detection image not given, taking what is in DetectionImages')
             DETECTION_IMAGE = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
             CATALOG_NAME = os.path.join(os.path.dirname(DETECTION_IMAGE),'Photometric_Catalogs',fn[:-5].replace(',','-')+'_cat.fits')
         elif os.path.isfile(sys.argv[-35-5]):        
@@ -13798,7 +13889,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
             os.path.join(param_dir,'gauss_4.0_7x7.conv'),64, 0.0003 ,'Y', '1.0',
             'CORRECT', 'NONE,MAP_VAR', 'NONE,'+VAR_IMAGE, '6,12,18', '2.5,4.0', '2.0,4.0',
             '0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95', MAG_ZEROPOINT_real, 0, 0.8,
-            os.path.join(param_dir,'default.nnw'), 'AUTO', 64, '8,8', 'LOCAL', 24, 0.0,
+            os.path.join(param_dir,'default.nnw'), 'AUTO', 64, '3', 'LOCAL', 24, 0.0,
             'NONE', 'check.fits'] 
     
     
@@ -13952,6 +14043,9 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
 #            #plt.show()
                 
     return
+def CleanSextractorCatalog(cat):
+    mask = (cat['A_IMAGE']<20) & (cat['B_IMAGE']<20) & (cat['MAG_AUTO']<40)
+    return cat[mask]
 
 
 def SextractorHSC_CLAUDS(d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, filename, param_names,FLAG_IMAGE, params, folder_name, Plot=False):
@@ -13986,7 +14080,7 @@ def SextractorHSC_CLAUDS(d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, file
         print(datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S"))
         
         #cat.sort('MAG_AUTO')
-        cat_ = cat#[:int(sys.argv[-1])]
+        cat_ = CleanSextractorCatalog(cat)#[:int(sys.argv[-1])]
         
         ########cat = cat[cat['MAGERR_AUTO']<float(sys.argv[-1])]
         cat1 = cat_[cat_['MAG_AUTO']>=cat_['MAG_ISO']]
@@ -13996,7 +14090,7 @@ def SextractorHSC_CLAUDS(d, DETECTION_IMAGE,CATALOG_NAME, PHOTOMETRIC_NAME, file
         #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
         savename = os.path.join(os.path.dirname(DETECTION_IMAGE),'reg', fn.replace(',','-')[:-5])
         create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=savename ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-        #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+        #create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=savename ,ID=[np.array(cat3['A_IMAGE'],dtype=int)])
         d.set('regions ' + savename + '.reg')
 #    
 #        d.set('pan to 2000 2000 image')

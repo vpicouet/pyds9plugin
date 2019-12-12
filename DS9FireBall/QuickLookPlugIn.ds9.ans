@@ -47,7 +47,7 @@ hmenu Generic functions
 		Import regions from catalog 
 		*
 		menu
-		DS9Utils $xpa_method DS9Catalog2Region  $param(Catalog-to-region); "$path"  $fields $name $form $size   2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method DS9Catalog2Region  $param(Catalog-to-region); "$path"  $fields $name $form $size $wcs   2>&1 | tee -a /tmp/DS9Utils.log
 
 
 
@@ -96,12 +96,12 @@ hmenu Generic functions
 		Lock/Unlock images (L)
 		*
 		menu
-		DS9Utils $xpa_method lock  $param(Lock); $var1 $var2 $var3 $var4 $var5  2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method lock  $param(Lock); $var1 $var3 $var2  $var4 $var5  2>&1 | tee -a /tmp/DS9Utils.log
 
 		Lock/Unlock images Key
 		*
 		bind L
-		DS9Utils $xpa_method lock $param(Lock); $var1 $var2 $var3 $var4 $var5  2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method lock $param(Lock); $var1 $var3 $var2  $var4 $var5  2>&1 | tee -a /tmp/DS9Utils.log
 	endhmenu
 
 
@@ -307,6 +307,10 @@ hmenu Astromatic
 	menu
 	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME  $REGION_THRESHOLD  2>&1 | tee -a /tmp/DS9Utils.log
 
+	SEXTRACTOR basics parameters
+	*
+	menu
+	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR-BASICS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME  $REGION_THRESHOLD  2>&1 | tee -a /tmp/DS9Utils.log
 
 
 
@@ -1229,9 +1233,9 @@ endparam
 
 
 param Lock
-var1 checkbox {frame} 1 {frame}
+var1 menu {frame} image|none|wcs|physical {frame}
+var3 menu {crosshair} image|none|wcs|physical {crosshair}
 var2 checkbox {scalelimits} 1 {scalelimits}
-var3 checkbox {crosshair} 1 {crosshair}
 var4 checkbox {smooth} 0 {smooth} 
 var5 checkbox {colorbar} 1 {colorbar} 
 endparam
@@ -1452,6 +1456,7 @@ fields entry {x,y fields} - {Name of the x and y fields: ex = xcentroid,ycentroi
 name entry {field name} - {field to put in region name: ex = magnitude, name, etc}
 form menu {form of the region} circle|box {fForm of the regions to display}
 size entry {Regions' size} 10 {Size in pixel}
+wcs checkbox {WCS} 0 {FCheck if the catalog fields are in degree-WCS, then radius must be in arc-second}
 endparam
 
 
@@ -1501,7 +1506,7 @@ STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibrat
 
 BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
 BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
-BACK_FILTERSIZE entry {BACK_FILTERSIZE} 8,8 {Background filter: <size> or <width>,<height>}
+BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Background filter: <size> or <width>,<height>}
 BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
 BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
@@ -1522,6 +1527,68 @@ endparam
 
 
 
+
+
+param SEXTRACTOR-BASICS
+DETECTION_IMAGE entry {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using ../DetectionImages/}
+CATALOG_NAME entry {CATALOG_NAME} - {Name of the output catalog. eg /tmp/catalog.fits, if -, saved in ../DetectionImages/Photometric_Catalogs/ }
+CATALOG_TYPE menu {CATALOG_TYPE} ASCII_HEAD|FITS_1.0|NONE|ASCII|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
+PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
+
+DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
+DETECT_MINAREA entry {DETECT_MINAREA} 3 {}
+#DETECT_MAXAREA entry {DETECT_MAXAREA} - {}
+THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
+DETECT_THRESH entry {DETECT_THRESH} 1.5 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
+ANALYSIS_THRESH entry {ANALYSIS_THRESH} 1.5 {sigmas or threshold,ZP in mag.arcsec-2}
+
+FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
+FILT_NAME menu {FILTER_NAME} default.conv|gauss_4.0_7x7.conv|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/}
+
+DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 32 {Number of deblending sub-thresholds}
+DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.005 {Minimum contrast parameter for deblending}
+
+CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
+CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency}
+MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
+
+WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
+WEIGHT_IMAGE entry {WEIGHT_IMAGE} - {}
+#RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 0 {}#FLAG_IMAGE entry {FLAG_IMAGE} - {}#FLAG_TYPE menu {FLAG_TYPE} MAX|MIN|? {}
+
+PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
+PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,3.5 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
+PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,3.5 {MAG_PETRO parameters: <Petrosian_fact>}
+PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95 {flux fraction[s] used for FLUX_RADIUS}
+#SATUR_LEVEL entry {SATUR_LEVEL} - {level (in ADUs) at which arises saturation}
+MAG_ZEROPOINT entry {MAG_ZEROPOINT} 30.0 {magnitude zero-point}
+#MAG_GAMMA entry {MAG_GAMMA} - {gamma of emulsion (for photographic scans)}
+#GAIN entry {GAIN} - {detector gain in e-/ADU}
+PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
+
+SEEING_FWHM entry {SEEING_FWHM} 1.2 {stellar FWHM in arcsec}
+STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
+
+BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
+BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
+BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Background filter: <size> or <width>,<height>}
+BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
+BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
+BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
+
+CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
+CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
+
+#MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
+#MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
+#MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
+
+#VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {}
+#WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
+#XML_NAME entry {XML_NAME} sex.xml {Filename for XML output}
+REGION_THRESHOLD entry {DS9 Regions Mag} 1000 {Min,max observed magnitude of the galaxy reghions to display}
+
+endparam
 
 
 
@@ -1574,7 +1641,7 @@ STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibrat
 
 BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
 BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
-BACK_FILTERSIZE entry {BACK_FILTERSIZE} 8,8 {Background filter: <size> or <width>,<height>}
+BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Background filter: <size> or <width>,<height>}
 BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
 BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
