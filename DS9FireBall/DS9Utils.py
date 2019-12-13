@@ -11901,12 +11901,13 @@ def galex2Ph_s_A(f200=2.9e-4, atm=0.37, throughput=0.13, QE=0.5, area=7854):
 
 def FB_ADU2Flux(ADU, EMgain=1370, ConversionGain=1.8, dispersion=46.6/10):#old emgain=453
     """
-    Convert FB2 ADUs/sec into e- per seconds per angstrom
+    Convert FB2 ADUs/sec into photons per seconds per angstrom
     print((galex2Ph_s_A()-FB_ADU2Flux(300/50))/galex2Ph_s_A())
     """
     Flux = ADU * ConversionGain * dispersion / EMgain
     return Flux
 
+#242/50/1370
 #def(3600*np.arctan(0.010/500)*180/np.pi):
     
 
@@ -12933,8 +12934,8 @@ def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U', fit=True):
     info_swml = glob.glob(os.path.join(general_path , '*SWML*.info'))[0]
     info_vmax = glob.glob(os.path.join(general_path , '*VMAX*.info'))[0]
     zs = np.genfromtxt(info_vmax, skip_header=15, max_rows=8,usecols=(1,2),delimiter='  ')#, unpack=True)
-    paths_swml = glob.glob(general_path + '/*SWML*.dat');paths_swml.sort()
-    paths_vmax = glob.glob(general_path + '/*VMAX*.dat');paths_vmax.sort()
+    paths_swml = glob.glob(general_path + '/*SWML*.dat*');paths_swml.sort()
+    paths_vmax = glob.glob(general_path + '/*VMAX*.dat*');paths_vmax.sort()
     #paths_swml.sort(key = lambda s: len(s))
     #paths_vmax.sort(key = lambda s: len(s))
     fig, axes = plt.subplots(int(len(zs)/3),3, figsize=(15,10),sharex=True, sharey=True)
@@ -12972,8 +12973,8 @@ def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat
     else:
         LIRrod_0 = LF_rod0['col1']
         phirod_0 = LF_rod0['col2']
-        errmrod_0 = LF_rod0['col3']
-        errprod_0 = LF_rod0['col4']
+        errmrod_0 = LF_rod0['col4']
+        errprod_0 = LF_rod0['col3']
         mask = True#LIRrod_0<mag_lim
         if fit:
             coeffrod_0 , chirod_0 = pso(likelihood,do,up,args=[LIRrod_0[mask],phirod_0[mask],errmrod_0[mask]],maxiter=500)

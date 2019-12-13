@@ -38,7 +38,7 @@ requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
 entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 
-data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*"]}
+data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*","doc/*"]}
 
 
 #version = '2.87dev'
@@ -46,7 +46,7 @@ data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "S
 
 MAJOR = '2'
 MINOR = '9'
-MICRO = '0dev1'
+MICRO = '0dev2'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
