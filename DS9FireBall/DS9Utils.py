@@ -32,8 +32,8 @@ print('Python version = ', sys.version)
 
 
 #import matplotlib; matplotlib.use('TkAgg')  
-import matplotlib
-matplotlib.use('TkAgg')
+#import matplotlib
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 #import matplotlib.pyplot as plt
@@ -91,6 +91,7 @@ def CreateFolders(DS9_BackUp_path=DS9_BackUp_path):
 def LoadDS9QuickLookPlugin():
     try:
         AnsDS9path = resource_filename('DS9FireBall','QuickLookPlugIn.ds9.ans')
+        help_path = resource_filename('DS9FireBall','doc/ref/index.html')
     except:
         #sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
         print(__file__)
@@ -113,8 +114,17 @@ def LoadDS9QuickLookPlugin():
         else:
             print(bcolors.BLACK_RED + 'To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
             print(bcolors.BLACK_RED + 'And switch on Autoreload' + bcolors.END)
+        bash_file = os.path.join(os.environ['HOME'], '.bachrc')
+        if os.path.isfile(bash_file):
+                if 'DS9FireBall' not in open(bash_file).read():
+                    var = input("Do you want to add DS9 Plug-in help path to %s to access it from ds9? [y]/n"%(bash_file))
+                    if  var.lower() != 'n':
+                        ds9file = open(bash_file,'a') 
+                        ds9file.write('export DS9Function="%s"'%(help_path))
+                        ds9file.close()                     
+            
         #sys.exit()
-
+        
     return
 
 def PresentPlugIn():
@@ -446,323 +456,214 @@ def create_repositories(path, field, values):
 #print('/tmp/%s_5s')
 #print('/'.join(fields))
 #path = ''
-def CatalogForGazpar(path):
-    from astropy.table import Table, Column
-    #path='/Users/Vincent/Documents/Work/sextractorCatalogs/subcats/3_with_ext/TotalMergedCatalog_9813_corr_ugrizy_only_mag.in'
-    a = Table.read(path, format='ascii')
-    a.remove_column('CONTEXT')
-    fl = np.ones(len(a))
-    fl[a['ZSPEC']>0] = 0 
-    a.add_column(Column(name='fl', data=fl), index=28)
-    a.remove_columns(['WEIGHT','SCALING_FACTOR'])
-    a.rename_column('RA','alpha')
-    a.rename_column('DEC','delta')
-    a['mask']=0
     
-    
-    a =         a['ID',
-                 'TOTAL_MAG_MegaCam_u_ext',
-                 'MAGERR_ISO_MegaCam_u',
-                 'TOTAL_MAG_MegaCam_uS_ext',
-                 'MAGERR_ISO_MegaCam_uS',
-                 'TOTAL_MAG_HSC_G_ext',
-                 'MAGERR_ISO_HSC_G',
-                 'TOTAL_MAG_HSC_R_ext',
-                 'MAGERR_ISO_HSC_R',
-                 'TOTAL_MAG_HSC_I_ext',
-                 'MAGERR_ISO_HSC_I',
-                 'TOTAL_MAG_HSC_Z_ext',
-                 'MAGERR_ISO_HSC_Z',
-                 'TOTAL_MAG_HSC_Y_ext',
-                 'MAGERR_ISO_HSC_Y',
-                 'TOTAL_MAG_VIRCAM_Y_ext',
-                 'MAGERR_ISO_VIRCAM_Y',
-                 'TOTAL_MAG_VIRCAM_J_ext',
-                 'MAGERR_ISO_VIRCAM_J',
-                 'TOTAL_MAG_VIRCAM_H_ext',
-                 'MAGERR_ISO_VIRCAM_H',
-                 'TOTAL_MAG_VIRCAM_Ks_ext',
-                 'MAGERR_ISO_VIRCAM_Ks',
-                 'TOTAL_MAG_NUV_ext',
-                 'MAGERR_ISO_NUV',
-                 'TOTAL_MAG_FUV_ext',
-                 'MAGERR_ISO_FUV',
-                 'ZSPEC',
-                 'fl',
-                 'alpha',
-                 'delta',
-                 'mask']
-    
-    a.write(path[:-3]+'_gazpar.in', format='ascii',overwrite=True)
-    return
-    
-def DS9createSubset_old(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/', config=my_conf):
-    """
-    """
-    from astropy.table import Table
-    try:
-        cat, number, gain, folder, exp, temp = sys.argv[3:3+6]
-        gain, folder, exp, temp = np.array(np.array([gain, folder, exp, temp],dtype=int),dtype=bool)
-        print('cat, gain, folder, exp, temp = ',cat, gain, folder, exp, temp)
-    except:
-        pass
-    
+def roundPartial (value, rounding, resolution):
+    return np.round(value / resolution,rounding) * resolution
 
 
-    try:
-        cat = Table.read(cat)
-    except:
-        print('Impossible to open table, verify your path.')
-
-
-
-    #vgain, vdate, vexp, vtemp = sys.argv[-4:]
-    fields = np.array(sys.argv[-10:-5], dtype=str)
-    values = np.array(sys.argv[-5:], dtype=str)
-    f1, f2, f3, f4, f5 = fields
-    v1, v2, v3, v4, v5 = values
-    #print(fields)
-    #print(values)
-    mask1 = (values!='-')
-    mask2 = [field in cat.colnames for field in fields]
-    #np.ma.mask_or(np.array([False]),np.array([True]))
-    mask = np.logical_and(mask1, mask2)
-    #print(mask1,mask2,mask)
-    
-    print('SELECTED FIELD %s => %s'%(fields,fields[mask]))
-    print('SELECTED values %s => %s'%(values,values[mask]))
-
-    
+def TakeAverage(x,y,z,bins=50, output='scatter', Plot=False):
+#    data1, a, b, p = plt.hist2d(cat['x'],cat['y'],weights=cat['z'],bins=[bins,bins])
+#    data2, a, b, p  = plt.hist2d(cat['x'],cat['y'],bins=[bins,bins])
+    data1, a, b = np.histogram2d(x,y,weights=z,bins=[bins,bins])
+    data2, a, b  = np.histogram2d(x,y,bins=[bins,bins])
+    if output == 'scatter':
+        xm,ym = np.meshgrid(a,b,indexing='ij')
+        if Plot:
+            plt.scatter(xm[:-1,:-1].flatten(),ym[:-1,:-1].flatten(),c=(data1/data2).flatten())
+            plt.colorbar()            
+        return xm[:-1,:-1].flatten(),ym[:-1,:-1].flatten(),(data1/data2).flatten()
+    if output == 'image':
+        if Plot:
+           plt.imshow((data1/data2)[:,::-1].T, extent=[a.min(),a.max(),b.min(),b.max()], aspect='auto');plt.colorbar()
+           plt.show()
+        return (data1/data2)[:,::-1].T, a, b 
 
 
 
 
-    print(cat.colnames)
-    print(cat['FPATH'])
-    
-    #fieldTemp = my_conf.temperature[0]#'EMCCDBAC'
-    #fieldExp = f2#my_conf.exptime[0]
-    #fieldGain = f3#my_conf.gain[0]
-    #fieldDate = f4#'date'
-    #lastfield = f5#'date'
-#
-#    v1 = Transform(v1)#Transform(vgain)
-#    #print(v1)
-#    v2 = Transform(v2)#Transform(vexp)
-#    v3 = Transform(v3)#Transform(vtemp)
-#    v4 = Transform(v4)#Transform(vdate)
-#    v5 = Transform(v5)#Transform(vdate)
-    new_values = [Transform(value) for value in values[mask]]
-    new_fields = fields[mask]
-    
-    
-    
-    
-    
+def fit_quadratic_curve(x,y,z,sigma_z=None,order=2,Plot=True,n=100, ax=None,c='r',title=None):
+    import matplotlib.cm as cmx
+    from mpl_toolkits.mplot3d import axes3d
+    cm = plt.get_cmap('twilight_shifted')
+    cNorm = matplotlib.colors.Normalize(vmin=1, vmax=4)
+    scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=cm)
 
-#    index_hist = ReturnIndex(t, fields=[fieldGain,fieldExp, fieldTemp, fieldDate],values=[EMGAIN,EXPTIME,TEMP, date])
-    index_hist = ReturnIndex(t, fields=new_fields, values=new_values)
+    if sigma_z is None:
+        index = np.isfinite(z) 
+#        data = np.array(zip(x[index],y[index],z[index]))  
+        data = np.array([x[index],y[index],z[index]]).T
+    else:
+        index = (np.isfinite(z))  & (np.isfinite(sigma_z)) 
+        data = np.array(zip(x[index],y[index],z[index]/sigma_z[index]))
+  # regular grid covering the domain of the data
+    X,Y = np.meshgrid(np.linspace(x.min(), x.max(), n), np.linspace(y.min(), y.max(), n))
+    XX = X.flatten()
+    YY = Y.flatten()
     
-    
-    
-
-    
-    for field in new_fields:
-        if (type(cat[field][0]) == float) or (type(cat[field][0]) == np.float64):
-            cat[field] =  np.round(cat[field].astype(float),1)
+    order = order  # 1: linear, 2: quadratic
+    if order == 1:
+        # best-fit linear plane
+        if sigma_z is None:
+            A = np.c_[data[:,0], data[:,1], np.ones(data.shape[0])]
+        else:
+            A = np.c_[data[:,0], data[:,1], np.ones(data.shape[0])] / sigma_z[:,np.newaxis]
             
+        C,_,_,_ = linalg.lstsq(A, data[:,2])    # coefficients        
+        # evaluate it on grid
+        Z = C[0]*X + C[1]*Y + C[2]        
+        # or expressed using matrix/vector product
+        #Z = np.dot(np.c_[XX, YY, np.ones(XX.shape)], C).reshape(X.shape)    
+    elif order == 2:
+        if sigma_z is None:
+        # best-fit quadratic curve
+            A = np.c_[np.ones(data.shape[0]), data[:,:2], np.prod(data[:,:2], axis=1), data[:,:2]**2]
+        else:
+        # best-fit quadratic curve
+            A = np.c_[np.ones(data.shape[0]), data[:,:2], np.prod(data[:,:2], axis=1), (data[:,:2]**2)] / sigma_z[:,np.newaxis]
+        C,_,_,_ = linalg.lstsq(A, data[:,2])        
+        # evaluate it on a grid
+        Z = np.dot(np.c_[np.ones(XX.shape), XX, YY, XX*YY, XX**2, YY**2], C).reshape(X.shape)
+    if Plot:
+        if ax is None:
+            fig = plt.figure(figsize=(15,10))#(10,8)
+            ax = fig.gca(projection='3d')
+        #ax.plot_surface(X, Y, Z, rstride=1, cstride=1, alpha=0.2,color = c)
+        ax.contour3D(X, Y, Z, 55, cmap='twilight_shifted')
+        ax.scatter(data[:,0], data[:,1], z[index], s=20, c=scalarMap.to_rgba(z[index]))# cmap='twilight_shifted',vmin=1,vmax=4)
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        ax.set_zlabel('Z')
+        scalarMap.set_array(z[index])
+        fig.colorbar(scalarMap,fraction=0.016, pad=-0.2)
+        #ax.axis('equal')
+        ax.axis('tight')
+        if title is not None:
+            ax.set_title(title)
+    else:
+        ax=1
+    return X,Y,Z, ax, C
+
 
 
     
-    cat = cat[index_hist]
-
-#    values_bool = []
-#    bools = [gain, folder, exp, temp]
-#    fields = [my_conf.gain[0], 'FPATH', cat[my_conf.exptime[0]], my_conf.temperature[0]]
-#    for booolean, field in zip(bools,fields):
-#        if booolean:
-#            if type(np.unique(cat[field])) == str:
-#                values_bool.append([np.unique(cat[field])])
-#            else:
-#                values_bool.append(np.unique(cat[field]))
-#        else:
-#            values_bool.append(cat[field])
-
-
-    fieldExp, fieldGain, fieldTemp = my_conf.exptime[0], my_conf.gain[0], my_conf.temperature[0]
-    gains = np.round(cat[my_conf.gain[0]].astype(float),1)
-    fpath = cat['FPATH']
-    exps = np.round(cat[my_conf.exptime[0]].astype(float),1)
-    temps = np.round(cat[my_conf.temperature[0]].astype(float),1)
-    
-    
-    if gain:
-        gains = np.unique(gains)
-    if folder:
-        fpath = np.unique(fpath)
-        if type(fpath)==str: #for fpath that can be a string
-            fpath = [fpath] 
-    if exp:
-        exps = np.unique(exps)
-    if temp:
-        temps = np.unique(temps)
-
-        
-        
-        
-    path_date = dpath+datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
-    if not os.path.exists(path_date):
-        os.makedirs(path_date)       
-        
-
-    for path in np.unique(fpath):
-        gainsi = np.unique(cat[([path in cati['PATH'] for cati in cat]) ][fieldGain])
-        for gain in np.unique(gainsi):
-            expsi = np.unique(cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) ][fieldExp])
-            for exp in np.unique(expsi):
-
-                tempsi = np.unique(cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp)][fieldTemp])
-                tempsi = np.round(tempsi,1)
-                for temp in np.unique(tempsi):
-                    print('GAIN = %i, exposure  = %i, temp = %0.2f and path=%s'%(float(gain), float(exp), float(temp), path))
-                    files = cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp) & (np.round(cat[fieldTemp].astype(float),1) == temp) ]['PATH']
-                    folders = cat[([path in cati['PATH'] for cati in cat])  & (cat[fieldGain] == gain) & (cat[fieldExp] == exp) & (np.round(cat[fieldTemp].astype(float),1) == temp) ]['FPATH']
-                    if len(files) > 0:
-                        for folder,file in zip(folders[-int(number):], files[-int(number):]):
-                            try:
-                                os.makedirs(path_date+'/%s/%s'%(os.path.basename(os.path.dirname(folder)),os.path.basename(folder)))  
-                            except FileExistsError:
-                                pass
-                            print('Copying file',os.path.basename(file))
-                            symlink_force(file,path_date+'/%s/%s/%s'%(os.path.basename(os.path.dirname(folder)),os.path.basename(folder),os.path.basename(file)))
-    return
-
-
-
-def Transform(value):
-    print(value)
-    if value == '-':
-        result = None
-    elif len(value.split(',')) == 2:
-        n1, n2 = value.split(',')
-        n1, n2 = int(float(n1)), int(float(n2))
-        n1, n2 = np.min([n1,n2]), np.max([n1,n2])
-        result = n1, n2
-    elif (value.isdigit(), value[1:].isdigit()):
-        result = int(float(value))
-    elif len(value.split(',')) > 2:
-        result = list(np.array(np.array(value.split(','),dtype=float), dtype=int))
-    return result
-    
-
-#    
-#def DS9createSubset_old(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/'):
-#
+#def DS9createSubset_old(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/', config=my_conf):
 #    """
-#
 #    """
-#
 #    from astropy.table import Table
-#
 #    try:
-#
 #        cat, number, gain, folder, exp, temp = sys.argv[3:3+6]
-#
 #        gain, folder, exp, temp = np.array(np.array([gain, folder, exp, temp],dtype=int),dtype=bool)
-#
-#        print('gain, folder, exp, temp = ',gain, folder, exp, temp)
-#
+#        print('cat, gain, folder, exp, temp = ',cat, gain, folder, exp, temp)
 #    except:
-#
 #        pass
-#
 #    
 #
-#    vgain, vdate, vexp, vtemp = sys.argv[-4:]
-#
-#    print('vgain, vdate, vexp, vtemp =',vgain, vdate, vexp, vtemp)
 #
 #    try:
-#
 #        cat = Table.read(cat)
-#
 #    except:
-#
 #        print('Impossible to open table, verify your path.')
 #
-#    print(cat)
 #
-#    print(cat['FPATH'])
+#
+#    #vgain, vdate, vexp, vtemp = sys.argv[-4:]
+#    fields = np.array(sys.argv[-10:-5], dtype=str)
+#    values = np.array(sys.argv[-5:], dtype=str)
+#    f1, f2, f3, f4, f5 = fields
+#    v1, v2, v3, v4, v5 = values
+#    #print(fields)
+#    #print(values)
+#    mask1 = (values!='-')
+#    mask2 = [field in cat.colnames for field in fields]
+#    #np.ma.mask_or(np.array([False]),np.array([True]))
+#    mask = np.logical_and(mask1, mask2)
+#    #print(mask1,mask2,mask)
+#    
+#    print('SELECTED FIELD %s => %s'%(fields,fields[mask]))
+#    print('SELECTED values %s => %s'%(values,values[mask]))
 #
 #    
 #
-#    fieldTemp = 'EMCCDBAC'
 #
-#    fieldExp = 'EXPTIME'
 #
-#    fieldGain = 'EMGAIN'
 #
-#    fieldDate = 'date'
+#    print(cat.colnames)
+#    print(cat['FPATH'])
+#    
+#    #fieldTemp = my_conf.temperature[0]#'EMCCDBAC'
+#    #fieldExp = f2#my_conf.exptime[0]
+#    #fieldGain = f3#my_conf.gain[0]
+#    #fieldDate = f4#'date'
+#    #lastfield = f5#'date'
+##
+##    v1 = Transform(v1)#Transform(vgain)
+##    #print(v1)
+##    v2 = Transform(v2)#Transform(vexp)
+##    v3 = Transform(v3)#Transform(vtemp)
+##    v4 = Transform(v4)#Transform(vdate)
+##    v5 = Transform(v5)#Transform(vdate)
+#    new_values = [Transform(value) for value in values[mask]]
+#    new_fields = fields[mask]
+#    
+#    
+#    
+#    
+#    
 #
-#    EMGAIN = Transform(vgain)
+##    index_hist = ReturnIndex(t, fields=[fieldGain,fieldExp, fieldTemp, fieldDate],values=[EMGAIN,EXPTIME,TEMP, date])
+#    index_hist = ReturnIndex(t, fields=new_fields, values=new_values)
+#    
+#    
+#    
 #
-#    EXPTIME = Transform(vexp)
+#    
+#    for field in new_fields:
+#        if (type(cat[field][0]) == float) or (type(cat[field][0]) == np.float64):
+#            cat[field] =  np.round(cat[field].astype(float),1)
+#            
 #
-#    TEMP = Transform(vtemp)
 #
-#    date = Transform(vdate)
-#
-#    t=cat.copy()
-#
-#    index_hist = ReturnIndex(t, fields=[fieldGain,fieldExp, fieldTemp, fieldDate],values=[EMGAIN,EXPTIME,TEMP, date])
-#
+#    
 #    cat = cat[index_hist]
 #
-#    gains = cat[fieldGain]
+##    values_bool = []
+##    bools = [gain, folder, exp, temp]
+##    fields = [my_conf.gain[0], 'FPATH', cat[my_conf.exptime[0]], my_conf.temperature[0]]
+##    for booolean, field in zip(bools,fields):
+##        if booolean:
+##            if type(np.unique(cat[field])) == str:
+##                values_bool.append([np.unique(cat[field])])
+##            else:
+##                values_bool.append(np.unique(cat[field]))
+##        else:
+##            values_bool.append(cat[field])
 #
+#
+#    fieldExp, fieldGain, fieldTemp = my_conf.exptime[0], my_conf.gain[0], my_conf.temperature[0]
+#    gains = np.round(cat[my_conf.gain[0]].astype(float),1)
 #    fpath = cat['FPATH']
-#
-#    exps = cat[fieldExp]
-#
-#    temps = np.round(cat[fieldTemp].astype(float),1)
-#
+#    exps = np.round(cat[my_conf.exptime[0]].astype(float),1)
+#    temps = np.round(cat[my_conf.temperature[0]].astype(float),1)
+#    
+#    
 #    if gain:
-#
 #        gains = np.unique(gains)
-#
 #    if folder:
-#
 #        fpath = np.unique(fpath)
-#
-#        if type(fpath)==str:
-#
+#        if type(fpath)==str: #for fpath that can be a string
 #            fpath = [fpath] 
-#
 #    if exp:
-#
-#        exps = np.unique(cat[fieldExp])
-#
+#        exps = np.unique(exps)
 #    if temp:
-#
 #        temps = np.unique(temps)
 #
-#    path_date = dpath+datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
-#
-#    
-#
-#    if not os.path.exists(path_date):
-#
-#        os.makedirs(path_date)       
-#
 #        
-#
-#    print(fpath)
-#
-#    print(gains)
-#
-#    print(exps)
-#
-#    print(temps)
+#        
+#        
+#    path_date = dpath+datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
+#    if not os.path.exists(path_date):
+#        os.makedirs(path_date)       
+#        
 #
 #    for path in np.unique(fpath):
 #        gainsi = np.unique(cat[([path in cati['PATH'] for cati in cat]) ][fieldGain])
@@ -785,6 +686,24 @@ def Transform(value):
 #                            print('Copying file',os.path.basename(file))
 #                            symlink_force(file,path_date+'/%s/%s/%s'%(os.path.basename(os.path.dirname(folder)),os.path.basename(folder),os.path.basename(file)))
 #    return
+
+
+
+def Transform(value):
+    print(value)
+    if value == '-':
+        result = None
+    elif len(value.split(',')) == 2:
+        n1, n2 = value.split(',')
+        n1, n2 = int(float(n1)), int(float(n2))
+        n1, n2 = np.min([n1,n2]), np.max([n1,n2])
+        result = n1, n2
+    elif (value.isdigit(), value[1:].isdigit()):
+        result = int(float(value))
+    elif len(value.split(',')) > 2:
+        result = list(np.array(np.array(value.split(','),dtype=float), dtype=int))
+    return result
+    
 
 
 
@@ -2058,8 +1977,6 @@ def throughfocusWCS(center, files,x=None,
     from astropy.table import Table, vstack
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
-    #from .focustest import AnalyzeSpot
-    #from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     fwhm = []
     EE50 = []
@@ -2319,7 +2236,6 @@ def throughfocus2(center, files,x=np.linspace(11.95,14.45,11)[::-1][3:8],
     from astropy.io import fits
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
-    #from .focustest import estimateBackground
     from scipy.optimize import curve_fit
     from astropy.table import Table, vstack
     fwhm = []
@@ -2506,7 +2422,6 @@ def DS9throughfocus(xpapoint, Plot=True):
     # EE80
     # """
     from astropy.io import fits
-    #from .focustest import AnalyzeSpot
     
     print('''\n\n\n\n      START THROUGHFOCUS \n\n\n\n''')
     d = DS9(xpapoint)
@@ -2717,11 +2632,8 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   """Function used to plot the radial profile and the encircled energy of a spot,
   Latex is not necessary
   """
-  #from .focustest import  radial_profile_normalized
   import matplotlib; matplotlib.use('TkAgg')  
   import matplotlib.pyplot as plt
-  #from .focustest import ConvolveDiskGaus2D
-  #from .focustest import gausexp
   from scipy.optimize import curve_fit
   from scipy import interpolate
   rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, anisotrope=anisotrope, angle=angle, radius=radius, n=n, center_type=center_type, size=size)
@@ -3411,159 +3323,6 @@ def popol2D(x, y , coeff):
             fit += np.power(x,i) * np.power(y,j) * coeff[i,j] 
     return fit
 
-def ContinuumPhotometry_old(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_path, config=my_conf, axis='y', kernel=1, fwhm='', center=False, Type = None, n=4):
-    """Fit a gaussian
-    interger the flux on 1/e(max-min) and then add the few percent calculated by the gaussian at 1/e 
-    """
-    #from astropy.io import fits
-    import matplotlib; matplotlib.use('TkAgg')  
-    import matplotlib.pyplot as plt
-    from astropy.table import Table
-    from scipy.optimize import curve_fit
-    from astropy.io import fits
-#    from .focustest import Gaussian
-    if xpapoint is not None:
-        d = DS9(xpapoint)
-        filename = getfilename(d)
-        Type, axis, kernel, fwhm, center, test = sys.argv[-11:-5]
-        path = Charge_path_new(filename) if len(sys.argv) > 10 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-        if len(path) == 1:
-            plot_flag = True
-        else:
-            plot_flag = False
-        verboseprint('plot_flag = ', plot_flag, verbose=config.verbose)
-        
-    else:
-        filename = None        
-    L = []
-    for filename in path:
-        print(filename)
-        texp = 1#d.get_pyfits()[0].header[my_conf.exptime[0]]
-        
-        verboseprint('Type, axis, kernel =',Type, axis, kernel, verbose=config.verbose)
-        if Type == 'ProjectionRegion':
-            if y is None:
-                try:
-                    path = sys.argv[3]
-                    a = Table.read(path,format='ascii')
-                except IndexError:
-                    a = Table.read(DS9backUp + '/DS9Curves/ds9.dat',format='ascii')
-                x, ys = a['col1'], [a['col2']]
-        elif Type == 'BoxRegion':
-            region = getregion(d, quick=True)
-            Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
-            data = fits.open(filename)[0].data
-            
-            if axis=='y':
-                ys = [np.nanmean(data[Yinf:Ysup,Xinf:Xsup],axis=1)]
-                yerrs = [np.nanstd(data[Yinf:Ysup,Xinf:Xsup],axis=1)/np.sqrt(data.shape[1])]
-            else:
-                ys = [np.nanmean(data[Yinf:Ysup,Xinf:Xsup],axis=0)] 
-                yerrs = [np.nanstd(data[Yinf:Ysup,Xinf:Xsup],axis=0)/np.sqrt(data.shape[0])]
-
-        if bool(int(test)):
-            plot_flag=False
-            sizex = Xsup - Xinf
-            sizey = Ysup - Yinf
-            xinfs, yinfs = np.random.randint(100,1900,size=n), np.random.randint(1400,1600,size=n)
-            images = [data[Yinf:Yinf+sizey,Xinf:Xinf+sizex] for Xinf, Yinf in zip(xinfs, yinfs)]
-            if axis=='y':
-                ys = [np.nanmean(image,axis=1) for image in images]
-                yerrs = [np.nanstd(image,axis=1)/np.sqrt(data.shape[1]) for image in images]
-            else:
-                ys = [np.nanmean(image,axis=1) for image in images]
-                yerrs = [np.nanstd(image,axis=0)/np.sqrt(data.shape[0]) for image in images]   
-            print('Test: number of images = %s'%(len(images)))
-        
-
-
-
-#            kernel = int(kernel)
-#            y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
-#            yerr = yerr[kernel:-kernel]
-#        else:
-#            kernel = int(kernel)
-#            y = np.convolve(y,np.ones(kernel)/kernel,mode='same')[kernel:-kernel]
-#            yerr = np.zeros(len(y))
-            
-        for y, yerr in zip(ys,yerrs):  
-            if x is None:
-                x = np.arange(len(y))
-            n=1
-            mask = (y<y.mean()+n*np.std(y)) & (y>y.mean()-n*np.std(y))
-            print(x,y,yerr,mask)
-            fit = np.polyfit(x[mask], y[mask] , 1)
-            #xmax = x[np.argmax(y)]
-            fit_fn = np.poly1d(fit) 
-            try:
-                p0=[y.max()-y.min(), x[y.argmax()], 5]
-                if fwhm.split('-')[0] == '':
-                    if bool(int(center)):
-                        popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, 5],bounds=([-np.inf,len(y)/2-1,-np.inf],[np.inf,len(y)/2 +1,np.inf]))            
-                    else:
-                        popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], 5])
-            
-                else:
-                    stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
-                    if bool(int(center)):
-                        print(bool(int(center)))
-                        popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), len(y)/2, (stdmin+stdmin)/2],bounds=([-np.inf,len(y)/2-1,stdmin],[np.inf,len(y)/2 +1,stdmax]))            
-                    else:
-                        print(bool(int(center)))
-                        popt1, pcov1 = curve_fit(gaussian, x,y-fit_fn(x), p0=[y.max()-y.min(), x[y.argmax()], (stdmin+stdmin)/2],bounds=([-np.inf,-np.inf,stdmin],[np.inf,np.inf,stdmax]))
-            except RuntimeError as e:
-                print(e)
-                popt1 = p0
-                
-            print(popt1)
-            limfit =  fit_fn(x)+gaussian(x, *popt1).max()/np.exp(1)
-        
-        #    import matplotlib._cntr as cntr
-        #    c = cntr.Cntr(x, y, z)
-        #    nlist = c.trace(level, level, 0)
-        #    CS = nlist[:len(nlist)//2]
-            image = np.array([np.zeros(len(y)),y>limfit,np.zeros(len(y))])
-            CS = plt.contour(image,levels=1);plt.close()
-            #size = [cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ]
-            maxx = [ int(cs[:,0].max())   for cs in CS.allsegs[0] ]
-            minx = [ int(cs[:,0].min())   for cs in CS.allsegs[0] ]
-            maxx.sort();minx.sort()
-            index = np.where(maxx>popt1[1])[0][0]#np.argmax(size)
-            print(minx[index],maxx[index])    
-            y0 = y-fit_fn(x)
-           #L.append({'Flux':1.155*np.sum(y0[mask])})
-            L.append(1.155*np.sum(y0[mask]))
-    
-
-    if plot_flag:
-            plt.figure()#figsize=(10,6))
-            plt.xlabel('Spatial direction')
-            plt.ylabel('ADU mean value')
-            plt.plot(np.linspace(x.min(),x.max(),10*len(x)), gaussian(np.linspace(x.min(),x.max(),10*len(x)), *popt1) + fit_fn(np.linspace(x.min(),x.max(),10*len(x))), label='Gaussian Fit, F = %0.2f - sgm=%0.1f'%(np.sum(gaussian(x, *popt1))/texp,popt1[-1]))
-        #    plt.plot(x[y>limfit], y[y>limfit], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[y>limfit])/texp))
-            mask = (x>minx[index]) & (x<maxx[index])
-            #p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
-            std = np.std(np.convolve(y0[~mask],np.ones(7),mode='valid'))
-            p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,1.155*np.sum(y0[mask])/std))
-            plt.plot(x, y,linestyle='dotted',c=p[0].get_color())
-            
-        #    plt.plot(x[mask], y[mask], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[mask])/texp))
-            #plt.plot(x,  limfit,'--', c='black', label='1/e limit')
-            plt.fill_between(x[mask],y[mask],y2=fit_fn(x)[mask],alpha=0.2, label='Best SNR flux calculation: F=%0.3f'%(1.155*np.sum(y0[mask])))
-            plt.plot(x, fit_fn(x),label='Fitted background',linestyle='dotted',c=p[0].get_color())
-            plt.legend()
-            plt.title(os.path.basename("%s"%(filename)))
-            plt.savefig( DS9backUp + 'Plots/%s_Continuumphotometry_%s.jpg'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss"), os.path.basename(filename) ))
-            if plot_flag:
-                plt.show()
-    else:
-        fig = plt.figure()#figsize=(10,6))
-        ax = fig.add_subplot(111)   
-        print(L)
-        #ax.plot(np.histogram(np.array(L)))
-        ax.hist(np.array(L))
-        plt.show()
-    return L
 
 
 
@@ -3978,7 +3737,6 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
     from scipy.optimize import curve_fit
     from astropy.io import fits
     from scipy import  ndimage
-#    from .focustest import Gaussian
     if xpapoint is not None:
         d = DS9(xpapoint)
         filename = getfilename(d)
@@ -4103,8 +3861,8 @@ def ContinuumPhotometry(xpapoint=None, x=None, y=None, DS9backUp = DS9_BackUp_pa
     plt.close()
     if plot_flag:
             plt.figure()#figsize=(10,6))
-            plt.xlabel('Spatial direction')
-            plt.ylabel('ADU mean value')
+            plt.xlabel('$\parallel$ pix',fontsize=18)
+            plt.ylabel('$\widehat{Val_{\perp pix}}$',fontsize=18)
             plt.plot(np.linspace(x.min(),x.max(),10*len(x)), gaussian(np.linspace(x.min(),x.max(),10*len(x)), *popt1) + fit_fn(np.linspace(x.min(),x.max(),10*len(x))), label='Gaussian Fit, F = %0.2f - sgm=%0.1f'%(np.sum(gaussian(x, *popt1))/texp,popt1[-1]))
         #    plt.plot(x[y>limfit], y[y>limfit], 'o', color=p[0].get_color(), label='Best SNR flux calculation: F=%i'%(1.155*np.sum(y0[y>limfit])/texp))
             #p = plt.errorbar(x, y , yerr = yerr, elinewidth=1, alpha=0.4, fmt='o', linestyle='dotted', label='Data, F=%0.2fADU - SNR=%0.2f'%(np.nansum(y0)/texp,gaussian(x, *popt1).max()/np.std(y0[~mask])))
@@ -4335,6 +4093,13 @@ def gaussianFit(x, y, param):
     amp, x0, sigma = popt   
     return (amp, x0, sigma) 
 
+def Gaussian(x, amplitude, xo, sigma2, offset):
+    """Defines a gaussian function with offset
+    """
+    xo = float(xo)
+    #A = amplitude/np.sqrt(2 * np.pi * sigma2)   #attention is not used anymore  
+    g = offset + amplitude * np.exp( - 0.5*(np.square(x-xo)/sigma2))
+    return g.ravel()
 
 def linefit(x, A, B):
     """
@@ -4793,7 +4558,6 @@ def detectLine2(x,y, clipping=10, window=20, savename='/tmp/stacked_spectrum.png
 
 
 def DS9Visualization(xpapoint):
-    #from .focustest import create_DS9regions
     d = DS9(xpapoint)
     filename = getfilename(d)
     fixed, variable, counts, flux = np.array(sys.argv[3:7], dtype=int)
@@ -5605,6 +5369,26 @@ def FlagHighBackgroundImages(stack, std=1, config=my_conf):
     return index
     
 
+def globglob(file):
+    try:
+        paths = glob.glob( file, recursive=True)
+    except:
+        paths=[]
+    if (len(paths)==0) & ('[' in file) and (']' in file):
+        print('Go in loop')
+        a, between = file.split('[')
+        between, b = between.split(']')
+        if ('-' in between) & (len(between)>3):
+            paths = []
+            n1, n2 = np.array(between.split('-'),dtype=int)
+            range_ = np.arange(n1, n2+1)
+            print(range_)
+            files = [a + '%0.{}d'.format(len(str(n2)))%(i) + b for i in range_]
+            for path in files:
+                if os.path.isfile(path):
+                    paths.append(path) 
+    return paths
+
 def DS9stack_new(xpapoint, dtype=float, std=False, Type=None, clipping=None):
     d = DS9(xpapoint)
     filename = d.get("file")
@@ -5613,8 +5397,10 @@ def DS9stack_new(xpapoint, dtype=float, std=False, Type=None, clipping=None):
         clipping = sys.argv[5]
     #if len(sys.argv) > 3+2: paths = Charge_path_new(filename, entry_point=3+2)
     #paths = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-    paths = glob.glob( sys.argv[3], recursive=True)
-    
+    file = '/Users/Vincent/Nextcloud/FIREBALL/TestsFTS2018-Flight/Flight/dobc_data/180922/CosmicRayFree/OS_corrected/image0000[11-90].CRv_cs.fits'
+    paths = globglob(sys.argv[3])
+    print(sys.argv[3],paths)
+  
     
     if 'int' in Type:
         dtype = 'uint16'
@@ -5723,7 +5509,7 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
 def DS9focus(xpapoint, Plot=True):
     """Apply focus test class to the image
     """
-    from .focustest import Focus  
+    #from .focustest import Focus  
     d = DS9(xpapoint)
     filename = getfilename(d)#filename = d.get("file")
     try:
@@ -5766,8 +5552,6 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
     from astropy.io import fits
-    #from .focustest import estimateBackground
-    from .focustest import Gaussian
     from scipy.optimize import curve_fit
 
     print('''\n\n\n\n      START THROUGHSLIT \n\n\n\n''')
@@ -5895,7 +5679,6 @@ def DS9snr(xpapoint):
     """Compute a rough SNR on the selected spot. Needs to be updates
     """
     #from astropy.io import fits
-    #from .focustest import create_DS9regions2
     n1 = 1.2
     n2 = 1.8
     d = DS9(xpapoint)
@@ -5949,7 +5732,6 @@ def DS9createImage(xpapoint):
     import matplotlib; matplotlib.use('TkAgg')  
    # import matplotlib.pyplot as plt
     #from astropy.io import fits
-    from .focustest import ConvolveSlit2D_PSF
     d=DS9(xpapoint)
 #    n=20
     lx, ly = 1000, 1000#fitstest[0].data.shape
@@ -9974,7 +9756,7 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
             file.close() 
 #            from tkinter import messagebox
 #            messagebox.showwarning( "Header error","At least one image here is not corresponding to its header")     
-            d = DS9();d.set('analysis message {At least one image here is not corresponding to its header}')
+            d = DS9();d.set('analysis message yesno {At least one image here is not corresponding to its header}')
         except:
             pass
     return new_cat    
@@ -10665,7 +10447,6 @@ def Choose_backend(function):
 
 #def DS9LoadCSV(xpapoint):
 #    from astropy.table import Table
-#    #from .focustest import create_DS9regions2
 #    d = DS9(xpapoint)
 #    filename = getfilename(d)#filename = d.get('file')
 ##    if len(sys.argv) > 3:
@@ -10681,7 +10462,6 @@ def Choose_backend(function):
 def DS9ExtractSources(xpapoint):
     """Extract sources for DS9 image and create catalog
     """
-    #from .focustest import create_DS9regions2
     #x, y = x+93, y-93
     d = DS9(xpapoint)
     filename = getfilename(d)
@@ -10708,7 +10488,24 @@ def DS9ExtractSources(xpapoint):
     return
 
 
-
+def delete_doublons(sources, dist):
+    """Function that delete doublons detected in a table, 
+    the initial table and the minimal distance must be specifies
+    """
+    try:
+        sources['doublons'] = 0
+        for i in range(len(sources)):
+            a = distance(sources[sources['doublons']==0]['xcentroid'],sources[sources['doublons']==0]['ycentroid'],sources['xcentroid'][i],sources['ycentroid'][i]) > dist
+            a = list(1*a)
+            a.remove(0)
+            if np.nanmean(a)<1:
+                sources['doublons'][i]=1
+        return sources[sources['doublons']==0]
+    except TypeError:
+        print('no source detected')
+#        quit()
+        
+        
 def ExtractSources(filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, sigma=3, iters=5, deleteDoublons=3):
     """Extract sources for DS9 image and create catalog
     """
@@ -10717,7 +10514,6 @@ def ExtractSources(filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, sigma=3
     from astropy.table import Table
     from astropy.stats import sigma_clipped_stats
     from photutils import DAOStarFinder
-    from .focustest import delete_doublons
     fitsfile = fits.open(filename)
     sizes = [sys.getsizeof(elem.data) for elem in fitsfile]#[1]
     data = fitsfile[np.argmax(sizes)].data
@@ -11193,7 +10989,6 @@ def AperturePhotometry(xpapoint):
     """
     """
     from astropy.table import Table
-    #from .focustest import create_DS9regions2
     #from astropy.io import fits
     from astropy.stats import sigma_clipped_stats
     from photutils import aperture_photometry
@@ -11299,7 +11094,6 @@ def MorphologicalProperties(xpapoint):
     from photutils import deblend_sources
     import matplotlib.pyplot as plt
     from photutils import source_properties, EllipticalAperture
-    #from .focustest import create_DS9regions
     #from astropy.table import hstack
 
     d = DS9(xpapoint)
@@ -11625,7 +11419,6 @@ def SimulateFIREBallemCCDImage(ConversionGain=0.53, EmGain=1500, Bias='Auto', RN
     from astropy.modeling.functional_models import Gaussian2D
     from scipy.sparse import dia_matrix
 
-    #from .focustest import convolvePSF, addAtPos
     OS1, OS2 = OSregions
     if Bias == 'Auto':
         if EmGain>1:
@@ -11978,7 +11771,6 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
 def BackgroundMeasurement(xpapoint, config=my_conf):
     """
     """
-    #from .focustest import create_DS9regions2
     from decimal import Decimal
     #x, y = x+93, y-93
     d = DS9(xpapoint)
@@ -12653,39 +12445,79 @@ def DS9Lephare(xpapoint):
 
 
 
-def PlotFilters(filts,pathf):
-    #filts = ['cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb']
-    #pathf = '/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/filt/'
+def PlotFilters(filts=['cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb'],
+                pathf='/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/filt/',
+                colors = ['midnightblue','darkblue','deepskyblue','aquamarine','mediumaquamarine','limegreen','grey','yellow','gold','orange','darkorange','coral']):
     fig, ax1 = plt.subplots()#figsize=(12, 6))
-    #ax1.tick_params('y', colors='b')
-    for filt in filts:
+    
+    for i, filt in enumerate(filts):
+        print(colors[i])
         print(os.path.basename(pathf)[:-3])
         path = os.path.join(pathf,filt)
         a=Table.read(path,format='ascii',data_start=1)
-        #print(a)
         a = a[a['col2']/a['col2'].max()>0.01]
-        ax1.fill_between(a['col1'],a['col2']/a['col2'].max(),label=os.path.basename(path)[:-3],alpha=0.3)
-        #plt.show()
+        ax1.fill_between(a['col1'],a['col2']/a['col2'].max(),label=os.path.basename(path)[:-3],alpha=0.3,color=colors[i])
     plt.xlabel('Wavelength [A]')
     ax2 = ax1.twinx()
-    files  = []#glob.glob('/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/sed/GAL/COSMOS_SED/SB*0.sed')
+    files  = glob.glob('/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/sed/GAL/COSMOS_SED/SB*0.sed')
     for file in files:
         a=Table.read(file,format='ascii')
         plt.semilogy(a['col1'],a['col2'],alpha=1,label=os.path.basename(file),linewidth=2)
     plt.xlim(2000,25000)
     ax2.set_ylim(1e-4,3e-2)
     ax1.set_ylim(ymin=0)
-    #ax2.set_ylim(1e-3,1e-2)
+    ax1.set_xlim(xmin=1000)
     ax2.set_ylabel('SED Fluxes')
     ax1.set_ylabel('Normalized transmission')
     ax1.legend(loc='lower left')
     ax2.legend()
+    #plt.savefig('/Users/Vincent/Nextcloud/Work/ThesisManuscript/fig/filters_sed.jpg')
     plt.show()
     return
 
 
+def PlotFilters_irx(filts=['cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb'],
+                pathf='/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/filt/',
+                colors = ['midnightblue','darkblue','deepskyblue','aquamarine','mediumaquamarine','limegreen','grey','yellow','gold','orange','darkorange','coral'],labels=None):
+    fig, ax1 = plt.subplots()#figsize=(12, 6))
+    
+    for i, filt in enumerate(filts):
+        print(colors[i])
+        print(os.path.basename(pathf)[:-3])
+        path = os.path.join(pathf,filt)
+        a=Table.read(path,format='ascii',data_start=1)
+        a = a[a['col2']/a['col2'].max()>0.01]
+        ax1.fill_between(a['col1'],a['col2']/a['col2'].max(),alpha=0.3,color=colors[i],label=labels[i])#,label=os.path.basename(path)[:-3]
+    plt.xlabel('Wavelength [A]')
+    plt.xscale('log')
 
-def PlotSED(file='/Users/Vincent/Nextcloud/Work/LePhare/work/lib_bin/LAB_GAL_COSMOS_MODIF.doc', pathlp = '/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509', filts=[]):
+    ax2 = ax1.twinx()
+    files  = glob.glob('/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/sed/GAL/DALE/dale_?1.sed')[1:4]
+  #  files  += glob.glob('/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/sed/GAL/LAGACHE/lagache_COLD_L09.*.sed')[:2]
+  #  files  += glob.glob('/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/sed/GAL/CHARY_ELBAZ/chary_elbaz_1?.sed')[:2]
+    for file in files:
+        a=Table.read(file,format='ascii')
+        ax2.semilogy(a['col1'],a['col2'],alpha=1,label=os.path.basename(file),linewidth=2)
+    plt.xlim(7e4,1e7)
+    #ax2.set_ylim(1e-4,3e-2)
+    ax1.set_ylim(ymin=0)
+    ax2.grid(False)
+    #ax2.set_ylim(ymin=1e-8,ymax=1)
+    #ax1.set_xlim(xmin=1000)
+    ax2.legend(loc='upper right')
+    ax1.set_ylabel('SED Fluxes')
+    ax1.set_ylabel('Normalized transmission')
+    ax1.legend(loc='lower left')
+    plt.savefig('/Users/Vincent/Nextcloud/Work/ThesisManuscript/fig/filters_sed_IRX.jpg')
+    plt.show()
+    return
+
+#PlotFilters_irx(filts=['hsc/rHSC.pb','hsc/yHSC.pb','spitzer/mips_24.pb','herschel/PACS_100.pb','herschel/PACS_160.pb','herschel/SPIRE_PSW.pb','herschel/SPIRE_PMW.pb','herschel/SPIRE_PLW.pb'],
+#                colors = ['aquamarine','grey','orange','darkorange','coral','tomato','red','maroon'])
+
+#PlotFilters_irx(filts=['spitzer/mips_24.pb','herschel/PACS_100.pb','herschel/PACS_160.pb','herschel/SPIRE_PSW.pb','herschel/SPIRE_PMW.pb','herschel/SPIRE_PLW.pb'],colors = ['orange','darkorange','coral','tomato','red','maroon'],labels=['24 $\mu m$: 28 374','100 $\mu m$: 3 333','160 $\mu m$: 2 834','250 $\mu m$: 11 072','350 $\mu m$: 2 275','500 $\mu m$: 1 263'])
+
+def PlotSED(file='/Users/Vincent/Nextcloud/Work/LePhare/work/lib_bin/LAB_GAL_COSMOS_MODIF.doc', pathlp = '/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509', filts=['cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb']):
     #filts = ['cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb']
     #pathf = '/Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/filt/'
     files = np.genfromtxt(file, skip_header=10, dtype=str,skip_footer=5,usecols=(4))
@@ -12718,7 +12550,7 @@ def PlotSED(file='/Users/Vincent/Nextcloud/Work/LePhare/work/lib_bin/LAB_GAL_COS
     #ax2.set_ylim(1e-4,3e-2)
     #ax1.set_ylim(ymin=0)
     #ax2.set_ylim(1e-3,1e-2)
-    plt.tilte(name)
+    plt.title(name)
     plt.ylabel('SED Fluxes')
     plt.ylabel('Normalized transmission')
     plt.legend(loc=(1,0),fontsize=5)
@@ -12877,6 +12709,11 @@ def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
     phi_FUV = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
     M_FUV = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
 
+
+    a_NUV = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
+    phi_NUV = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
+    M_NUV = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
+    
     a_U = -np.array([1.42,1.22,1.18,1.15,1.25,1.35,1.39,1.43,1.43])
     phi_U = 1e-3 * np.array([3.6, 5.6, 5.1, 5.3, 4.7, 3, 2.2, 2.2, 2.2])
     M_U = - np.array([19.87, 20.04, 20.13, 20.44, 20.84, 21.24, 21.677, 21.677, 21.677])
@@ -12906,25 +12743,31 @@ def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
     return
 
 
-def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U', fit=True):
+def PlotFL_from_ALF(xpapoint, general_path = None, filter_=None, fit=True):
     """
     """
     from decimal import Decimal
     if general_path is None:
         general_path = sys.argv[-2]
+    print(filter_)
+    if filter_ is None:
         filter_ = sys.argv[-1]
+    print(filter_)
 
     if filter_ == 'FUV':
+        print('FUV')
         a = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
         phi = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
         M = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
    
-    if filter_ == 'NUV':#to be changes
+    elif filter_ == 'NUV':#to be changes
+        print('NUV')
         a= -np.array([1.40,1.31,1.36,1.40,1.39,1.39,1.4,1.4,1.4])
         phi = 1e-3 * np.array([5.1, 6, 4.6, 4.2, 4.7, 3.1, 2.7, 1.7, 1.7])
         M = - np.array([18.51, 18.80, 19.03, 19.41, 19.86, 20.37, 20.62, 21.15, 21.15])
 
     else:#U
+        print('U')
         a= -np.array([1.42,1.22,1.18,1.15,1.25,1.35,1.39,1.43,1.43])
         phi = 1e-3 * np.array([3.6, 5.6, 5.1, 5.3, 4.7, 3, 2.2, 2.2, 2.2])
         M = - np.array([19.87, 20.04, 20.13, 20.44, 20.84, 21.24, 21.677, 21.677, 21.677])
@@ -12943,38 +12786,140 @@ def PlotFL_from_ALF(xpapoint, general_path = None, filter_='U', fit=True):
     for i, ax in enumerate(axes.ravel()[:len(zs)+1]):
         print(os.path.basename(paths_swml[i]),os.path.basename(paths_vmax[i]))
         coeffs = [phi[i],a[i],M[i]]
-        ax.plot(lx,(schechter_vincent(lx,coeffs)),c='grey',lw=1,label='M: '+ ', '.join([ '%.3E' % Decimal(a) for a in coeffs ]))
+        ax.plot(lx,(schechter_vincent(lx,coeffs)),linestyle='dotted',c='grey',lw=1,label='M: '+ ', '.join([ '%.3E' % Decimal(a) for a in coeffs ]))
         fitLF(path = paths_swml[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='orange', label='SWML LF', fit=fit)
         fitLF(path = paths_vmax[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='red', label='VMAX LF', fit=fit)
         ax.set_title('$%0.2f < z < %0.2f$'%(zs[i][0],zs[i][1]), fontsize=13)
+        ax.legend(loc='lower left',fontsize=11)
         
 #    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     #plt.xlabel('Mabs_{U}')
     #plt.ylabel('log N (mag^{-1} MPC^{-3}')
     fig=axes[0,0].figure
-    fig.text(0.5,0.08, '$M_{%s}$'%(filter_), ha="center", va="center",fontsize=18)
-    fig.text(0.08,0.5, '$log \phi/dm/ Mpc^{3}$', ha="center", va="center", rotation=90,fontsize=18)
-
-    plt.savefig(os.path.join(general_path,'Luminosity_%s'%(filter_)),dpi=300)
+    plt.tight_layout()
+    fig.text(0.5,0.0, '$M_{%s}$'%(filter_), ha="center", va="center",fontsize=18)
+    fig.text(0.0    ,0.5, '$log \phi/dm/ Mpc^{3}$', ha="center", va="center", rotation=90,fontsize=18)
+    plt.savefig(os.path.join(general_path,'Luminosity_%s'%(filter_)),dpi=300, bbox_inches = 'tight', pad_inches = 0.2)
+    plt.savefig('/Users/Vincent/Nextcloud/Work/ThesisManuscript/fig/Luminosity_%s'%(filter_)   ,dpi=300, bbox_inches = 'tight', pad_inches = 0.2)
     plt.show()
     return
 
 
 
 
+def PlotFL_from_ALF_mass_bin(xpapoint, general_path = None, filter_=None, fit=False):
+    """
+    """
+    from decimal import Decimal
+    if general_path is None:
+        general_path = sys.argv[-2]
+    print(filter_)
+    if filter_ is None:
+        filter_ = sys.argv[-1]
+    print(filter_)
+
+    if filter_ == 'FUV':
+        print('FUV')
+        a = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
+        phi = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
+        M = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
+   
+    elif filter_ == 'NUV':#to be changes
+        print('NUV')
+        a= -np.array([1.40,1.31,1.36,1.40,1.39,1.39,1.4,1.4,1.4])
+        phi = 1e-3 * np.array([5.1, 6, 4.6, 4.2, 4.7, 3.1, 2.7, 1.7, 1.7])
+        M = - np.array([18.51, 18.80, 19.03, 19.41, 19.86, 20.37, 20.62, 21.15, 21.15])
+
+    else:#U
+        print('U')
+        a= -np.array([1.42,1.22,1.18,1.15,1.25,1.35,1.39,1.43,1.43])
+        phi = 1e-3 * np.array([3.6, 5.6, 5.1, 5.3, 4.7, 3, 2.2, 2.2, 2.2])
+        M = - np.array([19.87, 20.04, 20.13, 20.44, 20.84, 21.24, 21.677, 21.677, 21.677])
+    
+
+    
+#    info_swml = glob.glob(os.path.join(general_path , '*SWML*.info'))[0]
+#    info_vmax = glob.glob(os.path.join(general_path , '*VMAX*.info'))[0]
+    info_vmax8 = glob.glob(os.path.join(general_path , '*8.*VMAX*.info'))[0]
+    info_vmax9 = glob.glob(os.path.join(general_path , '*9.*VMAX*.info'))[0]
+    info_vmax10 = glob.glob(os.path.join(general_path , '*10.*VMAX*.info'))[0]
+
+    zs = np.genfromtxt(info_vmax8, skip_header=15, max_rows=8,usecols=(1,2),delimiter='  ')#, unpack=True)
+    paths_vmax8 = glob.glob(os.path.join(general_path , '*8.*VMAX*.dat*'));paths_vmax8.sort()
+    paths_vmax9 = glob.glob(os.path.join(general_path , '*9.*VMAX*.dat*'));paths_vmax9.sort()
+    paths_vmax10 = glob.glob(os.path.join(general_path , '*10.*VMAX*.dat*'));paths_vmax10.sort()
+    #paths_swml.sort(key = lambda s: len(s))
+    #paths_vmax.sort(key = lambda s: len(s))
+    fig, axes = plt.subplots(int(len(zs)/3),3, figsize=(15,10),sharex=True, sharey=True)
+    lx = np.linspace(-13,-24,100)
+    for i, ax in enumerate(axes.ravel()[:len(zs)+1]):
+        #print(os.path.basename(paths_swml[i]),os.path.basename(paths_vmax[i]))
+        coeffs = [phi[i],a[i],M[i]]
+        fitLF(path = paths_vmax8[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='orange', label='7.5 M$_o$ < M$Gal$ < 8.5 M$_o$', fit=fit)
+        fitLF(path = paths_vmax9[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='green', label='8.5 M$_o$ < M$Gal$ < 9.5 M$_o$', fit=fit)
+        axn = fitLF(path = paths_vmax10[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='blue', label='9.5 M$_o$ < M$Gal$ < 10.5 M$_o$', fit=fit)
+        ax.plot(lx,(schechter_vincent(lx,coeffs)),linestyle='dotted',c='grey')#,lw=1,label='M: '+ ', '.join([ '%.2E' % Decimal(a) for a in coeffs ]))
+        ax.legend(loc='lower left',fontsize=8)
+        ax.set_title('$%0.2f < z < %0.2f$'%(zs[i][0],zs[i][1]), fontsize=13)
+#    a1, = axn.plot(1,1,color='orange', label='7.5 M$_o$ < M$Gal$ < 8.5 M$_o$')
+#    a2, = axn.plot(1,1,color='green', label='7.5 M$_o$ < M$Gal$ < 8.5 M$_o$')
+#    a3, = axn.plot(1,1,color='blue', label='7.5 M$_o$ < M$Gal$ < 8.5 M$_o$')
+    axn.text(-14.5, -4.4, '7.5 M$_o$ < M$_\star$ < 8.5 M$_o$', {'color': 'orange', 'fontsize': 13})
+    axn.text(-14.5, -4.8, '8.5 M$_o$ < M$_\star$ < 9.5 M$_o$', {'color': 'g', 'fontsize': 13})
+    axn.text(-14.5, -5.2, '8.5 M$_o$ < M$_\star$ < 10.5 M$_o$', {'color': 'b', 'fontsize': 13})
+    #plt.legend(handles=[a1,a2,a3],loc='upper right')
+#    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    #plt.xlabel('Mabs_{U}')
+    #plt.ylabel('log N (mag^{-1} MPC^{-3}')
+    fig=axes[0,0].figure
+    fig.text(0.5,0.0, '$M_{%s}$'%(filter_), ha="center", va="center",fontsize=18)
+    fig.text(0.0,0.5, '$log \phi/dm/ Mpc^{3}$', ha="center", va="center", rotation=90,fontsize=18)
+    plt.tight_layout()
+    plt.savefig(os.path.join(general_path,'Luminosity_%s'%(filter_)),dpi=300, bbox_inches = 'tight', pad_inches = 0.2)
+    plt.savefig('/Users/Vincent/Nextcloud/Work/ThesisManuscript/fig/Luminosity_mass_%s'%(filter_)   ,dpi=300, bbox_inches = 'tight', pad_inches = 0.2)
+    plt.show()
+    return
+
+def PlotLF_real_time(paths,labels=None):
+    from astropy.io import ascii
+    if labels is None:
+        labels = [os.path.basename(path) for path in paths]
+    while len(paths)>0:
+        for label, path in zip(labels, paths):
+            try:
+                LF_rod0 = ascii.read(path)
+            except:
+                pass
+            else:
+                print(path)
+                LIRrod_0 = LF_rod0['col1']
+                phirod_0 = LF_rod0['col2']
+                errmrod_0 = LF_rod0['col4']
+                errprod_0 = LF_rod0['col3']
+                plt.axis([-14,-24,-6,-1.5])
+                plt.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='-+',lw=1,label=label)
+                plt.legend(loc='upper right')
+                plt.pause(0.15)
+                plt.clf()
+        plt.show()
+
+
 def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat',mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=None,color='black', label=None,fit=True) : 
     from astropy.io import ascii
     from pyswarm import pso
     from decimal import Decimal
+    up = [5e-2,-0.1,-18]
+    do=[1e-4,-2.5,-23]
     try:
         LF_rod0 = ascii.read(path)
     except:
         pass
     else:
-        LIRrod_0 = LF_rod0['col1']
-        phirod_0 = LF_rod0['col2']
-        errmrod_0 = LF_rod0['col4']
-        errprod_0 = LF_rod0['col3']
+        n=1
+        LIRrod_0 = LF_rod0['col1']#[:-n]
+        phirod_0 = LF_rod0['col2']#[:-n]
+        errmrod_0 = LF_rod0['col4']#[:-n]
+        errprod_0 = LF_rod0['col3']#[:-n]
         mask = True#LIRrod_0<mag_lim
         if fit:
             coeffrod_0 , chirod_0 = pso(likelihood,do,up,args=[LIRrod_0[mask],phirod_0[mask],errmrod_0[mask]],maxiter=500)
@@ -12983,14 +12928,14 @@ def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat
             fig = plt.figure()#figsize=(12,4.5))
             ax = fig.add_subplot(111)
         if fit:
+            print(coeffrod_0)
+            print(chirod_0)
             ax.plot(lx,(schechter_vincent(lx,coeffrod_0)),c=color,lw=2,label='Fit: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffrod_0 ]))
-        ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='+',lw=1,c=color,label=label)
+        ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='.',lw=1,c=color)#,label=label)
         #ax.plot(lx,(schechter_vincent(lx,[4e-3,-1.4,-19])),c='grey',lw=1,label='Literature: Pi=0.004,a=-1.4,M=-19')
         #ax.plot(LIRrod_0[~mask],phirod_0[~mask],'o',lw=3,c='black',label='Fit mask')
-        ax.set_xlim((-14,-25));ax.set_ylim((-6,0))
-        ax.legend(loc='lower left',fontsize=8)
-    
-    return #coeffrod_0 , chirod_0
+        ax.set_xlim((-14,-24.5));ax.set_ylim((-6,-1.5))
+    return ax#coeffrod_0 , chirod_0
 
 
 
@@ -13556,17 +13501,20 @@ def readLPtables(path = '/Users/Vincent/Nextcloud/Work/LePhare/zphot_BC03_phys.o
     new_table.rename_column('T','##IDENT')
     name, ext = os.path.basename(path).split('.')
     #new_table.meta = {}
-    fields = ['RA',
-             'DEC',
-             'WEIGHT',
-             'SCALING_FACTOR', 
-             'MU_MAX_MegaCam_u','MU_MAX_MegaCam_uS','MU_MAX_HSC_G','MU_MAX_HSC_R','MU_MAX_HSC_I','MU_MAX_HSC_Z','MU_MAX_HSC_Y',
-             'MU_MAX_VIRCAM_Y','MU_MAX_VIRCAM_J','MU_MAX_VIRCAM_H','MU_MAX_VIRCAM_Ks',
-             'CLASS_STAR_MegaCam_u','CLASS_STAR_MegaCam_uS',
-             'CLASS_STAR_HSC_G','CLASS_STAR_HSC_R','CLASS_STAR_HSC_I', 'CLASS_STAR_HSC_Z','CLASS_STAR_HSC_Y',
-             'CLASS_STAR_VIRCAM_Y','CLASS_STAR_VIRCAM_J','CLASS_STAR_VIRCAM_H','CLASS_STAR_VIRCAM_Ks']
-    for i in range(len(fields)):
-         new_table.rename_column('STRING_INPUT_%i'%(i),fields[i])
+    try:
+        fields = ['RA',
+                 'DEC',
+                 'WEIGHT',
+                 'SCALING_FACTOR', 
+                 'MU_MAX_MegaCam_u','MU_MAX_MegaCam_uS','MU_MAX_HSC_G','MU_MAX_HSC_R','MU_MAX_HSC_I','MU_MAX_HSC_Z','MU_MAX_HSC_Y',
+                 'MU_MAX_VIRCAM_Y','MU_MAX_VIRCAM_J','MU_MAX_VIRCAM_H','MU_MAX_VIRCAM_Ks',
+                 'CLASS_STAR_MegaCam_u','CLASS_STAR_MegaCam_uS',
+                 'CLASS_STAR_HSC_G','CLASS_STAR_HSC_R','CLASS_STAR_HSC_I', 'CLASS_STAR_HSC_Z','CLASS_STAR_HSC_Y',
+                 'CLASS_STAR_VIRCAM_Y','CLASS_STAR_VIRCAM_J','CLASS_STAR_VIRCAM_H','CLASS_STAR_VIRCAM_Ks']
+        for i in range(len(fields)):
+             new_table.rename_column('STRING_INPUT_%i'%(i),fields[i])
+    except KeyError:
+        print('Fait chier ya pas assez de string input')
 
     new_table.write(os.path.dirname(path) + '/' +  name + '_col.' + ext, format='ascii', overwrite=True,comment=False)
     return   new_table, filts, dep_on_field 
@@ -14396,6 +14344,7 @@ def StackPhotometricTables(tract='',folder = '/Users/Vincent/Documents/Work/sext
     files = glob.glob('/data/deepZ/HSC_CLAUDS/DetectionImages/Photometric_Catalogs/BandMergedCatalogs/calexp-*%s*_cat.fits'%(tract))
     files = glob.glob(os.path.join(folder,'calexp-*%s*_cat.fits'%(tract)))
     tables = []
+    files.sort()
     for file in files:
         print(file)
         tables.append(Table.read(file))
@@ -14409,7 +14358,7 @@ def StackPhotometricTables(tract='',folder = '/Users/Vincent/Documents/Work/sext
 #        if len(table)>0: 
 #            print(0)
     print('Stacking tables...')
-    stack_table = hstack(tables)
+    stack_table = vstack(tables)
     del tables
     del table
     if not os.path.exists(os.path.join(folder,'BandMergedCatalogs')):

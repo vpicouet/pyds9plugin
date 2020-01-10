@@ -366,8 +366,10 @@ endhmenu
 DS9Functions Help !
 *
 web
-http://people.lam.fr/picouet.vincent/index.html
 #file:$env(DS9Function)
+file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
+#http://people.lam.fr/picouet.vincent/index.html
+
 
 
 
