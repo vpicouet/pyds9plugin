@@ -461,11 +461,27 @@ def roundPartial (value, rounding, resolution):
     return np.round(value / resolution,rounding) * resolution
 
 
-def TakeAverage(x,y,z,bins=50, output='scatter', Plot=False):
+def TakeAverage(x,y,z,bins=50, output='scatter', Plot=False, type_=None):
 #    data1, a, b, p = plt.hist2d(cat['x'],cat['y'],weights=cat['z'],bins=[bins,bins])
 #    data2, a, b, p  = plt.hist2d(cat['x'],cat['y'],bins=[bins,bins])
-    data1, a, b = np.histogram2d(x,y,weights=z,bins=[bins,bins])
     data2, a, b  = np.histogram2d(x,y,bins=[bins,bins])
+    if type_ is not None:
+#        for i, (xi, yi, zi) in enumerate(zip(x,y,z)):
+#            print(xi,yi,zi,i)
+        for i, ai in enumerate(a[:-1]):
+            for j, bj in enumerate(a[:-1]):
+                #print(i,i,ai,bj)
+                mask = (x>a[i]) & (x<a[i+1]) & (y>b[j]) & (y<b[j+1])
+                if type_ is 'std':
+                    print('Choosing std')
+                    z[mask] = np.std(z[mask])
+                if type_ is 'median':
+                    print('Choosing median')
+                    z[mask] = np.median(z[mask])
+        
+    data1, a, b = np.histogram2d(x,y,weights=z,bins=[bins,bins])
+
+
     if output == 'scatter':
         xm,ym = np.meshgrid(a,b,indexing='ij')
         if Plot:
@@ -475,7 +491,6 @@ def TakeAverage(x,y,z,bins=50, output='scatter', Plot=False):
     if output == 'image':
         if Plot:
            plt.imshow((data1/data2)[:,::-1].T, extent=[a.min(),a.max(),b.min(),b.max()], aspect='auto');plt.colorbar()
-           plt.show()
         return (data1/data2)[:,::-1].T, a, b 
 
 
@@ -13479,7 +13494,7 @@ def RunZphot(filter_, param_dict, file, output_file,i):
 
 
 def readLPtables(path = '/Users/Vincent/Nextcloud/Work/LePhare/zphot_BC03_phys.out'):
-    """
+    """vincent help etc...
     """
     a = Table.read(path,format='ascii',data_start=1)
     #a.remove_columns('col59')
