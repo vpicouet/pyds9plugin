@@ -367,7 +367,9 @@ DS9Functions Help !
 *
 web
 #file:$env(DS9Function)
-file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
+http://ilios.io/ds9/index.html
+#http://ds9.si.edu/doc/ref/analysis.html
+#/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
 #http://people.lam.fr/picouet.vincent/index.html
 
 
