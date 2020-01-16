@@ -439,7 +439,6 @@ hmenu Not to use
 	endhmenu
 
 
-
 	hmenu Charge images
 
 		Open Image (o)
@@ -452,15 +451,12 @@ hmenu Not to use
 		bind o
 		DS9Utils $xpa_method open ""$entry(Path to image to open)""   2>&1 | tee -a /tmp/DS9Utils.log
 
-		Update Image (U)
+
+
+		Refresh image and analyze
 		*
 		menu
-		DS9Utils $xpa_method Update  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Update Image Key
-		*
-		bind U
-		DS9Utils $xpa_method Update   2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method Update  $param(Analysis); $Max $Std $Flux  2>&1 | tee -a /tmp/DS9Utils.log
 
 		Next Image 
 		*
@@ -2037,4 +2033,12 @@ endparam
 param Plot-LF
 Path entry {Path} - {Path of the folder containing the ALF points}
 Filter menu {Filter} U|FUV|NUV {Number of pixels to mask in the y+ direction}
+endparam
+
+
+
+param Analysis
+Max checkbox {Max} 1 {Compute the max of the region}
+Std checkbox {Std} 1 {Compute the standard deviation of the region}
+Flux checkbox {Flux} 0 {Compute the flux in the region}
 endparam

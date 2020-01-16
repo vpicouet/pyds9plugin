@@ -461,7 +461,7 @@ def roundPartial (value, rounding, resolution):
     return np.round(value / resolution,rounding) * resolution
 
 
-def TakeAverage(x,y,z,bins=50, output='scatter', Plot=False, type_=None):
+def TakeAverage(x,y,z,weight=None,bins=50, output='scatter', Plot=False, type_=None):
 #    data1, a, b, p = plt.hist2d(cat['x'],cat['y'],weights=cat['z'],bins=[bins,bins])
 #    data2, a, b, p  = plt.hist2d(cat['x'],cat['y'],bins=[bins,bins])
     data2, a, b  = np.histogram2d(x,y,bins=[bins,bins])
@@ -478,6 +478,8 @@ def TakeAverage(x,y,z,bins=50, output='scatter', Plot=False, type_=None):
                 if type_ is 'median':
                     print('Choosing median')
                     z[mask] = np.median(z[mask])
+                if weight is not None:
+                    z[mask] = np.dot(weight,IRX)/np.sum(weight)
         
     data1, a, b = np.histogram2d(x,y,weights=z,bins=[bins,bins])
 
@@ -882,6 +884,44 @@ def TimerSMS(start, hour=1, message='Hello my friend, have a beer your super lon
         return 'SMS sent'
     else:
         return 'Code ran fast, SMS not sent'
+
+
+
+def CreateRegions(regions,savename='/tmp/region.reg', texts='               '):
+    regions_ = """# Region file format: DS9 version 4.1
+    global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+    image
+    """
+    colors = ['orange','green','red','pink','grey','black']*100
+    for region, text, color in zip(regions, texts,colors):
+        #print(region)
+        regions_ +=  '\n'  
+        regions_ +=  addRegion(region, color=color, text=text)
+    with open(savename, "w") as text_file:
+        text_file.write(regions_)        
+     
+
+
+def addRegion(region, color='Yellow', text=''):
+    def get_r(region):
+        return  region.r if hasattr(region, 'r') else [region.w, region.h]
+    def get_type(region):
+        return  'circle' if hasattr(region, 'r') else 'box'
+    form = get_type(region) 
+    
+    if form == 'circle':
+        text = '%s(%0.2f,%0.2f,%0.2f) # color=%s width=4 text={%s}'%(form, region.xc, region.yc, get_r(region), color, text )
+    if form == 'box':
+        text = '%s(%0.2f,%0.2f,%0.2f,%0.2f) # color=%s width=4 text={%s}'%(form, region.xc, region.yc, get_r(region)[0], get_r(region)[1], color, text )
+    #print(text)
+    return text
+
+def getDatafromRegion(d,region, ext):
+    Xinf, Xsup, Yinf, Ysup  = Lims_from_region(region=region, coords=None,  config=my_conf)
+    data = d.get_pyfits()[ext].data[Yinf:Ysup,Xinf:Xsup]
+    return data
+
+
 
 
 def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, config=my_conf):
@@ -5810,7 +5850,197 @@ def DS9inverse(xpapoint):
     return
 
 
-def DS9Update(xpapoint,Plot=True):
+def DS9Update_old(xpapoint,Plot=True, reg=True):
+    """Always display last image of the repository and will upate with new ones
+    """
+    import time
+    d = DS9(xpapoint)#DS9(xpapoint)
+
+    if reg:
+        regions =  getregion(d,all=True)
+        CreateRegions(regions,savename='/tmp/region.reg', texts=np.arange(len(regions)))
+        d.set('regions file /tmp/region.reg')
+    ext = FitsExt(d.get_pyfits()) 
+    filename = getfilename(d)#ffilename = d.get("file")
+    files = glob.glob(os.path.dirname(filename)+ '/*.fits')
+    files.sort()
+    files = files*100
+    fig, (ax0, ax1, ax2) = plt.subplots(3,1,sharex=True,figsize=(5,10))
+    colors = ['orange','green','red','pink','grey','black']*100
+    for (i,region,color) in zip(np.arange(len(regions)), regions,colors):
+        data = getDatafromRegion(d, region, ext=ext)
+        d0 = Center_Flux_std(data,bck=0,method='Gaussian-Picouet')
+
+        ax0.semilogy(i, d0['flux'],color=color,label=str(i))
+        #ax0.scatter(i, np.log10(d0['flux']),color=color,label=str(i))
+        ax1.scatter(i, d0['std'],color=color,label=str(i))
+        ax2.scatter(i, 0,color=color,label=str(i))
+
+#    for i, color in zip(np.arange(len(regions)),colors):   
+#        ax0.plot(0,0,'o',color=color,label=str(i))
+#        ax1.plot(0,0,'o',color=color,label=str(i))
+    ax0.legend(loc='upper left')
+#    ax0.set_xlim((0,100))
+    
+    ax1.set_xlabel('Number of images')
+    ax0.set_ylabel('Flux[region]')
+    ax1.set_ylabel('std[region]')
+    ax2.set_ylabel('Distance[region]')
+    ax0.set_title(os.path.basename(filename))
+    fig.tight_layout()
+    for i, file in enumerate(files):
+        ax0.set_title(os.path.basename(file))
+        ax0.set_xlim((np.max([i-30,0]),np.max([i+1,30])))
+#        plt.axis([np.max([i-10,0]), np.max([i+1,10]), 0, 1])
+        #ax0.get_legend().remove()
+        for j, (region,color) in enumerate(zip(regions,colors)):
+            data = getDatafromRegion(d, region, ext=ext)
+            dn = Center_Flux_std(data,bck=0,method='Gaussian-Picouet')
+            print('New centers = ',dn)
+            ax0.scatter(i, dn['flux'],color=color)
+            ax1.scatter(i, dn['std'],color=color)
+            ax2.scatter(i, distance(dn['x'],dn['y'],d0['x'],d0['y']),color=color)
+            Xinf, Xsup, Yinf, Ysup = Lims_from_region(regions[j])
+            regions[j] = regions[j]._replace(xc=Xinf + dn['x'])        
+        CreateRegions(regions,savename='/tmp/region.reg', texts=np.arange(len(regions)))
+        #pan = d.get('pan')
+        d.set('file ' + file) 
+        #d.set('pan to %s image'%(pan))
+        d.set('regions file /tmp/region.reg')
+        #y = np.random.random()
+
+        plt.pause(0.00001)
+        time.sleep(0.01)
+    plt.show()
+    return
+
+
+
+def DS9Update(xpapoint,Plot=True, reg=True,style='--o',lw=0.5):
+    """Always display last image of the repository and will upate with new ones
+    """
+    import time
+    d = DS9(xpapoint)#DS9(xpapoint)
+
+    if reg:
+        regions =  getregion(d,all=True)
+        CreateRegions(regions,savename='/tmp/region.reg', texts=np.arange(len(regions)))
+        d.set('regions file /tmp/region.reg')
+    ext = FitsExt(d.get_pyfits()) 
+    filename = getfilename(d)#ffilename = d.get("file")
+    files = glob.glob(os.path.dirname(filename)+ '/*.fits')
+    files.sort()
+    files = files*100
+    fig, (ax0, ax1, ax2) = plt.subplots(3,1,sharex=True,figsize=(5,10))
+    colors = ['orange','green','red','pink','grey','black']*100
+    d0=[]
+    for (i,region,color) in zip(np.arange(len(regions)), regions,colors):
+        data = getDatafromRegion(d, region, ext=ext)
+        d0.append(Center_Flux_std(data,bck=0,method='Gaussian-Picouet'))
+        dn=d0
+        ax0.semilogy(i, d0[i]['flux'], color=color,label=str(i))#,linewidth=lw)
+        #ax0.scatter(i, np.log10(d0['flux']),color=color,label=str(i))
+        ax1.scatter(i, d0[i]['std'],color=color,label=str(i))#,linewidth=lw)
+        ax2.scatter(i, 0,color=color,label=str(i))#,linewidth=lw)
+
+
+    ax0.legend(loc='upper left')
+    
+    ax1.set_xlabel('Number of images')
+    ax0.set_ylabel('Flux[region]')
+    ax1.set_ylabel('std[region]')
+    ax2.set_ylabel('Distance[region]')
+    ax0.set_title(os.path.basename(filename))
+    fig.tight_layout()
+    dn=[{'x':np.nan,'y':np.nan,'flux':np.nan,'std':np.nan}]*len(regions)
+    for i, file in enumerate(files):
+        ax0.set_title(os.path.basename(file))
+        ax0.set_xlim((np.max([i-30,0]),np.max([i+1,30])))
+        dnm = dn.copy()
+        dn=[]
+        for j, (region,color) in enumerate(zip(regions,colors)):
+            data = getDatafromRegion(d, region, ext=ext)
+            dn.append(Center_Flux_std(data,bck=0,method='Gaussian-Picouet'))
+            #print('New centers = ',dn)
+            print([i-1,i], [dnm[j]['flux'],dn[j]['flux']])
+            ax0.plot([i-1,i], [dnm[j]['flux'],dn[j]['flux']],style,color=color,linewidth=lw)
+            ax1.plot([i-1,i], [dnm[j]['std'],dn[j]['std']],style,color=color,linewidth=lw)
+            ax2.plot([i-1,i], [distance(dnm[j]['x'],dnm[j]['y'],d0[j]['x'],d0[j]['y']),distance(dn[j]['x'],dn[j]['y'],d0[j]['x'],d0[j]['y'])],style,color=color,linewidth=lw)
+
+            Xinf, Xsup, Yinf, Ysup = Lims_from_region(regions[j])
+            regions[j] = regions[j]._replace(xc=Xinf + dn[j]['x'])        
+            regions[j] = regions[j]._replace(yc=Yinf + dn[j]['y'])        
+        CreateRegions(regions,savename='/tmp/region.reg', texts=np.arange(len(regions)))
+        #pan = d.get('pan')
+        d.set('file ' + file) 
+        #d.set('pan to %s image'%(pan))
+        d.set('regions file /tmp/region.reg')
+        #y = np.random.random()
+
+        plt.pause(0.00001)
+        time.sleep(0.01)
+    plt.show()
+    return
+
+def Center_Flux_std(image,bck=0,method='Gaussian-Picouet'):
+    from photutils import centroid_com, centroid_1dg, centroid_2dg
+    from scipy.optimize import curve_fit
+#    if bool(int(bck)):
+#        print('Subtracting background...')
+#        background =  estimateBackground(data,[region.yc,region.xc],20,1.8 )
+#        image = image - background
+    lx, ly = image.shape
+    
+    if method == 'Center-of-mass': 
+        xn, yn = centroid_com(image)
+    
+    if method == '2x1D-Gaussian-fitting': 
+        xn, yn = centroid_1dg(image)
+        
+    if method == '2D-Gaussian-fitting': 
+        xn, yn = centroid_2dg(image)
+        
+    if method == 'Maximum': 
+        yn, xn = np.where(image==np.nanmax(image))[0][0], np.where(image==np.nanmax(image))[1][0]
+    elif  method == 'Gaussian-Picouet':
+        x = np.linspace(0,lx-1,lx)
+        y = np.linspace(0,ly-1,ly)
+        x, y = np.meshgrid(x,y)
+        yo,xo = np.where(image == image.max())#ndimage.measurements.center_of_mass(image)
+#        maxx, maxy = xc - (lx/2 - xo), yc - (ly/2 - yo)
+#        print ('maxx, maxy = {}, {}'.format(maxx,maxy))
+
+        bounds = ([1e-1*np.nanmax(image), xo-10 , yo-10, 0.5,0.5,-1e5], [10*np.nanmax(image), xo+10 , yo+10, 10,10,1e5])#(-np.inf, np.inf)#
+        Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
+        #print ('bounds = ',bounds)
+        #print('\nParam = ', Param)
+        try:
+            popt,pcov = curve_fit(twoD_Gaussian,(x,y),image.flat,
+                                  Param,bounds=bounds)
+            #print('\nFitted parameters = ', popt)
+        except RuntimeError:
+            #print('Optimal parameters not found: Number of calls to function has reached maxfev = 1400.')
+            return np.nan, np.nan
+        #print(np.diag(pcov))
+
+        #fit = twoD_Gaussian((x,y),*popt).reshape((ly,lx))
+        xn, yn = popt[1], popt[2]
+        d = {'x':xn,'y':yn,'flux':2*np.pi*np.square(popt[1])*np.square(popt[0]),'std':np.sqrt(popt[-2]**2+popt[-3]**2)}
+    return d 
+
+
+ 
+#def Quicklook_Analysis():
+#    d = DS9()
+#    regions =  getregion(d,all=True)
+#    d.set('regions delete all')
+#    CreateRegions(regions,savename='/tmp/region.reg', texts=np.arange(len(regions)))
+#    d.set('regions file /tmp/region.reg')
+#
+#
+
+
+def DS9Update_old(xpapoint,Plot=True):
     """Always display last image of the repository and will upate with new ones
     """
     import time
@@ -5829,8 +6059,12 @@ def DS9Update(xpapoint,Plot=True):
             print('Waiting ...')
         time.sleep(5)
     return
-        
-        
+     
+
+    
+
+
+   
 def Lims_from_region(region=None, coords=None,  config=my_conf):
     """Return the pixel locations limits of a DS9 region
     """
@@ -5867,8 +6101,8 @@ def Lims_from_region(region=None, coords=None,  config=my_conf):
 #            w, h = r, r
 
     xc, yc = giveValue(xc,yc)
-    print('W = ', w)
-    print('H = ', h)
+    #print('W = ', w)
+    #print('H = ', h)
     if w <= 2:
         w = 2             
     if h <= 2:                                                                          
@@ -13408,6 +13642,8 @@ def AddExtinction(table,extinction_map):
 
 
 def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
+    print('Change /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/source/dim_lf.decl 1520000 and /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/source/dim_filt.decl 16 ')
+    sys.exit()
     from astropy.table import Table, vstack
     from shutil import which
     import subprocess
@@ -14876,7 +15112,6 @@ def Convertissor(xpapoint):
     d = DS9();d.set('analysis message {%0.2E %s = %0.2E %s}'%(Decimal(val), unit1, Decimal((val*unit1).to(unit2)),unit2))
 
     return
-
 
 
 #DS9Plot(path='/Users/Vincent/DS9BackUp/CSVs/190311-13H13_CR_HP_profile.csv')
