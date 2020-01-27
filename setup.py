@@ -24,25 +24,11 @@ requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
             #'importlib','pkgutil'
             ]
 
-#
-#requires2 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
-#            'numpy >=1.8', 
-#            'scipy >=0.14', 
-#            'matplotlib==2.2.4',
-#            'astropy >=1.3',
-#            #'pyds9',
-#            'photutils',
-#            'logalpha',
-#            'tqdm'
-#            ]
 
 entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
 
 data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*","doc/*"]}
-
-
-#version = '2.87dev'
 
 
 MAJOR = '2'
