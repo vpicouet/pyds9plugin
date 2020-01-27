@@ -8,7 +8,7 @@ hmenu Generic functions
 
 
 	hmenu Header & data bases
-		Create header data base 
+		Create header data base
 		*
 		menu
 		DS9Utils $xpa_method CreateHeaderCatalog  $param(Click-Enter-For-Only-DS9-Image-); "$path"  $info $ext 2>&1 | tee -a /tmp/DS9Utils.log
@@ -55,7 +55,7 @@ hmenu Generic functions
 		*
 		menu
 		#DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
-		DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(open)"  2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
 
 
 		Mask Regions (NaN)
@@ -72,7 +72,7 @@ hmenu Generic functions
 	endhmenu
 
 	hmenu Setups
-		Change display parameters (S)
+		Change display parameters (S) #7
 		*
 		menu
 		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  $smooth $color $invert $grid 2>&1 | tee -a /tmp/DS9Utils.log
@@ -111,7 +111,7 @@ hmenu Generic functions
 
 
 
-		Execute Command
+		Execute Command #13
 		*
 		menu
 		DS9Utils $xpa_method SubstractImage $param(Arithmetic); $im_path "$exp" $eval $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
@@ -162,7 +162,7 @@ hmenu Generic functions
 
 
 
-	Stack images (s)
+	Stack images (s)  #20
 	*
 	menu
 	DS9Utils $xpa_method stack $param(Stacking); $Path $stack $clipping  2>&1 | tee -a /tmp/DS9Utils.log
@@ -202,15 +202,17 @@ hmenu Instrumentaiton - AIT
 
 	hmenu Focus
 
-		Throughfocus (t)
+		Throughfocus (t) #24
 		*
 		menu
-		DS9Utils $xpa_method throughfocus $param(Throughfocus); $WCS $steps $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS $steps  2>&1 | tee -a /tmp/DS9Utils.log 
+#		DS9Utils $xpa_method throughfocus $param(Throughfocus); $WCS $steps $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
 
 		Throughfocus Image Key
 		*
 		bind t
-		DS9Utils $xpa_method throughfocus $param(Throughfocus); $WCS $steps $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS $steps  2>&1 | tee -a /tmp/DS9Utils.log 
+#$param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path" 
 
 		Radial Profile (r)
 		*
@@ -226,7 +228,8 @@ hmenu Instrumentaiton - AIT
 		Visualisation Throughfocus
 		*
 		menu
-		DS9Utils $xpa_method throughfocus_visualisation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method throughfocus_visualisation "$entry(Paths of the images you want to display. Use global pattern matching.)"   2>&1 | tee -a /tmp/DS9Utils.log
+#DS9Utils $xpa_method throughfocus_visualisation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
 
 
 	endhmenu
@@ -237,7 +240,7 @@ hmenu Instrumentaiton - AIT
 
 	hmenu Detector characterization
 
-		Compute gain from fluctuation
+		Compute gain from fluctuation #29
 		*
 		menu
 		DS9Utils $xpa_method ComputeEmGain $param(EmGain); $subtract "$path" $box $overscan $limits $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
@@ -263,6 +266,12 @@ hmenu Instrumentaiton - AIT
 		DS9Utils $xpa_method ColumnLineCorrelation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
 
 	endhmenu
+
+
+	Guidance
+	*
+	menu
+	DS9Utils $xpa_method Update  2>&1 | tee -a /tmp/DS9Utils.log
 
 
 	Centering (c)
@@ -300,9 +309,9 @@ endhmenu
 
 
 
-hmenu Astromatic
+hmenu Astronomical softwares
 
-	SEXTRACTOR
+	SEXTRACTOR #36
 	*
 	menu
 	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME  $REGION_THRESHOLD  2>&1 | tee -a /tmp/DS9Utils.log
@@ -314,10 +323,10 @@ hmenu Astromatic
 
 
 
-	SWARP - WCS images
+	SWARP - WCS images #38
 	*
 	menu
-	DS9Utils $xpa_method DS9SWARP  $param(SWARP); $BACK_DEFAULT $BACK_FILTERSIZE $BACK_FILTTHRESH $BACK_SIZE $BACK_TYPE $CELESTIAL_TYPE $CENTER_TYPE $CENTERI $COMBINEI  $COMBINE_BUFSIZE $COMBINE_TYPE $COPY_KEYWORDS $FSCALASTRO_TYPE $FSCALE_DEFAULT $GAIN_DEFAULT $GAIN_KEYWORD $IMAGEOUT_NAME $IMAGE_SIZE $MEM_MAX $OVERSAMPLING $PIXEL_SCALE $PIXELSCALE_TYPE $PROJECTION_ERR $PROJECTION_TYPE $RESAMPLE $RESAMPLING_TYPE $SUBTRACT_BACK $WRITE_FILEINFO $VERBOSE_TYPE $WRITE_XML $XML_NAME  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    2>&1 | tee -a /tmp/DS9Utils.log
+	DS9Utils $xpa_method DS9SWARP  $param(SWARP); "$PATH" $BACK_DEFAULT $BACK_FILTERSIZE $BACK_FILTTHRESH $BACK_SIZE $BACK_TYPE $CELESTIAL_TYPE $CENTER_TYPE $CENTERI $COMBINEI  $COMBINE_BUFSIZE $COMBINE_TYPE $COPY_KEYWORDS $FSCALASTRO_TYPE $FSCALE_DEFAULT $GAIN_DEFAULT $GAIN_KEYWORD $IMAGEOUT_NAME $IMAGE_SIZE $MEM_MAX $OVERSAMPLING $PIXEL_SCALE $PIXELSCALE_TYPE $PROJECTION_ERR $PROJECTION_TYPE $RESAMPLE $RESAMPLING_TYPE $SUBTRACT_BACK $WRITE_FILEINFO $VERBOSE_TYPE $WRITE_XML $XML_NAME     2>&1 | tee -a /tmp/DS9Utils.log
 
 	STIFF - Color images
 	*
@@ -329,6 +338,14 @@ hmenu Astromatic
 	*
 	menu
 	DS9Utils $xpa_method DS9PSFEX  $param(PSFex); $ENTRY_PATH   $BASIS_TYPE  $BASIS_NUMBER  $PSF_SAMPLING  $PSF_ACCURACY  $PSF_SIZE  $CENTER_KEYS  "'$PHOTFLUX_KEY'"  "'$PHOTFLUXERR_KEY'"   $PSFVAR_KEYS    $PSFVAR_GROUPS       $PSFVAR_DEGREES    	$SAMPLE_AUTOSELECT   $SAMPLEVAR_TYPE   $SAMPLE_FWHMRANGE   $SAMPLE_VARIABILITY   $SAMPLE_MINSN   $SAMPLE_MAXELLIP   $CHECKPLOT_DEV $CHECKPLOT_TYPE  $CHECKPLOT_NAME  	$CHECKIMAGE_TYPE   $CHECKIMAGE_NAME    $PSF_DIR 	   $HOMOBASIS_TYPE $HOMOPSF_PARAMS $VERBOSE_TYPE $WRITE_XML $XML_NAME $NTHREADS  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+	Astrometric calibration (astrometry.net)
+	*
+	menu
+	DS9Utils $xpa_method   $message(okcancel,WARNING: you are about to run the WCS analysis. If your image does not have any WCS header this function will send the image to the astrometry.net server and run a lost in space algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.) WCS $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   2>&1 | tee -a /tmp/DS9Utils.log
+
+#$image_width $image_height 
 
 endhmenu
 
@@ -373,6 +390,16 @@ http://ilios.io/ds9/index.html
 #http://people.lam.fr/picouet.vincent/index.html
 
 
+Let's have a try!
+*
+menu
+#echo "$filename" | $text 
+#echo "$env(DS9Function)" | $text 
+DS9Utils $xpa_method test  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+
 
 
 #DS9Utils $xpa_method Help
@@ -398,16 +425,6 @@ hmenu Not to use
 
 
 	hmenu Dev
-
-
-
-	Test suite
-	*
-	menu
-	echo "$filename" | $text 
-	#echo "$env(DS9Function)" | $text 
-	#DS9Utils $xpa_method test  2>&1 | tee -a /tmp/DS9Utils.log
-
 
 
 
@@ -453,11 +470,6 @@ hmenu Not to use
 
 
 
-		Refresh image and analyze
-		*
-		menu
-		DS9Utils $xpa_method Update  $param(Analysis); $Max $Std $Flux  2>&1 | tee -a /tmp/DS9Utils.log
-
 		Next Image 
 		*
 		menu
@@ -465,7 +477,7 @@ hmenu Not to use
 
 		Next Image Key
 		*
-		bind n
+		bind m
 		DS9Utils $xpa_method next  2>&1 | tee -a /tmp/DS9Utils.log
 #
 #		Save images in color
@@ -482,11 +494,6 @@ hmenu Not to use
 	*
 	menu
 	DS9Utils $xpa_method RunSextractorHSC_CLAUDS $param(SEXTRACTOR-CLAUDS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME $REGION_THRESHOLD $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
-
-	Lost in space (astrometry.net)
-	*
-	menu
-	DS9Utils $xpa_method   $message(okcancel,WARNING: you are about to run the WCS analysis. If your image does not have any WCS header this function will send the image to the astrometry.net server and run a lost in space algorithm to generate a WCS header - only available with Python2. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. If it converges, it will display on DS9 an image from SDSS at the same location. Please check the log in /tmpDS9Utils.log if it does not converge)  WCS $param(LostInSpace); $scale_units $scale_type $scale_err $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $use_sextractor $crpix_center $parity $image_width $image_height $positional_error   2>&1 | tee -a /tmp/DS9Utils.log
 
 
 
@@ -995,6 +1002,13 @@ menu
 DS9Utils $xpa_method ComputeStandardDeviation  2>&1 | tee -a /tmp/DS9Utils.log
 
 
+Test
+*
+bind n
+DS9Utils $xpa_method next_step  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
 
 
 endhmenu
@@ -1041,7 +1055,7 @@ endparam
 
 
 param Setup
-scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization {Scale}
+scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization|zscale|minmax {Scale}
 cut entry {Colormap cut} 50-99.99 {Cuts in percentile}
 smooth entry {Smooth} 0 {Smoothing boxcar radius in pixel}
 color menu {Color} cool|grey|red|green|blue|a|b|bb|he|i8|aips0|sls|hsv|heat|rainbow|standard|staircase {Color}
@@ -1072,6 +1086,7 @@ endparam
 
 
 param SWARP
+PATH entry {PATHS} - {Path of the images you want to stack, use glob syntax with ? and *.}
 BACK_DEFAULT entry {BACK_DEFAULT} 0.0 {Default background value to be subtracted in BACK TYPE MANUAL mode.}
 BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Size in background meshes of the background-filtering mask.}
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Difference threshold (in ADUs) for the background-filtering}
@@ -1249,6 +1264,7 @@ endparam
 
 
 param Throughfocus
+Path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
 WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
 steps entry {Steps} - {Give first actuator center and step eg: 16.45-0.15. Leave '-' if not needed}
 endparam
@@ -1320,8 +1336,9 @@ endparam
 
 
 param LostInSpace
-scale_units menu {scale_units} degwidth|arcminwidth|arcsecperpix {The units for the scale_lower and scale_upper arguments becomes the scale-units argument to solve-field on the server side}
-scale_type menu {scale_type} ul|ev {Set ul if you are going to provide scale_lower and scale_upper arguments, or ev if you are going to provide scale_est and scale_err error percentage  arguments.}
+Image menu {Type} Image|XY-catalog {If Image, upload the image, else upload the used defined DS9 regions as jsoned fits catalog!}
+scale_units menu {scale_units} -|degwidth|arcminwidth|arcsecperpix|focalmm {The units for the scale_lower and scale_upper arguments becomes the scale-units argument to solve-field on the server side}
+#scale_type menu {scale_type} ul|ev {Set ul if you are going to provide scale_lower and scale_upper arguments, or ev if you are going to provide scale_est and scale_err error percentage  arguments.}
 scale_lower entry {scale_lower} - {The lower-bound of the scale of the image.}
 scale_upper entry {scale_upper} - {The upper-bound of the scale of the image.}
 
@@ -1330,16 +1347,16 @@ scale_err entry {scale_error} - {0 to 100. The error (percentage) on the estimat
 center_ra entry {center_ra} - {float, 0 to 360, in degrees. The position of the center of the image}
 center_dec entry {center_dec} - {float, -90 to 90, in degrees. The position of the center of the image}
 
-radius entry {radius} 0.3 {float, in degrees.}
-downsample_factor entry {downsample_factor} 2 {float, >1. Downsample (bin) your image by this factor before performing source detection. This often helps with saturated images, noisy images, and large images. 2 and 4 are commonly-useful values.}
-tweak_order menu {tweak_order} 2|1|3|4|5|6 {Polynomial degree order for distortion correction. Orders>2 may produce totally bogus results high-order polynomials are strange beasts.}
-use_sextractor menu {use_sextractor} True|False {Use the SourceExtractor program to detect stars, not our built-in program.}
+radius entry {radius} - {float, in degrees.}
+downsample_factor entry {downsample_factor} - {float, >1. Downsample (bin) your image by this factor before performing source detection. This often helps with saturated images, noisy images, and large images. 2 and 4 are commonly-useful values.}
+tweak_order menu {tweak_order} 2|1|3|4|5 {Polynomial degree order for distortion correction. Orders>2 may produce totally bogus results high-order polynomials are strange beasts.}
+#use_sextractor menu {use_sextractor} True|False {Use the SourceExtractor program to detect stars, not our built-in program.}
 
 crpix_center menu {crpix_center} False|True {Set the WCS reference position to be the center pixel in the image. By default the center is the center of the quadrangle of stars used to identify the image.}
-parity menu {parity} 2|1|0 {2 means try both. 0 means that the sign of the determinant of the WCS CD matrix is positive, 1 means negative.}
-image_width entry {image_width} - {int, only necessary if you are submitting an x,y list of source positions}
-image_height entry {image_height} - {int, ditto.}
-positional_error entry {positional_error} 1 {float, expected error on the positions of stars in your image}
+parity checkbox {parity} 0 {0 means that the sign of the determinant of the WCS CD matrix is positive, 1 means negative.}
+#image_width entry {image_width} - {int, only necessary if you are submitting an x,y list of source positions}
+#image_height entry {image_height} - {int, ditto.}
+positional_error entry {positional_error} - {float, expected error on the positions of stars in your image}
 #test $filedialog(open) {fielane} 0 {float}
 endparam
 
@@ -1417,7 +1434,7 @@ endparam
 
 
 param Background-Fit-1D
-axis menu {Direction} y|x {Variation direction to be analyzed}
+axis menu {Direction} x|y {Variation direction to be analyzed}
 background menu {Background deg} 0|1|2 {Background degree of the fit}
 law menu {Law} None|exponential1D|DoubleExponiential {Law used to fit the background}
 gaussians menu {Number} 0|1|2|3|4|5 {Number of features to fit by gaussian}

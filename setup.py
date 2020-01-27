@@ -19,7 +19,8 @@ requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
             'tqdm',#'shutil','os','glob','sys','time'
             'datetime',#pkgp_resources'#,'urllib','subprocess','collections','multiprocessing','errno',            
             'Pillow', 
-            'pyswarm'
+            'pyswarm',
+            'logalpha'
             #'importlib','pkgutil'
             ]
 
