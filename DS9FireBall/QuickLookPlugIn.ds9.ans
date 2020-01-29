@@ -1,9 +1,3 @@
-param bar
-    @analysis.par
-endparam
-
-
-
 hmenu Generic functions
 
 
@@ -17,7 +11,7 @@ hmenu Generic functions
 		Create Image subset
 		*
 		menu
-		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" $number $Fields "$Mask"  2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" 100 $Fields "$Mask"  2>&1 | tee -a /tmp/DS9Utils.log
 
 
 		Add header field
@@ -343,30 +337,41 @@ hmenu Astronomical softwares
 	Astrometric calibration (astrometry.net)
 	*
 	menu
-	DS9Utils $xpa_method   $message(okcancel,WARNING: you are about to run the WCS analysis. If your image does not have any WCS header this function will send the image to the astrometry.net server and run a lost in space algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.) WCS $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   2>&1 | tee -a /tmp/DS9Utils.log
+	DS9Utils $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.) WCS $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   2>&1 | tee -a /tmp/DS9Utils.log
 
 #$image_width $image_height 
 
+
+	hmenu Astronomy calculator
+
+		Cosmolgy calculator
+		*
+		menu
+		DS9Utils $xpa_method CosmologyCalculator $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty 2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Convertissor
+		*
+		menu
+		DS9Utils $xpa_method Convertissor $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift 2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Next
+		*
+		menu
+		DS9Utils $xpa_method next_step  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+	endhmenu
+
+
+
+
 endhmenu
 
 
 
-
-
-hmenu Astronomy calculator
-
-	Cosmolgy calculator
-	*
-	menu
-	DS9Utils $xpa_method CosmologyCalculator $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty 2>&1 | tee -a /tmp/DS9Utils.log
-
-
-	Convertissor
-	*
-	menu
-	DS9Utils $xpa_method Convertissor $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift 2>&1 | tee -a /tmp/DS9Utils.log
-
-endhmenu
 
 
 
@@ -384,10 +389,8 @@ DS9Functions Help !
 *
 web
 #file:$env(DS9Function)
-http://ilios.io/ds9/index.html
-#http://ds9.si.edu/doc/ref/analysis.html
-#/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
-#http://people.lam.fr/picouet.vincent/index.html
+#http://ilios.io/ds9/index.html
+file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
 
 
 Let's have a try!
@@ -397,6 +400,12 @@ menu
 #echo "$env(DS9Function)" | $text 
 DS9Utils $xpa_method test  2>&1 | tee -a /tmp/DS9Utils.log
 
+
+
+Test
+*
+bind n
+DS9Utils $xpa_method next_step  2>&1 | tee -a /tmp/DS9Utils.log
 
 
 
@@ -416,602 +425,6 @@ DS9Utils $xpa_method test  2>&1 | tee -a /tmp/DS9Utils.log
 ###########################################################################################################################################
 ###########################################################################################################################################
 
-
-
-
-
-hmenu Not to use
-
-
-
-	hmenu Dev
-
-
-
-
-	Parameter
-	*
-	menu
-	#$param(LostInSpace)
-	which DS9Utils
-	#echo $filedialog(save)  | $text #"$filedialog(open)"
-
-
-	Config
-	*
-	menu
-	DS9Utils $xpa_method ChangeConfig  $param(Change-Config); $exptime $temperature $gain $physical_region $extension $date $format_date $verbose $ConversionGain $Autocorr_region_1D $Autocorr_region_2D   2>&1 | tee -a /tmp/DS9Utils.log
-
-
-	Add header field from catalog
-	*
-	menu
-	DS9Utils $xpa_method AddHeaderFieldCat $param(CreateHeaderCat); $Field $catalog $timediff "$formatImage" "$formatCat" $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-	Add Measurements to catalog
-	*
-	menu
-	DS9Utils $xpa_method DS9AddToCatalog $param(AddToCatalog); $formatCat $Gain1 $Gain2 $Smearing1 $Smearing2 $HotPixels $AnalyzeOSSmearing  2>&1 | tee -a /tmp/DS9Utils.log	
-
-	endhmenu
-
-
-	hmenu Charge images
-
-		Open Image (o)
-		*
-		menu
-		DS9Utils $xpa_method open ""$entry(Path to image to open)""  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Open Image Key
-		*
-		bind o
-		DS9Utils $xpa_method open ""$entry(Path to image to open)""   2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Next Image 
-		*
-		menu
-		DS9Utils $xpa_method next  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Next Image Key
-		*
-		bind m
-		DS9Utils $xpa_method next  2>&1 | tee -a /tmp/DS9Utils.log
-#
-#		Save images in color
-#		*
-#		menu
-#		DS9Utils $xpa_method DS9save  $param(Save); $var1 $var2 $var3 $var4  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-	endhmenu
-
-
-
-	SEXTRACTOR for CLAUDS
-	*
-	menu
-	DS9Utils $xpa_method RunSextractorHSC_CLAUDS $param(SEXTRACTOR-CLAUDS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME $REGION_THRESHOLD $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-
-	hmenu Photutils
-
-		Extract Sources
-		*
-		menu
-		DS9Utils $xpa_method ExtractSources $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Subtract background
-		*
-		menu
-		DS9Utils $xpa_method BackgroundEstimationPhot $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Grouping algorithm
-		*
-		menu
-		DS9Utils $xpa_method GroupingAlgorithm $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Aperture photometry
-		*
-		menu
-		#DS9Utils $xpa_method AperturePhotometry $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path" |& tee -a /tmp/DS9Utils.log
-		DS9Utils $xpa_method AperturePhotometry  "$entry(Path of the detection catalog)"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Building an effective PSF
-		*
-		menu
-		DS9Utils $xpa_method BuildingEPSF $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-	#	PSF matching
-	#	*
-	#	menu
-	#	DS9Utils $xpa_method PSFmatching $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		#Centroiding
-		#*
-		#menu
-		#DS9Utils $xpa_method Centroiding  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Morphological Properties
-		*
-		menu
-		DS9Utils $xpa_method MorphologicalProperties $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Elliptical Isophote Analysis
-		*
-		menu
-		DS9Utils $xpa_method EllipticalIsophoteAnalysis  2>&1 | tee -a /tmp/DS9Utils.log
-
-	endhmenu
-
-
-	hmenu Noise contribution
-
-		Compute CIC
-		*
-		menu
-		DS9Utils $xpa_method ComputeCIC  "$entry(Path of the analysis table or numbers of the images on which run the analysis: Ex 10-15, all, 10-13-22, etc.)"    2>&1 | tee -a /tmp/DS9Utils.log
-
-		Compute Dark
-		*
-		menu
-		DS9Utils $xpa_method AnalyseDark  "$entry(Path of the general folder containing all the stacks to be analyzed. In each sub-folders, stacked images will subtracted and exposure devided to asses the dark level.)"   2>&1 | tee -a /tmp/DS9Utils.log
-
-		Compute Read Noise
-		*
-		menu
-		DS9Utils $xpa_method ComputeReadNoise  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Compute emGain Histogram
-		*
-		menu
-		DS9Utils $xpa_method ComputeGainHistogram  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Photon Transfer Curve
-		*
-		menu
-		DS9Utils $xpa_method DS9PhotonTransferCurve  $param(EmGain); $subtract "$path" $box $overscan $limits $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Histogram sums
-		*
-		menu
-		DS9Utils $xpa_method HistogramSums $param(-Click-Enter-For-Only-DS9-Image-); $log $range $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Histogram difference
-		*
-		menu
-		DS9Utils $xpa_method HistogramDifferences "$entry(Path of the image you want to subtract the histogram)"  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-	endhmenu
-
-
-	hmenu Smearing
-
-		Smearing: Hot pixels/CR/OS profile
-		*
-		menu
-		DS9Utils $xpa_method SmearingProfile $param(smearing); $pathc $fields $thresholds $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Smearing profile: Autocorrelation 
-		*
-		menu
-		DS9Utils $xpa_method DS9SmearingProfileAutocorr $param(SmearingAutocorr); $autocorr $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Smearing profile: Over scann 
-		*
-		menu
-		DS9Utils $xpa_method AnalyzeOSSmearing $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Unsmear events
-		*
-		menu
-		DS9Utils $xpa_method DS9Desmearing "$entry(Detection thresholds)"  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-#		Deconvolve smearing
-#		*
-#		menu
-#		DS9Utils $xpa_method DS9DeconvolveSmearing "$entry(Smearing_length)"  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Deconvolve smearing
-		*
-		menu
-		DS9Utils $xpa_method DS9DeconvolveSmearing2 $param(Variable-Smearing-Kernel); $Smearing $RateSmearing $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-	endhmenu
-
-
-
-	hmenu Lephare
-
-		Format Catalog For Lephare
-		*
-		menu
-		DS9Utils $xpa_method DS9FormatCatalogForLephare ""$entry(Path of the catalog to be formated)""  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Filters
-		*
-		menu
-		DS9Utils $xpa_method DS9LephareFilter $param(Lephare-Filters); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE $FILTER_LIST $TRANS_TYPE $FILTER_CALIB $FILTER_FILE  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		SED to lib
-		*
-		menu
-		DS9Utils $xpa_method DS9LephareSedToLib $param(Lephare-SedToLib); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE $STAR_c $QSO_c $GALAXY_c $STAR_SED $STAR_LIB $QSO_SED $QSO_LIB $GAL_SED $GAL_LIB $SEL_AGE $AGE_RANGE   2>&1 | tee -a /tmp/DS9Utils.log
-
-		Mag gal
-		*
-		menu
-		DS9Utils $xpa_method DS9LephareMagGal $param(Lephare-MagGal); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE $STAR_c $QSO_c $GALAXY_c $STAR_LIB_IN $STAR_LIB_OUT $QSO_LIB_IN $QSO_LIB_OUT $GAL_LIB_IN $GAL_LIB_OUT $MAGTYPE $Z_STEP  $COSMOLOGY $MOD_EXTINC $EXTINC_LAW $EB_V $EM_LINES $Z_FORM  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Zphot
-		*
-		menu
-		DS9Utils $xpa_method DS9LephareZphot $param(Lephare-Zphot); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE $ZPHOTLIB $CAT_IN $CAT_OUT   2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Galaxy stars classification
-		*
-		menu
-		DS9Utils $xpa_method GalaxyStarsClassification $param(Galaxy-star-classification); $path $bzk $chi2 $compactness  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Limits
-		*
-		menu
-		DS9Utils $xpa_method DS9LephareLimits $param(Lephare-Limits); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE	 $LIMITS_INPUT $LIMITS_OUTPUT $ZPHOTLIB $LF_MABS_REF $LF_MAPP_SEL  $LF_MAPP_CUT $LIMITS_ZBIN $MF_METHOD  $MF_MODEL $MF_M2L $MF_CONVERS   2>&1 | tee -a /tmp/DS9Utils.log
-
-	
-		Luminosity functions
-		*
-		menu
-		DS9Utils $xpa_method DS9LephareLF $param(Lephare-LF); $LEPHARE_DIR $LEPHARE_WORK $PARAM_FILE	 $MF $LF_ESTI $LF_INPUT $LF_OUTPUT $ZPHOTLIB $LF_AREA $LF_WEIGHT  $USE_WEIGHT $LF_ZBIN $LF_NBSTEP  $LF_RM_BIAS $LF_SELECT_1 $LF_SELECT_IN $LF_SELECT_RG $STY_DCHI2  $STY_FIX_ALPHA $STY_FIX_MSTAR $SWML_CONSTRAIN   2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Plot LF
-		*
-		menu
-		DS9Utils $xpa_method PlotFL_from_ALF  $param(Plot-LF); $Path $Filter    2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Plot Spectra
-		*
-		menu
-		DS9Utils $xpa_method PlotSpec  "$entry(Path, can use global pattern)"    2>&1 | tee -a /tmp/DS9Utils.log
-
-
-	endhmenu
-
-
-
-
-
-	hmenu FIREBall specific
-
-		hmenu Plot spectra
-
-			Plot spectra 
-			*
-			menu
-			DS9Utils $xpa_method DS9plot_spectra  $param(Frame); $Field $Frame $Wave $kernel $threshold $type $magnitude  2>&1 | tee -a /tmp/DS9Utils.log
-			
-
-
-			Image spectral feature
-			*
-			menu
-			DS9Utils $xpa_method lya_multi_image   $param(Frame); $Field $Frame $Wave  2>&1 | tee -a /tmp/DS9Utils.log
-			
-
-
-			Plot spatial stack
-			*
-			menu
-			DS9Utils $xpa_method PlotSpatial  $param(Field); $field $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		endhmenu
-
-
-		Show slits regions (R)
-		*
-		menu
-		DS9Utils $xpa_method regions "$entry(Number or field: f1 or F3 or grid, add lya or LYA or Lya for Lya lines: )"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Show slits regions Key
-		*
-		bind R
-		DS9Utils $xpa_method regions "$entry(Number or field: f1 or F3 or grid, add lya or LYA or Lya for Lya lines: )"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		XY Analysis
-		*
-		menu
-		DS9Utils $xpa_method xy_calib  "$entry(Number or field: f1 or F3: )"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Diffuse focus
-		*
-		menu
-		DS9Utils $xpa_method focus  "$entry(Number or field: f1 or F3 or grid, add pa after a space if not the nominal: )"  2>&1 | tee -a /tmp/DS9Utils.log
-
-	---
-	#		Total reduction (Bias, dark, etc.)
-	#		*
-	#		menu
-	#		DS9Utils $xpa_method  TotalReduction    $message(okcancel,WARNING: you are about to run the total reduction piepeline. Please make sure you are aware about the way it works. In particular note that master bias and dark should be stacked images - or folders containing the images - at the same gains/temp. Also make sure the exposure time is saved in the header of your images as 'EXPTIME'. If not flat path is given, flat removal will not be performed. Press ok to continue, cancel to abort.) "$entry(Path master BIAS image, or repository containing bias image to stack)" "$entry(Path master DARK image, or repository containing bias image to stack)" "$entry(Path master FLAT - dome or sky - image, or repository containing bias image to stack)" "$entry(Number of the images  on which run the analysis: first-last eg: 1-10  [Press ENTER for this image])" |& tee -a /tmp/DS9Utils.log
-
-			Total reduction 
-			*
-			menu
-			DS9Utils $xpa_method TotalReduction $param(TotalReduction); $cr $os $bck $d $cc $si $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-			Image Test images
-			*
-			menu
-			DS9Utils $xpa_method TestImages $param(Image-test); $header $size $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Simulate FIREBall emCCD detector
-		*
-		menu
-		DS9Utils $xpa_method SimulateFIREBallemCCD  $param(Detector-Parameters); $size $overscan $OS $ConversionGain $EmGain $n_registers $Bias $RN $pCIC $sCIC $Dark $Smearing $RateSmearing $Exposure $Flux $Source $Rx $Ry  $Name $spectra $cube $threshold $hist  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-
-	endhmenu
-
-
-
-	Trimming
-	*
-	menu
-	DS9Utils $xpa_method Trimming $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-	hmenu Cosmic Rays / Hot pixels 
-
-		Detect cosmics
-		*
-		menu
-		DS9Utils $xpa_method DS9DetectCosmics  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		NEW Detect + Remove cosmic rays 
-		*
-		menu
-		DS9Utils $xpa_method DS9removeCRtails_CS $param(Cosmic-Rays); $threshold $mask $all_line $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-
-
-		Remove cosmic rays 
-		*
-		menu
-		DS9Utils $xpa_method DS9MaskRegions  $param(ReplaceByNaNs); $top $bottom $left $right $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Cosmics: Replace regions with NaNs
-		*
-		menu
-		DS9Utils $xpa_method ReplaceWithNans   $message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)     2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Interpolate NaNs 
-		*
-		menu
-		DS9Utils $xpa_method InterpolateNaNs $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-
-
-	endhmenu
-	
-
-
-	hmenu Data reduction
-
-
-
-
-		Overscan Correction (O)
-		*
-		menu
-		DS9Utils $xpa_method OverscanCorrection $param(Overscan-Correction); $line $overscan $limits $column $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-
-		Generate & subtract background
-		*
-		menu
-		DS9Utils $xpa_method BackgroundSubstraction $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-
-
-		Photo counting (p)
-		*
-		menu
-		DS9Utils $xpa_method photo_counting "$entry(Threshold k want to apply - k * sigma. Default = 5.5 )" $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Bayesian multi-threshold PC
-		*
-		menu
-		DS9Utils $xpa_method DS9MultipleThreshold $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Noise minimization by image LC image removal (Bias, dark, etc.)
-		*
-		menu
-		DS9Utils $xpa_method NoiseMinimization "$entry(Folder containing the images you want to subtract for noise minimization)"  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-		Continuum photometry
-		*
-		menu
-		DS9Utils $xpa_method ContinuumPhotometry  $param(Gaussian-Fit-1D); $type $axis $kernel $FWHM $Center $noise  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-	endhmenu
-
-
-
-	Add gaussian 2D
-	*
-	menu
-	DS9Utils $xpa_method AddGaussian2d  $param(Add-Gaussian-2D); $Flux $FWHM  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-	Create histogram
-	*
-	menu
-	DS9Utils $xpa_method DS9CreateHistrogram $param(-Click-Enter-For-Only-DS9-Image-); $log $range $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-	#	Follow probability law
-	#	*
-	#	menu
-	#	DS9Utils $xpa_method FollowProbabilityLaw $param(ProbLaw); "$prob"    2>&1 | tee -a /tmp/DS9Utils.log
-	#	Realize image following probability law
-	#	*
-	#	menu
-	#	DS9Utils $xpa_method ApplyRealisation $param(RealLaw); "$prob" 2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-
-
-
-
-	hmenu HSC - CLAUDS
-
-		Generate Detection Image
-		*
-		menu
-		DS9Utils $xpa_method DS9CreateDetectionImages $param(Bands-to-use); $corr $U $G $R $I $Z $Y-HSC $Y-VIRCAM $us $H $J $Ks $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Save only images
-		*
-		menu
-		DS9Utils $xpa_method DS9SaveOnlyImage  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Save multi-color images
-		*
-		menu
-		DS9Utils $xpa_method CreateMultiColorImage $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-		Compare Mag color
-		*
-		menu
-		DS9Utils $xpa_method DS9PlotColor $param(Plot-Comparison-Mag); $path $var1 $var2 $var3 $Bins  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Compare redshift
-		*
-		menu
-		DS9Utils $xpa_method DS9PlotRedshiftGaussian $param(Plot-Comparison-Redshift); $path $var1 $var2 $Bins  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-		Get image depth
-		*
-		menu
-		DS9Utils $xpa_method get_depth_image $param(Get-depth); $mag_zp $aper_size $N_aper $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
-
-
-	endhmenu
-
-
-
-	Mean Var Region
-	*
-	menu
-	DS9Utils $xpa_method meanvar  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-Image Analysis (I)
-*
-menu
-DS9Utils $xpa_method ImageAnalysis $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-Image Analysis Key
-*
-bind I
-DS9Utils $xpa_method ImageAnalysis $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-Image Visualization
-*
-menu
-DS9Utils $xpa_method DS9Visualization $param(Visualization); $fixed $variable $counts $flux $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
-
-Background measurement (b)
-*
-menu
-DS9Utils $xpa_method BackgroundMeasurement   2>&1 | tee -a /tmp/DS9Utils.log
-
-Background measurement (b)
-*
-bind b
-DS9Utils $xpa_method BackgroundMeasurement   2>&1 | tee -a /tmp/DS9Utils.log
-
-
-Stack all the images given a catalog
-*
-menu
-DS9Utils $xpa_method StackAllImages "$entry(Header catalog to stack from, this function will stack images with same exposure/gain/temperature/path)"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-Compute Standard Deviation
-*
-menu
-DS9Utils $xpa_method ComputeStandardDeviation  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-Test
-*
-bind n
-DS9Utils $xpa_method next_step  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-
-
-
-endhmenu
 
 
 
@@ -1282,7 +695,7 @@ endparam
 
 param subset_
 cat entry {Header catalog} - {Path of the header catalog to create subset}
-number entry {Number of image} - {Number of images having the same characteristics, Use - for all.}
+#number entry {Number of image} - {Number of images having the same characteristics, Use - for all.}
 Fields entry {Fields} - {Fields for which images must have the save value, order matters for folder creation.}
 Mask entry {Selection} - {Selection to be applied. eg: ((FLUX*EXPTIME>1) & (FLUX*EXPTIME<30)) | (EMGAIN>0) }
 endparam
@@ -1492,7 +905,7 @@ DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma corr
 DETECT_MINAREA entry {DETECT_MINAREA} 10 {}
 #DETECT_MAXAREA entry {DETECT_MAXAREA} - {}
 THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
-DETECT_THRESH entry {DETECT_THRESH} 0.8 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
+DETECT_THRESH entry {DETECT_THRESH} 2 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
 ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
 
 FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}

@@ -306,8 +306,7 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
     return 
 
 
-
-
+#d.get('file') tiff
 
 
 ###################################################################################
@@ -2837,29 +2836,6 @@ def Charge_path(filename, entry_point = 3, entry=None):
     return path
     
 
-def DS9SaveOnlyImage(xpapoint):
-    '''
-    '''
-    from astropy.io import fits
-    d = DS9(xpapoint)
-    filename = getfilename(d)
-    paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-    if not os.path.exists(os.path.join(os.path.dirname(paths[0]),'ImagesOnly')):
-        os.makedirs(os.path.join(os.path.dirname(paths[0]),'ImagesOnly'))
-
-    for path in paths:
-        a = fits.open(path)[1]
-#        hdu = fits.PrimaryHDU(np.arange(10))
-#        hdu.data = a.data
-#        hdu.header = a.header
-#        hdul = fits.HDUList([hdu])
-#        hdul.writeto(os.path.join(os.path.dirname(path),'ImagesOnly',os.path.basename(path)),overwrite=True)
-        fits.writeto(os.path.join(os.path.dirname(path),'ImagesOnly',os.path.basename(path)).replace(',','-'), a.data,a.header,overwrite=True)
-
-       # a.writeto(os.path.join(os.path.dirname(path),'ImagesOnly',os.path.basename(path)),overwrite=True)
-        #a.header = 
-        #fitswrite(a,os.path.join(os.path.dirname(path),'ImagesOnly',os.path.basename(path)))
-    return
 
 def DS9visualisation_throughfocus(xpapoint):
     """
@@ -11552,58 +11528,6 @@ def MakeChi2image(images,varImages,outputImage,clobber=True):
     return 
 
 
-def DS9CreateDetectionImages(xpapoint):
-    d = DS9(xpapoint)
-    filename = d.get("file")
-    corr, U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks = np.array(np.array(sys.argv[-8-9:-5],dtype=int), dtype=bool)
-    print('MegaCam-u', 'HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z', 'HSC-Y', 'VIRCAM-Y', 'MegaCam-uS', 'VIRCAM-H', 'VIRCAM-J', 'VIRCAM-Ks',U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks)
-    #if len(sys.argv) > 3+2: paths = Charge_path_new(filename, entry_point=3+2)
-    paths = Charge_path_new(filename) if len(sys.argv) > 7+8 else [filename] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-        
-
-    for path in paths:
-        createDetectionImages(path, U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks, corr=corr)
-    return 
-def createDetectionImages(path, U=True, G=True, R=True, I=True, Z=True, Yhsc=True, Yvircam=False, Us=False, H=False, J=False, Ks=False, corr=True, remove=True):
-    #UGRIZY(HSC)Ks
-    from astropy.io import fits
-    dn = os.path.dirname(path)
-    fn = os.path.basename(path)
-    images = []
-    varImages = []
-    name = os.path.join(os.path.dirname(dn),'DetectionImages','-'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-'))
-    bools_bands = np.array([U, G, R, I, Z, Yhsc, Yvircam, Us, H, J, Ks] )
-    bands = np.array(['MegaCam-u', 'HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z', 'HSC-Y', 'VIRCAM-Y', 'MegaCam-uS', 'VIRCAM-H', 'VIRCAM-J', 'VIRCAM-Ks'])[bools_bands]
-    print('Bands to use : ', bands)
-    band_ims = []
-    if os.path.isfile(name) is False:
-        
-        
-        print(os.path.join(dn, fn[:7] + '*' + fn[-14:]))
-        for file in glob.glob(os.path.join(dn, fn[:7] + '*' + fn[-14:])):
-            band_im = '-'.join(file.split('-')[1:3])
-            print(band_im)    
-            if band_im in bands:
-                sepCoadd_2(file,scale=1.,corr=corr)
-                image_name = (os.path.dirname(os.path.dirname(file)) + '/tmp/' + os.path.basename(file)[:-5]+'_data.fits').replace(',','-')
-                var_name = (os.path.dirname(os.path.dirname(file)) + '/tmp/' + os.path.basename(file)[:-5]+'_vari.fits').replace(',','-')
-                images.append(image_name)
-                varImages.append(var_name)
-                band_ims.append(band_im)
-        print('Images = ', images)
-        if not os.path.exists(os.path.join(os.path.dirname(dn),'DetectionImages')):
-            os.makedirs(os.path.join(os.path.dirname(dn),'DetectionImages'))
-        MakeChi2image(images,varImages,name,clobber=True)
-        fits.setval(name, 'VAR_CORR', value = corr, comment = 'Rescaling factor for variance map')
-        fits.setval(name, 'BANDS', value = ' - '.join(band_ims), comment = 'Band used for detection image')
-        print('Detection image %s created!'%(name))
-        if remove:
-            for file in glob.glob(os.path.dirname(dn) + '/tmp/' + '-*'.join(fn.split('-')[:1] + fn.split('-')[-2:]).replace(',','-')[:-5]+'*.fits' ):
-                os.remove(file)
-    else:
-        print('Detection image %s already exists!'%(name))
-    return
-
 
 def get_depth_image(xpapoint):
     from .getDepth import main_coupon
@@ -12024,1027 +11948,6 @@ def PlotSED(file='/Users/Vincent/Nextcloud/Work/LePhare/work/lib_bin/LAB_GAL_COS
     return
 
 
-def DS9LephareFilter(xpapoint):
-    from shutil import which
-   
-    params = sys.argv[-7:]
-    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'FILTER_LIST' ,  'TRANS_TYPE' ,  'FILTER_CALIB' ,  'FILTER_FILE']
-    param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
-    print(param_dict)
-    if param_dict['PARAM_FILE'] == '-':
-        param_dict['PARAM_FILE'] = ''
-    else:
-        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
-
-    for key in list(param_dict.keys())[3:]:
-        if str(param_dict[key]) == '-':
-            del param_dict[key]
-            
-    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
-
-
-    #d = DS9(xpapoint)
-    filter_  = param_dict['LEPHARE_DIR'] + '/source/filter'
-    if which(filter_) is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
-        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
-    else:
-#        print(os.path.dirname(paths[0]))
-#        print(os.getcwd())
-#        os.chdir(os.path.dirname(paths[0]))
-#        print(os.getcwd())
-#        os.system("sleep 0.1")
-        print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3:]]) ))
-        os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3:]]) ))
-        #os.system("psfex %s -%s -c default.psfex"%(' '.join(paths),  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[1:]]) ))
-        os.system("sleep 1")
-        try:
-            PlotFilters(filts=param_dict['FILTER_LIST'].split(','),pathf=param_dict['LEPHARE_DIR']+'/filt/')
-        except KeyError:
-            pass
-
-    return
-
-def DS9LephareMagGal(xpapoint):
-    from shutil import which
-   
-    params = sys.argv[-20:]
-    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'STAR_c' ,  'QSO_c' ,  'GALAXY_c' ,  'STAR_LIB_IN',
-                    'STAR_LIB_OUT' ,  'QSO_LIB_IN' ,'QSO_LIB_OUT' ,  'GAL_LIB_IN' ,  'GAL_LIB_OUT' , 'MAGTYPE' ,  'Z_STEP',
-                    'COSMOLOGY' ,  'MOD_EXTINC' ,'EXTINC_LAW' ,  'EB_V' ,  'EM_LINES' , 'Z_FORM']
-    param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
-    print(param_dict)
-    if param_dict['PARAM_FILE'] == '-':
-        param_dict['PARAM_FILE'] = ''
-    else:
-        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
-
-
-    for key in list(param_dict.keys())[6:]:
-        if str(param_dict[key]) == '-':
-            del param_dict[key]
-            
-            
-    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
-
-
-    #d = DS9(xpapoint)
-    filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_star'
-    if which(filter_) is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
-        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
-    else:
-#        print(os.path.dirname(paths[0]))
-#        print(os.getcwd())
-#        os.chdir(os.path.dirname(paths[0]))
-#        print(os.getcwd())
-#        os.system("sleep 0.1")
-        if bool(int(param_dict['STAR_c'])):
-            filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_star'
-            print("%s %s -t S -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-            os.system("%s %s -t S -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-
-        if bool(int(param_dict['QSO_c'])):
-            filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_gal'
-#            print("%s %s -t Q -%s -MOD_EXTINC 0,1000 -EB_V 0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4 -EXTINC_LAW  SMC_prevot.dat"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-#            os.system("%s %s -t Q -%s -MOD_EXTINC 0,1000 -EB_V 0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4 -EXTINC_LAW  SMC_prevot.dat"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-            print("%s %s -t Q -%s  -EB_V 0  "%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-            os.system("%s %s -t Q -%s -EB_V 0   "%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-
-        if bool(int(param_dict['GALAXY_c'])):
-            filter_  = param_dict['LEPHARE_DIR'] + '/source/mag_gal'
-            print("%s %s -t G -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-            os.system("%s %s -t G -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-    
-    return
-
-
-
-def DS9LephareLF(xpapoint):
-    import time
-    from shutil import which
-   
-    params = sys.argv[-21:]
-    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'MF',  'LF_ESTI' ,  'LF_INPUT' ,  'LF_OUTPUT' ,  'ZPHOTLIB', 'LF_AREA' ,  'LF_WEIGHT' ,  'USE_WEIGHT',
-                    'LF_ZBIN' ,  'LF_NBSTEP' ,'LF_RM_BIAS' ,  'LF_SELECT_IN' ,  'LF_SELECT_RG' ,  'STY_DCHI2' ,'STY_FIX_ALPHA' ,  'STY_FIX_MSTAR' ,  'SWML_CONSTRAIN']
-    param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
-    print(param_dict)
-    if param_dict['PARAM_FILE'] == '-':
-        param_dict['PARAM_FILE'] = ''
-    else:
-        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
-
-
-    for key in list(param_dict.keys())[3:]:
-        if str(param_dict[key]) == '-':
-            del param_dict[key]
-            
-            
-    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
-
-
-    #d = DS9(xpapoint)
-    filter_  = param_dict['LEPHARE_DIR'] + '/source/LF'
-    if which(filter_) is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
-        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
-    else:
-        print("%s -t G  %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
-        os.system("%s -t G  %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
-        #os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
-    return
-
-
-def PlotFL_from_ALF_old(xpapoint, general_path = sys.argv[-1]):
-    """
-    """
-    from decimal import Decimal
-
-    a_FUV = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
-    phi_FUV = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
-    M_FUV = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
-
-
-    a_NUV = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
-    phi_NUV = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
-    M_NUV = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
-    
-    a_U = -np.array([1.42,1.22,1.18,1.15,1.25,1.35,1.39,1.43,1.43])
-    phi_U = 1e-3 * np.array([3.6, 5.6, 5.1, 5.3, 4.7, 3, 2.2, 2.2, 2.2])
-    M_U = - np.array([19.87, 20.04, 20.13, 20.44, 20.84, 21.24, 21.677, 21.677, 21.677])
-    
-    info = glob.glob(general_path + '/*.info')[0]
-    zs = np.genfromtxt(info, skip_header=15, max_rows=8,usecols=(1,2),delimiter='  ')#, unpack=True)
-    paths = glob.glob(general_path + '/*.dat')#[:1]
-    paths.sort()
-    paths.sort(key = lambda s: len(s))
-    fig, axes = plt.subplots(int(len(zs)/3),3, figsize=(15,10),sharex=True, sharey=True)
-    lx = np.linspace(-13,-24,100)
-    for i, ax in enumerate(axes.ravel()[:len(zs)+1]):
-        coeffs = [phi_U[i],a_U[i],M_U[i]]
-        ax.plot(lx,(schechter_vincent(lx,coeffs)),c='grey',lw=1,label='Moutard: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffs ]))
-        fitLF(path = paths[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax)
-        ax.set_title('z = %0.2f - %0.2f'%(zs[i][0],zs[i][1]), fontsize=10)
-        
-#    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-    #plt.xlabel('Mabs_{U}')
-    #plt.ylabel('log N (mag^{-1} MPC^{-3}'), fit=True
-    fig=axes[0,0].figure
-    fig.text(0.5,0.04, 'Mabs_{U}', ha="center", va="center")
-    fig.text(0.05,0.5, 'log N (mag^{-1} MPC^{-3}', ha="center", va="center", rotation=90)
-
-    plt.savefig(os.path.join(general_path,'Luminosity'))                
-    plt.show()
-    return
-
-
-def PlotFL_from_ALF(xpapoint, general_path = None, filter_=None, fit=True):
-    """
-    """
-    from decimal import Decimal
-    if general_path is None:
-        general_path = sys.argv[-2]
-    print(filter_)
-    if filter_ is None:
-        filter_ = sys.argv[-1]
-    print(filter_)
-
-    if filter_ == 'FUV':
-        print('FUV')
-        a = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
-        phi = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
-        M = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
-   
-    elif filter_ == 'NUV':#to be changes
-        print('NUV')
-        a= -np.array([1.40,1.31,1.36,1.40,1.39,1.39,1.4,1.4,1.4])
-        phi = 1e-3 * np.array([5.1, 6, 4.6, 4.2, 4.7, 3.1, 2.7, 1.7, 1.7])
-        M = - np.array([18.51, 18.80, 19.03, 19.41, 19.86, 20.37, 20.62, 21.15, 21.15])
-
-    else:#U
-        print('U')
-        a= -np.array([1.42,1.22,1.18,1.15,1.25,1.35,1.39,1.43,1.43])
-        phi = 1e-3 * np.array([3.6, 5.6, 5.1, 5.3, 4.7, 3, 2.2, 2.2, 2.2])
-        M = - np.array([19.87, 20.04, 20.13, 20.44, 20.84, 21.24, 21.677, 21.677, 21.677])
-    
-
-    
-    info_swml = glob.glob(os.path.join(general_path , '*SWML*.info'))[0]
-    info_vmax = glob.glob(os.path.join(general_path , '*VMAX*.info'))[0]
-    zs = np.genfromtxt(info_vmax, skip_header=15, max_rows=8,usecols=(1,2),delimiter='  ')#, unpack=True)
-    paths_swml = glob.glob(general_path + '/*SWML*.dat*');paths_swml.sort()
-    paths_vmax = glob.glob(general_path + '/*VMAX*.dat*');paths_vmax.sort()
-    #paths_swml.sort(key = lambda s: len(s))
-    #paths_vmax.sort(key = lambda s: len(s))
-    fig, axes = plt.subplots(int(len(zs)/3),3, figsize=(15,10),sharex=True, sharey=True)
-    lx = np.linspace(-13,-24,100)
-    for i, ax in enumerate(axes.ravel()[:len(zs)+1]):
-        print(os.path.basename(paths_swml[i]),os.path.basename(paths_vmax[i]))
-        coeffs = [phi[i],a[i],M[i]]
-        ax.plot(lx,(schechter_vincent(lx,coeffs)),linestyle='dotted',c='grey',lw=1,label='M: '+ ', '.join([ '%.3E' % Decimal(a) for a in coeffs ]))
-        fitLF(path = paths_swml[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='orange', label='SWML LF', fit=fit)
-        fitLF(path = paths_vmax[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='red', label='VMAX LF', fit=fit)
-        ax.set_title('$%0.2f < z < %0.2f$'%(zs[i][0],zs[i][1]), fontsize=13)
-        ax.legend(loc='lower left',fontsize=11)
-        
-#    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-    #plt.xlabel('Mabs_{U}')
-    #plt.ylabel('log N (mag^{-1} MPC^{-3}')
-    fig=axes[0,0].figure
-    plt.tight_layout()
-    fig.text(0.5,0.0, '$M_{%s}$'%(filter_), ha="center", va="center",fontsize=18)
-    fig.text(0.0    ,0.5, '$log \phi/dm/ Mpc^{3}$', ha="center", va="center", rotation=90,fontsize=18)
-    plt.savefig(os.path.join(general_path,'Luminosity_%s'%(filter_)),dpi=300, bbox_inches = 'tight', pad_inches = 0.2)
-    plt.savefig('/Users/Vincent/Nextcloud/Work/ThesisManuscript/fig/Luminosity_%s'%(filter_)   ,dpi=300, bbox_inches = 'tight', pad_inches = 0.2)
-    plt.show()
-    return
-
-
-
-
-def PlotFL_from_ALF_mass_bin(xpapoint, general_path = None, filter_=None, fit=False):
-    """
-    """
-    from decimal import Decimal
-    if general_path is None:
-        general_path = sys.argv[-2]
-    print(filter_)
-    if filter_ is None:
-        filter_ = sys.argv[-1]
-    print(filter_)
-
-    if filter_ == 'FUV':
-        print('FUV')
-        a = -np.array([1.405,1.369,1.407,1.402,1.431,1.431,1.43,1.43,1.43])
-        phi = 1e-3 * np.array([4.846, 5.224, 4.133, 4.401, 4.968, 3.265, 2.822, 1.686, 1.686])
-        M = - np.array([18.269, 18.572, 18.796, 19.113, 19.554, 20.004, 20.261, 20.842, 20.842])
-   
-    elif filter_ == 'NUV':#to be changes
-        print('NUV')
-        a= -np.array([1.40,1.31,1.36,1.40,1.39,1.39,1.4,1.4,1.4])
-        phi = 1e-3 * np.array([5.1, 6, 4.6, 4.2, 4.7, 3.1, 2.7, 1.7, 1.7])
-        M = - np.array([18.51, 18.80, 19.03, 19.41, 19.86, 20.37, 20.62, 21.15, 21.15])
-
-    else:#U
-        print('U')
-        a= -np.array([1.42,1.22,1.18,1.15,1.25,1.35,1.39,1.43,1.43])
-        phi = 1e-3 * np.array([3.6, 5.6, 5.1, 5.3, 4.7, 3, 2.2, 2.2, 2.2])
-        M = - np.array([19.87, 20.04, 20.13, 20.44, 20.84, 21.24, 21.677, 21.677, 21.677])
-    
-
-    
-#    info_swml = glob.glob(os.path.join(general_path , '*SWML*.info'))[0]
-#    info_vmax = glob.glob(os.path.join(general_path , '*VMAX*.info'))[0]
-    info_vmax8 = glob.glob(os.path.join(general_path , '*8.*VMAX*.info'))[0]
-    info_vmax9 = glob.glob(os.path.join(general_path , '*9.*VMAX*.info'))[0]
-    info_vmax10 = glob.glob(os.path.join(general_path , '*10.*VMAX*.info'))[0]
-
-    zs = np.genfromtxt(info_vmax8, skip_header=15, max_rows=8,usecols=(1,2),delimiter='  ')#, unpack=True)
-    paths_vmax8 = glob.glob(os.path.join(general_path , '*8.*VMAX*.dat*'));paths_vmax8.sort()
-    paths_vmax9 = glob.glob(os.path.join(general_path , '*9.*VMAX*.dat*'));paths_vmax9.sort()
-    paths_vmax10 = glob.glob(os.path.join(general_path , '*10.*VMAX*.dat*'));paths_vmax10.sort()
-    #paths_swml.sort(key = lambda s: len(s))
-    #paths_vmax.sort(key = lambda s: len(s))
-    fig, axes = plt.subplots(int(len(zs)/3),3, figsize=(15,10),sharex=True, sharey=True)
-    lx = np.linspace(-13,-24,100)
-    for i, ax in enumerate(axes.ravel()[:len(zs)+1]):
-        #print(os.path.basename(paths_swml[i]),os.path.basename(paths_vmax[i]))
-        coeffs = [phi[i],a[i],M[i]]
-        fitLF(path = paths_vmax8[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='orange', label='7.5 M$_o$ < M$Gal$ < 8.5 M$_o$', fit=fit)
-        fitLF(path = paths_vmax9[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='green', label='8.5 M$_o$ < M$Gal$ < 9.5 M$_o$', fit=fit)
-        axn = fitLF(path = paths_vmax10[i],mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=ax, color='blue', label='9.5 M$_o$ < M$Gal$ < 10.5 M$_o$', fit=fit)
-        ax.plot(lx,(schechter_vincent(lx,coeffs)),linestyle='dotted',c='grey')#,lw=1,label='M: '+ ', '.join([ '%.2E' % Decimal(a) for a in coeffs ]))
-        ax.legend(loc='lower left',fontsize=8)
-        ax.set_title('$%0.2f < z < %0.2f$'%(zs[i][0],zs[i][1]), fontsize=13)
-#    a1, = axn.plot(1,1,color='orange', label='7.5 M$_o$ < M$Gal$ < 8.5 M$_o$')
-#    a2, = axn.plot(1,1,color='green', label='7.5 M$_o$ < M$Gal$ < 8.5 M$_o$')
-#    a3, = axn.plot(1,1,color='blue', label='7.5 M$_o$ < M$Gal$ < 8.5 M$_o$')
-    axn.text(-14.5, -4.4, '7.5 M$_o$ < M$_\star$ < 8.5 M$_o$', {'color': 'orange', 'fontsize': 13})
-    axn.text(-14.5, -4.8, '8.5 M$_o$ < M$_\star$ < 9.5 M$_o$', {'color': 'g', 'fontsize': 13})
-    axn.text(-14.5, -5.2, '8.5 M$_o$ < M$_\star$ < 10.5 M$_o$', {'color': 'b', 'fontsize': 13})
-    #plt.legend(handles=[a1,a2,a3],loc='upper right')
-#    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-    #plt.xlabel('Mabs_{U}')
-    #plt.ylabel('log N (mag^{-1} MPC^{-3}')
-    fig=axes[0,0].figure
-    fig.text(0.5,0.0, '$M_{%s}$'%(filter_), ha="center", va="center",fontsize=18)
-    fig.text(0.0,0.5, '$log \phi/dm/ Mpc^{3}$', ha="center", va="center", rotation=90,fontsize=18)
-    plt.tight_layout()
-    plt.savefig(os.path.join(general_path,'Luminosity_%s'%(filter_)),dpi=300, bbox_inches = 'tight', pad_inches = 0.2)
-    plt.savefig('/Users/Vincent/Nextcloud/Work/ThesisManuscript/fig/Luminosity_mass_%s'%(filter_)   ,dpi=300, bbox_inches = 'tight', pad_inches = 0.2)
-    plt.show()
-    return
-
-def PlotLF_real_time(paths,labels=None):
-    from astropy.io import ascii
-    if labels is None:
-        labels = [os.path.basename(path) for path in paths]
-    while len(paths)>0:
-        for label, path in zip(labels, paths):
-            try:
-                LF_rod0 = ascii.read(path)
-            except:
-                pass
-            else:
-                print(path)
-                LIRrod_0 = LF_rod0['col1']
-                phirod_0 = LF_rod0['col2']
-                errmrod_0 = LF_rod0['col4']
-                errprod_0 = LF_rod0['col3']
-                plt.axis([-14,-24,-6,-1.5])
-                plt.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='-+',lw=1,label=label)
-                plt.legend(loc='upper right')
-                plt.pause(0.15)
-                plt.clf()
-        plt.show()
-
-
-def fitLF(path = '/Users/Vincent/Nextcloud/Work/LePhare/LF/test_LF_VMAX.out2.dat',mag_lim=-16, up = [1e-2,-1.1,-19], do=[1e-3,-1.5,-22], ax=None,color='black', label=None,fit=True) : 
-    from astropy.io import ascii
-    from pyswarm import pso
-    from decimal import Decimal
-    up = [5e-2,-0.1,-18]
-    do=[1e-4,-2.5,-23]
-    try:
-        LF_rod0 = ascii.read(path)
-    except:
-        pass
-    else:
-        n=1
-        LIRrod_0 = LF_rod0['col1']#[:-n]
-        phirod_0 = LF_rod0['col2']#[:-n]
-        errmrod_0 = LF_rod0['col4']#[:-n]
-        errprod_0 = LF_rod0['col3']#[:-n]
-        mask = True#LIRrod_0<mag_lim
-        if fit:
-            coeffrod_0 , chirod_0 = pso(likelihood,do,up,args=[LIRrod_0[mask],phirod_0[mask],errmrod_0[mask]],maxiter=500)
-        lx = np.linspace(-13,-24,100)
-        if ax is None:
-            fig = plt.figure()#figsize=(12,4.5))
-            ax = fig.add_subplot(111)
-        if fit:
-            print(coeffrod_0)
-            print(chirod_0)
-            ax.plot(lx,(schechter_vincent(lx,coeffrod_0)),c=color,lw=2,label='Fit: '+ ', '.join([ '%.1E' % Decimal(a) for a in coeffrod_0 ]))
-        ax.errorbar(LIRrod_0,phirod_0,yerr=[errmrod_0,errprod_0], fmt='.',lw=1,c=color)#,label=label)
-        #ax.plot(lx,(schechter_vincent(lx,[4e-3,-1.4,-19])),c='grey',lw=1,label='Literature: Pi=0.004,a=-1.4,M=-19')
-        #ax.plot(LIRrod_0[~mask],phirod_0[~mask],'o',lw=3,c='black',label='Fit mask')
-        ax.set_xlim((-14,-24.5));ax.set_ylim((-6,-1.5))
-    return ax#coeffrod_0 , chirod_0
-
-
-
-
-
-def res(P,x,y,err):
-    ps,a,ls = P
-    return (y-schechter_vincent(x,P))/(err)
-
-
-
-def schechter_vincent(x,P=[3.6,-1.4,19.8],e=2.718281828):
-    Phi,alpha,M = P
-    #M, x = x, M
-    #return 0.4 * np.log(10) * Phi * 10 ** (0.4*(x-M)*(alpha+1)) * np.exp(-10 ** (0.4*(x-M))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls))
-    return np.log10(0.4 * np.log(10) * Phi * 10 ** (0.4*(M-x)*(alpha+1)) *(e**(-pow(10,0.4*(M-x))))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls)))
-
-def schechter_vincent_(x,Phi,alpha,M):
-    #Phi,alpha,M = P
-    #M, x = x, M
-    #return 0.4 * np.log(10) * Phi * 10 ** (0.4*(x-M)*(alpha+1)) * np.exp(-10 ** (0.4*(x-M))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls))
-    return np.log10(0.4 * np.log(10) * Phi * 10 ** (0.4*(M-x)*(alpha+1)) *(2.718281828**(-pow(10,0.4*(M-x))))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls)))
-
-
-def likelihood(P,x,y,err):
-    ps,a,m = P
-    return sum(res(P,x,y,err)**2)
-
-
-def DS9LephareLimits(xpapoint):
-    from shutil import which
-   
-    params = sys.argv[-14:]
-    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'LIMITS_INPUT',  'LIMITS_OUTPUT' ,  'ZPHOTLIB', 'LF_MABS_REF' ,  'LF_MAPP_SEL' ,  'LF_MAPP_CUT',
-                    'LIMITS_ZBIN' ,  'MF_METHOD' ,'MF_MODEL' ,  'MF_M2L' ,  'MF_CONVERS']
-    param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
-    print(param_dict)
-    if param_dict['PARAM_FILE'] == '-':
-        param_dict['PARAM_FILE'] = ''
-    else:
-        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
-
-
-    for key in list(param_dict.keys())[3:]:
-        if str(param_dict[key]) == '-':
-            del param_dict[key]
-            
-            
-    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
-
-
-    #d = DS9(xpapoint)
-    filter_  = param_dict['LEPHARE_DIR'] + '/source/limits'
-    if which(filter_) is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
-        d = DS9();d.set('analysis message {Limits does not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
-    else:
-
-        print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
-        os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3  :]]) ))
-
-    return
-
-
-
-
-def DivideCatalog(path, tmpFOlder='/tmp',id_ = 'ID'):
-    import multiprocessing
-    import astropy
-    n=multiprocessing.cpu_count()+1
-    #path = '/Users/Vincent/Documents/Work/sextractorCatalogs/subcats/1/TotalMergedCatalog_9813_corr_ugrizy_Laigle_Moutard_only_mag.in'
-    try:
-        cat = Table.read(path)
-    except astropy.io.registry.IORegistryError:
-        cat = Table.read(path, format='ascii')
-
-    #cat = cat[cat['ZSPEC']>0]
-    #cat.write('/Users/Vincent/Nextcloud/Work/These/HSC/Catalogs/sub_cat/TotalMergedCatalog_9813_SNR5_complete_clean_only_mag_v3_spectro.in',format='ascii')
-#    a = np.linspace(cat['RA'].min(),cat['RA'].max(),n)
-    
-    a = np.linspace(cat[id_].min()-1,cat[id_].max(),n)
-    lens = []
-    for i, ra in enumerate(a[:-1]):
-        print(i)
-        if ra==a.max():
-            
-            tab = cat[cat[id_]>ra]
-        else:
-            tab = cat[(cat[id_]<=a[i+1]) & (cat[id_]>a[i])]
-        lens.append(len(tab))
-        tab.rename_column(id_,'#%s'%(id_))
-        tab.write(os.path.join(tmpFOlder, os.path.basename(path).split('.')[0] + '_%i.in'%(i)),format='ascii', overwrite=True)
-    return len(cat),np.sum(lens)
-
-
-
-
-def add_filters(fieldsname, filts, table):
-    dep_on_field = [ field for field in fieldsname if '()' in field  ]  
-    new_fieldsname = fieldsname
-    for field in dep_on_field:
-        print(field)
-        index = new_fieldsname.index(field);print(index)
-        c, d = new_fieldsname[:index], new_fieldsname[index+1:]
-        fieldfilt = [filt+'_'+field[:-2] for filt in filts]
-        print(fieldfilt)
-        new_fieldsname = c + fieldfilt + d
-    if 'STRING_INPUT' in new_fieldsname:
-        index = new_fieldsname.index('STRING_INPUT');print(index)
-        c, d = new_fieldsname[:index], new_fieldsname[index+1:]
-        new_fieldsname = c + ['STRING_INPUT_%i'%(i) for i in range(len(table.colnames)-len(new_fieldsname)+1)] + d
-    return new_fieldsname, dep_on_field
-
-
- 
-def ComputeTotalMagnitude2(cat, k_band=False, all_bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']):
-    #plt.scatter(cat['MAG_AUTO_HSC_G'],cat['MAG_AUTO_HSC_R'])
-    from astropy.table import Column, MaskedColumn
-    
-    print('Compute weight')
-    weight_U =  1 / (np.square(cat['FLUXERR_ISO_MegaCam_u']) + np.square(cat['FLUXERR_AUTO_MegaCam_u'])) 
-    weight_Us =  1 / (np.square(cat['FLUXERR_ISO_MegaCam_uS']) + np.square(cat['FLUXERR_AUTO_MegaCam_uS'])) 
-    weight_G =  1 / (np.square(cat['FLUXERR_ISO_HSC_G']) + np.square(cat['FLUXERR_AUTO_HSC_G'])) 
-    weight_R =  1 / (np.square(cat['FLUXERR_ISO_HSC_R']) + np.square(cat['FLUXERR_AUTO_HSC_R'])) 
-    weight_I =  1 / (np.square(cat['FLUXERR_ISO_HSC_I']) + np.square(cat['FLUXERR_AUTO_HSC_I'])) 
-    weight_Z =  1 / (np.square(cat['FLUXERR_ISO_HSC_Z']) + np.square(cat['FLUXERR_AUTO_HSC_Z'])) 
-    weight_Y =  1 / (np.square(cat['FLUXERR_ISO_HSC_Y']) + np.square(cat['FLUXERR_AUTO_HSC_Y'])) 
-    weight_Yv =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_Y']) + np.square(cat['FLUXERR_AUTO_VIRCAM_Y'])) 
-    weight_J =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_J']) + np.square(cat['FLUXERR_AUTO_VIRCAM_J'])) 
-    weight_H =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_H']) + np.square(cat['FLUXERR_AUTO_VIRCAM_H'])) 
-    weight_Ks =  1 / (np.square(cat['FLUXERR_ISO_VIRCAM_Ks']) + np.square(cat['FLUXERR_AUTO_VIRCAM_Ks'])) 
-
-    weight_U[ abs(cat['MAG_AUTO_MegaCam_u'] - cat['MAG_ISO_MegaCam_u'])>20 ] = 0
-    weight_Us[ abs(cat['MAG_AUTO_MegaCam_uS'] - cat['MAG_ISO_MegaCam_uS'])>20 ] = 0
-    weight_G[ abs(cat['MAG_AUTO_HSC_G'] - cat['MAG_ISO_HSC_G'])>20 ] = 0
-    weight_R[ abs(cat['MAG_AUTO_HSC_R'] - cat['MAG_ISO_HSC_R'])>20 ] = 0
-    weight_I[ abs(cat['MAG_AUTO_HSC_I'] - cat['MAG_ISO_HSC_I'])>20 ] = 0
-    weight_Z[ abs(cat['MAG_AUTO_HSC_Z'] - cat['MAG_ISO_HSC_Z'])>20 ] = 0
-    weight_Y[ abs(cat['MAG_AUTO_HSC_Y'] - cat['MAG_ISO_HSC_Y'])>20 ] = 0
-    weight_Yv[ abs(cat['MAG_AUTO_VIRCAM_Y'] - cat['MAG_ISO_VIRCAM_Y'])>20 ] = 0
-    weight_J[ abs(cat['MAG_AUTO_VIRCAM_J'] - cat['MAG_ISO_VIRCAM_J'])>20 ] = 0
-    weight_H[ abs(cat['MAG_AUTO_VIRCAM_H'] - cat['MAG_ISO_VIRCAM_H'])>20 ] = 0
-    weight_Ks[ abs(cat['MAG_AUTO_VIRCAM_Ks'] - cat['MAG_ISO_VIRCAM_Ks'])>20 ] = 0
-#    if k_band is False:
-#        weight_Ks = np.zeros(len(cat))
-
-    cat['WEIGHT'] = weight_U + weight_G + weight_R + weight_I + weight_Z + weight_Ks + weight_Us + weight_Y + weight_Yv + weight_H + weight_J
-
-    cat['weight_U'] =   weight_U/cat['WEIGHT'] 
-    cat['weight_G'] =   weight_G/cat['WEIGHT']  
-    cat['weight_R'] =   weight_R/cat['WEIGHT']  
-    cat['weight_I'] =   weight_I/cat['WEIGHT']  
-    cat['weight_Z'] =   weight_Z/cat['WEIGHT']  
-    cat['weight_Ks'] =   weight_Ks/cat['WEIGHT']  
-    cat['weight_Us'] =   weight_Us/cat['WEIGHT']  
-    cat['weight_Y'] =   weight_Y/cat['WEIGHT']  
-    cat['weight_Yv'] =   weight_Yv/cat['WEIGHT']  
-    cat['weight_J'] =   weight_J/cat['WEIGHT']  
-    cat['weight_H'] =   weight_H/cat['WEIGHT']  
-    
-    print('Compute scaling factor')  
-    
-    cat['SCALING_FACTOR'] = 0.0
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_MegaCam_u'] - cat['MAG_ISO_MegaCam_u']) * cat['weight_U']
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_MegaCam_uS'] - cat['MAG_ISO_MegaCam_uS']) * cat['weight_Us']
-    cat['SCALING_FACTOR'] +=  (cat['MAG_AUTO_HSC_G'] - cat['MAG_ISO_HSC_G']) * cat['weight_G']
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_R'] - cat['MAG_ISO_HSC_R']) * cat['weight_R']
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_I'] - cat['MAG_ISO_HSC_I']) * cat['weight_I']
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_Z'] - cat['MAG_ISO_HSC_Z']) * cat['weight_Z']
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_HSC_Y'] - cat['MAG_ISO_HSC_Y']) * cat['weight_Y']
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_Ks'] - cat['MAG_ISO_VIRCAM_Ks']) * cat['weight_Ks'] 
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_Y'] - cat['MAG_ISO_VIRCAM_Y']) * cat['weight_Y'] 
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_J'] - cat['MAG_ISO_VIRCAM_J']) * cat['weight_J'] 
-    cat['SCALING_FACTOR'] += (cat['MAG_AUTO_VIRCAM_H'] - cat['MAG_ISO_VIRCAM_H']) * cat['weight_H'] 
-
-    #cat['SCALING_FACTOR_ks'] = cat['SCALING_FACTOR'].copy()
-    
-    cat['SCALING_FACTOR'][cat['WEIGHT']==0] = 0#; cat['SCALING_FACTOR_ks'][cat['WEIGHT']==0] = 0
-    print('Compute total factor')
-    #print('% -of object with positive coorection = %0.1f \%'%(100*len(cat['SCALING_FACTOR'][cat['SCALING_FACTOR']>0])/len(cat['SCALING_FACTOR'])))
-    #cat['SCALING_FACTOR'][cat['SCALING_FACTOR']>0] = 0     
-    for band in all_bands:  
-        band = band.replace('-','_')
-#        cat['TOTAL_MAG_' + band] = np.array(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR'],dtype='float16')
-#        cat['MAGERR_ISO_' + band] = np.array(cat['MAGERR_ISO_' + band],dtype='float16')
-        #cat.remove_column('TOTAL_MAG_' + band)
-        #new_col_ks =MaskedColumn(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR_ks'], name='TOTAL_MAG_ks_' + band)
-        new_col=MaskedColumn(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR'], name='TOTAL_MAG_' + band)
-        try:
-            cat.add_column(new_col) 
-        except ValueError:
-            cat.remove_column(new_col.name) 
-            cat.add_column(new_col) 
-        #cat.add_column(new_col_ks) 
-        a = np.array(cat['MAGERR_ISO_' + band],dtype='float16') 
-        cat.remove_column('MAGERR_ISO_' + band)
-        cat.add_column(MaskedColumn(a, name='MAGERR_ISO_' + band)) 
-
-#        cat['TOTAL_MAG_' + band] = np.around(cat['MAG_ISO_' + band] + cat['SCALING_FACTOR'],8)
-#        cat['MAGERR_ISO_' + band] = np.around(cat['MAGERR_ISO_' + band],8)
-        cat['TOTAL_MAG_' + band][(cat['TOTAL_MAG_' + band]>50) | (cat['TOTAL_MAG_' + band]<-50) | (cat['TOTAL_MAG_' + band]<-50)] = -99
-        #cat['TOTAL_MAG_ks_' + band][(cat['TOTAL_MAG_ks_' + band]>50) | (cat['TOTAL_MAG_ks_' + band]<-50) | (cat['TOTAL_MAG_ks_' + band]<-50)] = -99
-        cat['MAGERR_ISO_' + band][cat['MAGERR_ISO_' + band]==99] = -99
-        cat['MAGERR_ISO_' + band][cat['MAGERR_ISO_' + band]>1000] = 1000
-    return
-
-
-
-
-
-
-def CleanCat(cat, bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']):
-    from astropy.table import Column, MaskedColumn, Table
-    cols2del = ['FLUX_ISO',
-                 'FLUXERR_ISO',
-                 'FLUX_AUTO',
-                 'FLUXERR_AUTO',
-                 'MAG_AUTO',
-                 'MAGERR_AUTO',
-                 'MAG_ISO',
-                 'MAG_APER',
-                 'MAGERR_APER',                 
-#                 'MU_MAX',
-                 'FLUX_APER_12pix',
-                 'FLUXERR_APER_12pix',
-                 'FLUX_APER_18pix',
-                 'FLUXERR_APER_18pix',
-                 'FLUX_APER_24pix',
-                 'FLUXERR_APER_24pix',
-                 'FLUX_RADIUS_0.25',
-                 'FLUX_RADIUS_0.5',
-                 'FLUX_RADIUS_0.75']
-
-    col2del2 =   ['NUMBER',
-                 'X_IMAGE',
-                 'Y_IMAGE',
-                 'A_WORLD',
-                 'B_WORLD',
-                 'KRON_RADIUS',
-                 'THETA_WORLD',
-                 'THETA_IMAGE',
-                 'BACKGROUND_MegaCam_u',
-                 'THRESHOLD',
-                 'A_IMAGE',
-                 'B_IMAGE',
-                 'FWHM_IMAGE',
-                 'FLAGS_MegaCam_u',
-                 
-                 'ELONGATION',
-                 'ELLIPTICITY',
-                 'TRACT',
-                 'PATCH',
-                 'BACKGROUND_HSC_Y',
-                 'FLAGS_HSC_Y',
-                 
-                 'BACKGROUND_HSC_R',
-                 'FLAGS_HSC_R',
-                 
-                 'BACKGROUND_VIRCAM_J',
-                 'FLAGS_VIRCAM_J',
-                 
-                 'BACKGROUND_HSC_I',
-                 'FLAGS_HSC_I',
-                 'BACKGROUND_HSC_G',
-                 'FLAGS_HSC_G',
-                 'BACKGROUND_HSC_Z',
-                 'FLAGS_HSC_Z',
-                 'BACKGROUND_VIRCAM_Y',
-                 'FLAGS_VIRCAM_Y',
-                 'BACKGROUND_VIRCAM_H',
-                 'FLAGS_VIRCAM_H',
-#                 'CLASS_STAR_HSC_Z','CLASS_STAR_HSC_G','CLASS_STAR_HSC_I','CLASS_STAR_HSC_R','CLASS_STAR_HSC_Y','CLASS_STAR_MegaCam_u',
-#                 'CLASS_STAR_VIRCAM_H','CLASS_STAR_VIRCAM_Ks','CLASS_STAR_MegaCam_uS','CLASS_STAR_VIRCAM_Y','CLASS_STAR_VIRCAM_J',
-                 'BACKGROUND_VIRCAM_Ks',
-                 'FLAGS_VIRCAM_Ks',
-                 
-                 'BACKGROUND_MegaCam_uS',
-                 'FLAGS_MegaCam_uS'
-                 ]
-    for band in bands:
-        band = band.replace('-','_')
-        for col in cols2del:
-            try:
-                cat.remove_column(col + '_%s'%(band))
-            except KeyError:
-                pass
-    for col in col2del2:
-        try:    
-            cat.remove_column(col)
-        except KeyError:
-            pass
-    try:
-        cat.add_column(Column(np.ones(len(cat))*2**len(bands)-1, name='CONTEXT',dtype=int), index=23) 
-    except ValueError:
-        pass
-    try:
-        cat.add_column(Column(np.ones(len(cat))*-99, name='ZSPEC'), index=24) 
-    except ValueError:
-        pass
-    try:
-        cat.add_column(Column(np.arange(len(cat)), name='#ID'), index=25) 
-    except ValueError:
-        pass
-    #cat['CONTEXT'] = 1023
-    #cat['ZSPEC'] = -99
-    cat_2 =   cat['#ID',
-                 'TOTAL_MAG_MegaCam_u_ext',
-                 'TOTAL_MAG_MegaCam_uS_ext',
-                 'TOTAL_MAG_HSC_G_ext',
-                 'TOTAL_MAG_HSC_R_ext',
-                 'TOTAL_MAG_HSC_I_ext',
-                 'TOTAL_MAG_HSC_Z_ext',
-                 'TOTAL_MAG_HSC_Y_ext',
-                 'TOTAL_MAG_VIRCAM_Y_ext',
-                 'TOTAL_MAG_VIRCAM_J_ext',
-                 'TOTAL_MAG_VIRCAM_H_ext',
-                 'TOTAL_MAG_VIRCAM_Ks_ext',
-                 'MAGERR_ISO_MegaCam_u',
-                 'MAGERR_ISO_MegaCam_uS',
-                 'MAGERR_ISO_HSC_G',
-                 'MAGERR_ISO_HSC_R',
-                 'MAGERR_ISO_HSC_I',
-                 'MAGERR_ISO_HSC_Z',
-                 'MAGERR_ISO_HSC_Y',
-                 'MAGERR_ISO_VIRCAM_Y',
-                 'MAGERR_ISO_VIRCAM_J',
-                 'MAGERR_ISO_VIRCAM_H',
-                 'MAGERR_ISO_VIRCAM_Ks',
-                 'CONTEXT',
-                 'ZSPEC',
-                 'RA',
-                 'DEC',
-                 'WEIGHT',
-                 'SCALING_FACTOR', 
-                 'MU_MAX_MegaCam_u','MU_MAX_MegaCam_uS','MU_MAX_HSC_G','MU_MAX_HSC_R','MU_MAX_HSC_I','MU_MAX_HSC_Z','MU_MAX_HSC_Y',
-                 'MU_MAX_VIRCAM_Y','MU_MAX_VIRCAM_J','MU_MAX_VIRCAM_H','MU_MAX_VIRCAM_Ks',
-                 'CLASS_STAR_MegaCam_u','CLASS_STAR_MegaCam_uS',
-                 'CLASS_STAR_HSC_G','CLASS_STAR_HSC_R','CLASS_STAR_HSC_I', 'CLASS_STAR_HSC_Z','CLASS_STAR_HSC_Y',
-                 'CLASS_STAR_VIRCAM_Y','CLASS_STAR_VIRCAM_J','CLASS_STAR_VIRCAM_H','CLASS_STAR_VIRCAM_Ks']
-#    cat_2.rename_column('RA','alpha')
-#    cat_2.rename_column('DEC','delta')
-#    cat_2['fl'] = 0
-#    cat_2['mask'] = 0
-    return cat_2
-
-
-
-def DS9FormatCatalogForLephare(xpapoint, path=None, all_bands=['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']):
-    #path = '/Users/Vincent/Documents/Work/sextractorCatalogs/TotalMergedCatalog_9813_corr_ugrizyk.fits'
-    import astropy
-    from astropy.table import Table, Column
-    from astropy import units as u
-    from astropy.coordinates import SkyCoord    #path = sys.argv[3]
-    if path is None:
-        path = sys.argv[-1]
-    try:
-        table = Table.read(path)
-    except astropy.io.registry.IORegistryError:
-        table = Table.read(path, format='ascii') 
-    dict_format = {}
-    for band in all_bands:
-         band = band.replace('-','_')
-         dict_format['TOTAL_MAG_' + band + '_ext'] = '%0.8e'
-         dict_format['MAGERR_ISO_' + band] ='%0.8e'
-    
-    ComputeTotalMagnitude2(table, all_bands=all_bands)
-    print('Adding extinction')
-    
-    AddExtinction(table,extinction_map='/Users/Vincent/Documents/Work/Thibault/CATALOGUES_s16a/s16a_uddd_COSMOS_unique_tot.fits')
-    table.write(path[:-5]+'_mag.fits',overwrite=True)
-    #plot_comptages_correction(path=path[:-5]+'_%s_mag.fits'%(ks))
-
-        
-    table_2 = CleanCat(table)
-    #cat_2 = RenameCols(cat_2)
-    name = path[:-5]+'_only_mag.txt'
-    zspec = Table.read('/Users/Vincent/Documents/Work/Catalogs/spectro/HSC_ZSPEC_PHOT.fits')
-    zspec = zspec[zspec['PHOTO']==0]
-#    for ra, dec, z in zip(zspec['RA'],zspec['DEC'],zspec['zspec']):
-#        print(ra,dec,z)
-
-    c = SkyCoord(ra=zspec['RA']*u.degree, dec=zspec['DEC']*u.degree)
-    catalog = SkyCoord(ra=table_2['RA']*u.degree, dec=table_2['DEC']*u.degree) 
-    print('Matching catalog with spectroscopic data')
-    idx, d2d, d3d = c.match_to_catalog_sky(catalog) 
-    #print('TEST: %0.1f = %0.1f +/- %0.1f'%(zspec[0]['RA']*3600,table_2[idx[0]]['RA']*3600, float(d2d[0].arcsec)))
-    for i in range(3):
-        print('TEST: %0.1f = %0.1f +/- %0.1f'%(zspec[360*np.array(d2d)<0.5][i]['RA']*3600,table_2[idx[360*np.array(d2d)<0.5][i]]['RA']*3600, float(d2d[360*np.array(d2d)<0.5][i].arcsec)))
-    
-    
-    zspec['zspec'][360*np.array(d2d)>0.5] = -99.0
-    table_2['ZSPEC'][idx] = zspec['zspec']
-    
-#hist(d2d.arcsec,bins=np.linspace(-0,4,100));show()
-#    astropy.io.ascii.write(table_2, path[:-5]+'_%s.in'%(ks), formats=dict_format,overwrite=True)
-    #table_2.remove_column('MAGERR_ISO_FUV')
-    
-    
-    table_2.add_column(Column(name='TOTAL_MAG_NUV_ext', data=np.ones(len(table_2))*-99.0), index=12) 
-    table_2.add_column(Column(name='MAGERR_ISO_NUV', data=np.ones(len(table_2))*-99.0), index=24) 
-
-    table_2.add_column(Column(name='TOTAL_MAG_FUV_ext', data=np.ones(len(table_2))*-99.0), index=13) 
-    table_2.add_column(Column(name='MAGERR_ISO_FUV', data=np.ones(len(table_2))*-99.0), index=26) 
-    table_2['CONTEXT'] =2**np.sum(['TOTAL_MAG_' in name for name in table_2.colnames])-1
-    astropy.io.ascii.write(table_2, name, formats=dict_format,overwrite=True)
-    #astropy.io.ascii.write(table_2[table_2['ZSPEC']>0], name[:-4] + '_spectro.ini', formats=dict_format,overwrite=True)
-    #CatalogForGazpar(name)
-    return
-
-def AddExtinction(table,extinction_map):
-    from astropy.table import Table
-    from astropy.coordinates import SkyCoord    #path = sys.argv[3]
-    from astropy import units as u
-    #table = Table.read('/Users/Vincent/Documents/Work/sextractorCatalogs/TotalMergedCatalog_9813_corr_ugrizy.fits')
-    extinction_map = Table.read(extinction_map)['RA','DEC','EB_V']
-    ext_u=4.799
-    ext_uS=4.670
-    ext_g=3.656
-    ext_r=2.699
-    ext_i=1.988
-    ext_z=1.513
-    ext_Y=1.296
-    ext_Yv=1.210
-    ext_J=0.871
-    ext_H=0.562
-    ext_K=0.365
-    ext_NUV=8.612
-    ext_FUV=8.290 
-
-    c = SkyCoord(ra=extinction_map['RA']*u.degree, dec=extinction_map['DEC']*u.degree)
-    catalog = SkyCoord(ra=table['RA']*u.degree, dec=table['DEC']*u.degree) 
-    idx, d2d, d3d = catalog.match_to_catalog_sky(c) 
-    #mask = 3600*np.array(d2d)<0.2
-    table['EB_V'] = extinction_map['EB_V'][idx]
-    cat = table#.copy()
-    cat['TOTAL_MAG_MegaCam_u_ext'] = cat['TOTAL_MAG_MegaCam_u'] - ext_u*cat['EB_V']
-    cat['TOTAL_MAG_MegaCam_uS_ext'] = cat['TOTAL_MAG_MegaCam_uS'] - ext_uS*cat['EB_V']
-    cat['TOTAL_MAG_HSC_G_ext'] = cat['TOTAL_MAG_HSC_G'] - ext_g*cat['EB_V']
-    cat['TOTAL_MAG_HSC_R_ext'] = cat['TOTAL_MAG_HSC_R'] - ext_r*cat['EB_V']
-    cat['TOTAL_MAG_HSC_I_ext'] = cat['TOTAL_MAG_HSC_I'] - ext_i*cat['EB_V']
-    cat['TOTAL_MAG_HSC_Z_ext'] = cat['TOTAL_MAG_HSC_Z'] - ext_z*cat['EB_V']
-    cat['TOTAL_MAG_HSC_Y_ext'] = cat['TOTAL_MAG_HSC_Y'] - ext_Y*cat['EB_V']
-    cat['TOTAL_MAG_VIRCAM_Y_ext'] = cat['TOTAL_MAG_VIRCAM_Y'] - ext_Yv*cat['EB_V']
-    cat['TOTAL_MAG_VIRCAM_J_ext'] = cat['TOTAL_MAG_VIRCAM_J'] - ext_J*cat['EB_V']
-    cat['TOTAL_MAG_VIRCAM_H_ext'] = cat['TOTAL_MAG_VIRCAM_H']  - ext_H*cat['EB_V']
-    cat['TOTAL_MAG_VIRCAM_Ks_ext'] = cat['TOTAL_MAG_VIRCAM_Ks'] - ext_K*cat['EB_V']
-    return cat
-
-
-
-
-
-
-def DS9LephareZphot(xpapoint, tmpFolder='/tmp',p_lim=3*17000000):
-#    print('Change /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/source/dim_lf.decl 1520000 and /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509/source/dim_filt.decl 16 not 19')
-#    sys.exit()
-    from astropy.table import Table, vstack
-    from shutil import which
-    import subprocess
-    import multiprocessing
-   
-    params = sys.argv[-6:]
-    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'ZPHOTLIB' ,  'CAT_IN' ,  'CAT_OUT' ]
-    param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
-    print(param_dict)
-    if param_dict['PARAM_FILE'] == '-':
-        param_dict['PARAM_FILE'] = ''
-    else:
-        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
-
-
-    for key in list(param_dict.keys())[6:]:
-        if str(param_dict[key]) == '-':
-            del param_dict[key]
-    if os.stat(param_dict['CAT_IN']).st_size > p_lim:
-        DivideCatalog(param_dict['CAT_IN'], tmpFOlder=tmpFolder)
-    
-        
-
-    filter_  = param_dict['LEPHARE_DIR'] + '/source/zphota'
-    if which(filter_) is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
-        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
-    else:
-        if os.stat(param_dict['CAT_IN']).st_size > p_lim:
-            print('Parellelizing LePhare')
-            files = glob.glob(os.path.join(tmpFolder,os.path.basename(param_dict['CAT_IN']).split('.')[0]+'*.in'))
-            files.sort()
-            output_files = []
-            jobs = []
-            for i, file in enumerate(files):
-                output_file = file.split('.')[0] + '_zphot.out'
-                output_files.append(output_file)
-                print("\n%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > %s & '%(file, output_file,output_file+'.log')) 
-                p = multiprocessing.Process(target=RunZphot, args=(filter_, param_dict, file, output_file,i,))
-                jobs.append(p)
-                p.start()
-            for job in jobs:
-                job.join()
-                subprocess.Popen("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_OUT ' + output_file,shell=True)
-            new_tables = []
-            for path in output_files:
-                print(path);#new_tables.append(Table.read(path,format= 'ascii'))
-                new_tables.append(readLPtables(path)[0])
-    
-            #cats = [Table.read(path.split('.')[0]+'_col.out', format='ascii') for path in output_files]
-            final_cat = vstack(new_tables)#;final_cat.write('/Users/Vincent/Documents/Work/sextractorCatalogs/subcats/BC03_0/TotalMergedCatalog_9813_corr_ugrizyk_only_mag_Z_ML_zphot_sub.fits')
-            #final_cat.rename_col('IDENT','#IDENT')
-            #Table.write(final_cat,os.path.dirname(path)+'/Merged_Lephare_output_cat_lp.out', format='ascii')
-            Table.write(final_cat,param_dict['CAT_OUT'].split('.')[0]+'.fits',overwrite=True)
-            Table.write(final_cat,param_dict['CAT_OUT'] , format='ascii',overwrite=True)
-            open(os.path.dirname(param_dict['CAT_OUT']) + '/zphot_param.txt', "w").writelines([l for l in open(output_files[0]).readlines() if "#" in l])
-
-        else:
-            print('Not Parellelizing LePhare, doing all the calculation at once.')
-            for key in list(param_dict.keys())[3:]:
-                if str(param_dict[key]) == '-':
-                    del param_dict[key]
-            print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3:]]) ))
-            #os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[3:]]) ))
-            print(param_dict['CAT_OUT'])
-            new_table, filts, dep_on_field  = readLPtables(param_dict['CAT_OUT'])
-            open(os.path.dirname(param_dict['CAT_OUT']) + '/zphot_param.txt', "w").writelines([l for l in open(param_dict['CAT_OUT']).readlines() if "#" in l])
-
-            #new_table.rename_col('IDENT','#IDENT')
-
-    return
-
-
-
-
-def RunZphot(filter_, param_dict, file, output_file,i):
-    #print("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > /tmp/test_zphot_%i.log'%(file, output_file,i))
-    os.system("%s %s -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ) + ' -CAT_IN  %s -CAT_OUT %s > /tmp/test_zphot_%i.log & '%(file, output_file,i))
-    return
-
-
-
-def readLPtables(path = '/Users/Vincent/Nextcloud/Work/LePhare/zphot_BC03_phys.out',cols=[]):
-    """vincent help etc...
-    """
-    a = Table.read(path,format='ascii',data_start=1)
-    #a.remove_columns('col59')
-    new_table = a.copy()
-    comment = [info for info in a.meta['comments']]
-    filts = comment[10].split(' ')[3:]
-    comment = ' '.join(comment)    
-    b, comment = comment.split('IDEN')
-    comment, c = comment.split(' , #')
-    fields = [field for field in comment.split(' , ')]
-    #fieldsnumber = [fn.split(' ')[-1] for fn in fields]
-    fieldsname = [fn.split(' ')[0] for fn in fields]
-    new_fieldsname, dep_on_field = add_filters(fieldsname, filts,a)
-    for i, field in enumerate(new_fieldsname):
-        print(i+1,field)
-        new_table.rename_column('col%i'%(int(i+1)), field)
-#    for i, field in zip(fieldsnumber, fieldsname):
-#        new_table.rename_column('col%i'%(int(i)), field)
-    new_table.rename_column('T','##IDENT')
-    name, ext = os.path.basename(path).split('.')
-    #new_table.meta = {}
-    try:
-        cols = ['RA',
-                 'DEC',
-                 'WEIGHT',
-                 'SCALING_FACTOR', 
-                 'MU_MAX_MegaCam_u','MU_MAX_MegaCam_uS','MU_MAX_HSC_G','MU_MAX_HSC_R','MU_MAX_HSC_I','MU_MAX_HSC_Z','MU_MAX_HSC_Y',
-                 'MU_MAX_VIRCAM_Y','MU_MAX_VIRCAM_J','MU_MAX_VIRCAM_H','MU_MAX_VIRCAM_Ks',
-                 'CLASS_STAR_MegaCam_u','CLASS_STAR_MegaCam_uS',
-                 'CLASS_STAR_HSC_G','CLASS_STAR_HSC_R','CLASS_STAR_HSC_I', 'CLASS_STAR_HSC_Z','CLASS_STAR_HSC_Y',
-                 'CLASS_STAR_VIRCAM_Y','CLASS_STAR_VIRCAM_J','CLASS_STAR_VIRCAM_H','CLASS_STAR_VIRCAM_Ks','LUM_TIR_MED','LUM_NUV_BEST_2']
-        for i in range(len(cols)):
-            print(i,cols[i])
-            new_table.rename_column('STRING_INPUT_%i'%(i),cols[i])
-    except KeyError:
-        print('Fait chier ya pas assez de string input')
-
-    new_table.write(os.path.dirname(path) + '/' +  name + '_col.' + ext, format='ascii', overwrite=True,comment=False)
-    return   new_table, filts, dep_on_field 
-
-
-def DS9LephareSedToLib(xpapoint):
-    import time
-    from shutil import which
-   
-    params = sys.argv[-14:]
-    param_names =  ['LEPHARE_DIR' ,  'LEPHARE_WORK' ,'PARAM_FILE' ,  'STAR_c' ,  'QSO_c' ,  'GALAXY_c' ,  'STAR_SED',
-                    'STAR_LIB' ,  'QSO_SED' ,'QSO_LIB' ,  'GAL_SED' ,  'GAL_LIB' , 'SEL_AGE' ,  'AGE_RANGE' ]
-    param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
-    print(param_dict)
-    if param_dict['PARAM_FILE'] == '-':
-        param_dict['PARAM_FILE'] = ''
-    else:
-        param_dict['PARAM_FILE'] = '-c ' + param_dict['PARAM_FILE']
-
-
-    for key in list(param_dict.keys())[6:]:
-        if str(param_dict[key]) == '-':
-            del param_dict[key]
-            
-            
-    #param_dict['FILTER_FILE'] = os.path.join(param_dict['LEPHARE_WORK'],'filter', param_dict['FILTER_FILE'])
-
-
-    #d = DS9(xpapoint)
-    filter_  = param_dict['LEPHARE_DIR'] + '/source/sedtolib'
-    if which(filter_) is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'Lephare error', message="""Lephare does not seem to be installedin you machine. Install it or verify Lephare_dir is well setep.""")     
-        d = DS9();d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
-    else:
-#        print(os.path.dirname(paths[0]))
-#        print(os.getcwd())
-#        os.chdir(os.path.dirname(paths[0]))
-#        print(os.getcwd())
-#        os.system("sleep 0.1")
-        if bool(int(param_dict['STAR_c'])):
-            print("%s %s -t S -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-            os.system("%s %s -t S -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-
-        if bool(int(param_dict['QSO_c'])):
-            print("%s %s -t Q -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-            os.system("%s %s -t Q -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-        if bool(int(param_dict['GALAXY_c'])):
-            print("%s %s -t G -%s"%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-            os.system("%s %s -t G -%s "%(filter_,param_dict['PARAM_FILE'],  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[6:]]) ))
-
-    if ('STAR_LIB' in dict.keys(param_dict)) | ('QSO_LIB' in dict.keys(param_dict)) | ('GAL_LIB' in dict.keys(param_dict)) :
-        time.sleep(6)
-    if (bool(int(param_dict['STAR_c']))) & ('STAR_LIB' in dict.keys(param_dict)):    
-        PlotSED(file=os.path.join(param_dict['LEPHARE_WORK'],'lib_bin',param_dict['STAR_LIB']+'.doc'), pathlp = param_dict['LEPHARE_DIR'], filts=[])      
-    if (bool(int(param_dict['QSO_c']))) & ('QSO_LIB' in dict.keys(param_dict)): 
-        PlotSED(file=os.path.join(param_dict['LEPHARE_WORK'],'lib_bin',param_dict['QSO_LIB']+'.doc'), pathlp = param_dict['LEPHARE_DIR'], filts=[])      
-    if (bool(int(param_dict['GALAXY_c']))) & ('GAL_LIB' in dict.keys(param_dict)): 
-        PlotSED(file=os.path.join(param_dict['LEPHARE_WORK'],'lib_bin',param_dict['GAL_LIB']+'.doc'), pathlp = param_dict['LEPHARE_DIR'], filts=[])      
-    return
-
 
 
 def DS9PSFEX(xpapoint):
@@ -13223,12 +12126,28 @@ def DS9saveColor(xpapoint, filename=None):
 
         print("stiff %s %s %s -"%(path1, path2, path3) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
         os.system("stiff %s %s %s -"%(path1, path2, path3) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
+    d.set('frame delete all')
     d.set('rgb')
     d.set('tiff %s'%(os.path.join(os.path.dirname(path1),'stiff.tiff')))
+    
+#    d.set('frame first')
+#    d.set('frame delete')
+#    d.set('frame delete')
+#    d.set('frame delete')
     for color in ['red','green','blue']:
         d.set('rgb '+ color)
         d.set('scale minmax')#
+      #  d.set('scale %s"%(scale))
         d.set('scale linear')
+        
+        
+#    for color in ['red','green','blue']:
+#        d.set('rgb '+ color)
+#        d.set('scale minmax')#
+#        d.set('scale linear')
+        
+        
+        
         #DS9originalSettings(xpapoint)
         #d.set('cmap 1 .5')
     #d.set('zoom to fit')
@@ -14016,61 +12935,6 @@ def CreateBigImage(paths=glob.glob('/Users/Vincent/Nextcloud/Work/These/HSC/TRAC
     return new_image
 
 
-def CreateMultiColorImage(xpapoint, paths=None, ordering=True):
-    from astropy.io import fits
-    d = DS9(xpapoint)
-    path = getfilename(d)
-    fd = os.path.dirname(path)
-    fn = os.path.basename(path)
-    data = getdata(xpapoint)
-    lx,ly  = data.shape
-    data -= data.min()
-    vmin, vmax = np.nanmedian(np.log(data.T)),np.nanpercentile(np.log(data.T),99)
-    
-    if paths is None:
-        #paths = glob.glob(fd+'/calexp*'+fn[-13:])
-        paths = Charge_path_new(path) if len(sys.argv) > 5 else [path] #and print('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-    if ordering: 
-        paths_n= [] 
-        filters_order = ['MegaCam-u','MegaCam-uS','HSC-G','HSC-R','HSC-I','HSC-Z','HSC-Y','VIRCAM-Y','VIRCAM-J','VIRCAM-H','VIRCAM-Ks']
-        filters = ['-'.join(os.path.basename(file).split('-')[1:3]) for file in paths]
-        for filt in filters_order:
-            if filt in filters:
-                paths_n.append(paths[filters.index(filt)])
-        paths = paths_n
-    region = getregion(d, quick=True)
-    Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region) 
-    im3d = np.zeros((ly,lx,len(paths))) 
-    #fig, ax = plt.subplots(3,4,sharex=True,sharey=True)
-    #ax = ax.ravel()
-    n = 3 * 4 - len(paths)
-    for i, path in enumerate(paths):
-        print(path)
-        band = '_'.join(os.path.basename(path).split('-')[1:3])
-        image = fits.open(path)[1].data[Yinf:Ysup,Xinf:Xsup]
-        im3d[:,:,i] = image.T
-        #ax[i].imshow(np.log(data.T - data.T.min()),vmin=vmin,vmax=vmax)
-        #ax[i].set_xlabel(band)
-    #for i in range(n):
-        #fig.delaxes(ax[-i-1])
-    #fig.tight_layout()
-    #fig.savefig(fd+'/3d'+fn[-14:-5]+'.png')
-    
-    fitswrite(im3d.T,fd+'/3d'+fn[-14:])
-    d.set('frame new') 
-    d.set("file {}".format(fd+'/3d'+fn[-14:]))#a = OpenFile(xpaname,filename = filename)
-    return
-
-
-    im3d = np.zeros((ly,lx,100)) 
-    for i, path in enumerate(arange(100)):
-        print(path)
-
-        im3d[:,:,i] = image.T
-    fitswrite(im3d.T,path[:-5]+'test.fits')
-
-
-
 
 
 def add_filters(fieldsname, filts, table):
@@ -14372,28 +13236,30 @@ def DS9tsuite(xpapoint):
     #if connect(host='http://google.com') if False: sys.exit()
     d = DS9(xpapoint)
     d.set('nan black')#sexagesimal
-    d.set("""analysis message {Test suite for beginners, please make sure you have a good internet connection so that images can be downloaded. This help, will go through most of the must-know functions of this plug-in. Between each function a message window will pop-up to explain you what does the function. After it has run you can run it again and change the parameters. When this is done you can just press the n key (next) so that you go to the next function.}""")
-
-#############################################
-    
-    
-    d.set('frame new')
-    d.set('tile no')
-    d.set("analysis message {First of all, let's load an image. You can change the cut/colormap/smoothing by yourself. }")
-    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/calexp-HSC-G-9813-1-5_Trimm.fits')
-    d.set('zoom to fit')
-    WaitForN(xpapoint)
-    d.set("""analysis message {Now let's use the first function: change all the display setups directly. Next time you will be able to access directly this function by hitting shift+s (for settings) or go in Analysis->Generic functions->Setup->Change display parameters. This function will make you gain a lot of time. If you create a region before hitting shift+s it will compute the threshold based on the encircled data! Do not forget to hit n when you want to go to next function!}""")
-    a = d.set('analysis task 7')#setup
-    WaitForN(xpapoint)
-    d.set("analysis message {Now let's use SExtractor to perform a source extraction on this image. You can access this function via: Analysis->Astromatic->Setup->Change display parameters. Do not hesitate to change the detection threshold or other parameters to try to optimize your source extraction!}")
-    a = d.set('analysis task 29')
-    WaitForN(xpapoint)
-    
-    #######################3
-    
-#    a = d.set('analysis task 34')
+#    d.set("""analysis message {Test suite for beginners, please make sure you have a good internet connection so that images can be downloaded. This help, will go through most of the must-know functions of this plug-in. Between each function a message window will pop-up to explain you what does the function. After it has run you can run it again and change the parameters. When this is done you can just press the n key (next) so that you go to the next function.}""")
+#
+##############################################
+#    
+#    
+#    d.set('frame new')
+#    d.set('tile no')
+#    d.set("analysis message {First of all, let's load an image. You can change the cut/colormap/smoothing by yourself. }")
+#    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/calexp-HSC-G-9813-1-5_1.fits')
+#    d.set('zoom to fit')
 #    WaitForN(xpapoint)
+#    d.set("""analysis message {Now let's use the first function: change all the display setups directly. Next time you will be able to access directly this function by hitting shift+s (for settings) or go in Analysis->Generic functions->Setup->Change display parameters. This function will make you gain a lot of time. If you create a region before hitting shift+s it will compute the threshold based on the encircled data! Do not forget to hit n when you want to go to next function!}""")
+#    a = d.set('analysis task 7')#setup
+#    WaitForN(xpapoint)
+#    d.set("analysis message {Now let's use SExtractor to perform a source extraction on this image. You can access this function via: Analysis->Astromatic->Setup->Change display parameters. Do not hesitate to change the detection threshold or other parameters to try to optimize your source extraction!}")
+#    a = d.set('analysis task 29')
+#    WaitForN(xpapoint)
+#    
+#    #######################3
+    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/2_Visualization-TF-TS/TF/TF_WCS/stack8099989_pa-161_2018-06-11T06-02-49_wcs.fits')
+    DS9setup2(xpapoint)
+    WaitForN(xpapoint)
+    a = d.set('analysis task 34')
+    WaitForN(xpapoint)
         #####################
     
     
@@ -14403,10 +13269,11 @@ def DS9tsuite(xpapoint):
     for file in glob.glob('/Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/SWARP/calexp2_trim?.fits'):
         d.set('frame new')
         d.set('file ' + file)
+        DS9setup2(xpapoint)
     d.set('tile yes')
-    DS9setup2(xpapoint)
     d.set("analysis message {You can type Shift+l to directly control all the lock parameters between the different frames}")
     a = d.set('analysis task 9')
+#    d.set('lock frame wcs')
 
 
 
@@ -14424,7 +13291,12 @@ def DS9tsuite(xpapoint):
     #d.set("analysis message {Now they are attached! Let's now use multi-band images to simulate visible images. }")
     d.set('frame delete all')
     d.set('tile yes')
-    d.set('lock cmap no')
+#    d.set('lock cmap no')
+#    d.set("lock colorbar no") 
+#
+#    d.set('lock scalelimits no')
+#    d.set("lock frame no")
+
     d.set('frame new') 
     d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/STIFF/G_Trimm.fits')
     DS9setup2(xpapoint, color='cool')
@@ -14437,12 +13309,15 @@ def DS9tsuite(xpapoint):
 #    d.set('lock frame physical')
     WaitForN(xpapoint)
 #    d.set('wcs skyformat degrees')
-    d.set('wcs reset')
+#    d.set('wcs reset')
+    d.set('lock frame image')
+    d.set('lock frame no')
 
     d.set("analysis message {We are now gonna use STIFF function to generate from scientific FITS image more popular TIFF format images for illustration puporses. Enter the path of a same image in three different bands (R,G,I) and STIFF will perform an accurate reproduction of the original surface brightness and colour, automatioc contrast/brightness adjustments, etc.}")
     #d.set('wcs reset')
     a = d.set('analysis task 32')
     WaitForN(xpapoint)
+    
 
 #
 #
@@ -14480,9 +13355,14 @@ def DS9tsuite(xpapoint):
     d.set('frame delete all')
     files  = glob.glob('/Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/TF/stack*_Trimm.fits')
     files.sort()
+    d.set('lock frame image')
+    d.set('lock scalelimits yes')
     for file in files:
         d.set('frame new')
         d.set('file ' + file)
+    DS9setup2(xpapoint)
+ 
+        
     d.set("analysis message {Here is a throughfocus.Please create a region around a close to focus spot. Then hit n.}")    
     WaitForN(xpapoint)
     a = d.set('analysis task 19')
@@ -14501,6 +13381,7 @@ def DS9tsuite(xpapoint):
     DS9setup2(xpapoint, color='cool')
     d.set("analysis message {Let us ty some real time simplistic guiding code in the case you need it for your observing nights. Select around ~3 stars by creating a circle regin around them and hit m.}")    
     WaitForN(xpapoint)
+    sys.exit()
     d.set('analysis task 26')
     WaitForN(xpapoint)
     d.set("analysis message {You are now ready to use the DS9 Quick Look plugin by yourself.}")    
@@ -14590,14 +13471,14 @@ def main():
     DictFunction_Calc = {'CosmologyCalculator':CosmologyCalculator,'Convertissor': Convertissor}
     
     
-    DictFunction_CLAUDS = {'DS9SaveOnlyImage':DS9SaveOnlyImage,'CreateMultiColorImage':CreateMultiColorImage,
-                     'DS9LephareFilter': DS9LephareFilter,
-                    'DS9LephareSedToLib':DS9LephareSedToLib,'DS9LephareMagGal':DS9LephareMagGal,'DS9LephareZphot':DS9LephareZphot,
-                    'DS9PlotRedshiftGaussian':DS9PlotRedshiftGaussian,'DS9PlotColor':DS9PlotColor, 'DS9LephareLimits':DS9LephareLimits,
-                    'DS9LephareLF':DS9LephareLF, 'PlotFL_from_ALF':PlotFL_from_ALF,'GalaxyStarsClassification':GalaxyStarsClassification,
-                    'get_depth_image': get_depth_image,'RunSextractorHSC_CLAUDS':RunSextractorHSC_CLAUDS, 'PlotSpec':PlotSpec,
-                    'DS9CreateDetectionImages': DS9CreateDetectionImages,'DS9FormatCatalogForLephare':DS9FormatCatalogForLephare,
-                    }
+#    DictFunction_CLAUDS = {'DS9SaveOnlyImage':DS9SaveOnlyImage,'CreateMultiColorImage':CreateMultiColorImage,
+#                     'DS9LephareFilter': DS9LephareFilter,
+#                    'DS9LephareSedToLib':DS9LephareSedToLib,'DS9LephareMagGal':DS9LephareMagGal,'DS9LephareZphot':DS9LephareZphot,
+#                    'DS9PlotRedshiftGaussian':DS9PlotRedshiftGaussian,'DS9PlotColor':DS9PlotColor, 'DS9LephareLimits':DS9LephareLimits,
+#                    'DS9LephareLF':DS9LephareLF, 'PlotFL_from_ALF':PlotFL_from_ALF,'GalaxyStarsClassification':GalaxyStarsClassification,
+#                    'get_depth_image': get_depth_image,'RunSextractorHSC_CLAUDS':RunSextractorHSC_CLAUDS, 'PlotSpec':PlotSpec,
+#                    'DS9CreateDetectionImages': DS9CreateDetectionImages,'DS9FormatCatalogForLephare':DS9FormatCatalogForLephare,
+#                    }
  
     DictFunction_SOFT = {'DS9SWARP':DS9SWARP,'DS9PSFEX': DS9PSFEX,'RunSextractor':RunSextractor,
                          }
