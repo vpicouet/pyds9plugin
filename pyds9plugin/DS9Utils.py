@@ -101,8 +101,8 @@ def CreateFolders(DS9_BackUp_path=DS9_BackUp_path):
 
 def LoadDS9QuickLookPlugin():
     try:
-        AnsDS9path = resource_filename('DS9FireBall','QuickLookPlugIn.ds9.ans')
-        help_path = resource_filename('DS9FireBall','doc/ref/index.html')
+        AnsDS9path = resource_filename('pyds9plugin','QuickLookPlugIn.ds9.ans')
+        help_path = resource_filename('pyds9plugin','doc/ref/index.html')
     except:
         #sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
         print(__file__)
@@ -127,7 +127,7 @@ def LoadDS9QuickLookPlugin():
             print(bcolors.BLACK_RED + 'And switch on Autoreload' + bcolors.END)
         bash_file = os.path.join(os.environ['HOME'], '.bachrc')
         if os.path.isfile(bash_file):
-                if 'DS9FireBall' not in open(bash_file).read():
+                if 'pyds9plugin' not in open(bash_file).read():
                     var = input("Do you want to add DS9 Plug-in help path to %s to access it from ds9? [y]/n"%(bash_file))
                     if  var.lower() != 'n':
                         ds9file = open(bash_file,'a') 
@@ -183,7 +183,7 @@ class config(object):
         return 
     
 try:
-    conf_dir = resource_filename('DS9FireBall', 'config')
+    conf_dir = resource_filename('pyds9plugin', 'config')
 except:
     conf_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
 try:
@@ -199,7 +199,7 @@ def ChangeConfig(xpapoint):
     print(len(sys.argv[3:]))
     exptime, temperature, gain, physical_region, extension, date, format_date, verbose, ConversionGain, Autocorr_region_1D, Autocorr_region_2D = sys.argv[3:]
     try:
-        conf_dir = resource_filename('DS9FireBall', 'config')
+        conf_dir = resource_filename('pyds9plugin', 'config')
     except:
         conf_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
     my_conf = Table.read(conf_dir+'/config.csv', format='csv')
@@ -2502,10 +2502,10 @@ def DS9open(xpapoint, filename=None):
 def ShowMessage(task='yesno'):
 #    try:
     d=DS9();
-    a = d.set('analysis /Users/Vincent/Github/DS9functions/DS9FireBall/QuickLookMessages.ds9.ans')
+    a = d.set('analysis /Users/Vincent/Github/DS9functions/pyds9plugin/QuickLookMessages.ds9.ans')
     a = d.set('analysis task %s'%(task))
-    a = d.set('analysis clear load /Users/Vincent/Github/DS9functions/DS9FireBall/QuickLookMessages.ds9.ans')
-    a = d.set('analysis /Users/Vincent/Github/DS9functions/DS9FireBall/QuickLookPlugIn.ds9.ans')
+    a = d.set('analysis clear load /Users/Vincent/Github/DS9functions/pyds9plugin/QuickLookMessages.ds9.ans')
+    a = d.set('analysis /Users/Vincent/Github/DS9functions/pyds9plugin/QuickLookPlugIn.ds9.ans')
     return a
 
 
@@ -3696,9 +3696,9 @@ def returnXY(field, w = 2060, frame='observed', keyword='Lya_Gal', mag_min=None,
     print('Selected Line is : %0.4f microns'%( w))
 
     try:
-        #slit_dir = resource_filename('DS9FireBall', 'Slits')
-        Target_dir = resource_filename('DS9FireBall', 'Targets')
-        Mapping_dir = resource_filename('DS9FireBall', 'Mappings')
+        #slit_dir = resource_filename('pyds9plugin', 'Slits')
+        Target_dir = resource_filename('pyds9plugin', 'Targets')
+        Mapping_dir = resource_filename('pyds9plugin', 'Mappings')
     except:
         #slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
         Target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Targets')
@@ -4141,7 +4141,7 @@ def Field_regions(xpapoint, mask=''):
         Type = 'detector'
     print ('Type = ', Type)
     try:
-        slit_dir = resource_filename('DS9FireBall', 'Slits')
+        slit_dir = resource_filename('pyds9plugin', 'Slits')
     except:
         slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
         
@@ -6224,7 +6224,7 @@ def DS9SmearingProfileAutocorr(xpapoint, DS9backUp=DS9_BackUp_path, name='', Plo
         region = getregion(d, quick=True)
     except ValueError:
         try:
-            reg = resource_filename('DS9FireBall', 'Regions')
+            reg = resource_filename('pyds9plugin', 'Regions')
         except:
             reg = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Regions')
         if Type == '2d-xy':
@@ -6726,7 +6726,7 @@ def DS9_2D_autocorrelation(xpapoint):
         region = getregion(d, quick=True)
     except ValueError:
         try:
-            reg = resource_filename('DS9FireBall', 'Regions')
+            reg = resource_filename('pyds9plugin', 'Regions')
         except:
             reg = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Regions')
         d.set('regions ' + reg + '/Autocorr.reg')
@@ -6769,7 +6769,7 @@ def DS9_2D_FFT(xpapoint, config=my_conf):
         region = getregion(d, quick=True)
     except ValueError:
         try:
-            reg = resource_filename('DS9FireBall', 'Regions')
+            reg = resource_filename('pyds9plugin', 'Regions')
         except:
             reg = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Regions')
         d.set('regions ' + reg + '/Autocorr.reg')
@@ -7719,7 +7719,7 @@ def Smearing2Noise(exp_coeff=1.5):
     """
     """
     try:
-        noisePath= resource_filename('DS9FireBall', 'CSVs')
+        noisePath= resource_filename('pyds9plugin', 'CSVs')
     except:
         noisePath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'CSVs')
     coeff1 = np.loadtxt(os.path.join(noisePath,'GainHistVSsmearing.csv'), delimiter=',')
@@ -7849,7 +7849,7 @@ def ApplyTotalReductionPipeline_new(xpapoint,filename, BackgroundCorrection=Fals
         filename, cosmics = removeCRtails_CS(filename, threshold=40000,n=3,size=0,area=area, create=create)
 
 #    try:
-#        table_path = resource_filename('DS9FireBall', 'Regions') + '/HotPixelsFinalV1_190222.reg'
+#        table_path = resource_filename('pyds9plugin', 'Regions') + '/HotPixelsFinalV1_190222.reg'
 #    except:
 #        table_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Regions')  + '/HotPixelsFinalV1_190222.reg'
 #    
@@ -10867,7 +10867,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     BACK_FILTTHRESH,  CHECKIMAGE_TYPE, CHECKIMAGE_NAME = params[-3:]
 
     try:
-        param_dir = resource_filename('DS9FireBall', 'Sextractor')
+        param_dir = resource_filename('pyds9plugin', 'Sextractor')
     except:
         param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
 
@@ -11226,7 +11226,7 @@ def RunSextractorHSC_CLAUDS(xpapoint, path=None):
             d = DS9();d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     
         try:
-            param_dir = resource_filename('DS9FireBall', 'Sextractor')
+            param_dir = resource_filename('pyds9plugin', 'Sextractor')
         except:
             param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
     
@@ -11920,7 +11920,7 @@ def Convertissor(xpapoint):
 
 
 def Help(xpapoint):
-    return '/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html'
+    return '/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html'
 
 def WaitForN(xpapoint):
     d = DS9(xpapoint)
@@ -12109,7 +12109,7 @@ def main():
     #path = os.path.dirname(os.path.realpath(__file__))
 
     from shutil import which
-    #import pkg_resources;print('Version = ', pkg_resources.require("DS9FireBall")[0].version)
+    #import pkg_resources;print('Version = ', pkg_resources.require("pyds9plugin")[0].version)
 #    print("which('DS9Utils') =", which('DS9Utils'))
 #    print("__file__ =", __file__)
 #    print("__package__ =", __package__)
