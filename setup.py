@@ -1,34 +1,27 @@
-#from distutils.core import setup
 from setuptools import setup, find_packages
-#import sys
-#from pip.req import parse_requirements
+
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 
-
-requires1 = [#'https://github.com/ericmandel/pyds9.git#egg=pyds9',
-	        'numpy >=1.8', 
+requires = ['numpy >=1.8', 
             'scipy >=0.14', 
             'matplotlib>=3.1.1',
             'astropy >=1.3',
             'pyds9',
             'photutils',
-            'PyQt5',#'mpl_toolkits',#tkinter
-            'tqdm',#'shutil','os','glob','sys','time'
-            'datetime',#pkgp_resources'#,'urllib','subprocess','collections','multiprocessing','errno',            
+            'PyQt5',
+            'tqdm',
+            'datetime',        
             'Pillow', 
             'pyswarm',
-            'logalpha'
-            #'importlib','pkgutil'
-            ]
-
+            'logalpha']
 
 entry_points = {}
-entry_points['console_scripts'] = ['DS9Utils = DS9FireBall.DS9Utils:main']
+entry_points['console_scripts'] = ['DS9Utils = pyds9plugin.DS9Utils:main']
 
-data = { "DS9FireBall": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*","doc/*"]}
+data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "Slits/*","Targets/*","Mappings/*","Regions/*","CSVs/*","config/*","Sextractor/*","doc/*"]}
 
 
 MAJOR = '2'
@@ -38,11 +31,11 @@ version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
     setup(
-    name='DS9FireBall',
+    name='pyds9plugin',
     python_requires='>3.5.2',
     version=version,
     license='Creative Commons Attribution-Noncommercial-Share Alike license',
-    install_requires = requires1,#	install_reqs = parse_requirements('requirements.txt', session='hack'),
+    install_requires = requires,
     long_description=long_description,
     url='https://people.lam.fr/picouet.vincent/index.html', 
     platforms=["Linux", "Mac OS-X", "Unix"],

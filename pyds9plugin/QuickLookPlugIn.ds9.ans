@@ -339,8 +339,20 @@ hmenu Astronomical softwares
 	menu
 	DS9Utils $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.) WCS $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   2>&1 | tee -a /tmp/DS9Utils.log
 
-#$image_width $image_height 
+	hmenu Photutils
 
+		Extract Sources
+		*
+		menu
+		DS9Utils $xpa_method ExtractSources $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+		Subtract background
+		*
+		menu
+		DS9Utils $xpa_method BackgroundEstimationPhot $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
+
+	endhmenu
 
 	hmenu Astronomy calculator
 
@@ -848,7 +860,7 @@ endparam
 
 param Background-Fit-1D
 axis menu {Direction} x|y {Variation direction to be analyzed}
-background menu {Background deg} 0|1|2 {Background degree of the fit}
+background menu {Background deg} 0|1 {Background degree of the fit}
 law menu {Law} None|exponential1D|DoubleExponiential {Law used to fit the background}
 gaussians menu {Number} 0|1|2|3|4|5 {Number of features to fit by gaussian}
 kernel entry {kernel} 1 {int, Convolution kenel}
@@ -1449,16 +1461,6 @@ formatCat entry {Catalog time format} - {Catalog time format: Derive it automati
 endparam
 
 
-
-param AddToCatalog
-formatCat entry {Catalog path} - {Path of the catalog to work on}
-Gain1 checkbox {Gain-VarIntens} 0 {Compute total gain from variance intensity diagram}
-Gain2 checkbox {Gain-Hist} 0 {Compute total gain from histogram analysis}
-Smearing1 checkbox {Smearing-Autocorr} 0 {Compute smearing from autocorrelation measurement}
-Smearing2 checkbox {Smearing-Profile} 0 {Compute smearing from hot pixels profile}
-HotPixels checkbox {Hot-Pixels} 0 {Count hot pixels}
-AnalyzeOSSmearing checkbox {OS-smearing} 0 {Analyze OS Smearing}
-endparam
 
 param Plot-LF
 Path entry {Path} - {Path of the folder containing the ALF points}
