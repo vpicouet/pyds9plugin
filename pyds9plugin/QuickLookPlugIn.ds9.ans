@@ -32,10 +32,10 @@ hmenu Generic functions
 
 	hmenu Regions
 
-		Create regions
-		*
-		menu
-		DS9Utils $xpa_method DetectHotPixels "$entry(Thresholds you want for detecting the hot pixels: Thresh1[-Thresh2]. Default value is 20000-4000 [If no threshold is given the function will return the 100 highest pixel in the seleted region])" 2>&1 | tee -a /tmp/DS9Utils.log
+#		Create regions
+#		*
+#		menu
+#		DS9Utils $xpa_method DetectHotPixels "$entry(Thresholds you want for detecting the hot pixels: Thresh1[-Thresh2]. Default value is 20000-4000 [If no threshold is given the function will return the 100 highest pixel in the seleted region])" 2>&1 | tee -a /tmp/DS9Utils.log
 
 
 		Import regions from catalog 
@@ -52,10 +52,18 @@ hmenu Generic functions
 		DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
 
 
-		Mask Regions (NaN)
+#		Mask Regions (NaN)
+#		*
+#		menu
+#		DS9Utils $xpa_method DS9MaskRegions "$entry(Length in pixel for which you want to replace the value by NaNs)"  2>&1 | tee -a /tmp/DS9Utils.log	
+
+
+		Replace regions with NaNs
 		*
 		menu
-		DS9Utils $xpa_method DS9MaskRegions "$entry(Length in pixel for which you want to replace the value by NaNs)"  2>&1 | tee -a /tmp/DS9Utils.log	
+		DS9Utils $xpa_method ReplaceWithNans   $message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)     2>&1 | tee -a /tmp/DS9FIREBall.log
+
+
 
 
 #		Load Table region
@@ -132,6 +140,17 @@ hmenu Generic functions
 		menu
 		DS9Utils $xpa_method Convolve2d $param(Convolution); $type $pat_c $sizex $sizey $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9Utils.log
 
+
+		Interpolate NaNs 
+		*
+		menu
+		DS9Utils $xpa_method InterpolateNaNs $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9FIREBall.log
+
+
+		Trimming
+		*
+		menu
+		DS9Utils $xpa_method Trimming $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  2>&1 | tee -a /tmp/DS9FIREBall.log
 
 	
 	endhmenu
@@ -405,7 +424,7 @@ web
 file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
 
 
-Let's have a try!
+Let us have a try!
 *
 menu
 #echo "$filename" | $text 
@@ -618,7 +637,7 @@ endparam
 param Detector-Parameters
 size entry {Detector size} 3216,2069 {Size of the detector in pixels}
 overscan checkbox {Overscan} 1 {Does the detector contain OS regions}
-OS entry {Overscan limits} 1066,2124 {Pixel number of the overscan regions' positions, put '-' if None}
+OS entry {Overscan limits} 1066,2124 {Pixel number of the overscan regions positions, put '-' if None}
 ConversionGain entry {Conversion gain} 0.53 {ADU/electron}
 EmGain entry {Amplification gain} 1410 {electron per electron}
 n_registers entry {Number of registers} 604 {Number of amplification register in EMCCD}
@@ -669,7 +688,7 @@ endparam
 
 param radial_profile
 center menu {Centring algorithm} Maximum|User|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting {Algorithm used for centering background subtraction precede Center of mass algorithm}
-diam entry {Source diameter[pixels]} 0 {Fiber's diameter - 0 for star}
+diam entry {Source diameter[pixels]} 0 {Fiber diameter - 0 for star}
 log checkbox {Log} 0 {Log or linear plot}
 endparam
 
@@ -699,7 +718,7 @@ all checkbox {All images} 0 {Check this box to run the analysis on all the image
 b entry {First image} - {Number of the first image to process}
 e entry {Last image} - {Number of the last image to process}
 list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
-path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/*.fits}
+path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/[1-13].fits}
 endparam
 
 
@@ -882,7 +901,7 @@ all checkbox {All images} 0 {Check this box to run the analysis on all the image
 b entry {First image} - {Number of the first image to process}
 e entry {Last image} - {Number of the last image to process}
 list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
-path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/*.fits}
+path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/[1-13].fits}
 stack checkbox {Only on stacked} 0 {Run analysis only on stacked images }
 endparam
 
@@ -901,7 +920,7 @@ path entry {Path} - {Path of the detection catalog}
 fields entry {x,y fields} - {Name of the x and y fields: ex = xcentroid,ycentroid}
 name entry {field name} - {field to put in region name: ex = magnitude, name, etc}
 form menu {form of the region} circle|box {fForm of the regions to display}
-size entry {Regions' size} 10 {Size in pixel}
+size entry {Regions size} 10 {Size in pixel}
 wcs checkbox {WCS} 0 {FCheck if the catalog fields are in degree-WCS, then radius must be in arc-second}
 endparam
 
@@ -1188,7 +1207,7 @@ endparam
 
 param Centering
 method menu {Method} Maximum|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting|Gaussian-Picouet {Method for centroiding}
-background checkbox {Background subtraction} 1 {Apply of not background subtraction before centering}
+background checkbox {Background subtraction} 0 {Apply of not background subtraction before centering}
 endparam
 
 
@@ -1474,3 +1493,23 @@ Max checkbox {Max} 1 {Compute the max of the region}
 Std checkbox {Std} 1 {Compute the standard deviation of the region}
 Flux checkbox {Flux} 0 {Compute the flux in the region}
 endparam
+
+
+param EmGain
+subtract checkbox {Subtract Image} 0 {Subtract image to have better assesment of the variance}
+number entry {Number/path} - {Number/path image to subtract, let - to automatically take the +/- consecutive image}
+box entry {Bin size} 30,30 {Size of the bins on which compute the variance and intensity}
+overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use}
+limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
+endparam
+
+
+param -Click-Enter-For-Only-DS9-Image-
+log checkbox {Log 10} 1 {Plot the histogram in log}
+range entry {Range} 2500-10000 {Range of the histogram, write - for automatic plot}
+all checkbox {All images} 0 {Check this box to run the analysis on all the images of the repository}
+b entry {First image} - {Number of the first image to process}
+e entry {Last image} - {Number of the last image to process}
+list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
+path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/.fits}
+stack checkbox {Only on stacked} 0 {Run analysis only on stacked images }

@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+Ifrom setuptools import setup, find_packages
 
 
 with open("README.md", "r") as fh:
@@ -26,7 +26,7 @@ data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","dygraph-combined_new.js", "S
 
 MAJOR = '2'
 MINOR = '9'
-MICRO = '0dev5'
+MICRO = '0dev6'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
