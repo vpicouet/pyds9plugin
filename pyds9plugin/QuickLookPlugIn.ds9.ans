@@ -420,8 +420,8 @@ DS9Functions Help !
 *
 web
 #file:$env(DS9Function)
-#http://ilios.io/ds9/index.html
-file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
+http://ilios.io/ds9/index.html
+#file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
 
 
 Let us have a try!
