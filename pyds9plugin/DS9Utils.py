@@ -29,13 +29,13 @@ else:
 #print("__file__ =", __file__)
 #print("__package__ =", __package__)
 #print('Python version = ', sys.version)
-#import matplotlib; matplotlib.use('TkAgg')  
 #import matplotlib
 #matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+#import matplotlib; matplotlib.use('TkAgg')  
 
 
-from .BasicFunctions import DS9lock
+from .BasicFunctions import DS9lock, verboseprint
 
 
 ################################
@@ -70,24 +70,7 @@ plt.rcParams['axes.titlesize'] = 'x-large'
 #def SetDiplay():
 #    """Set the sparameters of the plots
 #    """
-width = 23#root.winfo_screenmmwidth() / 25.4
-height = 14#root.winfo_screenmmheight() / 25.4
 
-#IPython_default = plt.rcParams.copy()
-plt.rcParams['figure.figsize'] = (2*width/3, 3*height/5)
-plt.rcParams['grid.linestyle'] = ':'
-plt.rcParams['axes.grid'] = True
-plt.rcParams['image.interpolation'] = None
-#plt.rcParams['savefig.transparent'] = True
-plt.rcParams['xtick.labelsize'] = 'large'
-plt.rcParams['ytick.labelsize'] = 'large'
-plt.rcParams['axes.labelsize'] = 'large'
-plt.rcParams['axes.titlesize'] = 'x-large'
-#    return
-
-    
-    
-    
     
 
 def CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/'):
@@ -121,17 +104,18 @@ def LoadDS9QuickLookPlugin():
     """
     try:
         AnsDS9path = resource_filename('pyds9plugin','QuickLookPlugIn.ds9.ans')
+        #AnsDS9path = resource_filename('pyds9plugin','QuickLookPlugIn.ds9.ans')
         help_path = resource_filename('pyds9plugin','doc/ref/index.html')
     except:
         #sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
         print(__file__)
         pass
     else:
-
+        print('DS9 analysis file = ', AnsDS9path)
         if os.path.isdir(os.path.join(os.environ['HOME'], '.ds9')):
             for file in glob.glob(os.path.join(os.environ['HOME'], '.ds9','*')):
                 if AnsDS9path not in open(file).read():
-                    var = input("Do you want to add the Quick Look plug-in to the DS9 %s fils? [y]/n"%(os.path.basename(file)))
+                    var = input("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n"%(os.path.basename(file)))
                     if  var.lower() != 'n':
                         ds9file = open(file,'a') 
                         ds9file.write('array set panalysis { user2 {} autoload 1 user3 {} log 1 user4 {} user %s }'%(AnsDS9path))
@@ -144,17 +128,14 @@ def LoadDS9QuickLookPlugin():
         else:
             print(bcolors.BLACK_RED + 'To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
             print(bcolors.BLACK_RED + 'And switch on Autoreload' + bcolors.END)
-        bash_file = os.path.join(os.environ['HOME'], '.bashrc')
-        if os.path.isfile(bash_file):
-                if 'pyds9plugin' not in open(bash_file).read():
-                    var = input("Do you want to add DS9 Plug-in help path to %s to access it from ds9? [y]/n"%(bash_file))
-                    if  var.lower() != 'n':
-                        ds9file = open(bash_file,'a') 
-                        ds9file.write('export DS9Function="%s"'%(help_path))
-                        ds9file.close()                     
-            
-        #sys.exit()
-        
+#        bash_file = os.path.join(os.environ['HOME'], '.bashrc')
+#        if os.path.isfile(bash_file):
+#                if 'pyds9plugin' not in open(bash_file).read():
+#                    var = input("Do you want to add DS9 Plug-in help path to %s to access it from ds9? [y]/n"%(bash_file))
+#                    if  var.lower() != 'n':
+#                        ds9file = open(bash_file,'a') 
+#                        ds9file.write('export DS9Function="%s"'%(help_path))
+#                        ds9file.close()                     
     return
 
 def PresentPlugIn():
@@ -1596,7 +1577,11 @@ def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None,
 #    except IndexError:
 #        entry = ''
     if fibersize is None:
-        fibersize = sys.argv[4] if sys.argv[4].replace('.','',1).isdigit() else 0 and print('Fiber size not understood, setting to 0')
+        if sys.argv[4].replace('.','',1).isdigit():
+            fibersize = sys.argv[4] 
+        else:
+            fibersize = 0
+            print('Fiber size not understood, setting to 0')
     if fibersize is None:
         log = bool(int(sys.argv[-1]))
     print('log = ',log)
@@ -2194,7 +2179,7 @@ def stackImages(path,all=False, DS=0, function = 'mean', numbers=None, save=True
             for i in numbers:
                 for ext in exts:
                     files.extend(glob.glob("{}/image{:06d}{}".format(path, int(i), ext))) 
-        print(print("\n".join(files)))
+        print("\n".join(files))
         n = len(files)
         image = fits.open(files[0])[0]
         lx,ly = image.data.shape
@@ -2848,8 +2833,6 @@ def DS9center(xpapoint,Plot=True):
             newCenterx = Xinf + xn + 1#region.xc - (lx/2 - popt[1])
             newCentery = Yinf + yn + 1#region.yc - (ly/2 - popt[2])
             print('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
-    
-    
             d.set('regions delete select')
     
             try:
@@ -3027,7 +3010,7 @@ def MaskCosmicRays2(image, cosmics, top=0, bottom=0, left=4, right=0, cols=None,
 def RunFunction(Fonction, args, return_dict):
     """Run a function in order to performe multi processing
     """
-    print(*args)
+    #print(*args)
     out = Fonction(*args)
     print(out)
     return_dict['output'] = out
@@ -3056,14 +3039,7 @@ def even(f):
     """
     return np.ceil(f / 2.) * 2
 
-       
-def verboseprint(*args, verbose=True):
-    """Print function with a boolean verbose argument
-    """
-    if bool(int(verbose)):
-        print(*args)
-    else:
-        pass
+
 
 
 def distance(x1,y1,x2,y2):
@@ -4450,10 +4426,12 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
         y = np.log10(y - np.nanmin(y))
         index = np.isfinite(y)
         x, y = x[index], y[index]
-        
-    kernel = int(kernel)
-    y = np.convolve(y, np.ones(kernel)/kernel, mode='same')[kernel:-kernel]
-    x = x[kernel:-kernel]
+ 
+    if float(kernel)>0:
+        kernel = int(float(kernel))
+        y = np.convolve(y, np.ones(kernel)/kernel, mode='same')[kernel:-kernel]
+        x = x[kernel:-kernel]
+    print('Convolution : kernel = %i'%(float(kernel)))
     #auto_gui.Background(x,y)
     if  function == 'exponential1D':
         exp=True

@@ -5,24 +5,35 @@ Created on Thu Jan 16 14:52:08 2020
 
 @author: Vincent
 """
-import time
-import glob
+#import time
+#import glob
 import os
 import sys
 import numpy as np
 from pyds9 import DS9
-import datetime
-from  pkg_resources  import resource_filename
-from astropy.table import Table
+#import datetime
+#from  pkg_resources  import resource_filename
+#from astropy.table import Table
 try:
     import IPython.core.ultratb
 except ImportError:
     pass
 else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
-from shutil import which
-import matplotlib.pyplot as plt
+#from shutil import which
+#import matplotlib.pyplot as plt
 
+
+       
+def verboseprint(args, verbose=True):
+    """Print function with a boolean verbose argument
+    """
+    if bool(int(verbose)):
+        print(*args)
+    else:
+        pass
+    
+    
 
 def FitsExt(fitsimage):
     ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]

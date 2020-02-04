@@ -5,17 +5,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 
-requires = ['numpy >=1.8', 
+requires = ['numpy >=1.8', #'PyQt5','Pillow','pyswarm',
             'scipy >=0.14', 
             'matplotlib>=3.1.1',
             'astropy >=1.3',
             'pyds9',
             'photutils',
-            'PyQt5',
             'tqdm',
-            'datetime',        
-            'Pillow', 
-            'pyswarm',
+            'datetime',         
             'logalpha']
 
 entry_points = {}
