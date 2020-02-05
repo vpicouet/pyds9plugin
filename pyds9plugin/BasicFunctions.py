@@ -25,7 +25,7 @@ else:
 
 
        
-def verboseprint(args, verbose=True):
+def verboseprint(*args, verbose=False):
     """Print function with a boolean verbose argument
     """
     if bool(int(verbose)):
