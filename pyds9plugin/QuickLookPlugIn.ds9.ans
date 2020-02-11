@@ -17,7 +17,7 @@ hmenu Generic functions
 		Add header field
 		*
 		menu
-		DS9Utils $xpa_method AddHeaderField $param(CreateHeader); $Field $Value $Comment $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  | $text  
+		DS9Utils $xpa_method AddHeaderField $param(CreateHeader); $Field $Value $Comment "$path"  | $text  
 
 
 	endhmenu
@@ -117,7 +117,7 @@ hmenu Generic functions
 		Execute Command #13
 		*
 		menu
-		DS9Utils $xpa_method SubstractImage $param(Arithmetic); $im_path "$exp" $eval $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		DS9Utils $xpa_method SubstractImage $param(Arithmetic); $im_path "$exp" $eval  "$path"   | $text  
 
 		Fit Background 1D
 		*
@@ -138,20 +138,21 @@ hmenu Generic functions
 		2D convolution
 		*
 		menu
-		DS9Utils $xpa_method Convolve2d $param(Convolution); $type $pat_c $sizex $sizey $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		DS9Utils $xpa_method Convolve2d $param(Convolution); $type $pat_c $sizex $sizey  "$path"   | $text  
 
 
 		Interpolate NaNs 
 		*
 		menu
-		DS9Utils $xpa_method InterpolateNaNs $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		#DS9Utils $xpa_method InterpolateNaNs $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		DS9Utils $xpa_method InterpolateNaNs $param(Images-to-analyze); "$path"   | $text  
 
 
 		Trimming
 		*
 		menu
-		DS9Utils $xpa_method Trimming $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
-
+		#DS9Utils $xpa_method Trimming $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		DS9Utils $xpa_method Trimming $param(Images-to-analyze);  "$path"   | $text  
 	
 	endhmenu
 
@@ -261,27 +262,30 @@ hmenu Instrumentaiton - AIT
 		Compute gain from fluctuation #29
 		*
 		menu
-		DS9Utils $xpa_method ComputeEmGain $param(EmGain); $subtract "$path" $box $overscan $limits $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		DS9Utils $xpa_method ComputeEmGain $param(EmGain); 0 - $box 0 0  "$path"   | $text  
 
 
 
 		Autocorrelation
 		*
 		menu
-		DS9Utils $xpa_method 2D_autocorrelation $param(autocorr); $type $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		DS9Utils $xpa_method 2D_autocorrelation $param(autocorr); $type  "$path"   | $text  
 
 
 		2D Fast Fourrier Transform
 		*
 		menu
-		DS9Utils $xpa_method DS9_2D_FFT $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  | $text  
+#		DS9Utils $xpa_method DS9_2D_FFT $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  | $text  
+		DS9Utils $xpa_method DS9_2D_FFT $param(Images-to-analyze);  "$path"  | $text  
 
 
 
 		Column Line Correlation
 		*
 		menu
-		DS9Utils $xpa_method ColumnLineCorrelation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		#DS9Utils $xpa_method ColumnLineCorrelation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
+		DS9Utils $xpa_method ColumnLineCorrelation $param(Images-to-analyze); "$path"   | $text  
+
 
 	endhmenu
 
@@ -289,7 +293,7 @@ hmenu Instrumentaiton - AIT
 	Guidance
 	*
 	menu
-	DS9Utils $xpa_method Update   | $text  
+	DS9Utils $xpa_method guidance   | $text  
 
 
 	Centering (c)
@@ -306,7 +310,9 @@ hmenu Instrumentaiton - AIT
 	Transit/through-slit analysis
 	*
 	menu
-	DS9Utils $xpa_method throughslit $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    | $text  
+	#DS9Utils $xpa_method throughslit $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    | $text  
+	DS9Utils $xpa_method throughslit $param(Images-to-analyze); "$path"    | $text  
+
 
 
 endhmenu
@@ -367,13 +373,13 @@ hmenu Astronomical softwares
 		Extract Sources
 		*
 		menu
-		DS9Utils $xpa_method ExtractSources $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  | $text  
+		DS9Utils $xpa_method ExtractSources $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons  "$path"  | $text  
 
 
 		Subtract background
 		*
 		menu
-		DS9Utils $xpa_method BackgroundEstimationPhot $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  | $text  
+		DS9Utils $xpa_method BackgroundEstimationPhot $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate "$path"  | $text  
 
 	endhmenu
 
@@ -708,6 +714,9 @@ var5 checkbox {colorbar} 1 {colorbar}
 endparam
 
 
+param Images-to-analyze
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+endparam
 
 
 
@@ -737,6 +746,7 @@ endparam
 
 param autocorr
 type menu {Type} 2D-XY|X|Y {Choose autocorrelation type}
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -761,6 +771,7 @@ param CreateHeader
 Field entry {Header} - {Header field to which add value}
 Value entry {Value} - {Value to add}
 Comment entry {Comment} - {Comment to add}
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 param SmearingAutocorr
@@ -821,6 +832,7 @@ mask checkbox {Masking sources} 0 {Check this and fill following entries to dete
 snr entry {snr} 3 {The snr per pixel above the background for which to consider a pixel as possibly being part of a source}
 npixels entry {npixels} 3 {The number of connected pixels, each greater than threshold, that an object must have to be detected.}
 dilate entry {dilate} 5 {The size of the square array used to dilate the segmentation image.}
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -832,6 +844,7 @@ theta entry {Angle} 0 {The position angle (in degrees) of the major axis of the 
 iters entry {Interation} 5 {The number of iterations to perform sigma clipping, or None to clip until convergence is achieved when calculating the statistics}
 ratio entry {Gaussian ratio} 1 {The ratio of the minor to major axis standard deviations of the Gaussian kernel}
 delete-doublons entry {Minimal distance} 30 {When entering several thresholds/FWHMs, the minimal distance between two sources in order to delete duplicates}
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -860,13 +873,13 @@ endparam
 
 
 
-param EmGain
-subtract checkbox {Subtract Image} 0 {Subtract image to have better assesment of the variance}
-number entry {Number/path} - {Number/path's image to subtract, let - to automatically take the +/- consecutive image}
-box entry {Bin's size} 30,30 {Size of the bins on which compute the variance and intensity}
-overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use}
-limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
-endparam
+#param EmGain
+#subtract checkbox {Subtract Image} 0 {Subtract image to have better assesment of the variance}
+#number entry {Number/path} - {Number/path's image to subtract, let - to automatically take the +/- consecutive image}
+#box entry {Bin's size} 30,30 {Size of the bins on which compute the variance and intensity}
+#overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use}
+#limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
+#endparam
 
 
 
@@ -915,6 +928,7 @@ type menu {Type} Box|Gaussian|Image {Type of the convolution}
 pat_c entry {path} - {Path of the convolution kernel 2D fits image.}
 sizex entry {Size x} 3 {Box's or gaussian's std size in the x direction (must be odd number for box!)}
 sizey entry {Size y} 3 {Box's or gaussian's std size in the y direction (must be odd number for box!)}
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -1220,6 +1234,7 @@ param Arithmetic
 im_path entry {image} - {Path of a second image. Keep '-' if not needed}
 exp entry {Expression} - {Expression for exec method (eg. ds9=ds9-image). See doc for exemples (convolution, adding noise, masking, trimming).}
 eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -1499,12 +1514,21 @@ Flux checkbox {Flux} 0 {Compute the flux in the region}
 endparam
 
 
+
 param EmGain
+box entry {Bin size} 30,30 {Size of the bins on which compute the variance and intensity}
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+endparam
+
+
+
+param EmGainFB
 subtract checkbox {Subtract Image} 0 {Subtract image to have better assesment of the variance}
 number entry {Number/path} - {Number/path image to subtract, let - to automatically take the +/- consecutive image}
 box entry {Bin size} 30,30 {Size of the bins on which compute the variance and intensity}
 overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use}
 limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
+path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
