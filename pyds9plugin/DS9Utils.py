@@ -5,7 +5,7 @@ Created on Wed Jul  4 10:35:13 2018
 
 @author: Vincent
 """
-
+import resource
 import time
 import glob
 import os
@@ -22,6 +22,10 @@ except ImportError:
     pass
 else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
+    
+    
+from functools import wraps
+
     
 #sys.stderr = sys.stdout
 #sys.stderr, sys.stdout = sys.stdout, sys.stderr
@@ -102,8 +106,50 @@ except (IOError or FileNotFoundError) as e:
     verboseprint(e)
     pass
 
-    
+ 
+ 
+def fn_timer(function):
+    @wraps(function)
+    def function_timer(*args, **kwargs):
+        t0 = time.time()
+        result = function(*args, **kwargs)
+        t1 = time.time()
+        verboseprint ("Total time running %s: %s seconds" %(function.__name__, str(t1-t0)))
+        return result
+    return function_timer
+  
+ 
 
+ 
+def fn_memory_load(function):
+    @wraps(function)
+    def function_timer(*args, **kwargs):
+        m1 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
+        result = function(*args, **kwargs)
+        m2 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
+        verboseprint ("Memory used %s: %0.1f MB (%0.1f - %0.1f)" %(function.__name__, (m2-m1)/1e6, m2/1e6, m1/1e6))
+        return result
+    return function_timer    
+
+def display_arguments(function):
+    @wraps(function)
+    def display_and_call(*args, **kwargs): 
+        args_ = ', '.join([str(arg) for arg in args])
+        opt_args_ = ', '.join([kw+'='+str( kwargs[kw] ) for kw in kwargs.keys() ]) 
+        verboseprint(function.__name__ + '(%s, %s)'%(args_,opt_args_) ) 
+    return display_and_call
+
+@fn_memory_load
+@fn_timer
+@display_arguments
+def FitsExt(fitsimage):
+    """Returns the number of the first image in a fits object
+    """
+    ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
+    verboseprint('Taking extension: ',ext)
+    return ext
+
+@fn_timer
 def CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/'):
     """Create the folders in which are stored DS9 related data
     """
@@ -229,14 +275,6 @@ def PresentPlugIn():
 
 
 
-
-def FitsExt(fitsimage):
-    """Returns the number of the first image in a fits object
-    """
-    ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
-    verboseprint('Taking extension: ',ext)
-    return ext
-
 def DS9setup2(xpapoint, config=my_conf, color='cool'):
     """This function aims at giving a quick and general visualisation of the image by applying specific thresholding
         and smoothing parameters. This allows to detect easily:
@@ -265,11 +303,9 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
     #filename = getfilename(d)
     #fitsimage = fits.open(filename)[0].data#d.get_pyfits()[0].data#d.get_pyfits()[0].data#d.get_arr2np()
     if (smooth != '0') & (d.get('smooth radius')!=smooth):
-        print(1)
         d.set("smooth yes") 
         d.set("smooth function gaussian") 
         d.set("smooth radius %i"%(int(smooth))) 
-        print(2)
     elif (smooth == '0'):
         d.set("smooth radius %i"%(int(smooth))) 
         d.set("smooth no") 
@@ -4669,7 +4705,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
 #        DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
 #    else:
 #        verboseprint('Can not find the output sextractor catalog...')
-    colors =  ['White','Yellow','Orange']  
+    colors =  ['Orange']  #['White','Yellow','Orange']  
 
     if not os.path.exists(os.path.dirname(filename) + '/DetectionImages/reg/'):
         os.makedirs(os.path.dirname(filename) + '/DetectionImages/reg/')     
@@ -4686,10 +4722,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         cat1 = cat[cat['MAG_AUTO']>=cat['MAG_ISO']]
         cat2 = cat[cat['MAG_AUTO']<cat['MAG_ISO']]
         cat3 = vstack((cat1,cat2))
-        #x, y = [list(cat1['X_IMAGE'])+list(cat2['X_IMAGE'])], [list(cat2['X_IMAGE'])+list(cat2['X_IMAGE'])]
-        #create_DS9regions([cat['X_IMAGE']],[cat['Y_IMAGE']], more=[cat['A_IMAGE']*cat['KRON_RADIUS'],cat['B_IMAGE']*cat['KRON_RADIUS'],cat['THETA_IMAGE']], form = ['ellipse']*len(cat),save=True,color = ['green']*len(cat), savename=os.path.dirname(dn) + '/DetectionImages/reg/' + fn[:-5].replace(',','-') ,ID=[np.array(cat['MAG_AUTO'],dtype=int)])
-        #create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = ['green']*len(cat1)+['red']*len(cat2), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS'],cat3['B_IMAGE']*cat3['KRON_RADIUS'],cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = [np.random.choice(colors)]*len(cat3), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') )#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = [np.random.choice(colors)]*len(cat3), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') )#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
         #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
         if path is None:
             d.set('regions ' +os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
@@ -5460,6 +5493,8 @@ def DS9RemoveImage(xpapoint):
     return
 
 
+@fn_memory_load
+@fn_timer
 def main():
     """Main function where the arguments are defined and the other functions called
     """
@@ -5474,10 +5509,10 @@ def main():
         PresentPlugIn()
         LoadDS9QuickLookPlugin()
         #SetDisplay()
-    #print(datetime.datetime.now())
+    #print(datetime.datetime.now());start = time.time()
     else:  
 
-        start = time.time()
+        
         
         DictFunction_Generic =  {'setup':DS9setup2,'guidance':DS9Update,'fitsgaussian2D': fitsgaussian2D, 'DS9createSubset':DS9createSubset,
                                  'DS9Catalog2Region':DS9Catalog2Region, 'AddHeaderField':AddHeaderField,'BackgroundFit1D':BackgroundFit1D,
@@ -5512,20 +5547,20 @@ def main():
         
         verboseprint(bcolors.BLACK_RED + 'DS9Utils ' + ' '.join(sys.argv[1:]) + bcolors.END)# %s %s '%(xpapoint, function) + ' '.join())
         
-        verboseprint(bcolors.GREEN_WHITE + """
-              *******************************************************************************************************
-                                                          Function = %s
-              *******************************************************************************************************"""%(function)+ bcolors.END)
+#        verboseprint(bcolors.GREEN_WHITE + """
+#              *******************************************************************************************************
+#                                                          Function = %s
+#              *******************************************************************************************************"""%(function)+ bcolors.END)
         try:
             a = DictFunction[function](xpapoint=xpapoint) 
         except ValueError as e: #Exception #ValueError #SyntaxError
             a=0
             print(e)            
-        stop = time.time()
-        verboseprint(bcolors.BLACK_GREEN + """
-            *******************************************************************************************************
-                       date : %s     Exited OK, duration = %s      
-            ******************************************************************************************************* """%(datetime.datetime.now().strftime("%y/%m/%d %HH%Mm%S"), str(datetime.timedelta(seconds=np.around(stop - start,1)))[:9]) + bcolors.END)
+#        stop = time.time()
+#        verboseprint(bcolors.BLACK_GREEN + """
+#            *******************************************************************************************************
+#                           date : %s     Exited OK, duration = %s
+#            ******************************************************************************************************* """%(datetime.datetime.now().strftime("%y/%m/%d %HH%Mm%S"), str(datetime.timedelta(seconds=np.around(stop - start,1)))[:9]) + bcolors.END)
     
     
         if (type(a) == list) and (type(a[0]) == dict):

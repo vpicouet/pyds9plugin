@@ -179,7 +179,7 @@ hmenu Generic functions
 	Stack images (s)  #20
 	*
 	menu
-	DS9Utils $xpa_method stack $param(Stacking); $Path $stack $clipping   | $text  
+	DS9Utils $xpa_method stack $param(Stacking); $Path $stack -   | $text  
 
 	Stack images Key
 	*
@@ -192,10 +192,10 @@ hmenu Generic functions
 	menu
 	DS9Utils $xpa_method PlotArea3D $param(Plot-3d); $log $kernel    | $text  
 
-	Plot region in 3D Key
-	*
-	bind 3
-	DS9Utils $xpa_method PlotArea3D $param(Plot-3d); $log $kernel    | $text  
+#	Plot region in 3D Key
+#	*
+#	bind 3
+#	DS9Utils $xpa_method PlotArea3D $param(Plot-3d); $log $kernel    | $text  
 
 
 	Simulate sky image
@@ -296,13 +296,13 @@ hmenu Instrumentaiton - AIT
 	DS9Utils $xpa_method guidance   | $text  
 
 
-	Centering (c)
+	Centering (C)
 	*
 	menu
 	DS9Utils $xpa_method centering  $param(Centering); $method $background  | $text  
 
 
-	Centering (c)
+	Centering (C)
 	*
 	bind c
 	DS9Utils $xpa_method centering  $param(Centering); $method $background  | $text  
@@ -852,7 +852,7 @@ endparam
 param Stacking
 Path entry {Path} - {Path of the images to stack (glob syntax. eg. /tmp/images00[12]?.fits)}
 stack menu {Stacking type} mean_float|mean_int|median_int|median_float|1/std-wheighted {Type of stacking to perform, mask will only be taken into account with float.}
-clipping entry {Clipping} - {Number of sigma to clip out before staking}
+#clipping entry {Clipping} - {Number of sigma to clip out before staking}
 endparam
 
 
@@ -954,7 +954,7 @@ DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma corr
 DETECT_MINAREA entry {DETECT_MINAREA} 10 {}
 #DETECT_MAXAREA entry {DETECT_MAXAREA} - {}
 THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
-DETECT_THRESH entry {DETECT_THRESH} 2 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
+DETECT_THRESH entry {DETECT_THRESH} 0.8 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
 ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
 
 FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
@@ -977,7 +977,7 @@ WEIGHT_IMAGE entry {WEIGHT_IMAGE} - {}
 PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
 PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,4.0 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
 PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,4.0 {MAG_PETRO parameters: <Petrosian_fact>}
-PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95 {flux fraction[s] used for FLUX_RADIUS}
+PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.3,0.5,0.9 {flux fraction[s] used for FLUX_RADIUS}
 #SATUR_LEVEL entry {SATUR_LEVEL} - {level (in ADUs) at which arises saturation}
 MAG_ZEROPOINT entry {MAG_ZEROPOINT} 30.0 {magnitude zero-point}
 #MAG_GAMMA entry {MAG_GAMMA} - {gamma of emulsion (for photographic scans)}
