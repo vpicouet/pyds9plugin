@@ -304,7 +304,7 @@ hmenu Instrumentaiton - AIT
 
 	Centering (C)
 	*
-	bind c
+	bind C
 	DS9Utils $xpa_method centering  $param(Centering); $method $background  | $text  
 
 	Transit/through-slit analysis

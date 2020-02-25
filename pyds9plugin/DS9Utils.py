@@ -328,7 +328,7 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
         d.set("cmap invert no") 
 
 
-    d.set("scale limits {} {} ".format(np.nanpercentile(image,cuts[0]),np.nanpercentile(image,cuts[1])))
+    d.set("scale limits {} {} ".format(np.nanpercentile(image[np.isfinite(image)],cuts[0]),np.nanpercentile(image[np.isfinite(image)],cuts[1])))
     return 
 
 
@@ -542,14 +542,14 @@ def getDatafromRegion(d,region, ext):
 
 
 
-def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, config=my_conf):
+def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, wcs='image'):#of fk5
     """Returns and possibly save DS9 region (circles) around sources with a given radius
     """
     
     regions = """# Region file format: DS9 version 4.1
     global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
-    image
-    """
+    %s
+    """%(wcs)
     if (type(radius) == int) or (type(radius) == float):
         r, r1 = radius, radius
     else:
@@ -578,10 +578,10 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
         try:
             for j, (x, y) in enumerate(np.nditer([xim[i], yim[i]])):
                 if form[0] == 'ellipse':
-                    rest = '{:.2f},{:.2f},{:.2f})'.format(more[0][j],more[1][j],more[2][j])
+                    rest = '{:.6f},{:.6f},{:.6f})'.format(more[0][j],more[1][j],more[2][j])
                     rest += ' # color={}'.format(color[j])
                     #print(color[j])
-                regions += '{}({:f},{:f},'.format(form[i], x+1, y+1) + rest
+                regions += '{}({:.6f},{:.6f},'.format(form[i], x+0, y+0) + rest
                 if ID is not None:
                     regions += ' text={{{}}}'.format(ID[i][j])
                     #print(ID[i][j])
@@ -821,8 +821,8 @@ def DS9guider(xpapoint):
         filename = name
     params = sys.argv[-13:]
     verboseprint('params = ',params)
-    print ('Nop header WCS - Applying lost in space algorithm: Internet needed!')
-    print ('Processing might take a few minutes ~5-10')
+    verboseprint ('Nop header WCS - Applying lost in space algorithm: Internet needed!')
+    verboseprint ('Processing might take a few minutes ~5-10')
     PathExec = os.path.dirname(os.path.realpath(__file__)) + '/astrometry3.py'
     Newfilename = filename[:-5] + '_wcs.fits'
     CreateWCS(PathExec, filename, Newfilename, params=params, type_=type_)
@@ -971,13 +971,13 @@ def process_region(regions, win,quick=False, config=my_conf, message=True):
         else:
             if name == 'box':
                 xc,yc,w,h,angle = coords
-                dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))                
-                X,Y,arr = parse_data(dat)
+                #dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))                
+                #X,Y,arr = parse_data(dat)
                 box = namedtuple('Box', 'data xc yc w h angle')
-                processed_regions.append(box(arr, xc, yc, w, h, angle))
+                processed_regions.append(box(0, xc, yc, w, h, angle))
             elif name == 'bpanda':
                 xc, yc, a1, a2, a3, a4,a5, w, h,a6,a7 = coords
-                dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))
+                #dat = win.get("data physical %s %s %s %s no" % (xc - w/2,yc - h/2, w, h))
                 X,Y,arr = parse_data(dat)
                 box = namedtuple('Box', 'data xc yc w h angle')
                 processed_regions.append(box(arr, xc, yc, w, h, 0))
@@ -1041,6 +1041,7 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf,selected=
         if len([row for row in regions.split('\n')])>=3:
             verboseprint('Taking only selected region')
             rows = regions
+
         #else:
         elif selected is False:
                 verboseprint('no region selected')
@@ -1063,19 +1064,15 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf,selected=
     rows = [row for row in rows.split('\n') ]
     if len(rows) < 3:
         verboseprint( "No regions found")
-
-    if debug:
-        verboseprint (rows[4])
-        if rows[5:]:
-            verboseprint('discarding %i regions' % len(rows[5:]) )
-    #print(rows[5:])
-    if all:
+    if all or selected:
         #print(rows[3:], type(rows[3:]))
         region = process_region(rows[3:], win,quick=quick, message=message)
         if type(region) == list:
             return region
         else:
             return [region]
+
+
     else:
         return process_region([rows[-1]], win,quick=quick, message=message)
 #getregion(d, all=True)
@@ -1132,7 +1129,6 @@ def throughfocus(center, files,x=None,
     ENCa = []
     ext = FitsExt(fits.open(files[0]))
     for file in files:
-        print (file)
         filename = file
         with fits.open(filename) as f:
             #stack[:,:,i] = f[0].data
@@ -1280,7 +1276,6 @@ def throughfocus(center, files,x=None,
 
     try:
         OldTable = Table.read(os.path.dirname(filename) + '/Throughfocus.csv')
-        print ('old',OldTable)
     except IOError:
         t.write(os.path.dirname(filename) + '/Throughfocus.csv')
     else:
@@ -1315,7 +1310,6 @@ def throughfocusWCS(center, files,x=None,
     ENCa = []
     ext = FitsExt(fits.open(files[0]))
     for file in files:
-        print (file)
         filename = file
         with fits.open(filename) as f:
             #stack[:,:,i] = f[0].data
@@ -1338,7 +1332,6 @@ def throughfocusWCS(center, files,x=None,
             from astropy import units as u
             from astropy import wcs
 
-            print ('Using WCS')
             w = wcs.WCS(header)
             center_wcs = center
             center_pix = w.all_world2pix(center_wcs[0]*u.deg, center_wcs[1]*u.deg,0, )
@@ -1611,7 +1604,6 @@ def DS9throughfocus(xpapoint, Plot=True):
         Type = 'detector'        
     if WCS:
         from astropy import wcs
-        print ('Using WCS')
         w = wcs.WCS(image.header)
         center_wcs = w.all_pix2world(x, y,0)
                 #d.set('crosshair {} {} physical'.format(x,y))
@@ -2293,7 +2285,7 @@ def globglob(file):
     try:
         paths = glob.glob(file, recursive=True)
     except Exception as e:
-        print(e)
+        verboseprint(e)
         paths=[]
     if (len(paths)==0) & ('[' in file) and (']' in file):
         verboseprint('Go in loop')
@@ -2464,7 +2456,6 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     ext = FitsExt(fits.open(path[0]))
 
     for file in path:
-        print (file)
         fitsfile = fits.open(file)[ext]
         image = fitsfile.data
         #plt.figure(figsize=(sizefig,sizefig))
@@ -2767,8 +2758,11 @@ def DS9center(xpapoint,Plot=True):
     d = DS9(xpapoint)#DS9(xpapoint)
     #filename = getfilename(d)#ffilename = d.get("file")
     #region = getregion(d)[0]
-    regions = getregion(d,all=True)#[0]
+    regions = getregion(d,selected=True)#[0]
+    d.set('regions delete select')
+    verboseprint(regions)
     for region in regions:
+        verboseprint(region)
         if hasattr(region, 'h'):
             xc, yc, h, w = int(region.xc), int(region.yc), int(region.h), int(region.w)
             verboseprint('W = ', w)
@@ -2800,7 +2794,6 @@ def DS9center(xpapoint,Plot=True):
             
             newCenterx = xc + x0y#popty[2]
             newCentery = yc + x0x#poptx[2]
-            d.set('regions delete select')
             verboseprint('''\n\n\n\n     Center change : [%0.2f, %0.2f] --> [%0.2f, %0.2f] \n\n\n\n''' % (region.yc,region.xc,newCentery,newCenterx))
             #d.set('regions command "box %0.3f %0.3f %0.1f %0.1f # color=yellow"' % (newCenterx+1,newCentery+1,region.w,region.h))
             #d.set('regions command "box %0.3f %0.3f %0.2f %0.2f # color=yellow"' % (newCenterx,newCentery,region.w,region.h))
@@ -2839,7 +2832,7 @@ def DS9center(xpapoint,Plot=True):
             plt.figtext(0.15,0.35,'Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f' % ( np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3]/2.) , 2*popty[1],2*np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])),bbox={'facecolor':'red', 'alpha':0.2, 'pad':10})
             if Plot:
                 plt.show()
-            
+   
         if hasattr(region, 'r'):
     
             method, bck = sys.argv[-2:]
@@ -2874,11 +2867,11 @@ def DS9center(xpapoint,Plot=True):
                 x, y = np.meshgrid(x,y)
                 yo,xo = np.where(image == image.max())#ndimage.measurements.center_of_mass(image)
                 maxx, maxy = xc - (lx/2 - xo), yc - (ly/2 - yo)
-                print ('maxx, maxy = {}, {}'.format(maxx,maxy))
+                verboseprint('maxx, maxy = {}, {}'.format(maxx,maxy))
         
                 bounds = ([1e-1*np.nanmax(image), xo-10 , yo-10, 0.5,0.5,-1e5], [10*np.nanmax(image), xo+10 , yo+10, 10,10,1e5])#(-np.inf, np.inf)#
                 Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
-                print ('bounds = ',bounds)
+                verboseprint('bounds = ',bounds)
                 verboseprint('\nParam = ', Param)
                 try:
                     popt,pcov = curve_fit(twoD_Gaussian,(x,y),image.flat,
@@ -3436,9 +3429,8 @@ def ComputeEmGain(filename, Path2substract=None, save=True, Plot=True, d=None, a
     var_all, intensity_all = np.array(var_all).flatten(), np.array(intensity_all).flatten()
     a = 1
     Index_all = (var_all<np.nanpercentile(var_all,90))&(intensity_all<np.nanpercentile(intensity_all,90))&(var_all < np.nanmedian(var_all) + a * np.nanstd(var_all))#.std()
-    print(np.nanmedian(var_all) + a * np.nanstd(var_all))
-    print(var_all)
-    print(Index_all)
+    #print(var_all)
+    #print(Index_all)
     intensity_all, var_all = intensity_all[Index_all], var_all[Index_all]
     areas = np.array(areas)
     if type(radius)==int:
@@ -3457,7 +3449,7 @@ def ComputeEmGain(filename, Path2substract=None, save=True, Plot=True, d=None, a
         cst = 1    
     fig = plt.figure()
     ax0 = fig.add_axes([0.1, 0.30, 0.84, 0.66])     
-    print(intensity_all,var_all/cst)
+    #print(intensity_all,var_all/cst)
     intensity_phys_n,var_phys_n = SigmaClipBinned(intensity_all,var_all/cst, sig=1, Plot=True, ax=ax0)
     #n=1 
     #ax, emgain_phys = PlotComputeEmGain_old(intensity_phys_n, var_phys_n, emgain , r1*r2, filename=filename, len_area_det=len_area_det, ax=ax0, cst='(%i x %i)'%(cst,n))
@@ -4683,7 +4675,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     if DETECTION_IMAGE == '-':
         DETECTION_IMAGE = None
     else:
-        DETECTION_IMAGE = ',' + DETECTION_IMAGE
+        DETECTION_IMAGE =  DETECTION_IMAGE + ','
     verboseprint(bcolors.BLACK_RED +'Image used for detection  = ' + str(DETECTION_IMAGE) + bcolors.END)
     verboseprint(bcolors.BLACK_RED + 'Image used for photometry  = '+ str(filename) + bcolors.END)
     
@@ -4695,37 +4687,30 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     os.system('sex -d > default.sex')
 
     if DETECTION_IMAGE is not None:
-        verboseprint('sex ' + filename + DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-        os.system('sex ' + filename + DETECTION_IMAGE + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        verboseprint('sex ' + DETECTION_IMAGE + filename  + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        os.system('sex ' + DETECTION_IMAGE + filename  + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
     else:   
         verboseprint('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
         os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
 
-#    if os.path.isfile(CATALOG_NAME):
-#        DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
-#    else:
-#        verboseprint('Can not find the output sextractor catalog...')
     colors =  ['Orange']  #['White','Yellow','Orange']  
 
     if not os.path.exists(os.path.dirname(filename) + '/DetectionImages/reg/'):
         os.makedirs(os.path.dirname(filename) + '/DetectionImages/reg/')     
     if os.path.isfile(CATALOG_NAME):
-        from astropy.table import vstack
         try:
             cat = Table.read(CATALOG_NAME)
         except astropy.io.registry.IORegistryError:
-            cat = Table.read(CATALOG_NAME, format='ascii')
-            
-        cat= CleanSextractorCatalog(cat)#[:int(sys.argv[-1])]
-
-        verboseprint(CATALOG_NAME)
-        cat1 = cat[cat['MAG_AUTO']>=cat['MAG_ISO']]
-        cat2 = cat[cat['MAG_AUTO']<cat['MAG_ISO']]
-        cat3 = vstack((cat1,cat2))
+            cat = Table.read(CATALOG_NAME, format='ascii')            
+        #cat= CleanSextractorCatalog(cat)#[:int(sys.argv[-1])]
+        verboseprint('Creating DS9 regions :', CATALOG_NAME)
+        cat3 = cat
         create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = [np.random.choice(colors)]*len(cat3), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') )#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-        #DS9Catalog2Region(xpapoint, name=CATALOG_NAME, x='X_IMAGE', y='Y_IMAGE', ID='MAG_AUTO')
+        #create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,color = ['Yellow']*len(cat3), savename=os.path.dirname(filename) + '/DetectionImages/reg/_' + os.path.basename(filename)[:-5].replace(',','-'), wcs='fk5' )#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
         if path is None:
+            verboseprint('Creating DS9 regions :', os.path.dirname(filename) + '/DetectionImages/reg/_' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
             d.set('regions ' +os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
+            #d.set('regions ' +os.path.dirname(filename) + '/DetectionImages/reg/_' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
     else:
         verboseprint('Can not find the output sextractor catalog...')
     for file in glob.glob(os.path.dirname(filename) + '/tmp/' + os.path.basename(filename)[:-5] + '*.fits' ):
@@ -5555,7 +5540,7 @@ def main():
             a = DictFunction[function](xpapoint=xpapoint) 
         except ValueError as e: #Exception #ValueError #SyntaxError
             a=0
-            print(e)            
+            verboseprint(e)            
 #        stop = time.time()
 #        verboseprint(bcolors.BLACK_GREEN + """
 #            *******************************************************************************************************
