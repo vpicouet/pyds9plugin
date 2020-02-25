@@ -10,6 +10,7 @@ import os
 import sys
 import numpy as np
 from pyds9 import DS9
+from  pkg_resources  import resource_filename
 
 try:
     import IPython.core.ultratb
@@ -22,7 +23,7 @@ else:
 
 
        
-def verboseprint(*args, verbose=False):
+def verboseprint(*args, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))))):
     """Print function with a boolean verbose argument
     """
     if bool(int(verbose)):

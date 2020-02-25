@@ -78,6 +78,7 @@ hmenu Generic functions
 		*
 		menu
 		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  $smooth $color $invert $grid | $text  
+
 		Change display parameters Key
 		*
 		bind S
@@ -400,9 +401,12 @@ hmenu Astronomical softwares
 		Next
 		*
 		menu
-		DS9Utils $xpa_method next_step  2>&1  | $text  
+		DS9Utils $xpa_method next_step   | $text  
 
-
+		verbose
+		*
+		bind V
+		DS9Utils $xpa_method verbose $param(verbose) $verbose | $text  
 
 	endhmenu
 
@@ -482,7 +486,9 @@ param check
 check checkbox {Do you wish to continue?} 1 {}
 endparam
 
-
+param verbose
+verbose checkbox {Verbose} 0 {Check to enter verbose mode.}
+endparam
 
 param Get-depth
 mag_zp entry {Magnitude zero point} - {'-' for Auto (CLAUDS): 30 for MegaCam and VIRCAM, 27 for HSC}

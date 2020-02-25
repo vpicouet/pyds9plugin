@@ -139,7 +139,6 @@ def display_arguments(function):
         verboseprint(function.__name__ + '(%s, %s)'%(args_,opt_args_) ) 
     return display_and_call
 
-@fn_memory_load
 @fn_timer
 @display_arguments
 def FitsExt(fitsimage):
@@ -2728,6 +2727,18 @@ def ConvolveBoxPSF(x, amp=1, l=40, x0=0, sigma2=40, offset=0):
     b = special.erf((l + (x - x0))/np.sqrt(2*sigma2))
     function = amp * ( a + b )/4*l
     return offset + function
+
+def verbose(xpapoint):
+    """Change the configuration 
+    """
+    v = sys.argv[-1]
+    try:
+        conf_dir = resource_filename('pyds9plugin', 'config')
+    except:
+        conf_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
+
+    np.save(os.path.join(conf_dir,'verbose'), v)
+    return 
 
 def DS9center(xpapoint,Plot=True):
     """How to use:
@@ -5438,7 +5449,7 @@ def DS9tsuite_old(xpapoint):
     d.set("analysis message {You are now ready to use the DS9 Quick Look plugin by yourself.}")    
     sys.exit()
   
-#    
+#    conf_dir
 #    WaitForN(xpapoint)
 #    #####Cubes
 #    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/Test/_104002019_objcube.fits')
@@ -5478,7 +5489,7 @@ def DS9RemoveImage(xpapoint):
     return
 
 
-@fn_memory_load
+
 @fn_timer
 def main():
     """Main function where the arguments are defined and the other functions called
@@ -5504,7 +5515,7 @@ def main():
                                  'test':DS9tsuite,  'Convolve2d':Convolve2d,'PlotSpectraDataCube':PlotSpectraDataCube,'StackDataDubeSpectrally': StackDataDubeSpectrally,
                                  'stack': DS9stack_new,'lock': DS9lock,'CreateHeaderCatalog':DS9CreateHeaderCatalog,'SubstractImage': DS9RemoveImage,
                                  'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
-                                 'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings,'next_step':next_step,'BackgroundEstimationPhot': DS9BackgroundEstimationPhot }
+                                 'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings,'next_step':next_step,'BackgroundEstimationPhot': DS9BackgroundEstimationPhot,'verbose':verbose }
                        
         DictFunction_AIT =     {'centering':DS9center, 'radial_profile':DS9rp,
                                 'throughfocus':DS9throughfocus, 
@@ -5527,10 +5538,11 @@ def main():
     
         xpapoint = sys.argv[1]
         function = sys.argv[2]
-        verboseprint(sys.argv)
         #Choose_backend(function)
         
-        verboseprint(bcolors.BLACK_RED + 'DS9Utils ' + ' '.join(sys.argv[1:]) + bcolors.END)# %s %s '%(xpapoint, function) + ' '.join())
+#        verboseprint(bcolors.BLACK_RED + 'DS9Utils ' + ' '.join(sys.argv[1:]) + bcolors.END)# %s %s '%(xpapoint, function) + ' '.join())
+        verboseprint('\n****************************************************\nDS9Utils ' + ' '.join(sys.argv[1:])+'\n****************************************************')# %s %s '%(xpapoint, function) + ' '.join())
+        verboseprint(sys.argv)
         
 #        verboseprint(bcolors.GREEN_WHITE + """
 #              *******************************************************************************************************
@@ -5564,7 +5576,7 @@ def main():
                     csvwrite(np.vstack((np.arange(len(l)), l)).T,DS9_BackUp_path +'CSVs/%s_Outputs_%s.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
                 except TypeError:
                     pass
-    
+    verboseprint('\n****************************************************')    
     return a
 
 
