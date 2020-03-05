@@ -338,12 +338,12 @@ hmenu Astronomical softwares
 	SEXTRACTOR #36
 	*
 	menu
-	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME  $REGION_THRESHOLD   | $text  
+	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits    0 | $text  
 
 	SEXTRACTOR basics parameters
 	*
 	menu
-	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR-BASICS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE $CHECKIMAGE_NAME  $REGION_THRESHOLD   | $text  
+	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR-BASICS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  | $text  
 
 
 
@@ -951,8 +951,8 @@ endparam
 
 
 param SEXTRACTOR
-DETECTION_IMAGE entry {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using ../DetectionImages/}
-CATALOG_NAME entry {CATALOG_NAME} - {Name of the output catalog. eg /tmp/catalog.fits, if -, saved in ../DetectionImages/Photometric_Catalogs/ }
+DETECTION_IMAGE entry {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using DS9 image}
+CATALOG_NAME entry {CATALOG_NAME} - {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
 PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
 
@@ -985,7 +985,7 @@ PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,4.0 {MAG_AUTO parameters: <Kron_fact
 PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,4.0 {MAG_PETRO parameters: <Petrosian_fact>}
 PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.3,0.5,0.9 {flux fraction[s] used for FLUX_RADIUS}
 #SATUR_LEVEL entry {SATUR_LEVEL} - {level (in ADUs) at which arises saturation}
-MAG_ZEROPOINT entry {MAG_ZEROPOINT} 30.0 {magnitude zero-point}
+MAG_ZEROPOINT entry {MAG_ZEROPOINT} 0.0 {magnitude zero-point}
 #MAG_GAMMA entry {MAG_GAMMA} - {gamma of emulsion (for photographic scans)}
 #GAIN entry {GAIN} - {detector gain in e-/ADU}
 PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
@@ -1001,8 +1001,9 @@ BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL an
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
 
 CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
-CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
+endparam
 
+#CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
 #MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
 #MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
 #MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
@@ -1010,10 +1011,7 @@ CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
 #VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {}
 #WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
 #XML_NAME entry {XML_NAME} sex.xml {Filename for XML output}
-REGION_THRESHOLD entry {DS9 Regions Mag} 1000 {Min,max observed magnitude of the galaxy reghions to display}
-
-endparam
-
+#REGION_THRESHOLD entry {DS9 Regions Mag} 1000 {Min,max observed magnitude of the galaxy reghions to display}
 
 
 
@@ -1050,7 +1048,7 @@ PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,3.5 {MAG_AUTO parameters: <Kron_fact
 PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,3.5 {MAG_PETRO parameters: <Petrosian_fact>}
 PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95 {flux fraction[s] used for FLUX_RADIUS}
 #SATUR_LEVEL entry {SATUR_LEVEL} - {level (in ADUs) at which arises saturation}
-MAG_ZEROPOINT entry {MAG_ZEROPOINT} 30.0 {magnitude zero-point}
+MAG_ZEROPOINT entry {MAG_ZEROPOINT} 0.0 {magnitude zero-point}
 #MAG_GAMMA entry {MAG_GAMMA} - {gamma of emulsion (for photographic scans)}
 #GAIN entry {GAIN} - {detector gain in e-/ADU}
 PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
@@ -1068,14 +1066,6 @@ BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the backgroun
 CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
 CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
 
-#MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
-#MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
-#MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
-
-#VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {}
-#WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
-#XML_NAME entry {XML_NAME} sex.xml {Filename for XML output}
-REGION_THRESHOLD entry {DS9 Regions Mag} 1000 {Min,max observed magnitude of the galaxy reghions to display}
 
 endparam
 

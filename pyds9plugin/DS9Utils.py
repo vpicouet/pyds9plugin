@@ -139,14 +139,21 @@ def display_arguments(function):
         verboseprint(function.__name__ + '(%s, %s)'%(args_,opt_args_) ) 
     return display_and_call
 
-@fn_timer
-@display_arguments
+#@fn_timer
+#@display_arguments
+#def FitsExt(fitsimage):
+#    """Returns the number of the first image in a fits object
+#    """
+#    ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
+#    verboseprint('Taking extension: ',ext)
+#    return ext
+
+
 def FitsExt(fitsimage):
-    """Returns the number of the first image in a fits object
-    """
     ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
     verboseprint('Taking extension: ',ext)
     return ext
+
 
 @fn_timer
 def CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/'):
@@ -172,7 +179,7 @@ def CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/subsets')
     return  DS9_BackUp_path
 
-DS9_BackUp_path = CreateFolders(os.environ['HOME'] + '/DS9BackUp/')
+DS9_BackUp_path = os.environ['HOME'] + '/DS9BackUp/'
 
 
 def LoadDS9QuickLookPlugin():
@@ -203,7 +210,7 @@ def LoadDS9QuickLookPlugin():
                         print(bcolors.BLACK_GREEN + """Plug-in added"""+ bcolors.END)
                     else:
                         print(bcolors.BLACK_RED + 'To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
-                        print(bcolors.BLACK_RED + 'And switch on Autoreload' + bcolors.END)
+                        print(bcolors.BLACK_RED + 'And switch on Autoload' + bcolors.END)
 #            sys.exit()
         else:
             print(bcolors.BLACK_RED + 'To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
@@ -541,14 +548,14 @@ def getDatafromRegion(d,region, ext):
 
 
 
-def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, wcs='image'):#of fk5
+def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, wcs='image', font=10):#of fk5
     """Returns and possibly save DS9 region (circles) around sources with a given radius
     """
     
     regions = """# Region file format: DS9 version 4.1
-    global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+    global color=green dashlist=8 3 width=1 font="helvetica %s normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
     %s
-    """%(wcs)
+    """%(font,wcs)
     if (type(radius) == int) or (type(radius) == float):
         r, r1 = radius, radius
     else:
@@ -692,14 +699,17 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300):
         region = getregion(d, quick=True)
         filename = getfilename(d)
         Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+        print(Xinf, Xsup, Yinf, Ysup)
         data = fits.open(filename)[0].data
         size = Xsup - Xinf
         xinfs, yinfs = np.random.randint(1100,1900,size=n), np.random.randint(100,1900,size=n)
         images = [data[Yinf:Yinf+size,Xinf:Xinf+size] for Xinf, Yinf in zip(xinfs, yinfs)]
         verboseprint('Test: number of images = %s'%(len(images)))
+        
     else:
         images = [getdata(xpapoint)]
-
+#        images, header, area, filename = getImage(xpapoint)
+#        images = [images]
     fluxes = []
     for i,image in enumerate(images):
         #print(xinfs[i],yinfs[i])
@@ -711,6 +721,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300):
             verboseprint(np.isfinite(image).all())
 
         lx, ly = image.shape
+        lx, ly = ly, lx
         x = np.linspace(0,lx-1,lx)
         y = np.linspace(0,ly-1,ly)
         x, y = np.meshgrid(x,y)
@@ -735,7 +746,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300):
                 bounds = ([-np.inf, xo-10 , yo-10, stdmin, stdmin,-np.inf], [np.inf, xo+10 , yo+10, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
     
     
-        
+        #x, y = y, x
         
         verboseprint('bounds = ',bounds)
         verboseprint('\nParam = ', Param)
@@ -1065,7 +1076,12 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf,selected=
         verboseprint( "No regions found")
     if all or selected:
         #print(rows[3:], type(rows[3:]))
-        region = process_region(rows[3:], win,quick=quick, message=message)
+#        if len(rows)<3:
+#            d = DS9();d.set('analysis message {It seems that you did not create a region. Please create a region and rerun the analysis}');sys.exit()
+        if ('circle' in rows[2]) | ('box' in rows[2]) | ('projection' in rows[2]) | ('ellipse' in rows[2]):
+            region = process_region(rows[2:], win,quick=quick, message=message)
+        else:
+            region = process_region(rows[3:], win,quick=quick, message=message)
         if type(region) == list:
             return region
         else:
@@ -1976,7 +1992,7 @@ def getImage(xpapoint):
     #from astropy.io import fits
     d = DS9(xpapoint)
     filename = getfilename(d)
-    region = getregion(d)
+    region = getregion(d, selected=True)
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
     area = [Yinf, Ysup,Xinf, Xsup]
     #fitsimage = fits.open(filename)[0]
@@ -2122,9 +2138,9 @@ def fitswrite(fitsimage, filename, verbose=True, config=my_conf, header=None):
         #plt.plot(np.nanmean(fitsimage.data,axis=0));plt.show()
         fitsimage.writeto(filename, overwrite=True)
     except IOError:
-        verboseprint(bcolors.BLACK_RED + 'Can not write in this repository : ' + filename + bcolors.END)
+        verboseprint('Can not write in this repository : ' + filename )
         filename = '/tmp/' + os.path.basename(filename)
-        verboseprint(bcolors.BLACK_RED + 'Instead writing new file in : ' + filename + bcolors.END)
+        verboseprint('Instead writing new file in : ' + filename)
         fitsimage.writeto(filename,overwrite=True) 
     verboseprint('Image saved: %s'%(filename))
     return filename
@@ -2147,9 +2163,9 @@ def csvwrite(table, filename, verbose=True, config=my_conf):
     try:
         table.write(filename, overwrite=True, format='csv')
     except IOError:
-        verboseprint(bcolors.BLACK_RED + 'Can not write in this repository : ' + filename + bcolors.END)
+        verboseprint('Can not write in this repository : ' + filename)
         filename = '/tmp/' + os.path.basename(filename)
-        verboseprint(bcolors.BLACK_RED + 'Instead writing new file in : ' + filename + bcolors.END)
+        verboseprint('Instead writing new file in : ' + filename)
         table.write(filename, overwrite=True, format='csv')
     verboseprint('Table saved: %s'%(filename))
     return table
@@ -2769,8 +2785,11 @@ def DS9center(xpapoint,Plot=True):
     d = DS9(xpapoint)#DS9(xpapoint)
     #filename = getfilename(d)#ffilename = d.get("file")
     #region = getregion(d)[0]
-    regions = getregion(d,selected=True)#[0]
+    regions = getregion(d,selected=True, message=True)#[0]
     d.set('regions delete select')
+    if regions is None:
+        d = DS9();d.set('analysis message {It seems that you did not create a region. Please create a region and rerun the analysis}');sys.exit()
+
     verboseprint(regions)
     for region in regions:
         verboseprint(region)
@@ -4475,37 +4494,42 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
     d = DS9(xpapoint)
     axis, background, function, nb_gaussians,  kernel, Type = sys.argv[-6:]
     verboseprint('axis, function, nb_gaussians = ',axis, function, nb_gaussians)
-    try:
-        region = getregion(d, quick=True)
-    except ValueError:
-        image_area = my_conf.physical_region#[1500,2000,1500,2000]
-        Yinf, Ysup,Xinf, Xsup = image_area
-    else:
-        Yinf, Ysup, Xinf, Xsup = Lims_from_region(None,coords=region)#[131,1973,2212,2562]
-        image_area = [Yinf, Ysup,Xinf, Xsup]
-        verboseprint(Yinf, Ysup,Xinf, Xsup)    
-    data = d.get_pyfits()[0].data[Xinf: Xsup,Yinf: Ysup]
-    if axis=='y':
-        y = np.nanmean(data,axis=1);x = np.arange(len(y))
-        index = np.isfinite(y)
-        x, y = x[index], y[index]
-        if np.nanmean(y[-10:])>np.nanmean(y[:10]):
-            y = y[::-1]
-    else:
-        y = np.nanmean(data,axis=0);x = np.arange(len(y))
-        index = np.isfinite(y)
-        x, y = x[index], y[index]
-        if np.nanmean(y[-10:])>np.nanmean(y[:10]):
-            y = y[::-1]
-    if  Type == 'Log':
-        y = np.log10(y - np.nanmin(y))
-        index = np.isfinite(y)
-        x, y = x[index], y[index]
- 
-    if float(kernel)>0:
-        kernel = int(float(kernel))
-        y = np.convolve(y, np.ones(kernel)/kernel, mode='same')[kernel:-kernel]
-        x = x[kernel:-kernel]
+    
+    if 'box' in d.get('regions selected'):
+        try:
+            region = getregion(d, quick=True)
+        except ValueError:
+            image_area = my_conf.physical_region#[1500,2000,1500,2000]
+            Yinf, Ysup,Xinf, Xsup = image_area
+        else:
+            Yinf, Ysup, Xinf, Xsup = Lims_from_region(None,coords=region)#[131,1973,2212,2562]
+            image_area = [Yinf, Ysup,Xinf, Xsup]
+            verboseprint(Yinf, Ysup,Xinf, Xsup)    
+        data = d.get_pyfits()[0].data[Xinf: Xsup,Yinf: Ysup]
+        if axis=='y':
+            y = np.nanmean(data,axis=1);x = np.arange(len(y))
+            index = np.isfinite(y)
+            x, y = x[index], y[index]
+        else:
+            y = np.nanmean(data,axis=0);x = np.arange(len(y))
+            index = np.isfinite(y)
+            x, y = x[index], y[index]
+        if  Type == 'Log':
+            y = np.log10(y - np.nanmin(y))
+            index = np.isfinite(y)
+            x, y = x[index], y[index]
+     
+        if float(kernel)>0:
+            kernel = int(float(kernel))
+            y = np.convolve(y, np.ones(kernel)/kernel, mode='same')[kernel:-kernel]
+            x = x[kernel:-kernel]
+    if 'projection' in d.get('regions selected'):
+        d.set('plot %s save /tmp/test.dat'%(d.get('plot')))
+        tab = Table.read('/tmp/test.dat', format='ascii')
+        x, y = tab['col1'],tab['col2']
+    if np.nanmean(y[-10:])>np.nanmean(y[:10]):
+        y = y[::-1]
+
     verboseprint('Convolution : kernel = %i'%(float(kernel)))
     #auto_gui.Background(x,y)
     if  function == 'exponential1D':
@@ -4637,48 +4661,48 @@ def StackDataDubeSpectrally(xpapoint):
 #    plt.show()
     return
 
+#    CATALOG_NAME, CATALOG_TYPE,  PARAMETERS_NAME,  DETECT_TYPE,  DETECT_MINAREA = params[:5]
+#    THRESH_TYPE,  DETECT_THRESH,  ANALYSIS_THRESH,  FILTER,  FILTER_NAME,  DEBLEND_NTHRESH = params[5:5+6]
+#    DEBLEND_MINCONT,  CLEAN,  CLEAN_PARAM,  MASK_TYPE,  WEIGHT_TYPE, WEIGHT_IMAGE,  PHOT_APERTURES = params[5+6:5+6+7]
+#    PHOT_AUTOPARAMS,  PHOT_PETROPARAMS,  PHOT_FLUXFRAC,  MAG_ZEROPOINT,  PIXEL_SCALE,  SEEING_FWHM = params[5+6+7:5+6+7+6]
+#    STARNNW_NAME,  BACK_TYPE,  BACK_SIZE,  BACK_FILTERSIZE,  BACKPHOTO_TYPE,  BACKPHOTO_THICK = params[5+6+7+6:5+6+7+6+6]
+#    BACK_FILTTHRESH,  CHECKIMAGE_TYPE, CHECKIMAGE_NAME = params[-3:]
+    
+
 def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     """Run sextraxtor software
     """
     import astropy
+    from astropy.wcs import WCS
+    from shutil import which
     d = DS9(xpapoint)
     filename = getfilename(d)
-    dn = os.path.dirname(filename)
-    fn = os.path.basename(filename)
-
-    from shutil import which
     if which('sex') is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'Sextractor error', message="""Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")     
         d = DS9();d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     params = np.array(sys.argv[-34:-1], dtype='<U256')#str)
     verboseprint(params)
     DETECTION_IMAGE = sys.argv[-35]
-    CATALOG_NAME, CATALOG_TYPE,  PARAMETERS_NAME,  DETECT_TYPE,  DETECT_MINAREA = params[:5]
-    THRESH_TYPE,  DETECT_THRESH,  ANALYSIS_THRESH,  FILTER,  FILTER_NAME,  DEBLEND_NTHRESH = params[5:5+6]
-    DEBLEND_MINCONT,  CLEAN,  CLEAN_PARAM,  MASK_TYPE,  WEIGHT_TYPE, WEIGHT_IMAGE,  PHOT_APERTURES = params[5+6:5+6+7]
-    PHOT_AUTOPARAMS,  PHOT_PETROPARAMS,  PHOT_FLUXFRAC,  MAG_ZEROPOINT,  PIXEL_SCALE,  SEEING_FWHM = params[5+6+7:5+6+7+6]
-    STARNNW_NAME,  BACK_TYPE,  BACK_SIZE,  BACK_FILTERSIZE,  BACKPHOTO_TYPE,  BACKPHOTO_THICK = params[5+6+7+6:5+6+7+6+6]
-    BACK_FILTTHRESH,  CHECKIMAGE_TYPE, CHECKIMAGE_NAME = params[-3:]
+
 
     try:
         param_dir = resource_filename('pyds9plugin', 'Sextractor')
     except:
         param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
-
-
-    
     param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
-    params[0]= filename[:-5] + '_sex.fits' if  (params[0]=='-') or (params[0]=='.') else params[0]
+    #params[0]= filename[:-5] + '_sex.fits' if  (params[0]=='-') or (params[0]=='.') else params[0]
     verboseprint(filename,params[0],filename + '_sex.fits')
     params[8]='Y' if  params[8]=='1' else 'N'
     params[12]='Y' if params[12]=='1' else 'N'
-    if not os.path.exists(os.path.join(dn,'DetectionImages','PhotometricCatalog')):
-        os.makedirs(os.path.join(dn,'DetectionImages','PhotometricCatalog'))     
+    if params[0]=='-':
+        cat_path = filename[:-5] #.fits'
+    else:
+        cat_path = params[0]
+    params[0] = cat_path + '_cat.fits'
 
-    if CATALOG_NAME=='-':
-        CATALOG_NAME = os.path.join(dn,'DetectionImages','PhotometricCatalog',fn[:-5].replace(',','-')+'_cat.fits')
-        params[0] = CATALOG_NAME
+    if params[-2]!='NONE': #CHECKIMAGE_TYPE
+        params[-1] = cat_path + '_check_%s.fits'%(params[-2])
+
+
     params[2] = os.path.join(param_dir,params[2])
     params[9] = os.path.join(param_dir,params[9])
     params[24] = os.path.join(param_dir,params[24])
@@ -4687,14 +4711,14 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         DETECTION_IMAGE = None
     else:
         DETECTION_IMAGE =  DETECTION_IMAGE + ','
-    verboseprint(bcolors.BLACK_RED +'Image used for detection  = ' + str(DETECTION_IMAGE) + bcolors.END)
-    verboseprint(bcolors.BLACK_RED + 'Image used for photometry  = '+ str(filename) + bcolors.END)
+    verboseprint('Image used for detection  = ' + str(DETECTION_IMAGE) )
+    verboseprint('Image used for photometry  = '+ str(filename) )
     
-    verboseprint(bcolors.GREEN_WHITE + """
+    verboseprint("""
           ********************************************************************
                                      Parameters sextractor:
-          ********************************************************************"""+ bcolors.END)
-    verboseprint(bcolors.BLACK_RED + '\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]) + bcolors.END)
+          ********************************************************************""")
+    verboseprint('\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]))
     os.system('sex -d > default.sex')
 
     if DETECTION_IMAGE is not None:
@@ -4703,29 +4727,23 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     else:   
         verboseprint('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
         os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-
     colors =  ['Orange']  #['White','Yellow','Orange']  
-
-    if not os.path.exists(os.path.dirname(filename) + '/DetectionImages/reg/'):
-        os.makedirs(os.path.dirname(filename) + '/DetectionImages/reg/')     
-    if os.path.isfile(CATALOG_NAME):
+    if os.path.isfile(params[0]):
         try:
-            cat = Table.read(CATALOG_NAME)
+            cat3 = Table.read(params[0])
         except astropy.io.registry.IORegistryError:
-            cat = Table.read(CATALOG_NAME, format='ascii')            
-        #cat= CleanSextractorCatalog(cat)#[:int(sys.argv[-1])]
-        verboseprint('Creating DS9 regions :', CATALOG_NAME)
-        cat3 = cat
-        create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,color = [np.random.choice(colors)]*len(cat3), savename=os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') )#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-        #create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,color = ['Yellow']*len(cat3), savename=os.path.dirname(filename) + '/DetectionImages/reg/_' + os.path.basename(filename)[:-5].replace(',','-'), wcs='fk5' )#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+            cat3 = Table.read(params[0], format='ascii')            
+        w = WCS(filename)
+        if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
+            verboseprint('Using WCS header for regions :', cat_path + '.reg')
+            create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.array(cat3['MAG_AUTO'],dtype=int)],color = ['Yellow']*len(cat3), savename=cat_path, wcs='fk5' , font=1)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+        else:
+            verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
+            create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.array(cat3['MAG_AUTO'],dtype=int)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=1)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
         if path is None:
-            verboseprint('Creating DS9 regions :', os.path.dirname(filename) + '/DetectionImages/reg/_' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
-            d.set('regions ' +os.path.dirname(filename) + '/DetectionImages/reg/' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
-            #d.set('regions ' +os.path.dirname(filename) + '/DetectionImages/reg/_' + os.path.basename(filename)[:-5].replace(',','-') + '.reg')
+            d.set('regions ' + cat_path + '.reg')
     else:
         verboseprint('Can not find the output sextractor catalog...')
-    for file in glob.glob(os.path.dirname(filename) + '/tmp/' + os.path.basename(filename)[:-5] + '*.fits' ):
-        os.remove(file)
     return
    
 
@@ -4790,7 +4808,7 @@ def DS9PSFEX(xpapoint):
     param_dict = {}
     for key, val in zip(param_names, params):
         param_dict[key] = val
-        verboseprint(bcolors.BLACK_RED + '%s : %s'%(key,param_dict[key]) +  bcolors.END )
+        verboseprint('%s : %s'%(key,param_dict[key]))
     #print(param_dict)
     
 
@@ -4956,8 +4974,8 @@ def DS9saveColor(xpapoint, filename=None):
 def CleanSextractorCatalog(cat):
     """Clean sextractor catalog before display
     """
-    mask =  (cat['MAG_AUTO']<100) #& (cat['A_IMAGE']<20) & (cat['B_IMAGE']<20) &
-    return cat[mask]
+    #mask =  (cat['MAG_AUTO']<100) #& (cat['A_IMAGE']<20) & (cat['B_IMAGE']<20) &
+    return cat#[mask]
 
 
 
@@ -5150,7 +5168,7 @@ def CosmologyCalculator(xpapoint):
     
     #il reste mu, probleme sur Vc,. pho_c
     for key in info.keys():
-        verboseprint(bcolors.BLACK_RED + '%s : %s'%(key,info[key]) +  bcolors.END )
+        verboseprint('%s : %s'%(key,info[key]) )
     
     
     return
@@ -5502,10 +5520,21 @@ def main():
 #    verboseprint('Python version = ', sys.version)
     #print(sys.argv)
     if len(sys.argv)==1:
+        CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/')
         PresentPlugIn()
         LoadDS9QuickLookPlugin()
-        #SetDisplay()
-    #print(datetime.datetime.now());start = time.time()
+    elif (len(sys.argv)==2) & ((sys.argv[-1]=='help')|(sys.argv[-1]=='h')):
+        PresentPlugIn()
+        from shutil import which
+        print("which('DS9Utils') =", which('DS9Utils'))
+        print("__file__ =", __file__)
+        print("__package__ =", __package__)
+        print('Python version = ', sys.version)
+        print('DS9 analysis file = ', resource_filename('pyds9plugin','QuickLookPlugIn.ds9.ans'))
+        print('Python main file = ', resource_filename('pyds9plugin','DS9Utils.py'))
+        sys.exit()
+
+
     else:  
 
         

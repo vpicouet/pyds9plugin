@@ -23,7 +23,7 @@ data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Sextractor/*","da
 
 MAJOR = '2'
 MINOR = '9'
-MICRO = '2dev2'
+MICRO = '2dev4'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
