@@ -32,11 +32,11 @@ def verboseprint(*args, verbose=bool(int(np.load(os.path.join(resource_filename(
         pass
     
     
-#
-#def FitsExt(fitsimage):
-#    ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
-#    verboseprint('Taking extension: ',ext)
-#    return ext
+
+def FitsExt(fitsimage):
+    ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
+    verboseprint('Taking extension: ',ext)
+    return ext
 
 
 def ExecCommand(filename, path2remove, exp, config, eval_=False):
