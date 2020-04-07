@@ -12,18 +12,19 @@ requires = ['numpy >=1.8', #'PyQt5','Pillow','pyswarm',
             'pyds9',
             'photutils',
             'tqdm',
-            'datetime',         
-            'logalpha']
+            'datetime',  
+            'pandas',       
+            'logalpha <2']
 
 entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils = pyds9plugin.DS9Utils:main']
 
-data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Sextractor/*","dataphile/*","doc/ref/*/*","doc/ref/*"]}#,"doc/features_files/*","doc/img/*","doc/index_files/*"
+data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Images/stack????????.fits","Images/stack.fits","Sextractor/*","dataphile/*","doc/ref/*/*","doc/ref/*"]}#,"doc/features_files/*","doc/img/*","doc/index_files/*"
 
 
 MAJOR = '2'
 MINOR = '9'
-MICRO = '2dev5'
+MICRO = '2dev9'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():

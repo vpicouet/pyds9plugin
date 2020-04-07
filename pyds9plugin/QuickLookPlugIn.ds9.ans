@@ -1,145 +1,146 @@
-hmenu Generic functions
 
 
-	hmenu Header & data bases
-		Create header data base
-		*
-		menu
-		DS9Utils $xpa_method CreateHeaderCatalog  $param(Click-Enter-For-Only-DS9-Image-); "$path"  $info $ext | $text  
+#Test $data
+#*.fits
+#menu
+#echo "$width $height $depth $bitpix $data $filename $x $y $xcen $ycen" | $text
 
 
-		Create Image subset
-		*
-		menu
-		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" 100 $Fields "$Mask" | $text  
+hmenu Generic Functions
 
-
-		Add header field
-		*
-		menu
-		DS9Utils $xpa_method AddHeaderField $param(CreateHeader); $Field $Value $Comment "$path"  | $text  
-
-
-	endhmenu
-
-
-
-
-
-
-
-
-
-	hmenu Regions
-
-#		Create regions
-#		*
-#		menu
-#		DS9Utils $xpa_method DetectHotPixels "$entry(Thresholds you want for detecting the hot pixels: Thresh1[-Thresh2]. Default value is 20000-4000 [If no threshold is given the function will return the 100 highest pixel in the seleted region])" | $text  
-
-
-		Import regions from catalog 
-		*
-		menu
-		DS9Utils $xpa_method DS9Catalog2Region  $param(Catalog-to-region); "$path"  $fields $name $form $size $wcs  | $text  
-
-
-
-		Export DS9 regions to catalog 
-		*
-		menu
-		#DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
-		DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
-
-
-#		Mask Regions (NaN)
-#		*
-#		menu
-#		DS9Utils $xpa_method DS9MaskRegions "$entry(Length in pixel for which you want to replace the value by NaNs)"  | $text  
-
-
-		Replace regions with NaNs
-		*
-		menu
-		DS9Utils $xpa_method ReplaceWithNans   $message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)    | $text  
-
-
-
-
-#		Load Table region
-#		* 
-#		menu
-#		DS9Utils $xpa_method LoadRegions | $text  
-
-	endhmenu
+#    Test $data
+#    *.fits
+#    menu
+#    $data | DS9Utils $xpa_method setup  $data
 
 	hmenu Setups
-		Change display parameters (S) #7
+		Change Display Parameters (S) #7
 		*
 		menu
 		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  $smooth $color $invert $grid | $text  
 
-		Change display parameters Key
+		Change Display Parameters (S) #7
 		*
 		bind S
-		#DS9Utils $xpa_method setup Log 50-99 cool 0 0 2>&1 | tee -a /tmp/DS9Utils.log
-		#DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut $smooth $color   $invert $grid 2&1 | $text  
-		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut $smooth $color   $invert $grid | $text  
+		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  $smooth $color $invert $grid | $text  
 
+#		Change Display Parameters (D) #7
+#		*.fits
+#		menu
+#		$data | echo  | $text
 
-		Reset display parameters (B)
+		Check #7
+		*
+		bind t
+		DS9Utils $xpa_method checkFile | $text  
+
+		Reset Display Parameters (B)
 		*
 		menu
 		DS9Utils $xpa_method OriginalSettings  | $text  
 		
-		Reset display parameters Key
+		Reset Display Parameters Key
 		*
 		bind B
 		DS9Utils $xpa_method OriginalSettings   | $text  
 
-		Lock/Unlock images (L)
+		Lock/Unlock Frames (L)
 		*
 		menu
 		DS9Utils $xpa_method lock  $param(Lock); $var1 $var3 $var2  $var4 $var5   | $text  
 
-		Lock/Unlock images Key
+
+		Lock/Unlock Frames Key
 		*
 		bind L
 		DS9Utils $xpa_method lock $param(Lock); $var1 $var3 $var2  $var4 $var5   | $text  
 	endhmenu
 
 
-
-
-	hmenu Image processing 
-
-
-
-		Execute Command #13
+	hmenu Header & Data Bases
+		Create Header Data Base
 		*
 		menu
-		DS9Utils $xpa_method SubstractImage $param(Arithmetic); $im_path "$exp" $eval  "$path"   | $text  
+		DS9Utils $xpa_method CreateHeaderCatalog  $param(Click-Enter-For-Only-DS9-Image-); "$path"  $info - | $text  
 
-		Fit Background 1D
+
+		Create Image Subset
 		*
 		menu
-		DS9Utils $xpa_method BackgroundFit1D  $param(Background-Fit-1D); $axis $background $law $gaussians $kernel $Value   | $text  
-		
-		Fit gaussian 2D
+		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" 100 $Fields "$Mask" | $text  
+
+
+		Add header Field
 		*
 		menu
-		DS9Utils $xpa_method fitsgaussian2D  $param(Gaussian-Fit-2D); $FWHM $Center $noise   | $text  
+		DS9Utils $xpa_method AddHeaderField $param(CreateHeader); $Field $Value $Comment "$path"  | $text  
 
-
-#		Inverse image
+#		Create WCS
 #		*
 #		menu
-#		DS9Utils $xpa_method inverse   | $text  
+#		DS9Utils $xpa_method CreateWCS $param(Create-WCS) $CRPIX $CDELT $CTYPE $CRVAL | $text  
 
-		2D convolution
+
+
+	endhmenu
+
+
+	hmenu Regions
+
+
+
+		Import Regions From Catalog 
 		*
 		menu
-		DS9Utils $xpa_method Convolve2d $param(Convolution); $type $pat_c $sizex $sizey  "$path"   | $text  
+		DS9Utils $xpa_method DS9Catalog2Region  $param(Catalog-to-region); "$path"  $fields $name $form $size $wcs "$Selection" | $text  
+
+
+
+		Export DS9 Regions To Catalog 
+		*
+		menu
+		#DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
+
+
+
+		Replace Regions With NaNs
+		*
+		menu
+		DS9Utils $xpa_method ReplaceWithNans   $message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)    | $text  
+
+
+	endhmenu
+
+
+
+
+
+	hmenu Image Processing 
+
+
+
+		Execute Python Command #13
+		*
+		menu
+		DS9Utils $xpa_method SubstractImage $param(Python-Command); $im_path "$exp" 0  "$path"   | $text  
+
+		Interactive 1D Fitting On Plot
+		*
+		menu
+		DS9Utils $xpa_method BackgroundFit1D  $param(Background-Fit-1D); x $background none $gaussians 1 Linear   | $text  
+		
+		Fit Gaussian 2D
+		*
+		menu
+		DS9Utils $xpa_method fitsgaussian2D  - 0 0   | $text  
+
+
+
+		2D Convolution
+		*
+		menu
+		DS9Utils $xpa_method Convolve2d $param(Convolution); $type $pat_c $sizex  "$path"   | $text  
 
 
 		Interpolate NaNs 
@@ -158,51 +159,45 @@ hmenu Generic functions
 	endhmenu
 
 
-	hmenu Data Cubes Processing 
-
-		Extract spectra from region(s)
-		*
-		menu
-		DS9Utils $xpa_method PlotSpectraDataCube $param(Extract-spectra); $smoothl $smoothl   | $text  
-
-		Stack data cube spectrally
-		*
-		menu
-		DS9Utils $xpa_method StackDataDubeSpectrally $param(Stack-spectra); $wave $smooth   | $text  
+#	hmenu Data Cubes Processing 
+#		Extract Spectra From Region(s)
+#		*
+#		menu
+#		DS9Utils $xpa_method PlotSpectraDataCube $param(Extract-spectra); $smoothl $smoothl   | $text  
+#	endhmenu
 
 
+	Open Image (O)
+	*
+	menu
+	DS9Utils $xpa_method open $param(open); "$path" $type   | $text
 
-	endhmenu
+	Open Image Key
+	*
+	bind O
+	DS9Utils $xpa_method open $param(open); "$path" $type   | $text
 
-
-
-
-	Stack images (s)  #20
+	Stack Images (s)  #20
 	*
 	menu
 	DS9Utils $xpa_method stack $param(Stacking); $Path $stack -   | $text  
 
-	Stack images Key
+	Stack Images Key
 	*
 	bind s
 	DS9Utils $xpa_method stack "$entry(Number of the images to stack: first-last)" "$entry(Number of dark images first-last to stack and  subtract, press enter if no dark)"   | $text  
 
 
-	Plot region in 3D
+	Plot Region In 3D
 	*
 	menu
-	DS9Utils $xpa_method PlotArea3D $param(Plot-3d); $log $kernel    | $text  
-
-#	Plot region in 3D Key
-#	*
-#	bind 3
-#	DS9Utils $xpa_method PlotArea3D $param(Plot-3d); $log $kernel    | $text  
+	DS9Utils $xpa_method PlotArea3D $param(Plot-3d); $log -    | $text  
 
 
-	Simulate sky image
+	Simulate Sky Image
 	*
 	menu
-	DS9Utils $xpa_method CreateImageFromCatalogObject "$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Put '-' to create random galaxies!)"  | $text  
+	DS9Utils $xpa_method CreateImageFromCatalogObject "$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"  | $text  
 
 
 endhmenu
@@ -218,38 +213,35 @@ endhmenu
 
 
 
-hmenu Instrumentaiton - AIT
+hmenu Instrumentation - AIT
 
 	hmenu Focus
 
-		Throughfocus (t) #24
+		Throughfocus  #24
 		*
 		menu
-		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS $steps   | $text  
-#		DS9Utils $xpa_method throughfocus $param(Throughfocus); $WCS $steps $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS - $sort   | $text  #$steps
 
-		Throughfocus Image Key
-		*
-		bind t
-		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS $steps  | $text  
-#$param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path" 
+#		Throughfocus Image Key
+#		*
+#		bind t
+#		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS $steps  | $text  
 
 		Radial Profile (r)
 		*
 		menu
-		DS9Utils $xpa_method radial_profile $param(radial_profile)  $center $diam $log   | $text  
+		DS9Utils $xpa_method radial_profile $param(radial_profile)  $center $diam 0   | $text  
 
 		Radial Profile Key
 		*
 		bind r
-		DS9Utils $xpa_method radial_profile $param(radial_profile)  $center $diam  $log   | $text  
+		DS9Utils $xpa_method radial_profile $param(radial_profile)  $center $diam  0   | $text  
 
 
-		Visualisation Throughfocus
-		*
-		menu
-		DS9Utils $xpa_method throughfocus_visualisation "$entry(Paths of the images you want to display. Use global pattern matching.)"    | $text  
-#DS9Utils $xpa_method throughfocus_visualisation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    | $text  
+#		Visualisation Throughfocus
+#		*
+#		menu
+#		DS9Utils $xpa_method throughfocus_visualisation "$entry(RegExp paths of the images you want to display. Use global pattern matching.)"    | $text  
 
 
 	endhmenu
@@ -258,9 +250,9 @@ hmenu Instrumentaiton - AIT
 
 
 
-	hmenu Detector characterization
+	hmenu Detector Characterization
 
-		Compute gain from fluctuation #29
+		Compute Gain From Fluctuation #29
 		*
 		menu
 		DS9Utils $xpa_method ComputeEmGain $param(EmGain); 0 - $box 0 0  "$path"   | $text  
@@ -276,7 +268,6 @@ hmenu Instrumentaiton - AIT
 		2D Fast Fourrier Transform
 		*
 		menu
-#		DS9Utils $xpa_method DS9_2D_FFT $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"  | $text  
 		DS9Utils $xpa_method DS9_2D_FFT $param(Images-to-analyze);  "$path"  | $text  
 
 
@@ -284,23 +275,22 @@ hmenu Instrumentaiton - AIT
 		Column Line Correlation
 		*
 		menu
-		#DS9Utils $xpa_method ColumnLineCorrelation $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
 		DS9Utils $xpa_method ColumnLineCorrelation $param(Images-to-analyze); "$path"   | $text  
 
 
 	endhmenu
 
 
-	Guidance
-	*
-	menu
-	DS9Utils $xpa_method guidance   | $text  
+#	Guidance
+#	*
+#	menu
+#	DS9Utils $xpa_method guidance   | $text  
 
 
 	Centering (C)
 	*
 	menu
-	DS9Utils $xpa_method centering  $param(Centering); $method $background  | $text  
+	DS9Utils $xpa_method centering  $param(Centering); $method 0  | $text  
 
 
 	Centering (C)
@@ -308,7 +298,7 @@ hmenu Instrumentaiton - AIT
 	bind C
 	DS9Utils $xpa_method centering  $param(Centering); $method $background  | $text  
 
-	Transit/through-slit analysis
+	Transit/Through-Slit Analysis
 	*
 	menu
 	#DS9Utils $xpa_method throughslit $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    | $text  
@@ -333,41 +323,62 @@ endhmenu
 
 
 
-hmenu Astronomical softwares
+hmenu Astronomical Softwares
 
-	SEXTRACTOR #36
+
+
+	STIFF - Color Images
 	*
 	menu
-	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits    0 | $text  
-
-	SEXTRACTOR basics parameters
-	*
-	menu
-	DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR-BASICS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  | $text  
-
-
-
-	SWARP - WCS images #38
-	*
-	menu
-	DS9Utils $xpa_method DS9SWARP  $param(SWARP); "$PATH" $BACK_DEFAULT $BACK_FILTERSIZE $BACK_FILTTHRESH $BACK_SIZE $BACK_TYPE $CELESTIAL_TYPE $CENTER_TYPE $CENTERI $COMBINEI  $COMBINE_BUFSIZE $COMBINE_TYPE $COPY_KEYWORDS $FSCALASTRO_TYPE $FSCALE_DEFAULT $GAIN_DEFAULT $GAIN_KEYWORD $IMAGEOUT_NAME $IMAGE_SIZE $MEM_MAX $OVERSAMPLING $PIXEL_SCALE $PIXELSCALE_TYPE $PROJECTION_ERR $PROJECTION_TYPE $RESAMPLE $RESAMPLING_TYPE $SUBTRACT_BACK $WRITE_FILEINFO $VERBOSE_TYPE $WRITE_XML $XML_NAME      | $text  
-
-	STIFF - Color images
-	*
-	menu
-	DS9Utils $xpa_method DS9saveColor  $param(STIFF-Color-image); $var1 $var2 $var3 $BINNING $BITS_PER_CHANNEL $COLOUR_SAT $COPY_HEADER $DESCRIPTION $GAMMA_ $GAMMAFAC $GAMMATYPE $IMAGE_TYPE $MAX_LEVEL $MAX_TYPE $MIN_LEVEL $MIN_TYPE $OUTFILE_NAME $SKY_LEVEL $SKY_TYPE $SATURATION_LEVEL   | $text  
+	DS9Utils $xpa_method DS9saveColor  $param(STIFF-Color-image); $var1 $var2 $var3 $BINNING $BITS_PER_CHANNEL $COLOUR_SAT $GAMMA_ $GAMMAFAC $GAMMATYPE $IMAGE_TYPE $MAX_LEVEL $MAX_TYPE $MIN_LEVEL $MIN_TYPE $OUTFILE_NAME $SKY_LEVEL $SKY_TYPE    | $text  
 
 
 	PSFex
 	*
 	menu
-	DS9Utils $xpa_method DS9PSFEX  $param(PSFex); $ENTRY_PATH   $BASIS_TYPE  $BASIS_NUMBER  $PSF_SAMPLING  $PSF_ACCURACY  $PSF_SIZE  $CENTER_KEYS  "'$PHOTFLUX_KEY'"  "'$PHOTFLUXERR_KEY'"   $PSFVAR_KEYS    $PSFVAR_GROUPS       $PSFVAR_DEGREES    	$SAMPLE_AUTOSELECT   $SAMPLEVAR_TYPE   $SAMPLE_FWHMRANGE   $SAMPLE_VARIABILITY   $SAMPLE_MINSN   $SAMPLE_MAXELLIP   $CHECKPLOT_DEV $CHECKPLOT_TYPE  $CHECKPLOT_NAME  	$CHECKIMAGE_TYPE   $CHECKIMAGE_NAME    $PSF_DIR 	   $HOMOBASIS_TYPE $HOMOPSF_PARAMS $VERBOSE_TYPE $WRITE_XML $XML_NAME $NTHREADS   | $text  
+	DS9Utils $xpa_method DS9PSFEX  $param(PSFex); $ENTRY_PATH   $BASIS_TYPE  $BASIS_NUMBER  $PSF_SAMPLING  $PSF_ACCURACY  $PSF_SIZE  $CENTER_KEYS  "'$PHOTFLUX_KEY'"  "'$PHOTFLUXERR_KEY'"   $PSFVAR_KEYS    $PSFVAR_GROUPS       $PSFVAR_DEGREES    	$SAMPLE_AUTOSELECT   $SAMPLEVAR_TYPE   $SAMPLE_FWHMRANGE   $SAMPLE_VARIABILITY   $SAMPLE_MINSN   $SAMPLE_MAXELLIP   $CHECKPLOT_DEV $CHECKPLOT_TYPE  $CHECKPLOT_NAME  	$CHECKIMAGE_TYPE   $CHECKIMAGE_NAME    $PSF_DIR 	   $HOMOBASIS_TYPE $HOMOPSF_PARAMS $VERBOSE_TYPE $WRITE_XML $XML_NAME $NTHREADS "$Selection"  | $text  
 
 
-	Astrometric calibration (astrometry.net)
+	Astrometric Calibration (astrometry.net)
 	*
 	menu
 	DS9Utils $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.) WCS $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   | $text  
+
+
+	hmenu SExtractor
+
+		SExtractor #36
+		*
+		menu
+		DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits    0 | $text  
+
+		SExtractor (Basic parameters)
+		*
+		menu
+		DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR-BASICS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  | $text  
+
+	endhmenu
+
+
+
+
+	hmenu SWARP
+
+
+		SWARP - WCS Images #38
+		*
+		menu
+		DS9Utils $xpa_method DS9SWARP  $param(SWARP); "$PATH" $IMAGEOUT_NAME $WEIGHT_TYPE $RESCALE_WEIGHTS $WEIGHT_IMAGE $COMBINEI $COMBINE_TYPE $CLIP_AMPFRAC $CLIP_SIGMA $CELESTIAL_TYPE $PROJECTION_TYPE $PROJECTION_ERR $CENTER_TYPE $CENTERI $PIXELSCALE_TYPE $PIXEL_SCALE $IMAGE_SIZE $RE-SAMPLING  $RESAMPLING_TYPE  $OVERSAMPLING  $INTERPOLATE $SUBTRACT_BACK  $BACK_SIZE $BACK_FILTERSIZE $BACK_FILTTHRESH     | $text  
+
+
+
+		Resample images #38
+		*
+		menu
+		DS9Utils $xpa_method DS9Resample  $param(Resample); "$PATH" $PIXEL_SCALE $IMAGE_SIZE $RESAMPLING_TYPE $RESAMPLE_SUFFIX   | $text  
+
+	endhmenu
+
 
 	hmenu Photutils
 
@@ -377,16 +388,23 @@ hmenu Astronomical softwares
 		DS9Utils $xpa_method ExtractSources $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons  "$path"  | $text  
 
 
-		Subtract background
+		Subtract Background
 		*
 		menu
 		DS9Utils $xpa_method BackgroundEstimationPhot $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate "$path"  | $text  
 
+		Aperture photometry
+		*
+		menu
+		DS9Utils $xpa_method AperturePhotometry  $param(Aperture-photometry); $aper $zpm   | $text
+
+
+
 	endhmenu
 
-	hmenu Astronomy calculator
+	hmenu Astronomy Calculator
 
-		Cosmolgy calculator
+		Cosmology Calculator
 		*
 		menu
 		DS9Utils $xpa_method CosmologyCalculator $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text  
@@ -398,15 +416,6 @@ hmenu Astronomical softwares
 		DS9Utils $xpa_method Convertissor $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift  | $text  
 
 
-		Next
-		*
-		menu
-		DS9Utils $xpa_method next_step   | $text  
-
-		verbose
-		*
-		bind V
-		DS9Utils $xpa_method verbose $param(verbose) $verbose | $text  
 
 	endhmenu
 
@@ -428,8 +437,6 @@ endhmenu
 
 
 
-
-
 DS9Functions Help !
 *
 web
@@ -438,12 +445,12 @@ file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
 #file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
 
 
-Let us have a try!
+Give it a go !
 *
 menu
 #echo "$filename" | $text 
 #echo "$env(DS9Function)" | $text 
-DS9Utils $xpa_method test   | $text  
+DS9Utils $xpa_method test   | $text   
 
 
 
@@ -452,14 +459,30 @@ Test
 bind n
 DS9Utils $xpa_method next_step   | $text  
 
-
-
-
+Test
+*
+bind N
+DS9Utils $xpa_method next_step   | $text  
 
 #DS9Utils $xpa_method Help
 #file:DS9Utils $xpa_method Help
 #$env(DS9Function)
 #/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
+
+
+
+verbose
+*
+bind V
+DS9Utils $xpa_method verbose $param(verbose) $verbose | $text  
+
+
+
+Fluxtucation
+*
+bind F
+DS9Utils $xpa_method ComputeFluctuation $param(ComputeFluctuation) $Number $Radius | $text  
+
 
 
 
@@ -482,12 +505,39 @@ DS9Utils $xpa_method next_step   | $text
 ###########################################################################################################################################
 ###########################################################################################################################################
 
+
+
+param Aperture-photometry
+aper entry {Apertures} 5,10,15 {Apertures radius in pixel}
+zpm entry {Zero point magnitude} 0 {Value to be added to -2.5 log(SumPix)}
+endparam
+
+
+param Create-WCS
+CRPIX entry {CRPIX} 0,0 {Pixel coordinate of reference point}
+CDELT entry {CDELT} 1,1 {Coordinate increment at reference point [in degrees]}
+CTYPE menu {CTYPE} RA---AIR,DEC--AIR|RA---TAN,DEC--TAN {Supported projections}
+CRVAL entry {CRVAL} 1,1 {Coordinate value at reference point [in degrees]}
+endparam
+
+
+
+param open
+path entry {Path(s)} - {Path of the image(s) to open} #NORMAL
+type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE {Radius of the aperture in pixel} 
+endparam
+
+param ComputeFluctuation
+Number entry {Number} 50000 {Number of aperture} #NORMAL
+Radius entry {Radius} 20 {Radius of the aperture in pixel} 
+endparam
+
 param check
 check checkbox {Do you wish to continue?} 1 {}
 endparam
 
 param verbose
-verbose checkbox {Verbose} 0 {Check to enter verbose mode.}
+verbose checkbox {Verbose} 0 {Check to enter verbose mode.} #NORMAL QUIET|DEBUG
 endparam
 
 param Get-depth
@@ -516,10 +566,10 @@ endparam
 
 param Setup
 scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization|zscale|minmax {Scale}
-cut entry {Colormap cut} 50-99.99 {Cuts in percentile}
+cut entry {Scale Limits} 50-99.9 {Scale limits in percentile of the image (or defined region)}
 smooth entry {Smooth} 0 {Smoothing boxcar radius in pixel}
 color menu {Color} cool|grey|cubehelix0|red|green|blue|a|b|bb|he|i8|aips0|sls|hsv|heat|rainbow|standard|staircase {Color}
-invert checkbox {invert} 0 {Invert}
+invert checkbox {invert} 0 {Invert colormap}
 grid checkbox {Grid} 0 {Display grid}
 endparam
 
@@ -539,7 +589,7 @@ endparam
 
 param Plot-3d
 log checkbox {Log} 0 {Plot in log value}
-kernel entry {Smoothing} - {Smoothing kernel sizes in pixel (x,y), eg: 3 -  1.5,0.9 or - for no smoothing}
+#kernel entry {Smoothing} - {Smoothing kernel sizes in pixel (x,y), eg: 3 -  1.5,0.9 or - for no smoothing}
 endparam
 
 
@@ -547,44 +597,74 @@ endparam
 
 param SWARP
 PATH entry {PATHS} - {Path of the images you want to stack, use glob syntax with ? and *.}
-BACK_DEFAULT entry {BACK_DEFAULT} 0.0 {Default background value to be subtracted in BACK TYPE MANUAL mode.}
-BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Size in background meshes of the background-filtering mask.}
-BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Difference threshold (in ADUs) for the background-filtering}
-BACK_SIZE entry {BACK_SIZE} 128 {Size in pixels of a background mesh.}
+#BACK_DEFAULT entry {BACK_DEFAULT} 0.0 {Default background value to be subtracted in BACK TYPE MANUAL mode.}
+IMAGEOUT_NAME entry {IMAGEOUT_NAME} coadd.fits {Name of the output image file}
 
-BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {Tells SWarp what background is subtracted from the images}
+WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|BACKGROUND|MAP_RMS|MAP_VARIANCE|MAP_WEIGHT {}
+RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 1|0 {Rescale input weights/variances (Y/N)?}
+WEIGHT_IMAGE  entry {WEIGHT_IMAGE} - {Name of the input weight image file}
+
+
+COMBINEI checkbox {COMBINE} 1|0 {Combine resampled images (Y/N)?}
+COMBINE_TYPE menu {COMBINE_TYPE} MEDIAN|AVERAGE|MIN|MAX|WEIGHTED|CHI2|SUM {Tells SWarp how to combine resampled images}
+CLIP_AMPFRAC entry {CLIP_AMPFRAC} 0.3 {Fraction of flux variation allowed with clipping}
+CLIP_SIGMA entry {CLIP_SIGMA} 4.0 {error multiple variation allowed with clipping}
+
+
 CELESTIAL_TYPE menu {CELESTIAL_TYPE} NATIVE|PIXEL|EQUATORIAL|GALACTIC|ECLIPTIC {Celestial coordinate system in output}
+PROJECTION_TYPE menu {PROJECTION_TYPE} TAN|AZP|STG|SIN|ARC|ZPN|ZEA|AIR|CYP|CEA|CAR|MER|COP|COE|COD|COO|BON|PCO|GLS|PAR|MOL|AIT|TSC|CSC|QSC {Projection system used in output, in standard WCS notation}
+PROJECTION_ERR entry {PROJECTION_ERR} 0.001 {Maximum position error (in pixels) allowed for bicubic-spline interpolation of the astrometric reprojection. 0 turns off interpolation.}
+
 CENTER_TYPE menu {CENTER_TYPE} ALL|MOST|MANUAL {Tells SWarp how to center the output frame}
 CENTERI entry {CENTERI} 0 {Position of the center in CENTER TYPE MANUAL mode. Can be given in floating point notation, in hh:mm:ss or dd:mm:ss}
-COMBINEI entry {COMBINE} Y {}
-COMBINE_BUFSIZE entry {COMBINE_BUFSIZE} 256 {Maximum amount of buffer memory (in MB) used for the co-addition process.}
-COMBINE_TYPE menu {COMBINE_TYPE} MEDIAN|AVERAGE|MIN|MAX|WEIGHTED|CHI2|SUM {Tells SWarp how to combine resampled images}
-COPY_KEYWORDS entry {COPY_KEYWORDS} OBJECT {Coma-separated list of FITS keywords that will be propagated from the input FITS headers to the coadded and resampled image headers.}
-FSCALASTRO_TYPE menu {FSCALASTRO_TYPE} FIXED|NONE|VARIABLE {Tells SWarp how to compute the astrometric part of the flux-rescalin}
-FSCALE_DEFAULT entry {FSCALE_DEFAULT} 1.0 {Default flux scale to adopt for each image if the FSCALE KEYWORD keyword is not found in the}
-GAIN_DEFAULT entry {GAIN_DEFAULT} 0.0 {Default gain conversion factor in e/ADU to adopt for each image if the GAIN keyword is not found in the FITS header. 0 means infinite gain.}
-GAIN_KEYWORD entry {GAIN_KEYWORD} GAIN {FITS keyword that should contain the gain in input images.}
-IMAGEOUT_NAME entry {IMAGEOUT_NAME} coadd.fits {Name of the output image file}
-IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic}
-MEM_MAX entry {MEM_MAX} 256 {Maximum amount of megabytes allowed for storing input images in memory}
-OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0 means automatic.}
-
-PIXEL_SCALE entry {PIXEL_SCALE} 0.0 {Step between pixels in each dimension in PIXELSCALE TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.}
 PIXELSCALE_TYPE menu {PIXELSCALE_TYPE} MEDIAN|MIN|MAX|MANUAL|FIT {Tells SWarp how to adjust the output pixel size}
+PIXEL_SCALE entry {PIXEL_SCALE} 0.0 {Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.}
+IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic}
 
-PROJECTION_ERR entry {PROJECTION_ERR} 0.001 {Maximum position error (in pixels) allowed for bicubic-spline interpolation of the astrometric reprojection. 0 turns off interpolation.}
-PROJECTION_TYPE entry {PROJECTION_TYPE} TAN {Projection system used in output, in standard WCS notation}
-RESAMPLE entry {RESAMPLE} Y {If true, resampling is performed on the input images.}
+
+
+RE-SAMPLING checkbox {RE-SAMPLING} 1|0 {Resample input images (Y/N)?}
 RESAMPLING_TYPE menu {RESAMPLING_TYPE} LANCZOS3|NEAREST|BILINEAR|LANCZOS2|LANCZOS4 {Image resampling method}
+OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0 means automatic.}
+INTERPOLATE checkbox {INTERPOLATE} 0|1 {Interpolate bad input pixels (Y/N)?}
+
+SUBTRACT_BACK checkbox {SUBTRACT_BACK} 1|0 {Subtraction sky background (Y/N)?}
+BACK_SIZE entry {BACK_SIZE} 128 {Size in pixels of a background mesh.}
+BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Size in background meshes of the background-filtering mask.}
+BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Difference threshold (in ADUs) for the background-filtering}
+
+#COMBINE_BUFSIZE entry {COMBINE_BUFSIZE} 256 {Maximum amount of buffer memory (in MB) used for the co-addition process.}
+#COPY_KEYWORDS entry {COPY_KEYWORDS} OBJECT {Coma-separated list of FITS keywords that will be propagated from the input FITS headers to the coadded and resampled image headers.}
+#FSCALASTRO_TYPE menu {FSCALASTRO_TYPE} FIXED|NONE|VARIABLE {Tells SWarp how to compute the astrometric part of the flux-rescalin}
+#FSCALE_DEFAULT entry {FSCALE_DEFAULT} 1.0 {Default flux scale to adopt for each image if the FSCALE KEYWORD keyword is not found in the}
+#GAIN_DEFAULT entry {GAIN_DEFAULT} 0.0 {Default gain conversion factor in e/ADU to adopt for each image if the GAIN keyword is not found in the FITS header. 0 means infinite gain.}
+#GAIN_KEYWORD entry {GAIN_KEYWORD} GAIN {FITS keyword that should contain the gain in input images.}
+#MEM_MAX entry {MEM_MAX} 256 {Maximum amount of megabytes allowed for storing input images in memory}
 
 
-SUBTRACT_BACK entry {SUBTRACT_BACK} Y {If true, input images are background-subtracted prior to resampling. VMEM}
-WRITE_FILEINFO entry {WRITE_FILEINFO} N {If true, extended information about input files is written in the header of the output FITS image.}
-VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {Tells SWarp how well operations should be commented}
 
 
-WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
-XML_NAME entry {XML_NAME} swarp.xml {Filename for XML output}
+#SUBTRACT_BACK entry {SUBTRACT_BACK} Y {If true, input images are background-subtracted prior to resampling. VMEM}
+#WRITE_FILEINFO entry {WRITE_FILEINFO} N {If true, extended information about input files is written in the header of the output FITS image.}
+#VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {Tells SWarp how well operations should be commented}
+
+
+#WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
+#XML_NAME entry {XML_NAME} swarp.xml {Filename for XML output}
+endparam
+
+
+
+
+param Resample
+PATH entry {PATHS} - {Path of the images you want to stack, use glob syntax with ? and *.}
+#PIXELSCALE_TYPE menu {PIXELSCALE_TYPE} MEDIAN|MIN|MAX|MANUAL|FIT {Tells SWarp how to adjust the output pixel size}
+PIXEL_SCALE entry {PIXEL_SCALE} 0.0 {Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.}
+IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic}
+#RE-SAMPLING checkbox {RE-SAMPLING} 1|0 {Resample input images (Y/N)?}
+RESAMPLING_TYPE menu {RESAMPLING_TYPE} LANCZOS3|NEAREST|BILINEAR|LANCZOS2|LANCZOS4 {Image resampling method}
+#OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0 means automatic.}
+RESAMPLE_SUFFIX   entry {RESAMPLE_SUFFIX}     .resamp.fits    {filename extension for resampled images}
 endparam
 
 
@@ -595,26 +675,30 @@ param STIFF-Color-image
 var1 entry {path 1} - {Path of the red image eg. ~i (770nm) band}
 var2 entry {path 2} - {Path to the green image eg. ~r (620nm) band}
 var3 entry {path 3} - {Path to the blue image eg. ~g (480nm) band}
+OUTFILE_NAME entry {OUTFILE_NAME} stiff.tiff {Output image file name}
+IMAGE_TYPE menu {IMAGE_TYPE} AUTO|TIFF|TIFF-pyramid {Output image format.}
 
+BITS_PER_CHANNEL menu {Background estimator}  8|16|-32 {Number of bits per channel in the output image. 8, 16 for int, -32 for float.}
 BINNING menu {BINNING} 1|2 {Pixel binning factor for both axes, or along each axis.}
-BITS_PER_CHANNEL menu {Background estimator} 8|16 {Number of bits per channel in the output image.}
 
-COLOUR_SAT entry {COLOUR_SAT} 1.0 {Colour saturation factor.}
-COPY_HEADER entry {COPY_HEADER} N {when set to Y, a copy of the (first) FITS image header replaces the content of the ImageDescription tag in the output TIFF file.}
-DESCRIPTION entry {DESCRIPTION} STIFF_image {Description string to include in the output TIFF image header (ImageDescription tag)}
+SKY_TYPE menu {SKY_TYPE} AUTO|MANUAL {Sky level determination in each input image.}
+SKY_LEVEL entry {SKY_LEVEL} 0.0 {User-specified sky level in SKY TYPE MANUAL mode.(1<n<m_ima)}
+
+MIN_TYPE menu {MIN_TYPE} GREYLEVEL|QUANTILE|MANUAL {Meaning of the MAX LEVEL parameter}
+MIN_LEVEL entry {MIN_LEVEL} 0.001 {Upper end of image dynamic range (see MIN TYPE).}
+
+MAX_TYPE menu {MAX_TYPE} QUANTILE|MANUAL {Meaning of the MAX LEVEL parameter}
+MAX_LEVEL entry {MAX_LEVEL} 0.995 {Upper end of image dynamic range (see MAX TYPE).}
+
+GAMMATYPE menu {GAMMA_TYPE} POWER-LAW|SRGB|REC.709 {Gamma correction type.}
 GAMMA_ entry {GAMMA} 2.2 {Image gamma (exponent of the display intensity transfer curve) for POWER-LAW GAMMA TYPEs.}
 GAMMAFAC entry {GAMMA_FAC} 1.0 {gamma correction factor for the luminance image component.}
-GAMMATYPE menu {GAMMA_TYPE} POWER-LAW|SRGB|REC.709 {Gamma correction type.}
-IMAGE_TYPE menu {IMAGE_TYPE} AUTO|TIFF|TIFF-pyramid {Output image format.}
-MAX_LEVEL entry {MAX_LEVEL} 0.995 {Upper end of image dynamic range (see MAX TYPE).}
-MAX_TYPE menu {MAX_TYPE} QUANTILE|MANUAL {Meaning of the MAX LEVEL parameter}
-MIN_LEVEL entry {MIN_LEVEL} 0.001 {Upper end of image dynamic range (see MIN TYPE).}
-MIN_TYPE menu {MIN_TYPE} GREYLEVEL|QUANTILE|MANUAL {Meaning of the MAX LEVEL parameter}
-OUTFILE_NAME entry {OUTFILE_NAME} stiff.tiff {Output image file name}
 
-SKY_LEVEL entry {SKY_LEVEL} 0.0 {User-specified sky level in SKY TYPE MANUAL mode.(1<n<m_ima)}
-SKY_TYPE menu {SKY_TYPE} AUTO|MANUAL {Sky level determination in each input image.}
-SATURATION_LEVEL entry {SATURATION_LEVEL} 40000.0 {Input image saturation level: colour is set to white if one of the images exceeds that level.}
+
+COLOUR_SAT entry {COLOUR_SAT} 1.0 {Colour saturation factor.}
+#COPY_HEADER entry {COPY_HEADER} N {when set to Y, a copy of the (first) FITS image header replaces the content of the ImageDescription tag in the output TIFF file.}
+#DESCRIPTION entry {DESCRIPTION} STIFF_image {Description string to include in the output TIFF image header (ImageDescription tag)}
+
 endparam
 
 
@@ -703,33 +787,34 @@ var4 menu {Variable 4} AAA|BBB|CCC {this is a menu}
 endparam
 
 param radial_profile
-center menu {Centring algorithm} Maximum|User|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting {Algorithm used for centering background subtraction precede Center of mass algorithm}
-diam entry {Source diameter[pixels]} 0 {Fiber diameter - 0 for star}
-log checkbox {Log} 0 {Log or linear plot}
+center menu {Centering algorithm} Maximum|User|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting {Algorithm used for centering.}
+diam entry {Source diameter} 0 {Fiber diameter in pixel. 0 for pure gaussian fitting, else data will be fitted by (Disk * Gaussian)}
+#log checkbox {Log} 0 {Log or linear plot}
 endparam
 
 
 
 
 param Lock
-var1 menu {frame} image|none|wcs|physical {frame}
-var3 menu {crosshair} image|none|wcs|physical {crosshair}
-var2 checkbox {scalelimits} 1 {scalelimits}
-var4 checkbox {smooth} 0 {smooth} 
-var5 checkbox {colorbar} 1 {colorbar} 
+var1 menu {frame} image|none|wcs|physical {}
+var3 menu {crosshair} image|none|wcs|physical {}
+var2 checkbox {scalelimits} 1 {}
+var4 checkbox {smooth} 0 {} 
+var5 checkbox {colorbar} 1 {} 
 endparam
 
 
 param Images-to-analyze
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
 
 param Throughfocus
-Path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
+Path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
+sort menu {Sorting type} AlphaNumerical|CreationDate|DS9-Order {Way to sort files to create throughfocus profile}
 WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
-steps entry {Steps} - {Give first actuator center and step eg: 16.45-0.15. Leave '-' if not needed}
+#steps entry {Steps} - {Give first actuator center and step eg: 16.45-0.15. Leave '-' if not needed.}
 endparam
 
 param Click-Enter-For-Only-DS9-Image
@@ -737,7 +822,7 @@ all checkbox {All images} 0 {Check this box to run the analysis on all the image
 b entry {First image} - {Number of the first image to process}
 e entry {Last image} - {Number of the last image to process}
 list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
-path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/[1-13].fits}
+path entry {RegExp Path} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/[1-13].fits}
 endparam
 
 
@@ -747,12 +832,12 @@ param subset_
 cat entry {Header catalog} - {Path of the header catalog to create subset}
 #number entry {Number of image} - {Number of images having the same characteristics, Use - for all.}
 Fields entry {Fields} - {Fields for which images must have the save value, order matters for folder creation.}
-Mask entry {Selection} - {Selection to be applied. eg: ((FLUX*EXPTIME>1) & (FLUX*EXPTIME<30)) | (EMGAIN>0) }
+Mask entry {Selection} - {Selection to be applied.  Use | for OR and \& for AND eg: ((FLUX*EXPTIME>1) & (FLUX*EXPTIME<30)) \| (EMGAIN>0) }
 endparam
 
 param autocorr
 type menu {Type} 2D-XY|X|Y {Choose autocorrelation type}
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -767,9 +852,9 @@ endparam
 
 
 param Click-Enter-For-Only-DS9-Image-
-path entry {Path} - {Path of the images to extract}
+path entry {RegExp Path} - {Path of the images to extract.  Use global pattern matching (*/?/[9-16], etc)}
 info checkbox {Info} 0 {Analyze each image (Means, vars, so-regions, gain, smearing, etc). Take ~1s/image}
-ext entry {Ext} 0 {Header extensions to be extracted: eg. 0,1,2,3}
+#ext entry {Ext} 0 {Header extensions to be extracted: eg. 0,1,2,3}
 endparam
 
 
@@ -777,7 +862,7 @@ param CreateHeader
 Field entry {Header} - {Header field to which add value}
 Value entry {Value} - {Value to add}
 Comment entry {Comment} - {Comment to add}
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 param SmearingAutocorr
@@ -830,7 +915,7 @@ endparam
 param Background-Subtraction
 sigma entry {Sigma clipping} 3 {The number of standard deviations to use for both the lower and upper clipping limit}
 bckd menu {Background estimator} MeanBackground|MedianBackground|ModeEstimatorBackground|MMMBackground|SExtractorBackground|BiweightLocationBackground {Different background estimators that can be used}
-rms menu {Background estimator} StdBackgroundRMS|MADStdBackgroundRMS|BiweightScaleBackgroundRMS {Different RMS estimators that can be used}
+rms menu {RMS estimator} StdBackgroundRMS|MADStdBackgroundRMS|BiweightScaleBackgroundRMS {Different RMS estimators that can be used}
 filter entry {Filter size} 3,3 {The window size of the 2D median filter to apply to the low-resolution background map}
 box entry {Box size} 40,40 {Size of the box to be used}
 percentile entry {Percentile} 20 {Percentile of the image to exclude in the background estimation}
@@ -838,7 +923,7 @@ mask checkbox {Masking sources} 0 {Check this and fill following entries to dete
 snr entry {snr} 3 {The snr per pixel above the background for which to consider a pixel as possibly being part of a source}
 npixels entry {npixels} 3 {The number of connected pixels, each greater than threshold, that an object must have to be detected.}
 dilate entry {dilate} 5 {The size of the square array used to dilate the segmentation image.}
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -850,13 +935,13 @@ theta entry {Angle} 0 {The position angle (in degrees) of the major axis of the 
 iters entry {Interation} 5 {The number of iterations to perform sigma clipping, or None to clip until convergence is achieved when calculating the statistics}
 ratio entry {Gaussian ratio} 1 {The ratio of the minor to major axis standard deviations of the Gaussian kernel}
 delete-doublons entry {Minimal distance} 30 {When entering several thresholds/FWHMs, the minimal distance between two sources in order to delete duplicates}
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
 
 param Stacking
-Path entry {Path} - {Path of the images to stack (glob syntax. eg. /tmp/images00[12]?.fits)}
+Path entry {RegExp Path} - {Path of the images to stack (glob syntax. eg. /tmp/images00[12]?.fits)}
 stack menu {Stacking type} mean_float|mean_int|median_int|median_float|1/std-wheighted {Type of stacking to perform, mask will only be taken into account with float.}
 #clipping entry {Clipping} - {Number of sigma to clip out before staking}
 endparam
@@ -901,13 +986,14 @@ endparam
 
 
 param Background-Fit-1D
-axis menu {Direction} x|y {Variation direction to be analyzed}
-background menu {Background deg} 0|1 {Background degree of the fit}
-law menu {Law} None|exponential1D|DoubleExponiential {Law used to fit the background}
-gaussians menu {Number} 0|1|2|3|4|5 {Number of features to fit by gaussian}
-kernel entry {kernel} 1 {int, Convolution kenel}
-Value menu {Value} Linear|Log {Fit in linear or log value}
+#axis menu {Direction} x|y {Variation direction to be analyzed}
+background menu {Background deg} Constant|slope|Exponential|DoubleExponential {Shape of the background}
+#law menu {Law} None|Exponiential|DoubleExponiential {Law used to fit the background}
+gaussians menu {Number of Gaussians} 0|1|2|3|4|5 {Number of features to fit by gaussian}
+#kernel entry {kernel} 1 {int, Convolution kenel}
+#Value menu {Value} Linear|Log {Fit in linear or log value}
 endparam
+
 
 
 param Gaussian-Fit-2D
@@ -930,22 +1016,23 @@ endparam
 
 
 param Convolution
-type menu {Type} Box|Gaussian|Image {Type of the convolution}
-pat_c entry {path} - {Path of the convolution kernel 2D fits image.}
-sizex entry {Size x} 3 {Box's or gaussian's std size in the x direction (must be odd number for box!)}
-sizey entry {Size y} 3 {Box's or gaussian's std size in the y direction (must be odd number for box!)}
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+type menu {Type} Gaussian|Box|Image {Shape of the convolution kernel}
+pat_c entry {path} - {Path of the 2D fits convolution kernel}
+sizex entry {Size x} 1.5,1.5 {Box's or gaussian's std size in the x,y direction (must be int odd number for box!)}
+#sizey entry {Size y} 3 {Box's or gaussian's std size in the y direction (must be odd number for box!)}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
 
 param Catalog-to-region
-path entry {Path} - {Path of the detection catalog}
+path entry {Path} - {Path of the catalog}
 fields entry {x,y fields} - {Name of the x and y fields: ex = xcentroid,ycentroid}
 name entry {field name} - {field to put in region name: ex = magnitude, name, etc}
 form menu {form of the region} circle|box {fForm of the regions to display}
-size entry {Regions size} 10 {Size in pixel}
-wcs checkbox {WCS} 0 {FCheck if the catalog fields are in degree-WCS, then radius must be in arc-second}
+size entry {Regions size} 10 {Size in pixel or arcseconds}
+wcs checkbox {WCS} 0 {Check if the catalog fields are in degree-WCS, then radius must be in arc-second}
+Selection entry {[Selection]} - {selection of the region in th catalog: Use | for OR and \& for AND}
 endparam
 
 
@@ -1169,11 +1256,11 @@ SAMPLE_MAXELLIP entry {SAMPLE_MAXELLIP} 0.3 {Maximum (A-B)/(A+B) for a source to
 
 
 CHECKPLOT_DEV menu {CHECKPLOT_DEV} PNG|XWIN|TK|PS|PSC|XFIG|JPEG|AQT|PDF|SVG {}
-CHECKPLOT_TYPE entry {CHECKPLOT_TYPE} FWHM,ELLIPTICITY,COUNTS,COUNT_FRACTION,CHI2,RESIDUALS {or NONE}
-CHECKPLOT_NAME entry {CHECKPLOT_NAME} fwhm,ellipticity,counts,countfrac,chi2,resi {}
+CHECKPLOT_TYPE menu {CHECKPLOT_TYPE} NONE|FWHM|ELLIPTICITY|COUNTS|COUNT_FRACTION|CHI2|RESIDUALS {or NONE}
+CHECKPLOT_NAME entry {CHECKPLOT_NAME} check-plot {CHeck-plot name}
 
-CHECKIMAGE_TYPE entry {CHECKIMAGE_TYPE} CHI,PROTOTYPES,SAMPLES,RESIDUALS,SNAPSHOTS {or MOFFAT,-MOFFAT,-SYMMETRICAL}
-CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} chi.fits,proto.fits,samp.fits,resi.fits,snap.fits {Group tag for each context key}
+CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} CHI|PROTOTYPES|SAMPLES|RESIDUALS|SNAPSHOTS|MOFFAT|-MOFFAT|-SYMMETRICAL {}
+CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Group tag for each context key}
 PSF_DIR entry {PSF_DIR} . {Where to write PSFs (empty=same as input)}
 
 HOMOBASIS_TYPE menu {HOMOBASIS_TYPE} GAUSS-LAGUERRE|NONE {GAUSS_LAGUERRE or no homogeneisation is computed}
@@ -1184,6 +1271,7 @@ VERBOSE_TYPE menu {VERBOSE_TYPE} QUIET|NORMAL|LOG {}
 WRITE_XML menu {WRITE_XML} Y|N {}
 XML_NAME entry {XML_NAME} psfex.xml {Filename for XML output}
 NTHREADS entry {NTHREADS} 2 {Number of simultaneous threads for the SMP version of PSFEx, 0 = automatic}
+Selection entry {[Selection]} - {Selection of the objetcs in th catalog: Use | for OR and \& for AND}
 endparam
 
 
@@ -1220,17 +1308,17 @@ endparam
 
 
 param Centering
-method menu {Method} Maximum|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting|Gaussian-Picouet {Method for centroiding}
-background checkbox {Background subtraction} 0 {Apply of not background subtraction before centering}
+method menu {Method} Maximum|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting {Method for centroiding} #|Gaussian-Picouet
+#background checkbox {Background subtraction} 0 {Apply of not background subtraction before centering}
 endparam
 
 
 
-param Arithmetic
-im_path entry {image} - {Path of a second image. Keep '-' if not needed}
-exp entry {Expression} - {Expression for exec method (eg. ds9=ds9-image). See doc for exemples (convolution, adding noise, masking, trimming).}
-eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+param Python-Command
+im_path entry {image} - {Path of a second image to use. Keep '-' if not needed}
+exp entry {Expression} ds9 = ds9 + convolve(ds9, np.ones((3,5))/15) {Python expression for exec method (eg. ds9=ds9-image). See doc for exemples (convolution, adding noise, masking, trimming).}
+#eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -1512,8 +1600,8 @@ endparam
 
 
 param EmGain
-box entry {Bin size} 30,30 {Size of the bins on which compute the variance and intensity}
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+box entry {Aperture} 30,30 {Aperture size [in pixels] in which compute the variance and intensity}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -1524,7 +1612,7 @@ number entry {Number/path} - {Number/path image to subtract, let - to automatica
 box entry {Bin size} 30,30 {Size of the bins on which compute the variance and intensity}
 overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use}
 limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
-path entry {Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -1535,5 +1623,5 @@ all checkbox {All images} 0 {Check this box to run the analysis on all the image
 b entry {First image} - {Number of the first image to process}
 e entry {Last image} - {Number of the last image to process}
 list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
-path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/.fits}
+path entry {RegExp Path} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/.fits}
 stack checkbox {Only on stacked} 0 {Run analysis only on stacked images }

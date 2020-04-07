@@ -25,6 +25,7 @@ else:
        
 def verboseprint(*args, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))))):
     """Print function with a boolean verbose argument
+    
     """
     if bool(int(verbose)):
         print(*args)
@@ -39,73 +40,6 @@ def FitsExt(fitsimage):
     return ext
 
 
-def ExecCommand(filename, path2remove, exp, config, eval_=False):
-    """Combine two images and an evaluable expression 
-    """
-    import numpy as np
-    from simpleeval import  EvalWithCompoundTypes#,simple_eval
-    from astropy.io import fits
-    from astropy.convolution import  convolve #,Gaussian2DKernel
-    type_ = 'exec'
-    fitsimage = fits.open(filename)
-    ext = FitsExt(fitsimage) 
-    fitsimage = fitsimage[ext]
-    ds9 = fitsimage.data
-    if os.path.isfile(path2remove) is False:
-        if 'image'in exp:
-    
-            d = DS9();d.set('analysis message {Image not found, please verify your path!}')
-        else:
-            image = 0
-    else:
-        fitsimage2 = fits.open(path2remove)[ext]
-        image = fitsimage2.data
-
-    names = {"ds9": ds9, "image": image, "np":np}
-    functions = {"convolve":convolve}
-    verboseprint('Expression = ',exp)
-    if type_ == 'eval': 
-        try:
-            fitsimage.data = EvalWithCompoundTypes(exp, names=names, functions=functions).eval(exp)
-        except (TypeError) as e:
-            if eval_:
-                print('Simple_eval did not work: ', e)
-                try:
-                    fitsimage.data = eval(exp)
-                    verboseprint('Using eval!')
-                except SyntaxError:
-                    verboseprint('Using exec!')
-                    verboseprint(ds9)
-                    exec(exp, globals=globals(), locals=locals())
-                    verboseprint(ds9)
-                    fitsimage.data = ds9
-                    
-            else:
-                print(e)
-                sys.exit()
-    else:
-        verboseprint('Using exec!')
-        verboseprint(ds9)
-        #import IPython; IPython.embed()
-        ldict={'ds9':ds9,'image':image,'convolve':convolve}
-        #exec("import IPython;IPython.embed()", globals(), ldict)#, locals(),locals())
-        exec(exp, globals(), ldict)#, locals(),locals())
-        #IPython.embed()
-        ds9 = ldict['ds9']
-        verboseprint(ds9)
-        fitsimage.data = ds9#ds9
-    name = filename[:-5] + '_modified.fits'
-    #exp1, exp2 = int(fitsimage.header[my_conf.exptime[0]]), int(fitsimage2.header[my_conf.exptime[0]])
-    fitsimage.header['DS9'] = filename
-    fitsimage.header['IMAGE'] = path2remove
-    try:
-        fitsimage.header['COMMAND'] = exp
-    except ValueError as e:
-        print(e)
-        verboseprint(len(exp))
-        fitsimage.header.remove('COMMAND')
-    fitsimage.writeto(name, overwrite=True)
-    return fitsimage.data, name  
 
 
 def DS9lock(xpapoint):
