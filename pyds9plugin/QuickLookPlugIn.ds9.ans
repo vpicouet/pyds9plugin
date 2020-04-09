@@ -450,7 +450,7 @@ Give it a go !
 menu
 #echo "$filename" | $text 
 #echo "$env(DS9Function)" | $text 
-DS9Utils $xpa_method test   | $text   
+DS9Utils $xpa_method test $param(Tutorials); $tutorials   | $text   
 
 
 
@@ -567,7 +567,7 @@ endparam
 param Setup
 scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization|zscale|minmax {Scale}
 cut entry {Scale Limits} 50-99.9 {Scale limits in percentile of the image (or defined region)}
-smooth entry {Smooth} 0 {Smoothing boxcar radius in pixel}
+smooth menu {Smooth} 0|1|2|3|4|5|6|7|8|9|10 {Smoothing boxcar radius in pixel}
 color menu {Color} cool|grey|cubehelix0|red|green|blue|a|b|bb|he|i8|aips0|sls|hsv|heat|rainbow|standard|staircase {Color}
 invert checkbox {invert} 0 {Invert colormap}
 grid checkbox {Grid} 0 {Display grid}
@@ -808,11 +808,13 @@ param Images-to-analyze
 path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
-
+param Tutorials
+tutorials menu {Tutorials} 1-Generic-Tools|2-Photometric-Analysis|3-Image-Quality-Assesment|4-Image-Processing|5-All-In-One {Choose the tutorial you want to do.}
+endparam
 
 param Throughfocus
 Path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
-sort menu {Sorting type} AlphaNumerical|CreationDate|DS9-Order {Way to sort files to create throughfocus profile}
+sort menu {Sorting type} 	AlphaNumerical|CreationDate|DS9-Order {Way to sort files to create throughfocus profile}
 WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
 #steps entry {Steps} - {Give first actuator center and step eg: 16.45-0.15. Leave '-' if not needed.}
 endparam
@@ -831,8 +833,8 @@ endparam
 param subset_
 cat entry {Header catalog} - {Path of the header catalog to create subset}
 #number entry {Number of image} - {Number of images having the same characteristics, Use - for all.}
-Fields entry {Fields} - {Fields for which images must have the save value, order matters for folder creation.}
-Mask entry {Selection} - {Selection to be applied.  Use | for OR and \& for AND eg: ((FLUX*EXPTIME>1) & (FLUX*EXPTIME<30)) \| (EMGAIN>0) }
+Fields entry {Re-arange} Directory {Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2}
+Mask entry {Selection} - {Selection to be applied.  Use \| for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) \| (EMGAIN>0) }
 endparam
 
 param autocorr
@@ -952,6 +954,7 @@ threshold entry {Detection threshold} 50000 {Detection threshold for cosmic rays
 mask menu {Masking factor} 1|2|3|4|5|6|7|8|9|10 {Masking factor of the cosmics. The higher the bigger will be the mask}
 all_line checkbox {Masking entirely} 0 {Masking all the line on the left side of the impact}
 tail menu {Tail direction} -x|+x|-y|+y {Direction of the tail of the cosmic to corect for its impact}
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -989,7 +992,7 @@ param Background-Fit-1D
 #axis menu {Direction} x|y {Variation direction to be analyzed}
 background menu {Background deg} Constant|slope|Exponential|DoubleExponential {Shape of the background}
 #law menu {Law} None|Exponiential|DoubleExponiential {Law used to fit the background}
-gaussians menu {Number of Gaussians} 0|1|2|3|4|5 {Number of features to fit by gaussian}
+gaussians menu {Number of Gaussians} 0|1|2|3|4|5 {Number of features to be fitted by a gaussian}
 #kernel entry {kernel} 1 {int, Convolution kenel}
 #Value menu {Value} Linear|Log {Fit in linear or log value}
 endparam
@@ -1315,10 +1318,10 @@ endparam
 
 
 param Python-Command
-im_path entry {image} - {Path of a second image to use. Keep '-' if not needed}
-exp entry {Expression} ds9 = ds9 + convolve(ds9, np.ones((3,5))/15) {Python expression for exec method (eg. ds9=ds9-image). See doc for exemples (convolution, adding noise, masking, trimming).}
+exp entry {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image). See doc for exemples (convolution, adding noise, masking, trimming).}
+im_path entry {image} - {Path of a second image to use. Keep '-' if not used}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
-path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+path entry {RegExp Path} - {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 endparam
 
 

@@ -40,7 +40,7 @@ from functools import wraps
 import matplotlib.pyplot as plt
 #import matplotlib; matplotlib.use('TkAgg')  
 
-from .BasicFunctions import DS9lock, verboseprint
+from .BasicFunctions import DS9lock#, verboseprint
 
 
 
@@ -130,29 +130,54 @@ plt.rcParams['axes.titlesize'] = 'x-large'
 #    """
 
 
-def Log(): 
+def Log(v=None): 
     import logging
     from logging.handlers import RotatingFileHandler
     logger = logging.getLogger()# création de l'objet logger qui va nous servir à écrire dans les logs
-    v = int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))# on met le niveau du logger à DEBUG, comme ça il écrit tout
+    if v is None:
+        v = int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))# on met le niveau du logger à DEBUG, comme ça il écrit tout
     if v == 0:
-        logger.setLevel(logging.CRITICAL)
+        logger.setLevel(logging.ERROR)
 #    if v == 1:
 #        logger.setLevel(logging.WARNING)
     if v == 1:
         logger.setLevel(logging.DEBUG)# création d'un formateur qui va ajouter le temps, le niveau de chaque message quand on écrira un message dans le log
-    formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
+    #formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
+    #formatter = logging.Formatter('%(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
     file_handler = RotatingFileHandler('/tmp/activity.log', 'a', 1000000, 1)# on lui met le niveau sur DEBUG, on lui dit qu'il doit utiliser le formateur créé précédement et on ajoute ce handler au logger
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(formatter)
+    #file_handler.setLevel(logging.DEBUG)
+    #file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(logger.getEffectiveLevel())
-    logger.addHandler(stream_handler)
+    
+#    stream_handler = logging.StreamHandler(sys.stdout)
+#    stream_handler.setLevel(logger.getEffectiveLevel())
+#    logger.addHandler(stream_handler)
     logging.getLogger('matplotlib.font_manager').disabled = True
     return logger
 
 logger = Log()
+#logger.critical('critical')
+#logger.error('error')
+#logger.warning('warning')
+#logger.info('info')
+#logger.debug('debug')
+
+
+def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))))):
+    #did not manage to save log in .log but not display it....
+    logger.critical(*args)
+#    with open('/tmp/activity.log','a') as f:
+#        f.write(str(*args))
+    if bool(int(verbose)):
+        from tqdm import tqdm
+        print(*args)
+        with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}",
+                  postfix=["", dict(value='')], file=sys.stdout) as t:
+            for i in range(0):
+                t.update()
+    else:
+        pass
+    return  
 
 class config(object):
     """Configuration class
@@ -246,18 +271,20 @@ def CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/'):
         os.makedirs(os.path.dirname(DS9_BackUp_path))
     if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/Plots'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/Plots')
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/DS9Regions'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/DS9Regions')
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/DS9Curves'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/DS9Curves')
+#    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/DS9Regions'):
+#        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/DS9Regions')
+#    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/DS9Curves'):
+#        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/DS9Curves')
     if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/CSVs'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/CSVs')
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/Images'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/Images')
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/config'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/config')
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/CreatedImages'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/CreatedImages')
+    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/HeaderDataBase'):
+        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/HeaderDataBase')
+#    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/Images'):
+#        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/Images')
+#    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/config'):
+#        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/config')
+#    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/CreatedImages'):
+#        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/CreatedImages')
     if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/subsets'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/subsets')
     return  DS9_BackUp_path
@@ -372,18 +399,14 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
         •If a spot saturates
         •If the image contains some ghost/second pass spots. . .
     """
-#    for i in range(3):
-#        print(i)
-#        time.sleep(i)
-    #print(1)
+    d = DS9(xpapoint)
+    d=DS9()
     try:
         scale, cuts, smooth, color, invert, grid = sys.argv[-6:]
     except ValueError:
-        scale, cuts, smooth, color, invert, grid = "Log",  '50-99.99',  '0', color, '0', '0' 
-    #verboseprint(scale, cuts, smooth, color, invert, grid)
-    #logger.warning('%s %s %s %s %s %s'%(scale, cuts, smooth, color, invert, grid))
+        scale, cuts, smooth, color, invert, grid = "Log",  '50-99.99',  '5', 'cool', '0', '0' 
+    verboseprint(scale, cuts, smooth, color, invert, grid)
     cuts = np.array(cuts.split('-'),dtype=float)
-    d = DS9(xpapoint)
     region = getregion(d, all=False, quick=True,selected=True)
     if region is None:
         image_area = [0,-1,0,-1]
@@ -397,12 +420,17 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
         d.set("analysis message {Smoothing can not be inferior to 1, setting it to 0.}")    
         smooth = '0'
     if (smooth != '0') & (d.get('smooth radius')!=smooth):
+        verboseprint('Applying smoothing')
         d.set("smooth yes") 
-        d.set("smooth function gaussian") 
+        #d.set("smooth function gaussian") 
         d.set("smooth radius %i"%(float(smooth))) 
+        verboseprint('Smoothing applied')
     elif (smooth == '0'):
+        verboseprint('Putting smoothing to 0')
         d.set("smooth radius %i"%(float(smooth))) 
-        d.set("smooth no") 
+        d.set("smooth no")
+        verboseprint('Smoothing set to 0')
+
     lx = int(d.get('fits width'))
     ly = int(d.get('fits height'))
     if lx*ly < 5000**2:
@@ -424,10 +452,11 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
             #image = parse_data(d.get("data image %i %i %i  %i no"%(int(lx/2),int(lx/2)+50,int(ly/2),int(ly/2)+50)))[-1]
     image = fitsimage[Yinf: Ysup,Xinf: Xsup]#[Xinf: Xsup, Yinf: Ysup]
 
+    verboseprint('Changing colormap %s'%(d.get('cmap')))
     d.set("cmap %s"%(color))
+    verboseprint('Changing Scale %s'%(d.get('cmap')))
     d.set("scale %s"%(scale))
-
-
+    verboseprint('Changing grid %s'%(d.get('cmap')))
     if grid=='1':
         d.set("grid yes") 
     elif grid=='0':
@@ -437,6 +466,7 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
     elif invert=='0':
         d.set("cmap invert no") 
 
+    verboseprint('Changing scale limits %s'%(d.get('cmap')))
     try:
         d.set("scale limits {} {} ".format(np.nanpercentile(image[np.isfinite(image)],cuts[0]),np.nanpercentile(image[np.isfinite(image)],cuts[1])))
     except ValueError:
@@ -452,21 +482,26 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     """Cfeate a subset of images considering a selection and ordering rules
     """
     from astropy.table import Table
+    from shutil import copyfile
     #import pandas as pd
     #cat, query, fields = sys.rgv[-3:]
-    cat, number, fields, query = sys.argv[-4:]
+    cat_path, number, fields, query = sys.argv[-4:]
+    cat_path = cat_path.rstrip()[::-1].rstrip()[::-1]
     fields = np.array(fields.split(','),dtype=str)
     verboseprint('cat, number, fields, query = ',cat, number, fields, query )
     try:
-        cat = Table.read(cat)
+        cat = Table.read(cat_path )
     except Exception as e:
+        print(e)
         logger.warning(e)
     cat = DeleteMultiDimCol(cat)
     if query != '-':
         df = cat.to_pandas()
         try:
+            verboseprint(query)
             new_table = df.query(query) 
         except:
+            print(query)
             query = entry(xpapoint, 'UndefinedVariableError in query, please rewrite a query.', quit_=False)
             new_table = df.query(query) 
         t2 = Table.from_pandas(new_table) 
@@ -480,7 +515,6 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     verboseprint('SELECTION %i -> %i'%(len(cat),len(t2)))
     
     verboseprint('SELECTED FIELD  %s'%(fields))
-
     path_date = dpath+datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
     if not os.path.exists(path_date):
         os.makedirs(path_date)       
@@ -490,7 +524,7 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     except KeyError:
         numbers = [''] * len(t2)
     for line,numbers in zip(t2, numbers):
-        filename = line['PATH']
+        filename = line['Path']
         #print(fields)
         number = list(numbers)#np.array(list(line[fields]))
         #print(numbers)
@@ -501,6 +535,11 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
             os.makedirs(new_path) 
         #print('Copying file',os.path.basename(filename))
         symlink_force(filename,new_path + '/%s'%(os.path.basename(filename)))    
+
+    copyfile(cat_path, os.path.join(path_date,os.path.basename(cat_path)) )
+    csvwrite(t2, os.path.join(path_date,'HeaderCatalogSubet.csv') )#[1;31mTypeError[0m[1;31m:[0m Cannot set fill value of string with array of dtype int64
+
+
 #    paths = [path_date]
 #    for path in paths:
 #        for i in range(len(fields)):
@@ -515,7 +554,7 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
 #        for f in files:
 #            print(f)
     d=DS9(xpapoint)
-    d.set("""analysis message {Images are saved as symbolik links there : %s}"""%(new_path))
+    d.set("""analysis message {Images are saved as symbolik links there : %s}"""%(path_date))
 
     return t2
 
@@ -966,7 +1005,11 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
     if bool(int(test)):
         Plot=False
         filename = getfilename(d)
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+        try:
+            Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+        except Exception:
+            d.set("analysis message {Please create and select a region (Circle/Box) before runnning this analysis}");sys.exit() 
+
         print(Xinf, Xsup, Yinf, Ysup)
         data = fits.open(filename)[0].data
         size = Xsup - Xinf
@@ -1231,7 +1274,7 @@ def DS9originalSettings(xpapoint):
 
 def entry(xpapoint, message, quit_=False):
     d=DS9(xpapoint)
-    answer = d.get("analysis entry %s"%(message))
+    answer = d.get("analysis entry {%s}"%(message))
     answer = answer.rstrip()[::-1].rstrip()[::-1] 
     if quit_ & (answer==''):
         sys.exit()
@@ -2105,11 +2148,12 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   import matplotlib.pyplot as plt
   from scipy.optimize import curve_fit
   from scipy import interpolate
+  fontsize=10
   rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, anisotrope=anisotrope, angle=angle, radius=radius, n=n, center_type=center_type, size=size)
   profile = profile[:size]#(a[:n] - min(a[:n]) ) / np.nansum((a[:n] - min(a[:n]) ))
   
   rmean_long = np.linspace(0,rmean[:size].max(),1000)
-  fig, ax1 = plt.subplots()
+  fig, ax1 = plt.subplots(figsize=(12,5))
   fiber = float(fibersize) #/ (2*1.08*(1/0.083))
   if fiber == 0:
       gaus = lambda x, a, sigma: a**2 * np.exp(-np.square(x / sigma) / 2)
@@ -2141,8 +2185,8 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
       ax1.errorbar(rmean, profile, yerr = stddev, fmt='o', color=p[0].get_color(), alpha=0.5)
       ax1.set_ylim((minplot, np.nanmax([np.nanmax(1.1*(profile)), maxplot])))
 
-  ax1.set_xlabel('Distance to center [pix]', fontsize=12)                      
-  ax1.set_ylabel('Radial Profile', color='b', fontsize=12)
+  ax1.set_xlabel('Distance to center [pix]', fontsize=fontsize+2)                      
+  ax1.set_ylabel('Radial Profile', color='b', fontsize=fontsize+2)
   ax1.tick_params('y', colors='b')
   ax2 = ax1.twinx()
   EE_interp = interpolate.interp1d(rsurf[:size], EE[:size],kind='cubic')
@@ -2161,22 +2205,22 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   ax2.plot(np.linspace(mina, mina, 2), np.linspace(0, 80, 2), 'r-o')                    
   ax2.plot(np.linspace(mina, size, 2), np.linspace(80, 80, 2), 'r-o')
   ax2.set_ylim((0, 110))
-  ax2.set_ylabel('Encircled Energy', color='r', fontsize=12)
+  ax2.set_ylabel('Encircled Energy', color='r', fontsize=fontsize+2)
   ax2.tick_params('y', colors='r')
   ax1.xaxis.grid(True)
-  ax1.tick_params(axis='x', labelsize=12)
-  ax1.tick_params(axis='y', labelsize=12)
-  ax2.tick_params(axis='y', labelsize=12)                    
-  ax1.legend(loc = (0.54,0.05),fontsize=12)
+  ax1.tick_params(axis='x', labelsize=fontsize)
+  ax1.tick_params(axis='y', labelsize=fontsize)
+  ax2.tick_params(axis='y', labelsize=fontsize)                    
+  ax1.legend(loc = (0.54,0.05),fontsize=fontsize)
   if fiber == 0:
       flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
       plt.figtext(0.53,0.53,"Flux = %0.0f\n$r_{in}$ = %0.1f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (flux,0,abs(popt[1]),minb,mina), 
-                  fontsize=14,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
+                  fontsize=fontsize,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":flux,"SizeSource":0,"Sigma":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       verboseprint("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
   else:
       plt.figtext(0.53,0.53,"Amp = %0.3f\n$r_{in}$ = %0.3f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (popt[0],popt[1],popt[2],minb,mina), 
-                  fontsize=14,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
+                  fontsize=fontsize,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       verboseprint("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
   plt.title('{} - {}'.format(os.path.basename(name),np.round(NewCenter,1)),y=1)
@@ -2408,7 +2452,7 @@ def PlotArea3D(xpapoint, cmap='twilight_shifted'):
         image = np.log10(image - np.nanmin(image) +1)
         
     #max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), image.max()-image.min()]).max() / 2.0
-    fig = plt.figure()
+    fig = plt.figure(figsize=(7,5))
     ax = fig.gca(projection='3d', adjustable='box')
     #ax.set_aspect('equal')
     X1 = np.reshape(xm, -1)
@@ -2421,6 +2465,7 @@ def PlotArea3D(xpapoint, cmap='twilight_shifted'):
     plt.title('3D plot - %s - area = %s'%(os.path.basename(filename),area))
     plt.xlabel('X')
     plt.ylabel('Y')
+    ax.dist = 7 
     verboseprint(image)
     #print(0.9 * np.nanmin(image[np.isfinite(image)]), 1.1 * np.nanmax(image[np.isfinite(image)]))
     ax.set_zlim((0.9 * np.nanmin(image[np.isfinite(image)]), 1.1 * np.nanmax(image[np.isfinite(image)])))
@@ -2466,7 +2511,7 @@ def ExecCommand(filename, path2remove, exp, config, eval_=False):
             fitsimage.data = EvalWithCompoundTypes(exp, names=names, functions=functions).eval(exp)
         except (TypeError) as e:
             if eval_:
-                print('Simple_eval did not work: ', e)
+                verboseprint('Simple_eval did not work: ', e)
                 try:
                     fitsimage.data = eval(exp)
                     verboseprint('Using eval!')
@@ -2482,7 +2527,7 @@ def ExecCommand(filename, path2remove, exp, config, eval_=False):
                     fitsimage.data = ds9
                     
             else:
-                print(e)
+                verboseprint(e)
                 sys.exit()
     else:
         verboseprint('Using exec!')
@@ -2493,7 +2538,7 @@ def ExecCommand(filename, path2remove, exp, config, eval_=False):
         try:
             exec(exp, globals(), ldict)#, locals(),locals())
         except SyntaxError:
-            d.set("analysis message {Coul not execute your command. Please make sure your pythonic expression is valid or refer to the help.}")     ;sys.exit()  
+            d.set("analysis message {Could not execute the command. Please make sure your pythonic expression is valid or refer to the help.}")     ;sys.exit()  
 
         #IPython.embed()
         ds9 = ldict['ds9']
@@ -2506,7 +2551,7 @@ def ExecCommand(filename, path2remove, exp, config, eval_=False):
     try:
         fitsimage.header['COMMAND'] = exp
     except ValueError as e:
-        print(e)
+        verboseprint(e)
         verboseprint(len(exp))
         fitsimage.header.remove('COMMAND')
     try:
@@ -2716,15 +2761,17 @@ def stackImages(path,all=False, DS=0, function = 'mean', numbers=None, save=True
 
 
 
-def globglob(file, sort=True):
+def globglob(file, sort=True, ds9_im = True):
     """Improved glob.glob routine where we can use regular expression with this: /tmp/image[5-15].fits
     """
     file = file.rstrip()[::-1].rstrip()[::-1]
-    try:
-        paths = glob.glob(file, recursive=True)
-    except Exception as e:
-        verboseprint(e)
-        paths=[]
+    #print(file)
+    paths = glob.glob(r'%s'%(file), recursive=True)
+#    try:
+#        paths = glob.glob(r'%s'%(file), recursive=True)
+#    except ValueError as e:
+#        print(e)
+#        paths=[]
     verboseprint(file, paths)
     if (len(paths)==0) & ('[' in file) and (']' in file):
         verboseprint('Go in loop')
@@ -2742,11 +2789,17 @@ def globglob(file, sort=True):
                     paths.append(path) 
     if sort:
         paths.sort()
-    if len(paths)==0:
-        d=DS9()
-        if file != '-':
+
+    if (len(paths)==0) & (file=='-'):
+        d=DS9();paths = [getfilename(d)]
+
+    elif (len(paths)==0) & (file!='-'):
+        if ds9_im:
+            d=DS9()
             d.set("analysis message {No file is matching the pathname pattern. Please verify your entry. Running the analysis on the DS9 loaded image.}")    
-        paths = [getfilename(d)]
+            paths = [getfilename(d)]
+        else:
+            paths = []
     return paths
 
 def DS9stack_new(xpapoint, dtype=float, std=False, Type=None, clipping=None):
@@ -3172,10 +3225,13 @@ def ConvolveBoxPSF(x, amp=1, l=40, x0=0, sigma2=40, offset=0):
     function = amp * ( a + b )/4*l
     return offset + function
 
-def verbose(xpapoint):
+def verbose(xpapoint,verbose=None):
     """Change the configuration 
     """
-    v = sys.argv[-1]
+    if verbose is None:
+        v = sys.argv[-1]
+    else:
+        v = verbose
     try:
         conf_dir = resource_filename('pyds9plugin', 'config')
     except:
@@ -3185,7 +3241,8 @@ def verbose(xpapoint):
 #    if v == 'DEBUG':
 #        v = 1
     np.save(os.path.join(conf_dir,'verbose'), int(v))
-    sys.exit()
+    if v is None:
+        sys.exit()
     return 
 
 def DS9center(xpapoint,Plot=True):
@@ -3432,9 +3489,9 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
         pass
 
     try:
-        cat = Table.read(name)
+        cat = Table.read(name.rstrip()[::-1].rstrip()[::-1])
     except astropy.io.registry.IORegistryError:
-        cat = Table.read(name, format='ascii')
+        cat = Table.read(name.rstrip()[::-1].rstrip()[::-1], format='ascii')
 
     cat = DeleteMultiDimCol(cat)
     
@@ -4190,7 +4247,23 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
 
 
 
-
+def get(d, sentence, exit_=True):
+    try:
+        path = d.get("""analysis entry {%s}"""%(sentence))
+    except (TypeError) as e:
+        print(1,e)
+        time.sleep(0.2)
+        try:
+            path = d.get("""analysis entry {%s}"""%(sentence))
+        except (TypeError) as e:
+            print(2,e)
+            time.sleep(0.2)
+            d=DS9()
+            path = d.get("""analysis entry {%s}"""%(sentence))
+    if exit_ & (path==''):
+        sys.exit()
+    else:
+        return path
         
 
 def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
@@ -4199,7 +4272,7 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
     """
     from astropy.table import vstack
     from astropy.io import fits
-    try :
+    try : 
         verboseprint('info, extension = ', sys.argv[4], sys.argv[5])
         if sys.argv[4] == '1':
             info=True
@@ -4210,7 +4283,13 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
         
     if xpapoint:    
         if files is None:
-            files =   globglob( sys.argv[3]) #and verboseprint('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+            files =   globglob( sys.argv[3], ds9_im=False) 
+            print(files)
+            while len(files)==0:
+                d=DS9(xpapoint)
+                path = get(d, "No file matching the regular expression. Please give a new pattern matching (*/?/[9-16], etc)", exit_=True) 
+                files = globglob(path, ds9_im=False) 
+#and verboseprint('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
     fname = os.path.dirname(os.path.dirname(files[0]))
 
     #extentsions = np.array(sys.argv[5].split(','),dtype=int)
@@ -4220,7 +4299,7 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
     except TypeError:
         d=DS9()
     if ext != 1:
-        extent = d.get('analysis entry "Your image contains %i extensions, write the ones you want to use, eg 0,1,3  put all for all extensions and let it blank for primary header."'%(ext))
+        extent = get(d, "Your image contains %i extensions, write the ones you want to use, eg 0,1,3  put all for all extensions and let it blank for primary header."%(ext), exit_=False) 
         if extent == 'all':
             extentsions = np.arange(ext)
         elif extent == '':
@@ -4303,10 +4382,10 @@ def CreateCatalog_new_old(files, ext=0, config=my_conf):
                     pass
             file_header.append(htable)
     table_header = hstack(file_header) 
-    table_header.add_column(Column(np.arange(len(table_header)),name='INDEX'), index=0, rename_duplicate=True)
-    table_header.add_column(Column(files,name='PATH'), index=1, rename_duplicate=True)
-    table_header.add_column(Column([os.path.basename(file) for file in files]),name='FILENAME', index=2, rename_duplicate=True)
-    table_header.add_column(Column([os.path.basename(os.path.dirname(file)) for file in files]),name='DIRNAME', index=3, rename_duplicate=True)
+    table_header.add_column(Column(np.arange(len(table_header)),name='Index'), index=0, rename_duplicate=True)
+    table_header.add_column(Column(files,name='Path'), index=1, rename_duplicate=True)
+    table_header.add_column(Column([os.path.basename(file) for file in files]),name='Filename', index=2, rename_duplicate=True)
+    table_header.add_column(Column([os.path.basename(os.path.dirname(file)) for file in files]),name='Directory', index=3, rename_duplicate=True)
 
     #import IPython; IPython.embed()
     csvwrite(hstack(table_header),os.path.dirname(path) + '/HeaderCatalog.csv')
@@ -4336,13 +4415,14 @@ def CreateCatalog_new_old(files, ext=0, config=my_conf):
     return table_header
 
 
-def CreateCatalog_new(files, ext=0, config=my_conf):
+def CreateCatalog_new(files, ext=[0], config=my_conf):
     """Create header catalog from a list of fits file
     """
     from astropy.table import Column, hstack, vstack
     #from astropy.io import fits
+    from datetime import datetime
     import warnings
-    from tqdm import tqdm_gui
+    from tqdm import tqdm_gui, tqdm
     import matplotlib.pyplot as plt
 
 
@@ -4352,7 +4432,7 @@ def CreateCatalog_new(files, ext=0, config=my_conf):
 
     file_header = []
     files_name = []
-    for i  in tqdm_gui(range(len(files)), file=sys.stdout, desc='Number of files : ', ncols=100):
+    for i  in tqdm(range(len(files)), file=sys.stdout, desc='Number of files : ', ncols=100):
         try:
             table = CreateTableFromHeader(files[i], exts=ext)
             if table is not None:
@@ -4381,19 +4461,26 @@ def CreateCatalog_new(files, ext=0, config=my_conf):
     
     
     verboseprint('Stacking all the headers...')
-    table_header.add_column(Column(np.arange(len(table_header)),name='INDEX',dtype=str), index=0, rename_duplicate=True)
-    table_header.add_column(Column(files_name,name='PATH'), index=1, rename_duplicate=True)
-    table_header.add_column(Column([os.path.basename(file) for file in files_name]),name='FILENAME', index=2, rename_duplicate=True)
-    table_header.add_column(Column([os.path.basename(os.path.dirname(file)) for file in files_name]),name='DIRNAME', index=3, rename_duplicate=True)
+    table_header.add_column(Column(np.arange(len(table_header)),name='Index',dtype=str), index=0, rename_duplicate=True)
+    table_header.add_column(Column(files_name,name='Path'), index=1, rename_duplicate=True)
+    table_header.add_column(Column([os.path.basename(file) for file in files_name]),name='Filename', index=2, rename_duplicate=True)
+    table_header.add_column(Column([os.path.basename(os.path.dirname(file)) for file in files_name]),name='Directory', index=3, rename_duplicate=True)
+    table_header.add_column(Column([datetime.strptime(time.ctime(os.path.getctime(file)), "%a %b %d %H:%M:%S %Y").strftime('%Y-%m-%dT%H:%M:%S') for file in files_name]),name='CreationTime', index=4, rename_duplicate=True)
+    table_header.add_column(Column([datetime.strptime(time.ctime(os.path.getctime(file)), "%a %b %d %H:%M:%S %Y").strftime('%Y-%m-%d') for file in files_name]),name='CreationDate', index=5, rename_duplicate=True)
+    table_header.add_column(Column([datetime.strptime(time.ctime(os.path.getmtime(file)), "%a %b %d %H:%M:%S %Y").strftime('%Y-%m-%dT%H:%M:%S') for file in files_name]),name='ModificationTime', index=6, rename_duplicate=True)
+    table_header.add_column(Column(['%0.2f'%(os.stat(file).st_size/1e6) for file in files_name]),name='FileSize_Mo', index=6, rename_duplicate=True)
+
+
 
     #import IPython; IPython.embed()
     from astropy.io import ascii
-    ascii.write(table_header.filled(''), os.path.dirname(path) + '/HeaderCatalog.csv',  format='csv')   
+    path_db =  os.environ['HOME'] + '/DS9BackUp/HeaderDataBase/HeaderCatalog_%s.csv'%(datetime.now().strftime("%y%m%d-%HH%Mm%Ss"))
+    ascii.write(table_header.filled(''),path_db,  format='csv')   
     #csvwrite(hstack(table_header),os.path.dirname(path) + '/HeaderCatalog.csv')#fill_values=[(ascii.masked, 'N/A')]
     #hstack(table_header).write(os.path.dirname(path) + '/HeaderCatalog.fits')
     table_header.pprint_all(max_lines=-1)
-    print('Table saved : ', os.path.dirname(path) + '/HeaderCatalog.csv')
-    print('You can use this table with the Create Image subset [Analysis -> Generic Functions -> Header & Data Base]. This function will help you create well ordered folders of you fits images, respecting possible conditions.')
+    print('\nTable saved : ', path_db)
+    print('\nYou can use this table with the Create Image subset [Analysis -> Generic Functions -> Header & Data Base]. This function will help you create well ordered folders of you fits images, respecting possible conditions.')
     return table_header
 
 def remove_duplicates(hdr):
@@ -4403,11 +4490,11 @@ def remove_duplicates(hdr):
     for key in keys:
         for number in range(keys[key]):
             hdr.remove(key)
-    for key in ['SIMPLE','BITPIX','NAXIS','XTENSION','NAXIS','NAXIS1']:
-        try:
-            hdr.remove(key)
-        except KeyError:
-            pass
+#    for key in ['SIMPLE','BITPIX','NAXIS','XTENSION','NAXIS','NAXIS1']:
+#        try:
+#            hdr.remove(key)
+#        except KeyError:
+#            pass
     return hdr
 
 #%time CreateCatalog_new(glob.glob('/Users/Vincent/Documents/Work/calexp/*.fits'), ext=exts)
@@ -5552,7 +5639,7 @@ def DS9PSFEX(xpapoint):
         
     if query != '-':
         for path in param_dict['ENTRY_PATH']:
-            a = Table.read(path, format="fits", hdu='LDAC_OBJECTS')
+            a = Table.read(path.rstrip()[::-1].rstrip()[::-1], format="fits", hdu='LDAC_OBJECTS')
             a_simple = DeleteMultiDimCol(a)
 
             hdu1 = fits.open(path)
@@ -6013,13 +6100,21 @@ def DS9open(xpapoint, filename=None):
     
     if filename is None:
         filename, type_ = sys.argv[3:]
-    if filename == '-':
-        d=DS9(xpapoint);d.set('analysis message {File not found, please verify your path.}')    
+#    if filename == '-':
+#        d=DS9(xpapoint);d.set('analysis message {File not found, please verify your path.}')    
+#        sys.exit()  
+    filenames = globglob(filename, ds9_im = False)
+    d.set('tile yes')   
+    path=1
+    while (filenames == []) & (path!=''):
+        path = get(d, "File not found, please verify your path.  You can use global pattern matching", exit_=True)#(*/?/[9-16], etc)
+        filenames = globglob(path, ds9_im = False)
+    if path == '':
         sys.exit()
-    else:
-        filenames = globglob(filename)
-        d.set('tile yes')        
         
+#    if filename == '-':
+#        d=DS9(xpapoint);d.set('analysis message {File not found, please verify your path.}')    
+#        sys.exit()       
 #    if (filename[-4:].lower() == '.jpg') or (filename[-4:].lower()  == 'jpeg'):
 #
 #        d.set('rgb')
@@ -6078,115 +6173,46 @@ def DS9open(xpapoint, filename=None):
 #ds9 3d open
 #mecube new
 def pprint(string):
-    from tqdm import tqdm
-    print(string)
-    with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}",
-              postfix=["", dict(value='')], file=sys.stdout) as t:
-        for i in range(0):
-            #t.postfix[1]["value"] = '-----------'
-            t.update()
-#    for i in tqdm(range(1)):
-#        time.sleep(0.01)
+    verboseprint(string,verbose='1')
+#    from tqdm import tqdm
+#    print(string)
+#    with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}",
+#              postfix=["", dict(value='')], file=sys.stdout) as t:
+#        for i in range(0):
+#            t.update()
     return
 
-def DS9tsuite(xpapoint):
-    """Teste suite: run several fucntions in DS9
-    """
+def PhotometricAnalysisTutorial(xpapoint,i=0,n=1):
     from shutil import which
-    d = DS9(xpapoint)
 
-
-    d.set('nan black')#sexagesimal
-    d.set("""analysis message {Test suite for beginners: This help will go through most of the must-know functions of this plug-in. Between each function some message will appear to explain you the purpose of the function and give you some instructions.  }""")
-
-
-    pprint("""********************************************************************************
-                               General Instructions
-********************************************************************************\n
-Shit+V : Enter VERBOSE mode to print intermediate outputs, bugs, etc.
-Default parameters can be changed here: 
-    %s    
-After a function has run you can run it again with different parameters
-by launching it from the Analysis menu.
-
-                  *** When you are done with a function *** 
-       *** Hit the n key (next) so that you go to the next function. ***
-
-I loaded an example image for you.
-INSTRUCTIONS: 
-    1 - Please take some time to adjust the scale/colormap/smoothing 
-        settings by yourself so that you have a clear view of your image.
-        When this is done, please hit n!"""%(resource_filename('pyds9plugin','QuickLookPlugIn.ds9.ans')))
-#You can always load this image by clicking on Analysis->Generic->Simulate Sky Image.
-
-#############################################
-
-    
-    d.set('frame new')
-    d.set('tile no')
-    #CreateImageFromCatalogObject(xpapoint, nb = int(1e3), path='')
-    d.set('file ' +  os.path.join(resource_filename('pyds9plugin', 'Images'),'stack.fits') )
-    #pb pour creer une ellipse au bon ra dec
-    #pb pour fiter le read noise...
-    d.set('zoom to fit')
+    d=DS9(xpapoint)
+    pprint("""
+              *******************************************
+              *      Photometric Analysis Tutorial      *
+              *******************************************
+* This tutorial will show you a few functions that will help you perform
+* photometric analysis in your images. It will go through the following functions:
+Centering - Aperture Photometry - SExtractor (if available)
+                                [Hit n]""")    
     WaitForN(xpapoint)
-    d.set("""analysis message {Now let me show you a much easier and quicker way to change the display settings at once! This function will make you gain a lot of time. }""")
-    pprint("""********************************************************************************
-                               Change settings at once
-  (Analysis->)Generic functions->Setup->Change display parameters [or Shift+S]
-********************************************************************************\n
-    2 - First, click on OK to run the function with the default parameters.""")
-
-    d.set('analysis task "Change Display Parameters (S) "')
-
-    pprint("""    3 - Now create & select a region in a dark area
-        and re-run the function (Shift+S). As you will see, it will compute 
-        the scale's thresholds based on the encircled data! 
-
-    4 - If you want to continue changing the parameters, re-run the function. 
-        When it is done hit n key to access the next function.""")
         
-    WaitForN(xpapoint)
- 
-    
-    d.set("analysis message {Now let us do some 3D plotting}")    
-    pprint("""********************************************************************************
-                               Plot 3D
-         Generic functions -> Setup -> Change display parameters 
-********************************************************************************
-
-    4 - Please create & select a region and then hit n to run the function.
-    The region must be <500pix on the side.""")
-        
-    WaitForN(xpapoint)
-    while  getregion(d,selected=True) is None:
-        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
-        WaitForN(xpapoint)
-    d.set('analysis task "Plot Region In 3D"')
-    pprint("""* Well done!
-* hint: 
-*     - If you smooth the image in DS9 is it will plot it as it is displayed! 
-*     - You can use this function on circle or box regions and use log scale.
-
-You can either rerun the function or HIT N KEY TO ACCESS THE NEXT FUNCTION.""")
-    WaitForN(xpapoint)
-    
     d.set("analysis message {Now let us do some centering and aperture photometry!}")  
+    d.set('pan to 175 300')
     d.set('zoom to 2')
     d.set('regions delete all')
     pprint("""********************************************************************************
-                               Centering
-         Generic functions -> Setup -> Centering
+                               Centering (C)
+                Instrumentation / AIT -> Centering [or Shift+C]
 ********************************************************************************
-
-    5 - Encircle small galaxies/stars with DS9 regions, and select them all by
+* This function allows you to center a region on sources using different
+* alghorithms, you might need to do [Shift+S] to make the sources appear.
+ %i/%i - Encircle small galaxies/stars with DS9 regions, and select them all by
         hitting Cmd+a. They must be small enough to not include other objetcs.
-    6 - We will center the regions on the objects. 
-        Hit n when it is done!""")
+ %i/%i - Hit n when it is done! """%(i,n,i+1,n));i+=2
 
     WaitForN(xpapoint)
 
-    pprint("""    7 - Select the algorithm you want to use and click OK.""")
+    pprint(""" %i/%i - Select the algorithm you want to use and click OK."""%(i,n));i+=1
 
     while  getregion(d,selected=True) is None:
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
@@ -6194,29 +6220,26 @@ You can either rerun the function or HIT N KEY TO ACCESS THE NEXT FUNCTION.""")
     d.set('analysis task "Centering (C)"')
     #d.set("analysis message {Well done! Now let us use some photometry tools!}")    
 
+    
     pprint("""* Well done! 
 ********************************************************************************
-                               Aperture Photometry
-         Generic functions -> Setup -> Aperture Photometry
+                         Aperture Photometry
+         Astronomical Softwares -> Photutils -> Aperture Photometry
 ********************************************************************************
-    8 - Re-select all the regions (Cmd+A) to perform aperture photometry 
-        on these centered regions. Hit n when it is done!""")
-
-
+ %i/%i - Re-select all the regions (Cmd+a) to perform aperture photometry 
+        on these centered regions. Hit n when it is done!"""%(i,n));i+=1
     WaitForN(xpapoint)
-    #d.set('analysis task "Aperture photometry"')    
-    pprint("""    9 - Zero-Point-Magnitude is 30 for this image. 
-        You can also change the radiuses or let them as it is and click OK!""")
+    pprint("""%i/%i - Zero-Point-Magnitude is 30 for this image. 
+        You can also change the radiuses or let them as it is and click OK!"""%(i,n));i+=1
 
-    #d.set("analysis message {}")    
     while  getregion(d,selected=True) is None:
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
         WaitForN(xpapoint)
     d.set('analysis task "Aperture Photometry"')
 
+    
     pprint("""* Perfect!
-    10 - Re-select all the regions (Cmd+A) to perform aperture photometry 
-        on these objects with these centered regions. Hit n when it is done!""")
+%i/%i - Hit n when it is done!"""%(i,n));i+=1    
 
     WaitForN(xpapoint)
     
@@ -6224,25 +6247,23 @@ You can either rerun the function or HIT N KEY TO ACCESS THE NEXT FUNCTION.""")
         d.set("analysis message {Now let us use sextractor as it seems to be installed!}")    
         pprint("""Well done!\n
 ********************************************************************************
-                               Sextractor
-         Generic functions -> Setup -> Sextractor
+                               SExtractor
+         Astronomical Softwares -> SExtractor -> SExtractor
 ********************************************************************************
-    11 - Let us use this masterpiece sofware with DS9
-    12 - You can put 30 in the field MAG_ZEROPOINT. 
-    You can play with the other parameters or let them as they are.""")
+%i/%i - Let us use this masterpiece software with DS9
+%i/%i - You can put 30 in the field MAG_ZEROPOINT. 
+    You can play with the other parameters or let them as they are."""%(i,n,i+1,n));i+=2
         d.set('analysis task "SExtractor "')
 
         pprint("""* Well done!
-    13 - The SExtractor catalog has been saved to $path_cat.fits:
+%i/%i - The SExtractor catalog has been saved to $path_cat.fits:
          %s
          You can open it with TOPCAT. 
-    14 - The magnitudes of the objects are also saved in the ds9 regions. 
-         Select them (Cmd+a) and go to Region->Font-10 to display them! 
+%i/%i - The magnitudes of the objects are also saved in the ds9 regions. 
+         Select them (Cmd+a) and go to Region->Font->10 to display them! 
          You can compare them to the aperture photometry you computed before!
-    14 - Hit n when you want to go to next function."""%(os.path.join(resource_filename('pyds9plugin', 'Images'),'stack_cat.fits')))
+%i/%i - Hit n when you want to go to next function."""%(i,n,os.path.join(resource_filename('pyds9plugin', 'Images'),'stack_cat.fits'),i+1,n,i+2,n));i+=3 
         WaitForN(xpapoint)
-       # d.set("analysis message {The SExtractor catalog has been saved to path_cat.fits. You can open it with TOPCAT. The magnitudes of the objects are also saved in the ds9 regions. Select them (Cmd+a) and go to Region->Font-10 to display them! You can compare them to the aperture photometry you computed before!}")    
-        #WaitForN(xpapoint)
     else:
        pprint("""* Perfect!
 * I wanted to run SExtractor but does not seem to be  installed on your machine!
@@ -6257,12 +6278,52 @@ You can either rerun the function or HIT N KEY TO ACCESS THE NEXT FUNCTION.""")
     pprint("""Well done!\n
 ********************************************************************************
                              Fit Gaussian 2D
-         Generic functions -> Setup -> Fit Gaussian 2D
+         Generic functions -> Image Processing -> Fit Gaussian 2D
 ********************************************************************************
-    15 - Create a region over a star or galaxy and select it. 
-         It must be small enough to encircle only one object.
-    16 - Then press n to use the function 2D gaussian fit!
-         Don't forget that you can smooth the data before if needed.""")
+%i/%i - Create a region over a star or galaxy and select it. 
+         It must be small enough to encircle only one source.
+%i/%i - Then press n to use the 2D gaussian fit function!
+         Don't forget that you can smooth the data before if needed."""%(i,n,i+1,n));i+=2
+    WaitForN(xpapoint)
+    while  getregion(d,selected=True) is None:
+        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
+        WaitForN(xpapoint)
+    d.set('analysis task  "Fit Gaussian 2D"')
+
+    pprint("""* Perfect!
+* As you can see it also created an ellipse around the region!
+* The major/minor axis are the gaussian's FWHMs, the angle is also saved.""")
+    return
+
+
+
+def ImageQualityAssesment(xpapoint,i=0,n=1):
+    d=DS9(xpapoint)
+    pprint("""
+              *******************************************
+              *    Image Quality Assesment Tutorial     *
+              *******************************************
+* This tutorial will show you a few functions that will help you asses
+* the image quality in your images. It will go through the following functions:
+Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
+                                [Hit n]""")
+    WaitForN(xpapoint)
+        
+    d.set("analysis message {Let us do some 2D gaussian fitting!}")  
+    d.set('regions delete all')
+    d.set('zoom to 2')
+
+
+    pprint("""********************************************************************************
+                             Fit Gaussian 2D
+         Generic functions -> Image Processing -> Fit Gaussian 2D
+********************************************************************************
+* This function fits your encircled data by a 2D assymetrical gaussian
+* You might need to hit [Shift+S] to make the compact sources appear.
+%i/%i - Create a region over a star or galaxy and select it. 
+         It must be small enough to encircle only one source.
+%i/%i - Then press n to use the 2D gaussian fit function!
+         Don't forget that you can smooth the data before if needed."""%(i,n,i+1,n));i+=2
     WaitForN(xpapoint)
     while  getregion(d,selected=True) is None:
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
@@ -6273,85 +6334,166 @@ You can either rerun the function or HIT N KEY TO ACCESS THE NEXT FUNCTION.""")
 * As you can see it also created an ellipse around the region!
 * The major/minor axis are the gaussian's FWHMs, the angle is also saved.
 
-    17 - Then press n to go to next function: Radial profile!
-""")
+%i/%i - Then press n to go to next function: Radial profile!
+"""%(i,n));i+=1    
     
     WaitForN(xpapoint)
     pprint("""********************************************************************************
                              Radial Profile
-         Generic functions -> Setup -> Radial Profile [or r]
+         Instrumentation / AIT -> Focus -> Radial Profile [or r]
 ********************************************************************************
 
-* This function as been run on the selected region (same than before then).
+* This function is run on the selected region (same than before then).
 * You can change the centering algortihm if you want. The source diameter needs
 * only to be changed when you want to fit the image of an unresolved source by
-* your insturment, such as a fiber or a laser. Then it fits the profile
-* by the convolution of a gaussian by a disk of this diameter!""")
+* your instrument, such as a fiber or a laser. Then the profile is fitted
+* by the convolution of a gaussian by a disk of this diameter!
+                    [Hit n] """)
 
-
-    #d.set("analysis message {Or a radial profile to compute the seeing and the encircled energy.}")    
-    d.set('analysis task "Radial Profile (r)" ')  
+    WaitForN(xpapoint)
     pprint("""* As you can see it plots both the radial profile and the encircled energy 
 * of the encircled object up to the region's radius.
 * It shows several image quality estimators: 
 *    Moffat fit, gaussian fit, FWHM, 50%-80% Encircled energy diameters...
 """)    
+
+    d.set('analysis task "Radial Profile (r)" ')  
     
     
     pprint("""* To compute the image quality of your data, you must select one
 * of the most compact (small) source in your image and run the radial profile. 
 
-    18 - If you want to do it create & select a region on a very compact spot 
-         and run the function (r). If you want to go to the next function
-         just hit n!""")
+%i/%i - If you want to do it by yourself create & select a region on a very 
+         compact spot and run the function (r). If you want to go to the next 
+         function close the window and hit n!"""%(i,n));i+=1    
     WaitForN(xpapoint)
 
+    d.set("analysis message {Let us open several images at once to do some through-focus analysis!}")    
 
+    pprint("""********************************************************************************
+                                Open Image (O)
+              Generic functions -> Setups -> Open Image [or O]
+********************************************************************************
+%i/%i - You can use regular expression to open several files! Copy this path:
+         %s
+%i/%i - Hit n to run the function"""%(i,n,resource_filename('pyds9plugin','Images/stack????????.fits'),i+1,n));i+=2
+
+    WaitForN(xpapoint)
+    d.set('frame delete all')
+    d.set('frame new')
+    pprint("""%i/%i - Then paste it in the RegExp path field.
+* If you do not see any image, the cuts might not be right, 
+* hit shift+s to change it automatically.
+%i/%i - Hit n to go to next function."""%(i,n,i+1,n));i+=2
+    d.set('analysis task "Open Image (O)"')
+
+        
+    WaitForN(xpapoint)
+        
+    pprint("""********************************************************************************
+                             Lock / Unlock Frames
+       Generic functions -> Setups -> Lock / Unlock Frames [or Shift+L]
+********************************************************************************
+* It is quite slow to match all the tiles of DS9 display at once.
+* This tool allows you to do it simply and at once
+* As there is not any WCS header in the images,
+* there is no need to change the default parameters.
+%i/%i - Click on OK and then hit n when you want to go to the next function."""%(i,n));i+=1    
+
+    d.set('analysis task "Lock/Unlock Frames (L)"')    
+    WaitForN(xpapoint)
+    d.set("analysis message {Let us do a throughfocus analysis!}")    
+
+    pprint("""********************************************************************************
+                                  Throughfocus
+              Instrumentation / AIT -> Focus -> Throughfocus
+********************************************************************************
+* The following throughfocus function will compute several estimators 
+* of image quality on every image.   
+%i/%i - Please define & select a circle region around the best focused PSF.
+%i/%i -  Hit n when it is done."""%(i,n,i+1,n));i+=2
+
+    WaitForN(xpapoint)
+
+    pprint("""%i/%i - On the RegExp path field you can either paste 
+         the same pathname pattern as before or let it blank so that the
+         function only uses images displayed in DS9
+%i/%i - If you put the path then select alpha-numerical, else select DS9 -> OK
+* next time, if throughfocus is not in alpha-numerical or time order
+* you can change their display on DS9 menu: Frame -> Move frame
+* Do not check the WCS box, must be used when available WCS information 
+* and that the spots are on the same sky region not pixel."""%(i,n,i+1,n));i+=2
+    
+    while  getregion(d,selected=True) is None:
+        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please create a circle on a close to focus spot, select it and press n.}")    
+        WaitForN(xpapoint)
+    d.set('analysis task "Throughfocus  "')    
+    WaitForN(xpapoint)
+    return 
+
+def ImageProcessingTutorial(xpapoint,i=0,n=1):
+    d=DS9(xpapoint)
+    pprint("""
+              *******************************************
+              *        Image Processing Tutorial        *
+              *******************************************
+              
+* This tutorial will show you a several functions that will show you how to take
+* advantage of very usefull image processing tools. It will go through the following 
+* functions: Interactive 1D Fitting On Plot - Execute Python Command
+                                [Hit n]""")   
+    WaitForN(xpapoint)
     d.set("analysis message {Now, let us try some interactive 1D fitting!}")  
 
     pprint("""********************************************************************************
                              Interactive 1D Fitting On Plot
-         Generic functions -> Setup -> Interactive 1D Fitting On Plot
+    Generic functions -> Image Processing -> Interactive 1D Fitting On Plot
 ********************************************************************************
 
-* This package allows you to perform interactive 1D fitting 
-* with user adjustment of the initial fitting parameters.
+* As a >5 pameters fit is unlikely to converge without a close initial,
+* this package allows you to perform interactive 1D fitting 
+* with user adjustment of the initial fitting parameters!
+* You might need to hit [Shift+S] to make appear some features in the image.
 
-    19 - Create a projection (Region->Shape->Projection) on a shape you want 
-         to fit. Move it untill you have a fittable feature (several gaussians, 
-         slope,exponential or sum of them...). You can stack the projection 
-         with the small square on the center of you line!
-    20 - When you are happy with the shape you have hit n to run the function!
-""")
+%i/%i - Create a projection (Region->Shape->Projection) on a shape you want 
+         to fit. Move it until you have a fittable feature (several gaussians, 
+         slope, exponential or sum of them...). You can stack the projection 
+         with the small square on the center of your line!
+%i/%i - When you are happy with the shape you have hit n to run the function!
+"""%(i,n,i+1,n));i+=2
         
       
     WaitForN(xpapoint)
-    pprint("""    21 - Choose the background and the number of gaussian you want
+    pprint("""%i/%i - Choose the background and the number of gaussians you want
          to fit the data with.
-    22 - Now, you adjust each parameter of each feature! Change by hand the 
-         different parameters to fit the data and then ckeck on Fit to run the 
+%i/%i - Now, you adjust each parameter of each feature! Change by hand the 
+         different parameters to fit the data and then click on Fit to run the 
          fitting least square function. Then you can read the parameters of the
-         features that can help you asses image quality or other information.""")
+         features that can help you asses image quality or other information."""%(i,n,i+1,n));i+=2
     d.set('analysis task "Interactive 1D Fitting On Plot"')
 
     pprint("""* This fitting function works on any DS9 plot! Now let's use it 
-* on an histogram to compute the the read noise of the image!
+* on an histogram to compute the read noise of the image!
 
-    23 - Create a r~200 region over a dark area of the image. Double click on
+%i/%i - Create a r~200 region over a dark area of the image. Double click on
          it. The region's window should appear, click on Analysis -> Histogram
          to plot the histogram of the encircled data!
-    24 - If the plot does not show a nice gaussian, move a bit the region or
+%i/%i - If the plot does not show a nice gaussian, move a bit the region or
          change the radius to have enough pixels without too bright ones.
-         The plot should reload automatically. 
-    25 - Go to Interactive 1D Fitting On Plot when you are ready!""")
+         The plot should refresh automatically. 
+%i/%i - Go to Interactive 1D Fitting On Plot when you are ready!"""%(i,n,i+1,n,i+2,n));i+=2
 
     d.set('zoom to fit')
     WaitForN(xpapoint)
-    pprint("""    26 - Fit this shape by just 1 gaussian with constant 
+    pprint("""%i/%i - Fit this shape by just 1 gaussian with constant 
          background to compute the read noise of the image! Adjust the para-
          meters and click on fit! The read noise is the FWHGM of your gaussian!
-    27 - Hit n when you want to go to next function.""")
+%i/%i - Hit n when you want to go to next function."""%(i,n,i+1,n));i+=2
 
+    while d.get('plot') == '':
+        d.set("analysis message {Please create a plot by creating a Region->Shape->Projection to run this function. Hit n when it is done.}")  ;sys.exit()  
+        WaitForN(xpapoint)
+        
 
     d.set('analysis task "Interactive 1D Fitting On Plot"')
     WaitForN(xpapoint)
@@ -6362,314 +6504,227 @@ You can either rerun the function or HIT N KEY TO ACCESS THE NEXT FUNCTION.""")
 
     pprint("""********************************************************************************
                              Execute Python Command
-         Generic functions -> Setup -> Execute Python Command
+        Generic functions -> Image Processing -> Execute Python Command
 ********************************************************************************
 
 * This command allows you to modify your image by interpreting a python command
 * Enter a basic command in the Expression field such as: 
 *    ds9=ds9[:100,:100]                           -> Trim the image
-*    ds9+=np.random.normal(0,0.1,size=ds9.shape)  -> Add noise ot the image
+*    ds9+=np.random.normal(0,0.1,size=ds9.shape)  -> Add noise to the image
 *    ds9[ds9>2]=np.nan                            -> Mask a part of the image
-*    ds9=1/ds9, ds9+=1, ds9+=1                    -> Mask a part of the image
-*    ds9=convolve(ds9,np.ones((2,3)))[2:-2,3:-3]  -> Convolve unsytmetrically
+*    ds9=1/ds9, ds9+=1, ds9+=1                    -> Different basic expressions
+*    ds9=convolve(ds9,np.ones((1,9)))[1:-1,9:-9]  -> Convolve unsymetrically
 
 * If you want to combine another image, enter its path in the first field
 * and call it by image in the next field:
 *    ds9-=image    (Must be the same size!)       -> Subtract the image
 *    ds9=convolve(ds9,image)  (image must be odd) -> Convolve with image
 
-    28 - Hit n when you want to use the function.""")
+%i/%i - Hit n when you want to use the function."""%(i,n));i+=1
 
     WaitForN(xpapoint)
-    pprint("""    29 - Choose the function you want to use among the example above.
+    pprint("""%i/%i - Choose the function you want to use among the example above.
           If you want to use the images' convolution copy paste this one:
-    %s"""%(resource_filename('pyds9plugin','Images/stack18446524.fits')))
+    %s"""%(i,n,resource_filename('pyds9plugin','Images/stack18446524.fits')));i+=1    
 
     d.set('analysis task "Execute Python Command "')
     
     pprint("""* Well done!
-    29 - You can try it again or hit n when you want to go to next function.""")
+%i/%i - You can try it again or hit n when you want to go to next function."""%(i,n));i+=1    
 
     WaitForN(xpapoint)
+    return
+
+def GenericToolsTutorial(xpapoint,i=0,n=1):
+    d=DS9(xpapoint)
     
-    #############################################
-    d.set("analysis message {Let us open several images at once to do some through-focus analysis!}")    
+    pprint("""              *******************************************
+              *          Generic Tools Tutorial         *
+              *******************************************
+              
+* This tutorial will show you a few functions that will help you interacting 
+* with your fits images. It will go through the following functions: 
+* Change Display Parameters - Plot Region In 3D 
+* Create Header Catalog  - Create Image Subset
+                                [Hit n]""")      
+    WaitForN(xpapoint)
 
+    d.set("""analysis message {Now let me show you a much easier and quicker way to change the display settings at once! This function will make you gain a lot of time. }""")
     pprint("""********************************************************************************
-                             Open
-         Generic functions -> Setup -> Open (O)
-********************************************************************************
-    30 - You can use regular expression to open several files! Copy this path:
-         %s
-    31 - Hit n to run the function"""%(resource_filename('pyds9plugin','Images/stack????????.fits')))
+                               Change settings at once
+  (Analysis->)Generic functions->Setup->Change display parameters [or Shift+S]
+********************************************************************************\n
+ %i/%i - First, click on OK to run the function with the default parameters."""%(i,n));i+=1
 
+    d.set('analysis task "Change Display Parameters (S) "')
+
+    pprint(""" %i/%i - Now create & select a region in a dark area
+        and re-run the function (Shift+S). As you will see, the scale's 
+        thresholds for the image will be computed based on the encircled data! 
+
+ %i/%i - If you want to continue changing the parameters, re-run the function. 
+        Else [Hit n]"""%(i,n,i+1,n))
+    i+=1
+    i+=1
+        
     WaitForN(xpapoint)
-    d.set('frame delete all')
-    d.set('frame new')
-    pprint("""    32 - Then paste it in the RegExp path field.
-* If you do not see any image, the cuts might not be right, 
-* hit shift+s to change it automatically.
-    33 - Hit n to go to next function.""")
-    d.set('analysis task "Open Image (O)"')
-
-    WaitForN(xpapoint)
-    pprint("""********************************************************************************
-                             Lock
-         Generic functions -> Setup -> Lock [or Shift+L]
-********************************************************************************
-* It is quite slow to match all the tiles of DS9 display at once.
-* This tool allows you to do it simply and at once
-* As there is not any WCS header in the images,
-* there is no need to change the parameters.
-    34 - Click on OK and then hit n when you want to go to the next function.""")
-
-    d.set('analysis task "Lock/Unlock Frames (L)"')    
-    WaitForN(xpapoint)
-    d.set("analysis message {Let us do a throughfocus analysis!}")    
-
-    pprint("""********************************************************************************
-                             Throughfocus
-         Generic functions -> Setup -> Throughfocus
-********************************************************************************
-* The following throughfocus function will compute several estimators 
-* of focus on every image.   
-    35 - Please define & select a circle region around the best focused PSF
-    36 - Hit n when it is done.""")
-
-    WaitForN(xpapoint)
-
-    pprint("""    37 - On the RegExp path field you can either paste 
-         the same pathname pattern as before or let it blank so that the
-         function only uses images displayed in DS9
-    38 - If you put the path then select alpha-numerical, else select DS9 -> OK""")
+ 
     
+    d.set("analysis message {Now let us do some 3D plotting}")    
+    d.set('pan to 630 230')
+    d.set('zoom to 1')
+    
+    pprint("""********************************************************************************
+                               Plot Region In 3D
+                   Generic functions -> Plot Region In 3D
+********************************************************************************
+
+ %i/%i - Please create & select a region and then hit n to run the function.
+    The region must be <500pix on the side."""%(i,n))
+    i+=1
+        
+    WaitForN(xpapoint)
     while  getregion(d,selected=True) is None:
-        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please create a circle on a close to focus spot, select it and press n.}")    
+        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
         WaitForN(xpapoint)
-    d.set('analysis task "Throughfocus  "')    
-    pprint("""    39 - Hit n when you are ready to go to the last but not least functions!""")
+    d.set('analysis task "Plot Region In 3D"')
+    pprint("""* Well done!
+* If you smooth the image in DS9 is it will plot it as it is displayed! 
+* You can use this function on circle or box regions and use log scale.
+* You can either rerun the function or HIT n KEY TO ACCESS THE NEXT FUNCTION.""")
     WaitForN(xpapoint)
 
-    
+  
     pprint("""********************************************************************************
                              Create Header Catalog
-         Generic functions -> Setup ->  Create Header Catalog
+         Generic functions -> Header & Data Base ->  Create Header Catalog
 ********************************************************************************
 * The following function will take all the images matching the given pattern
 * and will concatenate all the header information in a csv catalog.
+* It will also add other info: pathm, name, directory, creation date, size.
 * You can either give it a folder where you put (a subset of) your images
 * or even search your whole documents folder: %s
+* If you do not have any fit[s] file here you can use the one of this plugin:
+    %s
 * Do not worry if you have too many files, we will only take the first 200.
-    40 - Copy the path you want to use and hit n when you are ready."""%(os.environ['HOME'] + '/Documents/**/*.fit*'))
+%i/%i - Copy the path you want to use and hit n when you are ready."""%(os.environ['HOME'] + '/Documents/**/*.fit*',os.path.join(resource_filename('pyds9plugin', '**/*.fits')),i,n));i+=1    
 
     WaitForN(xpapoint)
-    pprint("""    41 - Paste the path in the Regexp Path entry.""")
+    pprint("""%i/%i - Paste the path in the Regexp Path entry."""%(i,n));i+=1    
     #d.set('analysis task "Create Header Data Base"')    
-    path = d.get('analysis entry "Path of the images to extract.  Use global pattern matching (*/?/[9-16], etc)"')
+    path = get(d, "Path of the images to extract.  Use global pattern matching", exit_=True)#(*/?/[9-16], etc)
     files = globglob(path)[:100]
+    while len(files)==0:
+        path = get(d, "No file matching the regular expression. Please give a new pattern matching (*/?/[9-16], etc)", exit_=True)
+        files = globglob(path)[:100]
     DS9CreateHeaderCatalog(xpapoint=None, files=files, info=False, config=my_conf)
     pprint("""* Great!
-    41 - The master header catalog has been saved here: 
-         %s
-         You can open & analyse it with TOPCAT. 
+%i/%i - You can open the above catalog & analyse it with TOPCAT. 
          Please copy this path, you will need it!
-    42 - Hit n when you are ready to use it!""") 
+%i/%i - Hit n when you are ready to use it!"""%(i,n,i+1,n));i+=2 #The master header catalog has been saved here: %s
     WaitForN(xpapoint)
-    d.set('analysis task "Create Image Subset"')    
     pprint("""********************************************************************************
                              Create Image Subset
-         Generic functions -> Setup ->  Create Header Catalog
+       Generic functions -> Header & Data Base ->  Create Image Subset
 ********************************************************************************
-* We are now gonna use the very last function that will help you arange all 
+* We are now gonna use the very last function that will help you arrange all 
 * your fits/fit/FIT images very simply. I will basically use the header catalog
-* to arange your files verifying some conditions and orders!
+* to arrange your files verifying some conditions and orders!
 * Do not worry, we will not displace your files, just create some symbolic links
 * to help you see all the images you have!
-    43 - Paster you header catalog in the first field.
-    43 - In the second one enter the way you want to order your images based on
-         the fields (floats) that are in the header : %s
-    43 - In the last one, write the selection that you want to to on the catalog
-         for instance: %s
-    44 - Check ok when you are ready"""%('NAXIS,EXPTIME','EXPTIME>10 & NAXIS1>1000')) 
+%i/%i - Paste your header catalog path in the first field.
+%i/%i - In the second one enter the way you want to order your images based on
+         the fields (floats) that are in the header, eg: 
+* NAXIS,Directory      -> Differentiate images/cubes and order them by folder       
+* CTYPE1,CreationDate  -> Differentiate WCS types and order them by dates 
 
-    pprint("""    45 - Go to %s and enjoy your well ordered files!           
-    46 - You can copy paste these instruction somewhere if you want to keep it!
-    """%(os.environ['HOME'] + '/DS9BackUp/Subsets'))
-    time.sleep(2)
-    d.set("analysis message {You are now ready to use the DS9 Quick Look plugin by yourself.}")    
+%i/%i - In the last one, write the selection that you want to apply to the 
+        catalog, for instance, eg: 
+* NAXIS==2  [NAXIS==3/0]        -> Take only images [or cube/table respectively]         
+* BITPIX==-64 \| NAXIS2>1000    -> Certain bibpix and image heights>10000
+* FileSize_Mo>10  \& WCSAXES>1  -> Big images containing WCS header   
+* EMGAIN>9000 \& EXPTIME<10     -> Likely photon starving images 
+
+%i/%i - Check ok when you are ready
+* Note that you must use & for AND and \| for OR! """%(i,n,i+1,n,i+2,n,i+3,n)) ;i+=4
+    d.set('analysis task "Create Image Subset"')    
+
+    pprint("""%i/%i - Go to %s and enjoy your well ordered files!           
+%i/%i - You can copy paste these instructions somewhere if you want to keep it!
+    """%(i,n,os.environ['HOME'] + '/DS9BackUp/Subsets',i+1,n));i+=2
+    #time.sleep(5)
     
-    sys.exit()
-#    d.set('frame delete all')
-#    files  = globglob('/Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/TF/stack*_Trimm.fits')
-#    files.sort()
-#    d.set('lock frame image')
-#    d.set('lock scalelimits yes')
-#    d.set('tile yes')
-#    for file in files:
-#        d.set('frame new')
-#        d.set('file ' + file)
-#    DS9setup2(xpapoint)
+
  
-     
-
     
-    d.set('frame delete all')
-    d.set('frame new')
-    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/Guidance/stack25055816_Trimm.fits')
-    DS9setup2(xpapoint, color='cool')
-    d.set("analysis message {Let us ty some real time simplistic guiding code in the case you need it for your observing nights. Select around ~3 stars by creating a circle regin around them and hit m.}")    
-    WaitForN(xpapoint)
-    sys.exit()
-    d.set('analysis task Guidance')
-    WaitForN(xpapoint)
-    d.set("analysis message {You are now ready to use the DS9 Quick Look plugin by yourself.}")    
-    sys.exit()
-
     return
-#
-#def DS9tsuite_old(xpapoint):
-#    """Teste suite: run several fucntions in DS9
-#    """
-#    #if connect(host='http://google.com') if False: sys.exit()
-#    d = DS9(xpapoint)
-#    d.set('nan black')#sexagesimal
-#    d.set("""analysis message {Test suite for beginners. This help, will go through most of the must-know functions of this plug-in. Between each function a message window will pop-up to explain you what does the function. After it has run you can run it again and change the parameters. When this is done you can just press the n key (next) so that you go to the next function. First of all, let's load an image. You can change the cut/colormap/smoothing by yourself. }""")
-#
-##############################################
-#    
-#    
-#    d.set('frame new')
-#    d.set('tile no')
-#    #d.set("analysis message {First of all, let's load an image. You can change the cut/colormap/smoothing by yourself. }")
-#    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/calexp-HSC-G-9813-1-5_1.fits')
-#    d.set('zoom to fit')
-#    WaitForN(xpapoint)
-#    d.set("""analysis message {Now let's use the first function: change all the display setups directly. Next time you will be able to access directly this function by hitting shift+s (for settings) or go in Analysis->Generic functions->Setup->Change display parameters. This function will make you gain a lot of time. If you create a region before hitting shift+s it will compute the threshold based on the encircled data! Do not forget to hit n when you want to go to next function!}""")
-#    d.set('analysis task 6')#setup
-#    WaitForN(xpapoint)
-#    d.set("analysis message {Now let's use SExtractor to perform a source extraction on this image. You can access this function via: Analysis->Astromatic->Setup->Change display parameters. Do not hesitate to change the detection threshold or other parameters to try to optimize your source extraction!}")
-#    d.set('analysis task 30')
-#    WaitForN(xpapoint)
-#    
-#    #######################3
-#    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/2_Visualization-TF-TS/TF/TF_WCS/stack8099989_pa-161_2018-06-11T06-02-49_wcs.fits')
-#    DS9setup2(xpapoint)
-#    WaitForN(xpapoint)
-#    d.set('analysis task 35')
-#    WaitForN(xpapoint)
-#        #####################
-#    
-#    
-#    
-#    d.set("analysis message {Now let's do some resampling and co-add of FITS images having WCS header. It uses SWARP software.}")
-#    d.set('frame delete all')
-#    for file in globglob('/Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/SWARP/calexp2_trim?.fits'):
-#        d.set('frame new')
-#        d.set('file ' + file)
-#        DS9setup2(xpapoint)
-#    d.set('tile yes')
-##    d.set("analysis message {You can type Shift+l to directly control all the lock parameters between the different frames}")
-##    d.set('analysis task 9')
-##    d.set('lock frame wcs')
-#
-#
-#
-##    d.set('frame new')
-##    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/SWARP/calexp2.fits')
-##    d.set('zoom to fit')
-##    d.set('zoom out')
-##    d.set('frame next')
-##    d.set('zoom to fit')
-##    d.set('zoom out')
-#    WaitForN(xpapoint)
-#    d.set("analysis message {As you can see the different images are cut... SWARP perform background subtraction and noise-level measurement for automatic weighting. Do not hesitqte to re-run the function and press n when you are satisfierd and want to go to next function.}")
-#    d.set('analysis task 31')
-#    WaitForN(xpapoint)
-#    #d.set("analysis message {Now they are attached! Let's now use multi-band images to simulate visible images. }")
-#    d.set('frame delete all')
-#    d.set('tile yes')
-##    d.set('lock cmap no')
-##    d.set("lock colorbar no") 
-##
-##    d.set('lock scalelimits no')
-##    d.set("lock frame no")
-#
-#    d.set('frame new') 
-#    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/STIFF/G_Trimm.fits')
-#    DS9setup2(xpapoint, color='cool')
-#    d.set('frame new')
-#    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/STIFF/R_Trimm.fits')
-#    DS9setup2(xpapoint, color='green')
-#    d.set('frame new')
-#    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/STIFF/I_Trimm.fits')
-#    DS9setup2(xpapoint, color='red')
-##    d.set('lock frame physical')
-#    WaitForN(xpapoint)
-##    d.set('wcs skyformat degrees')
-##    d.set('wcs reset')
-#    d.set('lock frame image')
-#    d.set('lock frame no')
-#
-#    d.set("analysis message {We are now gonna use STIFF function to generate from scientific FITS image more popular TIFF format images for illustration puporses. Enter the path of a same image in three different bands (R,G,I) and STIFF will perform an accurate reproduction of the original surface brightness and colour, automatioc contrast/brightness adjustments, etc.}")
-#    #d.set('wcs reset')
-#    d.set('analysis task 32')
-#    WaitForN(xpapoint)
-#    
-#
-##
-##
-##    d.set('regions format ds9')
-##    d.set('regions system image')
-##    d.set('tile no')
-##    d.set('regions command  "circle 8000 8000 20 # color=yellow"')
-##    d.set('pan to 8000 8000')
-##    d.set('zoom to 4')
-##    d.set('regions select all')
-##    d.set("analysis message {Create a region }")        
-##    WaitForN(xpapoint)
-#    d.set("analysis message {Now some more simple features that do not need any other code to be run. Create a region on the part of the galaxy for instance (select it) and hit n : This will generate a 3d plot of a region area.  }")    
-#    WaitForN(xpapoint)
-#    d.set('analysis task 17')
-#    WaitForN(xpapoint)
-#    d.set("analysis message {No create a region a a bright star and select it. Then press n to use the function 2D gaussian fit!}")    
-#    WaitForN(xpapoint)
-#    d.set('analysis task 12')
-#    WaitForN(xpapoint)
-#    d.set("analysis message {Or a radial profile to compute the seeing and the encircled energy.}")    
-#    d.set('analysis task 20')    
-#    WaitForN(xpapoint)
-#    d.set('frame delete all')
-#    d.set('frame new') 
-#    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/Command/image000034.fits')
-#    DS9setup2(xpapoint, color='cool')
-#    d.set('zoom to 1')
-#    d.set('regions command  "box 1598 1071 702 38 # color=yellow"')
-#    WaitForN(xpapoint)
-#    d.set("analysis message {This package also allows you to perform interactive 1D fitting with user adjustment of the initial fitting parameters. Choose 3 gaussian in order to fit the different features. }")    
-#    d.set('analysis task 11')
-#    WaitForN(xpapoint)
-#    #sys.exit()
-#    d.set('frame delete all')
-#    files  = globglob('/Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/TF/stack*_Trimm.fits')
-#    files.sort()
-#    d.set('lock frame image')
-#    d.set('lock scalelimits yes')
-#    for file in files:
-#        d.set('frame new')
-#        d.set('file ' + file)
-#    DS9setup2(xpapoint)
-# 
-#        
-#    d.set("analysis message {Here is a throughfocus.Please create a region around a close to focus spot. Then hit n.}")    
-#    WaitForN(xpapoint)
-#    d.set('analysis task 19')
-#    WaitForN(xpapoint)
-#    
-#    #add throughfocus
-#    #add throughfocus analysis
-#    #add astrometry.net
-#    #add swarp
-#    
+
+def DS9tsuite(xpapoint):
+    """Teste suite: run several fucntions in DS9
+    """
+    d = DS9(xpapoint)
+    verbose(xpapoint,verbose='0')
+    tutorial = sys.argv[-1]
+    tutorial_number = '0'
+    if tutorial=='1-Generic-Tools':
+        tutorial_number += '1'
+    elif tutorial=='2-Photometric-Analysis':
+        tutorial_number += '2'
+    elif tutorial=='3-Image-Quality-Assesment':
+        tutorial_number += '3'
+    elif tutorial=='4-Image-Processing':
+        tutorial_number += '4'
+    if tutorial=='5-All-In-One':
+        tutorial_number = '1234'
+    #print(tutorial,tutorial_number)
+    d.set('nan black')#sexagesimal
+    d.set("""analysis message {Test suite for beginners: This help will go through most of the must-know functions of this plug-in. Between each function some message will appear to explain you the purpose of these functions and give you some instructions.  }""")
+    pprint("""********************************************************************************
+                               General Instructions
+********************************************************************************\n
+I will follow you during this tutorial so please do not close me.
+[Type Shift+V to  Enter VERBOSE mode. Only for debugging.] 
+
+You can access/change the default parameters of each function here: 
+    %s    
+After a function has run you can run it again with different parameters
+by launching it from the Analysis menu [always explicited under function's name]
+[Hit n]: When you are done with a function, 
+         Hit the n key (next) so that you go to the next function."""%(resource_filename('pyds9plugin', 'QuickLookPlugIn.ds9.ans')))
+
+    d.set('frame new')
+    d.set('tile no')
+    d.set('file ' +  os.path.join(resource_filename('pyds9plugin', 'Images'),'stack.fits') )
+    d.set('zoom to fit')
+    #WaitForN(xpapoint)
+    #print('tutorial_number = ', tutorial_number)
+    i=1
+    if '1' in tutorial_number:
+        GenericToolsTutorial(xpapoint,i=i,n=10)
+    if '2' in tutorial_number:
+        PhotometricAnalysisTutorial(xpapoint,i=i,n=10)
+    if '3' in tutorial_number:
+        ImageQualityAssesment(xpapoint,i=i,n=10)
+    if '4' in tutorial_number:
+        ImageProcessingTutorial(xpapoint,i=i,n=10)
+    if tutorial=='5-All-In-One':
+        #d.set("analysis message {You are now ready to use the DS9 Quick Look plugin by yourself.}")    
+        pprint("""
+********************************************************************************
+             You are now ready to use the DS9 Quick Look plugin by yourself.
+********************************************************************************\n""")
+
+    else:
+        #d.set("analysis message {Well done, You completed the %s tutorial! Let's try the next one when you have some time!}"%(tutorial))    
+        pprint("""
+********************************************************************************
+             Well done, You completed the %s tutorial! 
+               Let's try the next one when you have some time!
+********************************************************************************\n"""%(tutorial))
+
+    sys.exit()    
+    return
+
 #
 #    
 #    d.set('frame delete all')
@@ -6724,7 +6779,7 @@ def DS9RemoveImage(xpapoint):
 
 
 
-@fn_timer
+#@fn_timer
 def main():
     """Main function where the arguments are defined and the other functions called
     """
@@ -6813,7 +6868,8 @@ def main():
                     logger.critical(e)
 
                     pass
-    verboseprint('\n****************************************************')    
+        if function not in ['verbose','setup','next_step']:
+            verboseprint('\n****************************************************')    
     return a
 
 

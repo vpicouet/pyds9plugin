@@ -23,16 +23,16 @@ else:
 
 
        
-def verboseprint(*args, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))))):
-    """Print function with a boolean verbose argument
+#def verboseprint(*args, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))))):
+#    """Print function with a boolean verbose argument
+#    
+#    """
+#    if bool(int(verbose)):
+#        print(*args)
+#    else:
+#        pass
     
-    """
-    if bool(int(verbose)):
-        print(*args)
-    else:
-        pass
-    
-    
+ 
 
 def FitsExt(fitsimage):
     ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
