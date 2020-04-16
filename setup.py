@@ -1,11 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
-
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 
-requires = ['numpy >=1.8', #'PyQt5','Pillow','pyswarm',
+requires = ['numpy >=1.8', #'PyQt5','Pillow',
             'scipy >=0.14', 
             'matplotlib>=3.1.1',
             'astropy >=1.3',
@@ -14,7 +15,7 @@ requires = ['numpy >=1.8', #'PyQt5','Pillow','pyswarm',
             'tqdm',
             'datetime',  
             'pandas',       
-            'logalpha <2']
+            'dataphile']
 
 entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils = pyds9plugin.DS9Utils:main']
@@ -24,7 +25,7 @@ data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Images/stack?????
 
 MAJOR = '2'
 MINOR = '9'
-MICRO = '3dev0'
+MICRO = '3dev2'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():

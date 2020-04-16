@@ -123,6 +123,7 @@ hmenu Generic Functions
 		Execute Python Command #13
 		*
 		menu
+#		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
 		DS9Utils $xpa_method SubstractImage $param(Python-Command); $im_path "$exp" 0  "$path"   | $text  
 
 		Interactive 1D Fitting On Plot
@@ -154,7 +155,7 @@ hmenu Generic Functions
 		*
 		menu
 		#DS9Utils $xpa_method Trimming $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
-		DS9Utils $xpa_method Trimming $param(Images-to-analyze);  "$path"   | $text  
+		DS9Utils $xpa_method Trimming $param(Trimming);  Image  "$path"   | $text  
 	
 	endhmenu
 
@@ -434,7 +435,12 @@ endhmenu
 
 ---
 
-
+#help 
+#Main Help
+#A help message may contain
+#multiple lines of description of the tasks
+#in the menu or menus
+#endhelp
 
 
 DS9Functions Help !
@@ -805,6 +811,11 @@ endparam
 
 
 param Images-to-analyze
+path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+endparam
+
+param Trimming
+#system menu {Coordinate system} Image|Physical DS9 pixel coordinate system to use to extract the sub-image}
 path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 

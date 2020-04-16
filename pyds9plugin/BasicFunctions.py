@@ -34,39 +34,6 @@ else:
     
  
 
-def FitsExt(fitsimage):
-    ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
-    verboseprint('Taking extension: ',ext)
-    return ext
-
-
-
-
-def DS9lock(xpapoint):
-    """Lock all the images in DS9 together in frame, smooth, limits, colorbar
-    """
-    d = DS9(xpapoint)
-    l = sys.argv[-3:]
-    ll = np.array(l,dtype='U3')
-    verboseprint(l,ll)
-    l = np.array(l,dtype=int)
-    ll[l==1]='yes'
-    ll[l==0]='no'
-#    if ll[0] == 'no':
-#        d.set("lock frame %s"%(ll[0]))
-#    else:
-    d.set("lock frame %s"%(sys.argv[-5]))
-    d.set("lock crosshair %s"%(sys.argv[-4]))
-        
-    d.set("lock scalelimits  %s"%(ll[-3]))
-#    if ll[2] == 'no':
-#    else:
-#        d.set("lock crosshair physical")
-    d.set("lock smooth  %s"%(ll[-2]))
-    d.set("lock colorbar  %s"%(ll[-1]))
-
-    return
-
 
 
 
