@@ -336,6 +336,7 @@ def LoadDS9QuickLookPlugin():
     """Load the plugin in DS9 parameter file
     """
     from shutil import which
+    d=DS9()
     try:
         AnsDS9path = resource_filename('pyds9plugin','QuickLookPlugIn.ds9.ans')
         help_path = resource_filename('pyds9plugin','doc/ref/index.html')
@@ -350,7 +351,7 @@ def LoadDS9QuickLookPlugin():
         if len(glob.glob(os.path.join(os.environ['HOME'], '.ds9/*')))>0:
             for file in glob.glob(os.path.join(os.environ['HOME'], '.ds9','*')):
                 if AnsDS9path not in open(file).read():
-                    var = input("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n"%(os.path.basename(file)))
+                    var = 'y'#sinput("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n"%(os.path.basename(file)))
                     if  var.lower() != 'n':
 #                        ds9file = open(file,'a') 
 #                        ds9file.write('array set panalysis { user2 {} autoload 1 user3 {} log 1 user4 {} user %s }\n'%(AnsDS9path))
@@ -358,12 +359,16 @@ def LoadDS9QuickLookPlugin():
                         ReplaceStringInFile(path=file, string1='user4 {}', string2='user4 {%s}'%(AnsDS9path)) 
                         
                         print(bcolors.BLACK_GREEN + """Plug-in added"""+ bcolors.END)
-                    else:
-                        print(bcolors.BLACK_RED + 'To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
-                        print(bcolors.BLACK_RED + 'And switch on Autoload' + bcolors.END)
+#                    else:
+#                        print(bcolors.BLACK_RED + 'To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
+#                        print(bcolors.BLACK_RED + 'And switch on Autoload' + bcolors.END)
 #            sys.exit()
+
         else:
+            d=DS9();d.set("analysis message {In order to add the plugin to DS9 go to Preferences-Analysis, paste the path that is going to appear. Click on auto-load and save the preferences.}")
+            d.set('analysis text {%s}'%(AnsDS9path) )
             print(bcolors.BLACK_RED + 'To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu :  \n' + AnsDS9path + bcolors.END)
+            
             #print(bcolors.BLACK_RED + 'And switch on Autoload' + bcolors.END)
 #        bash_file = os.path.join(os.environ['HOME'], '.bashrc')
 #        if os.path.isfile(bash_file):
@@ -383,6 +388,11 @@ def LoadDS9QuickLookPlugin():
 #        var = input("Are you sure you want to modify %s with this: %s? [y]/n"%(AnsDS9path,'file:%s'%(help_path)))
 #        if  var.lower() != 'n':
         ReplaceStringInFile(path=AnsDS9path, string1='file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html', string2='file:%s'%(help_path)) 
+
+    if AnsDS9path in open(os.path.join(os.environ['HOME'], '.ds9/%s.prf'%(d.get('version').replace(' ','.')))).read():
+
+        d.set("analysis message {Plug-in added! You can now go to Analysis menu -> Give it a go to try it! You might need to re-run DS9.}")
+
     sys.exit()
     
     return
@@ -441,6 +451,7 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
     """
     d = DS9()
     d=DS9()
+    d.set('wcs degrees')
     try:
         scale, cuts, smooth, color, invert, grid = sys.argv[-6:]
     except ValueError:
@@ -4487,6 +4498,13 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
         else:
             return t1s[0]
 
+def GetTableColumns(path):
+    from astropy.io import fits
+    header = fits.open(path)[1].header
+    a = list(dict.fromkeys( header.keys()))
+    cols = [header[item] for item in a if 'TYPE' in item]
+    return cols
+
 
 def CreateCatalog_new_old(files, ext=0, config=my_conf):
     """Create header catalog from a list of fits file
@@ -7275,6 +7293,11 @@ def main():
 #    verboseprint("__package__ =", __package__)
 #    verboseprint('Python version = ', sys.version)
     #print(sys.argv)
+    if sys.stdin is not None:
+        _verbose_ = np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))
+        np.save(os.path.join(conf_dir,'verbose'), 1)
+    
+
     if len(sys.argv)==1:
         CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/')
         PresentPlugIn()
@@ -7355,6 +7378,13 @@ def main():
                     pass
         if function not in ['verbose','setup','next_step']:
             verboseprint('\n****************************************************')    
+
+
+    if sys.stdin is not None:
+        np.save(os.path.join(conf_dir,'verbose'), _verbose_)
+
+
+
     return a
 
 
