@@ -68,7 +68,7 @@ def galex2Ph_s_A(f200=2.9e-4, atm=0.37, throughput=0.13, QE=0.5, area=7854):
 
 
 
-def connect(host='http://google.com'):
+    def connect(host='http://google.com'):
     import urllib.request
     try:
         urllib.request.urlopen(host) #Python 3.x

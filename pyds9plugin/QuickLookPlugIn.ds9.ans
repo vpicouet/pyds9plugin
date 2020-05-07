@@ -17,12 +17,12 @@ hmenu Generic Functions
 		Change Display Parameters (S) #7
 		*
 		menu
-		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  $smooth $color $invert $grid | $text  
+		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  0 $color $invert $grid | $text  
 
 		Change Display Parameters (S) #7
 		*
 		bind S
-		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  $smooth $color $invert $grid | $text  
+		DS9Utils $xpa_method setup $param(Setup); "$scale"  $cut  0 $color $invert $grid | $text  
 
 #		Change Display Parameters (D) #7
 #		*.fits
@@ -75,10 +75,10 @@ hmenu Generic Functions
 		menu
 		DS9Utils $xpa_method AddHeaderField $param(CreateHeader); $Field $Value $Comment "$path"  | $text  
 
-#		Create WCS
-#		*
-#		menu
-#		DS9Utils $xpa_method CreateWCS $param(Create-WCS) $CRPIX $CDELT $CTYPE $CRVAL | $text  
+		Create WCS
+		*
+		menu
+		DS9Utils $xpa_method CreateWCS $param(Create-WCS) $CRPIX $CDELT $CTYPE $CRVAL | $text  
 
 
 
@@ -129,7 +129,7 @@ hmenu Generic Functions
 		Interactive 1D Fitting On Plot
 		*
 		menu
-		DS9Utils $xpa_method BackgroundFit1D  $param(Background-Fit-1D); x $background none $gaussians 1 Linear   | $text  
+		DS9Utils $xpa_method BackgroundFit1D  $param(Background-Fit-1D); x $background none $gaussians $moffats $voight 0 $other  | $text  
 		
 		Fit Gaussian 2D
 		*
@@ -155,16 +155,20 @@ hmenu Generic Functions
 		*
 		menu
 		#DS9Utils $xpa_method Trimming $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
-		DS9Utils $xpa_method Trimming $param(Trimming);  Image  "$path"   | $text  
+		DS9Utils $xpa_method Trimming $param(Trimming);  Image  "$path"  | $text  
+
+		Plot 3rd Dimention From Region(s)
+		*
+		menu
+		DS9Utils $xpa_method PlotSpectraDataCube $param(Extract-spectra);  $smoothl   | $text
+
 	
 	endhmenu
 
 
+
 #	hmenu Data Cubes Processing 
-#		Extract Spectra From Region(s)
-#		*
-#		menu
-#		DS9Utils $xpa_method PlotSpectraDataCube $param(Extract-spectra); $smoothl $smoothl   | $text  
+  
 #	endhmenu
 
 
@@ -181,7 +185,7 @@ hmenu Generic Functions
 	Stack Images (s)  #20
 	*
 	menu
-	DS9Utils $xpa_method stack $param(Stacking); $Path $stack -   | $text  
+	DS9Utils $xpa_method stack $param(Stacking); $Path $stack -  $output | $text  
 
 	Stack Images Key
 	*
@@ -416,11 +420,20 @@ hmenu Astronomical Softwares
 		menu
 		DS9Utils $xpa_method Convertissor $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift  | $text  
 
+		Function displayor
+		*
+		menu
+		DS9Utils $xpa_method Function $param(Function); "$formula" "$xrange" $plot "$path" | $text  
 
 
 	endhmenu
 
-
+param Function
+plot menu {Plot type} Linear|Polar|LinLog|LogLog {Choose beyond the 2D plots, still use x (not r) in polar plots.}#|PolarLog|Plot3D
+formula entry {f(x,ai...) = } sin(a0*x)*sin(a1*x) {Functions with range values}
+xrange entry {x range} -10,10 {Value to be added to -2.5 log(SumPix). Will not be used if Data.}
+path entry {Data} - {Optional, enter [ascii/csv/fits] 2-columns table path}
+endparam
 
 
 endhmenu
@@ -513,6 +526,8 @@ DS9Utils $xpa_method ComputeFluctuation $param(ComputeFluctuation) $Number $Radi
 
 
 
+
+
 param Aperture-photometry
 aper entry {Apertures} 5,10,15 {Apertures radius in pixel}
 zpm entry {Zero point magnitude} 0 {Value to be added to -2.5 log(SumPix)}
@@ -573,7 +588,7 @@ endparam
 param Setup
 scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization|zscale|minmax {Scale}
 cut entry {Scale Limits} 50-99.9 {Scale limits in percentile of the image (or defined region)}
-smooth menu {Smooth} 0|1|2|3|4|5|6|7|8|9|10 {Smoothing boxcar radius in pixel}
+#smooth menu {Smooth} 0|1|2|3|4|5|6|7|8|9|10 {Smoothing boxcar radius in pixel}
 color menu {Color} cool|grey|cubehelix0|red|green|blue|a|b|bb|he|i8|aips0|sls|hsv|heat|rainbow|standard|staircase {Color}
 invert checkbox {invert} 0 {Invert colormap}
 grid checkbox {Grid} 0 {Display grid}
@@ -588,7 +603,7 @@ endparam
 
 param Extract-spectra
 smoothl entry {Spectral smoothing} 1 {Smoothing kernel size in pixel}
-smoothx entry {Spatial smoothing} 1 {Smoothing kernel size in pixel}
+#smoothx entry {Spatial smoothing} 1 {Smoothing kernel size in pixel}
 endparam
 
 
@@ -957,6 +972,7 @@ param Stacking
 Path entry {RegExp Path} - {Path of the images to stack (glob syntax. eg. /tmp/images00[12]?.fits)}
 stack menu {Stacking type} mean_float|mean_int|median_int|median_float|1/std-wheighted {Type of stacking to perform, mask will only be taken into account with float.}
 #clipping entry {Clipping} - {Number of sigma to clip out before staking}
+output entry {Output name} stacked_image.fits {Path of the stack image, in the repository of the first image.}
 endparam
 
 
@@ -1001,9 +1017,13 @@ endparam
 
 param Background-Fit-1D
 #axis menu {Direction} x|y {Variation direction to be analyzed}
-background menu {Background deg} Constant|slope|Exponential|DoubleExponential {Shape of the background}
+background menu {Background deg} Constant|None|slope|Exponential|DoubleExponential {Shape of the background}
 #law menu {Law} None|Exponiential|DoubleExponiential {Law used to fit the background}
 gaussians menu {Number of Gaussians} 0|1|2|3|4|5 {Number of features to be fitted by a gaussian}
+moffats menu {Number of Moffats} 0|1|2|3 {Number of features to be fitted by a moffat}
+voight menu {Number of Voight} 0|1|2|3 {Number of features to be fitted by a voight}
+#sinusoid menu {Number of Sinusoids} 0|1|2 {Add sinusoids to the fitting signal}
+other menu {Other features} None|EMCCD_Histogram|Black_Body {Add sinusoids to the fitting signal}
 #kernel entry {kernel} 1 {int, Convolution kenel}
 #Value menu {Value} Linear|Log {Fit in linear or log value}
 endparam
