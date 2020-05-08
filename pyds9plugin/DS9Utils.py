@@ -24,7 +24,33 @@ else:
 from functools import wraps
 
 
+def verbose(xpapoint=None,verbose=None):
+    """Change the configuration 
+    """
+    if verbose is None:
+        v = sys.argv[-1]
+    else:
+        v = verbose
+    try:
+        conf_dir = resource_filename('pyds9plugin', 'config')
+    except:
+        conf_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
+#    if v == 'QUIET':
+#        v = 0
+#    if v == 'DEBUG':
+#        v = 1
+    np.save(os.path.join(conf_dir,'verbose'), int(v))
+    if v is None:
+        sys.exit()
+    
+    return 
 
+if sys.stdin is not None:
+    print('STDIN detected')
+    verbose(xpapoint=None,verbose=1)
+    #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 1)
+else:
+    verbose(xpapoint=None,verbose=0)
     
 def DS9n(xpapoint=None):
     targets = ds9_targets()
@@ -213,10 +239,12 @@ def DS9lock(xpapoint):
 
 def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))))):
     #did not manage to save log in .log but not display it....
+    
     st = ' '.join([str(arg) for arg in args])
     logger.critical(st)
 #    with open('/tmp/activity.log','a') as f:
 #        f.write(str(*args))
+    #print(verbose)
     if bool(int(verbose)):
         from tqdm import tqdm
         print(*args)
@@ -3194,26 +3222,7 @@ def ConvolveBoxPSF(x, amp=1, l=40, x0=0, sigma2=40, offset=0):
     function = amp * ( a + b )/4*l
     return offset + function
 
-def verbose(xpapoint=None,verbose=None):
-    """Change the configuration 
-    """
-    if verbose is None:
-        v = sys.argv[-1]
-    else:
-        v = verbose
-    try:
-        conf_dir = resource_filename('pyds9plugin', 'config')
-    except:
-        conf_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
-#    if v == 'QUIET':
-#        v = 0
-#    if v == 'DEBUG':
-#        v = 1
-    np.save(os.path.join(conf_dir,'verbose'), int(v))
-    if v is None:
-        sys.exit()
-    
-    return 
+
 
 def DS9center(xpapoint,Plot=True):
     """How to use:
@@ -5197,7 +5206,7 @@ class GeneralFit_new(Demo):
             EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=n)
 
             Models.append(Model(EMCCD_new,
-                  Parameter(value=3350, bounds=(3000, 4000), label='Bias'),
+                  Parameter(value=3350, bounds=(2500, 4000), label='Bias'),
                   Parameter(value=107, bounds=(0, 150), label='ReadNoise'),
                   Parameter(value=600, bounds=(200, 2000), label='EmGain'),
                   Parameter(value=0.02,bounds=(0, 1.9  ), label='Flux'),#50
@@ -5491,6 +5500,7 @@ def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,S
     #plot(bright_surf-np.log(x[1]-x[0]) + np.log10(convolve(y[:],kernel)));ylim((0,6));xlim((0,5000))
     #print(x)
     #print('x1-x0 = ',x[1]-x[0],np.log(x[1]-x[0]))
+    #verboseprint(bright_surf)
     return bright_surf + 2  + np.log10(convolve(y[:],kernel))
 #
 #flux=0.1
@@ -7309,19 +7319,19 @@ def DS9RemoveImage(xpapoint):
 def main():
     """Main function where the arguments are defined and the other functions called
     """
-#    path = os.path.dirname(os.path.realpath(__file__))
-#    import pkg_resources;print('Version = ', pkg_resources.require("pyds9plugin")[0].version)
-#    verboseprint("which('DS9Utils') =", which('DS9Utils'))
-#    verboseprint("__file__ =", __file__)
-#    verboseprint("__package__ =", __package__)
-#    verboseprint('Python version = ', sys.version)
-    #print(sys.argv)
-    _verbose_ = np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))
-    if sys.stdin is not None:
-        np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 1)
-    else:
-        np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 0)
-#           verboseprint(_verbose_)
+#    _verbose_ = np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))
+#    print(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))
+#    print(bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))))
+#    if sys.stdin is not None:
+#        print('STDIN detected')
+#        verbose(xpapoint=None,verbose=1)
+#        #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 1)
+#    else:
+#        verbose(xpapoint=None,verbose=0)
+#        #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 0)
+##           verboseprint(_verbose_)
+#    print(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))
+#    print(bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))))
 
     if len(sys.argv)==1:
         CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/')
@@ -7406,8 +7416,6 @@ def main():
             verboseprint('\n****************************************************')    
 
 
-    if sys.stdin is not None:
-        np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), _verbose_)
     return 
 
 
