@@ -2193,11 +2193,33 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   import matplotlib.pyplot as plt
   from scipy.optimize import curve_fit
   from scipy import interpolate
+  import matplotlib.ticker as mticker
+  from matplotlib.widgets import  CheckButtons #RadioButtons,
+
+  fmt = mticker.FuncFormatter(lambda x,pos : "${}$".format(mticker.ScalarFormatter(useOffset=False, useMathText=True)._formatSciNotation('%1.10e' % np.round(x,2))))
+
   fontsize=10
   rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, anisotrope=anisotrope, angle=angle, radius=radius, n=n, center_type=center_type, size=size)
   profile = profile[:size]#(a[:n] - min(a[:n]) ) / np.nansum((a[:n] - min(a[:n]) ))
   rmean_long = np.linspace(0,rmean[:size].max(),1000)
   fig, ax1 = plt.subplots(figsize=(10,5))
+  #rax = plt.axes([0.1, 0.01, 0.15, 0.15], facecolor='white')
+  rax = plt.axes([0.02, 0.8, 0.05, 0.15], facecolor='None')
+  for edge in 'left', 'right', 'top', 'bottom':
+    rax.spines[edge].set_visible(False)
+  #rax = plt.axes([0.1, 0.15, 0.15, 0.15], facecolor='white')
+  #scale = RadioButtons(rax, ('linear','log'), active=0)
+  scale = CheckButtons(rax, ['log'])
+  def scalefunc(label):
+      print(scale)
+      if ax1.get_yscale()=='linear':
+          ax1.set_yscale('log')
+      elif ax1.get_yscale()=='log':
+          ax1.set_yscale('linear')
+
+      fig.canvas.draw_idle()
+  scale.on_clicked(scalefunc)
+
   fiber = float(fibersize) #/ (2*1.08*(1/0.083))
   if fiber == 0:
       gaus = lambda x, a, sigma: a**2 * np.exp(-np.square(x / sigma) / 2)
@@ -2207,7 +2229,8 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
       else:
           try:
               popt_m, pcov_m = curve_fit(Moffat1D,rmean[:size], profile,p0=[profile.max(),4,2.5])
-              ax1.plot(rmean_long, Moffat1D(rmean_long,*popt_m),label=r'Moffat fit: A=%0.3f, $\alpha$=%0.2f, $\beta$=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
+              #ax1.plot(rmean_long, Moffat1D(rmean_long,*popt_m),label=r'Moffat fit: A=%0.3f, $\alpha$=%0.2f, $\beta$=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
+              ax1.plot(rmean_long, Moffat1D(rmean_long,*popt_m),label=r'Moffat fit: A={}, $\alpha$={}, $\beta$={}'.format(fmt(popt_m[0]),fmt(popt_m[1]),fmt(popt_m[2])))
           except RuntimeError:
               pass
   else:
@@ -2227,7 +2250,7 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   else:
       p = ax1.plot(rmean[:size], profile, linestyle='dotted', c='black', label='Normalized isotropic profile')
       ax1.errorbar(rmean, profile, yerr = stddev, fmt='o', color=p[0].get_color(), alpha=0.5)
-      ax1.set_ylim((minplot, np.nanmax([np.nanmax(1.1*(profile)), maxplot])))
+      #ax1.set_ylim((minplot, np.nanmax([np.nanmax(1.1*(profile)), maxplot])))
 
   ax1.set_xlabel('Distance to center [pix]', fontsize=fontsize+2)                      
   ax1.set_ylabel('Radial Profile', color='b', fontsize=fontsize+2)
@@ -2252,18 +2275,19 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   ax2.set_ylabel('Encircled Energy', color='r', fontsize=fontsize+2)
   ax2.tick_params('y', colors='r')
   ax1.xaxis.grid(True)
+  ax2.yaxis.grid(False)
   ax1.tick_params(axis='x', labelsize=fontsize)
   ax1.tick_params(axis='y', labelsize=fontsize)
   ax2.tick_params(axis='y', labelsize=fontsize)                    
   ax1.legend(loc = (0.54,0.05),fontsize=fontsize)
   if fiber == 0:
       flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
-      plt.figtext(0.53,0.53,"Flux = %0.0f\n$r_{in}$ = %0.1f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (flux,0,abs(popt[1]),minb,mina), 
+      plt.figtext(0.63,0.53,"Flux = %0.0f\n$r_{in}$ = %0.1f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (flux,0,abs(popt[1]),minb,mina), 
                   fontsize=fontsize,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":flux,"SizeSource":0,"Sigma":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       verboseprint("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
   else:
-      plt.figtext(0.53,0.53,"Amp = %0.3f\n$r_{in}$ = %0.3f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (popt[0],popt[1],popt[2],minb,mina), 
+      plt.figtext(0.63,0.53,"Amp = %0.3f\n$r_{in}$ = %0.3f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (popt[0],popt[1],popt[2],minb,mina), 
                   fontsize=fontsize,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       verboseprint("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
@@ -5206,10 +5230,10 @@ class GeneralFit_new(Demo):
             EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=n)
 
             Models.append(Model(EMCCD_new,
-                  Parameter(value=3350, bounds=(2500, 4000), label='Bias'),
-                  Parameter(value=107, bounds=(0, 150), label='ReadNoise'),
-                  Parameter(value=600, bounds=(200, 2000), label='EmGain'),
-                  Parameter(value=0.02,bounds=(0, 1.9  ), label='Flux'),#50
+                  Parameter(value=3350, bounds=(2500, 4000), label='Bias [ADU]'),
+                  Parameter(value=107, bounds=(0, 150), label='ReadNoise [$e^-$]'),
+                  Parameter(value=600, bounds=(200, 2000), label='EmGain [ADU/$e^-$]'),
+                  Parameter(value=0.1,bounds=(0, 10.9  ), label='Flux [$e^-$]'),#50
                   #Parameter(value=np.log10(np.sum([10**yi for yi in ydata_i])),bounds=(1, 9), label='Npix'),#*np.nansum(y)
                   label='EMCCD'))  
             #print()
@@ -5283,13 +5307,56 @@ class GeneralFit_new(Demo):
         self.model = model
         self.gui = gui
 
-
+def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,Smearing=0.7):
+    from astropy.convolution import Gaussian1DKernel,convolve
+    import scipy.special as sps
+    #n_registers=604
+    #flux = , exposure=50* flux=1e-3 + dark
+#    x = np.arange(2000,30000)
+#    EmGain=1500
+#    flux=0.1
+#    RN = 80
+#    p_sCIC=2
+    #bright_surf=7
+    n_registers = 604
+    coeff = 0.53
+    RN *= coeff
+    EmGain *= coeff/np.log(2)
+    #ybias = np.zeros(len(x))#np.exp(-np.square(x-biais)/(2*RN**2))
+    shape = flux*coeff#(Dark+flux)*exposure
+#    ycounts = x**(shape-1)*(np.exp(-x/EmGain) /(sps.gamma(shape)*EmGain**shape))    
+    #print(x[1]-x[0])
+    ycounts = (x[1]-x[0])*(x-np.nanmin(x)+0)**(shape-1)*(np.exp(-(x-np.nanmin(x))/EmGain) /(sps.gamma(shape)*EmGain**shape))    
+    ycounts[0]=1-np.nansum(ycounts[np.isfinite(ycounts)])
+    #print(np.nansum(ycounts[:-1]))
+    #print(ycounts[0],np.sum(ycounts[1:]))
+    yscic = [np.exp(-x/np.power(EmGain, register/n_registers))/np.power(EmGain, register/n_registers) for register in np.arange(n_registers)]
+    yscic = np.sum(yscic,axis=0)
+    #plt.plot(np.sum(yscic,axis=0)/len(yscic));plt.plot(yscic[1]);plt.plot(yscic[-1]);n=500;plt.plot(np.exp(-x/np.power(EmGain, n/n_registers))/np.power(EmGain, n/n_registers))
+    ycounts[(x>biais)] = ycounts[:-np.sum(x<=biais)] #PPPPPbbbbbbb
+    #ycounts[(x>biais) & (x<x[-1])] = ycounts[1:-np.sum(x<=biais)] #PPPPPbbbbbbb
+    ycounts[x<biais] = 0
+    #plot(x,10*np.log10(10*yscic))
+    yscic[x>biais] = yscic[:-np.sum(x<=biais)]
+    yscic[x<biais] = 0
+    #plt.semilogy(x, ybias+ycounts)
+    y = ycounts#*(x[1]-x[0])#*10**bright_surf*
+    #plot(x,np.log10(convolve(y[:],Gaussian1DKernel(stddev=RN/(x[1]-x[0])))));ylim((-5,13))
+    #y += 4*10**5*yscic
+    #plot(x,np.log10(convolve(y[:],Gaussian1DKernel(stddev=RN/(x[1]-x[0])))));ylim((-5,13))
+    n=1
+    kernel = Gaussian1DKernel(stddev=RN/(x[1]-x[0]),x_size=int(301.1*10**n))
+    #plot(bright_surf-np.log(x[1]-x[0]) + np.log10(convolve(y[:],kernel)));ylim((0,6));xlim((0,5000))
+    #print(x)
+    #print('x1-x0 = ',x[1]-x[0],np.log(x[1]-x[0]))
+    #verboseprint(bright_surf)
+    return bright_surf + n*2  + np.log10(convolve(y[:],kernel))
 
 
 class GeneralFit_Function(Demo):
 
     """Multiple Gaussian Features over a Polynomial Background."""
-    def __init__(self, x, y, function,  ranges, zdata_i=None, ax=None, Plot='Linear', linewidth=2, marker=None, linestyle='dotted'):
+    def __init__(self, x, y, function,  ranges, zdata_i=None, ax=None, Plot='Linear', linewidth=2, marker=None, linestyle='dotted',n=100):
         """Create synthetic dataset, plots, and AutoGUI."""
         from dataphile.statistics.regression.modeling import Parameter, Model, CompositeModel, AutoGUI
         from dataphile.statistics.distributions import linear1D, polynomial1D, gaussian1D, voigt1D, sinusoid1D
@@ -5343,7 +5410,7 @@ class GeneralFit_Function(Demo):
             self.ax.plot(xdata_i, ydata_i, linestyle=linestyle, linewidth=linewidth)
         xinf,xsup = self.ax.get_xlim()
         yinf,ysup = self.ax.get_ylim()
-        xsample = np.linspace(xdata_i.min(),xdata_i.max(),len(xdata_i)*100)
+        xsample = np.linspace(xdata_i.min(),xdata_i.max(),len(xdata_i)*n)
         parameters = [] 
         
         for i, rangei in enumerate(self.ranges):
@@ -5462,46 +5529,7 @@ def findMaxima(x, y, conv=10, max_=True):
     ys = y[np.arange(len(y))[maxim][::-1]]
     return xs[np.argsort(ys)][::-1], ys[np.argsort(ys)][::-1]
 
-def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,Smearing=0.7):
-    from astropy.convolution import Gaussian1DKernel,convolve
-    import scipy.special as sps
-    #n_registers=604
-    #flux = , exposure=50* flux=1e-3 + dark
-#    x = np.arange(2000,30000)
-#    EmGain=1500
-#    flux=0.1
-#    RN = 80
-#    p_sCIC=2
-    #bright_surf=7
-    n_registers = 604
-    coeff = 0.53
-    RN *= coeff
-    EmGain *= coeff/np.log(2)
-    ybias = np.zeros(len(x))#np.exp(-np.square(x-biais)/(2*RN**2))
-    shape = flux*coeff#(Dark+flux)*exposure
-#    ycounts = x**(shape-1)*(np.exp(-x/EmGain) /(sps.gamma(shape)*EmGain**shape))    
-    ycounts = (x-np.nanmin(x)+0)**(shape-1)*(np.exp(-(x-np.nanmin(x))/EmGain) /(sps.gamma(shape)*EmGain**shape))    
-    ycounts[0]=1-np.nansum(ycounts[np.isfinite(ycounts)])
-    yscic = [np.exp(-x/np.power(EmGain, register/n_registers))/np.power(EmGain, register/n_registers) for register in np.arange(n_registers)]
-    yscic = np.sum(yscic,axis=0)
-    #plt.plot(np.sum(yscic,axis=0)/len(yscic));plt.plot(yscic[1]);plt.plot(yscic[-1]);n=500;plt.plot(np.exp(-x/np.power(EmGain, n/n_registers))/np.power(EmGain, n/n_registers))
-    ycounts[(x>biais)] = ycounts[:-np.sum(x<=biais)] #PPPPPbbbbbbb
-    #ycounts[(x>biais) & (x<x[-1])] = ycounts[1:-np.sum(x<=biais)] #PPPPPbbbbbbb
-    ycounts[x<biais] = 0
-    #plot(x,10*np.log10(10*yscic))
-    yscic[x>biais] = yscic[:-np.sum(x<=biais)]
-    yscic[x<biais] = 0
-    #plt.semilogy(x, ybias+ycounts)
-    y = 0*ybias+ycounts#*10**bright_surf*
-    #plot(x,np.log10(convolve(y[:],Gaussian1DKernel(stddev=RN/(x[1]-x[0])))));ylim((-5,13))
-    #y += 4*10**5*yscic
-    #plot(x,np.log10(convolve(y[:],Gaussian1DKernel(stddev=RN/(x[1]-x[0])))));ylim((-5,13))
-    kernel = Gaussian1DKernel(stddev=RN/(x[1]-x[0]),x_size=2001)
-    #plot(bright_surf-np.log(x[1]-x[0]) + np.log10(convolve(y[:],kernel)));ylim((0,6));xlim((0,5000))
-    #print(x)
-    #print('x1-x0 = ',x[1]-x[0],np.log(x[1]-x[0]))
-    #verboseprint(bright_surf)
-    return bright_surf + 2  + np.log10(convolve(y[:],kernel))
+
 #
 #flux=0.1
 #val,bins,n = hist(np.random.gamma(flux,EmGain,100000),bins=arange(0,6000,20)
@@ -5565,6 +5593,7 @@ def linear1D_centered(x: np.ndarray, intercept, slope, x0=0) -> np.ndarray:
 def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type='Linear',EMCCD_=False,nb_blackbody=0):
     """Fit background 1d with different features
     """
+    from matplotlib.widgets import RadioButtons
     d = DS9n(xpapoint)
     axis, background, function, nb_gaussians,  nb_moffats ,nb_voigt1D,nb_sinusoid, other = sys.argv[-8:]
     
@@ -5588,7 +5617,7 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
 
     if d.get('plot') != '':
         plots = d.get('plot').split(' ')
-        name = plots[-1]
+        name = plots[0]
         d.set('plot %s save /tmp/test.dat'%(name))
         x_scale = d.get('plot %s axis x log'%(name))
         y_scale = d.get('plot %s axis y log'%(name))
@@ -5619,7 +5648,7 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
         d.set("analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}")     ;sys.exit()  
         
     if np.nanmean(y[-10:])>np.nanmean(y[:10]):
-        y = y[::-1]
+       y = y[::-1]
 
     #auto_gui.Background(x,y)
     if  background.lower() == 'exponential':
@@ -5627,9 +5656,80 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
     if  background.lower() == 'doubleexponential':
         double_exp=True
     verboseprint('Using general fit new')
-    GeneralFit_new(x,y,nb_gaussians=int(nb_gaussians),nb_moffats=int(nb_moffats), background=int(bckgd),nb_voigt1D=int(nb_voigt1D),nb_sinusoid1D=int(nb_sinusoid), exp=exp, EMCCD_=EMCCD_,nb_blackbody=nb_blackbody,double_exp=double_exp, marker='.',linestyle='dotted',linewidth=1)
+    gui = GeneralFit_new(x,y,nb_gaussians=int(nb_gaussians),nb_moffats=int(nb_moffats), background=int(bckgd),nb_voigt1D=int(nb_voigt1D),nb_sinusoid1D=int(nb_sinusoid), exp=exp, EMCCD_=EMCCD_,nb_blackbody=nb_blackbody,double_exp=double_exp, marker='.',linestyle='dotted',linewidth=1)
+    rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor='None')
+    
+    for edge in 'left', 'right', 'top', 'bottom':
+        rax.spines[edge].set_visible(False)
+    scale = RadioButtons(rax, ('linear','log'), active=0)
+    def scalefunc(label):
+          gui.ax.set_yscale(label)
+          gui.figure.canvas.draw_idle()
+    scale.on_clicked(scalefunc)
+
+    
+    gui.ax.set_title(os.path.basename(getfilename(d)))
     plt.show()
     return
+
+
+
+
+
+
+
+
+def  ManualFitting(xpapoint):
+    """Fit background 1d with different features
+    """
+    from astropy.table import Table
+    from .slider import InteractivManualFitting
+    d=DS9n(xpapoint)
+    try: 
+        d.get('plot') 
+    except TypeError:
+        d.set("analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}")  ;sys.exit()  
+
+    if d.get('plot') != '':
+        plots = d.get('plot').split(' ')
+        name = plots[0]
+        d.set('plot %s save /tmp/test.dat'%(name))
+        #x_scale = d.get('plot %s axis x log'%(name))
+        #y_scale = d.get('plot %s axis y log'%(name))
+        tab = Table.read('/tmp/test.dat', format='ascii')
+        x, y = tab['col1'],tab['col2']
+        xmin = d.get('plot %s axis x min'%(name))
+        xmax = d.get('plot %s axis x max'%(name))
+        ymin = d.get('plot %s axis y min'%(name))
+        ymax = d.get('plot %s axis y max'%(name))
+        xmin = float(xmin) if xmin!= '' else - np.inf
+        xmax = float(xmax) if xmax!= '' else np.inf
+        ymin = float(ymin) if ymin!= '' else - np.inf
+        ymax = float(ymax) if ymax!= '' else np.inf
+        mask = (x>xmin) & (x<xmax) & (y>ymin) & (y<ymax)
+        x, y = x[mask], y[mask]
+#        if EMCCD_:
+#            y -= 1
+#        if x_scale == 'yes':
+#            verboseprint('X LOG')
+#            x = np.log10(x)
+#        if y_scale == 'yes':
+#            verboseprint('Y LOG')
+#            y = np.log10(y)
+        index = (np.isfinite(y)) &  (np.isfinite(x))
+        x, y = x[index], y[index]
+            
+    else:
+        d.set("analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}")     ;sys.exit()  
+        
+    if np.nanmean(y[-10:])>np.nanmean(y[:10]):
+       y = y[::-1]
+
+    InteractivManualFitting()
+    
+    #plt.show()
+    return
+
 
 
 def openTable(path):
@@ -5656,6 +5756,7 @@ def Function(xpapoint, config=my_conf):
     """Fit background 1d with different features
     """
     import re 
+    from matplotlib.widgets import RadioButtons
     d = DS9n(xpapoint)
     y=0
     function = sys.argv[-4]
@@ -5691,21 +5792,58 @@ def Function(xpapoint, config=my_conf):
         y = dict_tot['y']
         #print(x,y)
         #return (y - np.nanmin(y)) /np.nanmax(y - np.nanmin(y))
-        return y
+        #print(x.shape)
+        #print(y[0][:-1].shape)
+        if 'bins' in function_new:
+            return np.pad(y[0], (0, 1), 'constant')
+        else:
+            return y
     
     args =  [np.mean(np.array(rangei.split(','),dtype=float)) for rangei in ranges]#np.ones(len(ranges))#*np.nan 
     if path!='-':
         cat = openTable(path)
         x,y = cat[cat.colnames[0]], cat[cat.colnames[1]]
+        n=100
     else:
-        x = np.linspace(xmin, xmax,100)
+        if 'bins' in function:
+            x = np.linspace(xmin, xmax,1000)
+            n=1
+        else:
+            x = np.linspace(xmin, xmax,100)
+            n=100
         y = real_function(x, *args)
 
     #print(x,real_function(x, *args))
-    gui = GeneralFit_Function(x,y, function=real_function, ranges=ranges,marker='.',Plot=Plot,linestyle='dotted',linewidth=0)
+    gui = GeneralFit_Function(x,y, function=real_function, ranges=ranges,marker='.',Plot=Plot,linestyle='dotted',linewidth=0,n=n)
+    rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor='None')
+    for edge in 'left', 'right', 'top', 'bottom':
+        rax.spines[edge].set_visible(False)
+    scale = RadioButtons(rax, ('linear','log'), active=0)
+    def scalefunc(label):
+          gui.ax.set_yscale(label)
+          gui.figure.canvas.draw_idle()
+    scale.on_clicked(scalefunc)
+
     gui.ax.set_title(function)
     plt.show()
     return
+
+
+#gui = GeneralFit_Function(x,y, function=schechter_vincent2, ranges=['3e-3,6e-3', '-21.5,-18', '-1.4,-1.2'],marker='.',Plot='Linear',linestyle='dotted',linewidth=0,n=100)
+##gui = GeneralFit_Function(np.linspace(-21.5,-18,100),schechter_vincent2(np.linspace(-21.5,-18,100)), function=schechter_vincent2, ranges=['3e-3,6e-3', '-21.5,-18', '-1.4,-1.2'],marker='.',Plot='Linear',linestyle='dotted',linewidth=0,n=100)
+#for i, file in enumerate(glob.glob('/Volumes/Vincent/sextractorCatalogs/subcats/BC03_1/U/TotalMergedCatalog_9813_corr_ugrizyk_only_mag_zphot_col_021219_gal.e.u.limits_VMAX[0,2,5].dat.ini')):
+#    gui.gui.sliders[0].valfmt='%.2E'
+#    print(file)
+#    x,y,xx,yy = openLFdata(file)
+#    print(y)
+#    try:
+#        var = np.sum(gui.gui.active_model.uncertainties)
+#    except TypeError:
+#        var = np.nan
+#    gui.ax.plot(x,y,'o',label='%0.1f'%(var))
+#gui.gui.active_model.a1.value
+#gui.ax.legend()    
+#plt.show()
 
 
 #def Function_parametric(xpapoint, config=my_conf):
@@ -7359,7 +7497,7 @@ def main():
                                  'stack': DS9stack_new,'lock': DS9lock,'CreateHeaderCatalog':DS9CreateHeaderCatalog,'SubstractImage': DS9RemoveImage,
                                  'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
                                  'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings,'next_step':next_step,'BackgroundEstimationPhot': DS9BackgroundEstimationPhot,'verbose':verbose,
-                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile}
+                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting}
                        
         DictFunction_AIT =     {'centering':DS9center, 'radial_profile':DS9rp,
                                 'throughfocus':DS9throughfocus, 'ComputeFluctuation':ComputeFluctuation,

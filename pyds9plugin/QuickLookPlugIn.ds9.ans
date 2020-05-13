@@ -130,6 +130,12 @@ hmenu Generic Functions
 		*
 		menu
 		DS9Utils $xpa_method BackgroundFit1D  $param(Background-Fit-1D); x $background none $gaussians $moffats $voight 0 $other  | $text  
+
+		Interactive Manual Fitting
+		*
+		menu
+		DS9Utils $xpa_method ManualFitting | $text  
+
 		
 		Fit Gaussian 2D
 		*
