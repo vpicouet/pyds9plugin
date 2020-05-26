@@ -67,7 +67,7 @@ hmenu Generic Functions
 		Create Image Subset
 		*
 		menu
-		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" 100 $Fields "$Mask" | $text  
+		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" 10000 $Fields "$Mask" | $text  
 
 
 		Add header Field
@@ -75,10 +75,10 @@ hmenu Generic Functions
 		menu
 		DS9Utils $xpa_method AddHeaderField $param(CreateHeader); $Field $Value $Comment "$path"  | $text  
 
-		Create WCS
-		*
-		menu
-		DS9Utils $xpa_method CreateWCS $param(Create-WCS) $CRPIX $CDELT $CTYPE $CRVAL | $text  
+#		Create WCS
+#		*
+#		menu
+#		DS9Utils $xpa_method CreateWCS $param(Create-WCS) $CRPIX $CDELT $CTYPE $CRVAL | $text  
 
 
 
@@ -163,7 +163,7 @@ hmenu Generic Functions
 		#DS9Utils $xpa_method Trimming $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text  
 		DS9Utils $xpa_method Trimming $param(Trimming);  Image  "$path"  | $text  
 
-		Plot 3rd Dimention From Region(s)
+		Plot 3rd Dimension From Region(s)
 		*
 		menu
 		DS9Utils $xpa_method PlotSpectraDataCube $param(Extract-spectra);  $smoothl   | $text
@@ -202,7 +202,7 @@ hmenu Generic Functions
 	Plot Region In 3D
 	*
 	menu
-	DS9Utils $xpa_method PlotArea3D $param(Plot-3d); $log -    | $text  
+	DS9Utils $xpa_method PlotArea3D | $text  
 
 
 	Simulate Sky Image
@@ -415,10 +415,15 @@ hmenu Astronomical Softwares
 
 	hmenu Astronomy Calculator
 
+#		Cosmology Calculator
+#		*
+#		menu
+#		DS9Utils $xpa_method CosmologyCalculator $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text  
+
 		Cosmology Calculator
 		*
 		menu
-		DS9Utils $xpa_method CosmologyCalculator $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text  
+		DS9Utils $xpa_method CosmologyCalculator LambdaCDM 1 70 0.2 0.7 -  | $text  
 
 
 		Convertissor
@@ -441,6 +446,15 @@ xrange entry {x range} -10,10 {Value to be added to -2.5 log(SumPix). Will not b
 path entry {Data} - {Optional, enter [ascii/csv/fits] 2-columns table path}
 endparam
 
+
+param Cosmology
+#Cosmo menu {Cosmology} LambdaCDM|wCDM|WMAP5|WMAP7|WMAP9|Planck13|Planck15 {Cosmology to use} #|w0waCDM|w0wzCDM|wpwaCDM
+#redshift entry {z} 0.7-3.0 {Redshift or list of redshift eg '1-2-3.5'}
+#H0 entry {H0} 70 {Hubble constant at z = 0. If a float, must be in [km/sec/Mpc]}
+#Omega_m entry {Omega_m} 0.20 {Omega matter: density of non-relativistic matter in units of the critical density at z=0.}
+#Ode0 entry {Ode0} 0.70 {Omega dark energy: density of dark energy in units of the critical density at z=0.}
+#Uncertainty entry {Uncertainty} H0:1 {Parameter and uncertainty in % eg. H0:1 or Om0:2.5 or Ode0:1.5}
+endparam
 
 endhmenu
 
@@ -1318,14 +1332,6 @@ endparam
 
 
 
-param Cosmology
-Cosmo menu {Cosmology} LambdaCDM|wCDM|WMAP5|WMAP7|WMAP9|Planck13|Planck15 {Cosmology to use} #|w0waCDM|w0wzCDM|wpwaCDM
-redshift entry {z} 0.7-3.0 {Redshift or list of redshift eg '1-2-3.5'}
-H0 entry {H0} 70 {Hubble constant at z = 0. If a float, must be in [km/sec/Mpc]}
-Omega_m entry {Omega_m} 0.20 {Omega matter: density of non-relativistic matter in units of the critical density at z=0.}
-Ode0 entry {Ode0} 0.70 {Omega dark energy: density of dark energy in units of the critical density at z=0.}
-Uncertainty entry {Uncertainty} H0:1 {Parameter and uncertainty in % eg. H0:1 or Om0:2.5 or Ode0:1.5}
-endparam
 
 
 
