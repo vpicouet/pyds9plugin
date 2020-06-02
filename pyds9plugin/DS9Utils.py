@@ -2228,9 +2228,8 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   import matplotlib.pyplot as plt
   from scipy.optimize import curve_fit
   from scipy import interpolate
-  import matplotlib.ticker as mticker
   from matplotlib.widgets import  CheckButtons #RadioButtons,
-
+  import matplotlib.ticker as mticker
   fmt = mticker.FuncFormatter(lambda x,pos : "${}$".format(mticker.ScalarFormatter(useOffset=False, useMathText=True)._formatSciNotation('%1.10e' % np.round(x,2))))
 
   fontsize=10
@@ -3706,7 +3705,7 @@ def RunFunction(Fonction, args, return_dict):
     """
     #print(*args)
     out = Fonction(*args)
-    verboseprint(out)
+    #verboseprint(out)
     return_dict['output'] = out
     return 
 
@@ -4362,6 +4361,249 @@ def GetColumns(path):
     cols = [header[item] for item in a if 'TYPE' in item]
     return cols
 
+def Parallelize(function=lambda x:print(x),action_to_paralize=[],parameters=[], number_of_thread=10):
+    from tqdm import tqdm
+    from multiprocessing import Process, Manager
+    info = [action_to_paralize[x:x+number_of_thread] for x in range(0, len(action_to_paralize), number_of_thread)]
+    for i in tqdm(range(len(info))):
+        subinfo = info[i]
+        jobs = []
+        manager = Manager()
+        return_dict = manager.dict()
+        for inf in subinfo:
+            p = Process(target=RunFunction, args=(function,[inf]+parameters,return_dict,))
+            jobs.append(p)
+            p.start()
+        for job in jobs:
+            job.join()
+    return
+
+
+    
+def DS9PlotEMCCD(xpapoint):
+    from matplotlib.widgets import  Button, RadioButtons, TextBox # Slider
+    from matplotlib.widgets import  CheckButtons #RadioButtons,
+    from dataphile.graphics.widgets import Slider
+    d = DS9n(xpapoint)    
+    im=getdata(d)
+    val, bins = np.histogram(im.flatten(),bins=np.linspace(2000,7000,500))
+    bins = (bins[1:]+bins[:-1])/2
+    #tab = Table.read('/tmp/test.dat', format='ascii')
+    #xdata,ydata = tab['col1'], tab['col2']
+    #xdata,ydata =xdata[xdata<7000],np.log10(ydata[xdata<7000])
+    xdata,ydata = bins[np.isfinite(np.log10(val))], np.log10(val)[np.isfinite(np.log10(val))]
+    n = np.log10(np.sum([10**yi for yi in ydata]))
+    #n=len(xdata)
+    lims = np.array([0,2])
+        
+    np_function = {a:getattr(np, a) for a in dir(np)}
+    
+    fig, ax = plt.subplots(figsize=(10,7))
+    plt.subplots_adjust(bottom=0.25)
+    x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), len(ydata))
+    #initial = 'a*min(ydata)+b*(max(ydata)-min(ydata))*exp(-(x-c*xdata[argmax(ydata)])**2/d)'   
+    
+      
+    dict_values={'a':1,'b':1,'c':1,'d':1,'x':x,'xdata':xdata,'ydata':ydata}
+    EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=n-2)
+    EMCCD_noise = lambda x,biais,RN: EMCCD(x,biais,RN, EmGain=0,flux=0, bright_surf=n-2)
+    
+    datal,  = plt.plot(xdata,ydata, '.',c='black',label='Data')
+    l, = plt.plot(x, EMCCD_new(x,3350,107,600,0.1), lw=1,label='EMCCD model')
+    s, = plt.plot(np.ones(2)*3350+5.5*107/2.35, [l.get_ydata().min(),l.get_ydata().max()], lw=1,color='red',linestyle='dotted',label='$5.5\sigma$ Threshold')
+    noise, = plt.plot(x[x>3350+2*107/2.35], EMCCD_noise(x,3350,107)[x>3350+2*107/2.35], lw=1,color='black',linestyle='dotted',label='Readout noise')
+    #plt.fill_between(np.linspace(3350+5.5*107/2.35,3350+10*107/2.35,len(x)), EMCCD_noise(x,3350,107)*0,EMCCD_noise(x,3350,107), label='Readout noise is PC mode')
+    ax.set_ylim((0.9*ydata.min(),1.1*ydata.max()))
+    ax.set_ylabel('Log (Frequency of occurence)',fontsize=15)
+        
+    ax.margins(x=0)
+    #rax = plt.axes([0.04, 0.85, 0.15, 0.15], facecolor='None')
+    #raxx = plt.axes([0.93, 0.17, 0.15, 0.15], facecolor='None')
+    #data_box = plt.axes([0.8, 0.75, 0.15, 0.15], facecolor='None')
+    bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor='None')
+    #axbox = plt.axes([0.1,  0.025, 0.65, 0.04])
+    
+    
+    button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), 'Fit', color='white', hovercolor='0.975')
+    #delete_button = Button(plt.axes([0.72, 0.025, 0.04, 0.04]), 'x', color='white', hovercolor='0.975')
+    #replace_ax = plt.axes([0.77, 0.025, 0.1, 0.04])    
+    
+    
+    for edge in 'left', 'right', 'top', 'bottom':
+        #rax.spines[edge].set_visible(False)
+        #raxx.spines[edge].set_visible(False)
+        #data_box.spines[edge].set_visible(False)
+        bounds_box.spines[edge].set_visible(False)
+        #replace_ax.spines[edge].set_visible(False)
+    #scale = CheckButtons(rax, ['log'])
+    #scalex = CheckButtons(raxx, ['log'])
+    #data_button = CheckButtons(data_box, ['Data'],[True])
+    bounds_button = CheckButtons(bounds_box, ['Bounds'],[False])
+    #replace_button = Button(replace_ax, ['Replace'],[False])
+    
+    def scalefunc(label):
+        #print(scale)
+        if (ax.get_yscale()=='linear') :#& ((dict_values['ydata']>1).any() | (dict_values['y']>1).any()):
+            ax.set_yscale('log')
+        elif ax.get_yscale()=='log':
+            ax.set_yscale('linear')
+        fig.canvas.draw_idle()
+    def scalefuncx(label):
+        #print(scale)
+        if (ax.get_xscale()=='linear') & (dict_values['x']>1).any():
+            ax.set_xscale('log')
+        elif ax.get_xscale()=='log':
+            ax.set_xscale('linear')        
+        fig.canvas.draw_idle()
+    
+    def loadData(label):
+        #from astropy.table import Table
+        if data_button.get_status()[0]:
+            datal.set_marker('.')
+        else:
+            datal.set_marker(None)        
+        fig.canvas.draw_idle()
+    
+    
+            
+    
+    def submit(text):
+        x = dict_values['x'] 
+        a = dict_values['a'] 
+        b = dict_values['b'] 
+        c = dict_values['c'] 
+        d = dict_values['d'] 
+        ydata = eval(text,np_function,dict_values)
+        l.set_ydata(ydata)
+        ax.set_ylim(np.min(ydata), np.max(ydata))
+        plt.draw()
+        return text
+    
+    def update(val):
+        try:
+            a = b_a.value
+            b = b_b.value
+            c = b_c.value
+            d = b_d.value
+        except AttributeError:
+            a = b_a.val
+            b = b_b.val
+            c = b_c.val
+            d = b_d.val
+        x = dict_values['x'] 
+        l.set_ydata(EMCCD_new(x,a,b,c,d))
+        s.set_xdata(np.ones(2)*a+5.5*b/2.35)
+        noise.set_data(x[x>a+2*b/2.35],EMCCD_noise(x,a,b)[x>a+2*b/2.35])
+    
+    
+     
+        fig.canvas.draw_idle()
+        dict_values['a'] = a
+        dict_values['b'] = b
+        dict_values['c'] = c
+        dict_values['d'] = d
+        return 
+    
+        
+    #scale.on_clicked(scalefunc)
+    #scalex.on_clicked(scalefuncx)
+    #   data_button.on_clicked(loadData)
+    
+    b_a = Slider(figure=fig, location=[0.3, 0.17, 0.6, 0.03], label='Bias [ADU]',  bounds=(2500, 4000), init_value=3350)#,valfmt="%1.2f")
+    b_b = Slider(figure=fig, location=[0.3, 0.14, 0.6, 0.03], label='ReadNoise [$e^-$]', bounds=(0, 150), init_value=107)
+    b_c = Slider(figure=fig, location=[0.3, 0.11, 0.6, 0.03], label='EmGain [ADU/ADU]',  bounds=(200, 2000), init_value=600)
+    b_d = Slider(figure=fig, location=[0.3, 0.08, 0.6, 0.03], label='Flux [$e^-$]',  bounds=(0, 1.9  ), init_value=0.1)#10.9
+    
+    b_a.on_changed(update)
+    b_b.on_changed(update)
+    b_c.on_changed(update)
+    b_d.on_changed(update)
+    
+        
+    def reset(event):
+        b_a.reset()
+        b_b.reset()
+        b_c.reset()
+        b_d.reset()
+        
+    def fit(event):
+        from scipy.optimize import curve_fit
+    
+        def f(x, a, b, c, d):
+            return  EMCCD_new(x, a, b, c, d)
+    
+        #f = lambda x, a, b, c, d : eval(dict_values['function'],np_function,{'a':a,'b':b,'c':c,'d':d,'x':t})
+        x = dict_values['x'] 
+        a = dict_values['a'] 
+        b = dict_values['b'] 
+        c = dict_values['c'] 
+        d = dict_values['d'] 
+        #print(len(f(x,a,b,c,d)),len(x),len(y))
+        verboseprint('p0 = ',[a,b,c,d])
+        xmin, xmax = ax.get_xlim()
+    
+        #popt, pcov = curve_fit(f, x[(x>xmin) & (x<xmax)], y[(x>xmin) & (x<xmax)],p0=[a,b,c,d])
+        if bounds_button.get_status()[0]:
+            bounds = (lims.min(),lims.min(),lims.min(),lims.min()), (lims.max(),lims.max(),lims.max(),lims.max())
+        else:
+            bounds = (-np.inf,-np.inf,-np.inf,-np.inf), (np.inf,np.inf,np.inf,np.inf)
+        verboseprint('bounds = ', bounds)
+    
+        popt, pcov = curve_fit(f, xdata, ydata,p0=[a,b,c,d],bounds=bounds)
+        #verboseprint('Fitting, f(x) = ',dict_values['function'])
+        verboseprint('p0 = ',[a,b,c,d])
+        verboseprint('Fit : ',popt)
+    
+        #a, b, c, d = popt
+        import matplotlib.ticker as mticker
+        fmt = mticker.FuncFormatter(lambda x,pos : "${}$".format(mticker.ScalarFormatter(useOffset=False, useMathText=True)._formatSciNotation('%1.2e' % np.round(x,1))))
+
+        plt.figtext(0.55,0.93,r'Fit: {} {} {} {}, std={}'.format(fmt(popt[0]),fmt(popt[1]),fmt(popt[2]),fmt(popt[3]),fmt(np.sum(np.diag(pcov))),bbox={'facecolor':'black', 'alpha':0,'color':'white', 'pad':10}))#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
+        
+        #ax.plot(t, f(t,*popt),label='%s'%(np.round(popt,2)),linestyle='dotted',linewidth=0.7);ax.legend()
+        l.set_ydata(f(x,*popt))
+        plt.draw()
+    
+        
+        b_a.widget.set_val(popt[0])
+        b_b.widget.set_val(popt[1])
+        b_c.widget.set_val(popt[2])
+        b_d.widget.set_val(popt[3])
+    
+    def delete(event):
+        text_box.set_val("")
+        return 
+    button.on_clicked(fit)
+    def onclick(event):
+    
+        #print(ax.get_xlim())
+        xmin, xmax = ax.get_xlim()
+        x = np.linspace(xmin, xmax,n)
+        a = dict_values['a'] 
+        b = dict_values['b']
+        c = dict_values['c'] 
+        d = dict_values['d']
+        dict_values['x'] = x
+        #text = dict_values['function']
+        y = EMCCD_new(x,a,b,c,d)#eval(text,np_function,dict_values)
+        dict_values['y'] = y
+        l.set_xdata(x)
+        l.set_ydata(y)
+        ymax = 1.1 * np.nanmax(y) if np.nanmax(y)>0 else 0.9 * np.nanmax(y)
+        ymin = 0.9 * np.nanmin(y) if np.nanmin(y)>0 else 1.1 * np.nanmin(y)
+        ymax2 = 1.1 * np.nanmax(datal.get_ydata()) if np.nanmax(datal.get_ydata())>0 else 0.9 * np.nanmax(datal.get_ydata())
+        ymin2 = 0.9 * np.nanmin(datal.get_ydata()) if np.nanmin(datal.get_ydata())>0 else 1.1 * np.nanmin(datal.get_ydata())
+    #    if datal.get_marker() is not None:
+    #        ax.set_ylim((np.nanmin([ymin,ymin2]),np.nanmax([ymax,ymax2])))
+    #    else:
+    #        ax.set_ylim((ymin,ymax))
+        #print(dict_values['ydata'])
+        plt.draw()
+        #xmin, xmax = ax.get_xaxis()
+        return 
+    #cid = fig.canvas.mpl_connect('draw_event', onclick)
+    ax.legend(loc='upper right',fontsize=15)
+    plt.show()
 
 def CreateCatalog_new_old(files, ext=0, config=my_conf):
     """Create header catalog from a list of fits file
@@ -5289,6 +5531,7 @@ class GeneralFit_new(Demo):
                   label='Sinusoid%i'%(i)))  
         if self.EMCCD:
             n = np.log10(np.sum([10**yi for yi in ydata_i]))
+            print(n)
             EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=n)
 
             Models.append(Model(EMCCD_new,
@@ -5358,15 +5601,18 @@ class GeneralFit_new(Demo):
 
 
 
-        model =CompositeModel(*Models, label='General fit')
+        model = CompositeModel(*Models, label='General fit')
         #xsample = np.linspace(xdata_i.min(),xdata_i.max(),len(xdata_i)*100)
         model_curve, = self.ax.plot(xsample, model(xsample), color='steelblue', label='model')
         self.ax.legend(loc='upper right')
         self.ax.set_xlim((xinf,xsup))
         self.ax.set_ylim((yinf,ysup))
+        verboseprint('autogui')
         gui = AutoGUI(model, [model_curve], bbox=[0.20, 0.07, 0.75, 0.17],
                       slider_options={'color': 'steelblue'}, data=(xdata_i, ydata_i))
+        verboseprint('model')
         self.model = model
+        verboseprint('gui')
         self.gui = gui
 
 def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,Smearing=0.7):
@@ -5736,7 +5982,9 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, Type=
 
     
     gui.ax.set_title(os.path.basename(getfilename(d)))
+    verboseprint('plotting')
     plt.show()
+    verboseprint('exiting')
     return
 
 
@@ -5760,6 +6008,8 @@ def  ManualFitting(xpapoint):
     if d.get('plot') != '':
         plots = d.get('plot').split(' ')
         name = plots[0]
+        verboseprint(name)
+
         d.set('plot %s save /tmp/test.dat'%(name))
         #x_scale = d.get('plot %s axis x log'%(name))
         #y_scale = d.get('plot %s axis y log'%(name))
@@ -5794,7 +6044,8 @@ def  ManualFitting(xpapoint):
         
     if np.nanmean(y[-10:])>np.nanmean(y[:10]):
        y = y[::-1]
-       InteractivManualFitting(x,y,initial = 'a+b*max(ydata)*exp(-(x-c*xdata[argmax(ydata)])**2/len(ydata)/d)')
+    verboseprint(y)
+    InteractivManualFitting(x,y,initial = 'a+b*max(ydata)*exp(-(x-c*xdata[argmax(ydata)])**2/len(ydata)/d)')
 
     
     #plt.show()
@@ -6170,25 +6421,26 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
                                      Parameters sextractor:
           ********************************************************************""")
     verboseprint('\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]))
-    os.system('sex -d > default.sex')
+    #os.system('sex -d > default.sex')
 
     if DETECTION_IMAGE is not None:
-        verboseprint('sex ' + DETECTION_IMAGE + filename  + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-        answer = os.system('sex ' + DETECTION_IMAGE + filename  + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        verboseprint('sex ' + DETECTION_IMAGE + filename  + ' -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        answer = os.system('sex ' + DETECTION_IMAGE + filename  + ' -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         if answer != 0:
             d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
 
     else:   
-        verboseprint('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
+        verboseprint('sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
         #import subprocess
         #answer = subprocess.check_output('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]), shell=True, stderr=subprocess.STDOUT)
         #pprint(answer)
-        answer = os.system('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
+        answer = os.system('sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
         if answer != 0:
             d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
-
-
-
+#try:
+#    xml = Table.read('/tmp/%s.xml'%(os.path.basename(filename)),table_id=1)
+#    os.system('echo %s, %s, %s, %s, %s, %s, %s, %s, %s >> /tmp/sextractor_background.csv'%(filename, xml['NDetect'][0],xml['NSextracted'][0],xml['Threshold'][0][0],xml['Threshold'][0][1],xml['Background_Mean'][0][0], xml['Background_Mean'][0][1],xml['Background_StDev'][0][0], xml['Background_StDev'][0][1]))
+#    os.remove('/tmp/%s.xml'%(os.path.basename(filename)))
     colors =  ['Orange']  #['White','Yellow','Orange']  
     if os.path.isfile(params[0]):
         try:

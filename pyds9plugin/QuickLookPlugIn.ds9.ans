@@ -564,8 +564,8 @@ endparam
 
 
 param open
-path entry {Path(s)} - {Path of the image(s) to open} #NORMAL
-type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE {Radius of the aperture in pixel} 
+path entry {Path of the image(s) to open}    {} #NORMAL
+type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE {} 
 endparam
 
 param ComputeFluctuation
