@@ -25,7 +25,7 @@ data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Images/stack?????
 
 MAJOR = '2'
 MINOR = '9'
-MICRO = '3dev7'
+MICRO = '3dev8'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
