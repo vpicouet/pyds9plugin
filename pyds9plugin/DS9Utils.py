@@ -542,11 +542,13 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     """
 
 
-    from astropy.table import Table
+    from astropy.table import Table, vstack
     from shutil import copyfile
     #import pandas as pd
     #cat, query, fields = sys.rgv[-3:]
     cat_path, number, fields, query = sys.argv[-4:]
+    if number == 'all':
+        number=1000
     cat_path = cat_path.rstrip()[::-1].rstrip()[::-1]
     fields = np.array(fields.split(','),dtype=str)
     verboseprint('cat, number, fields, query = ',cat, number, fields, query )
@@ -580,10 +582,18 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     if not os.path.exists(path_date):
         os.makedirs(path_date)       
     
+    t3 = t2.copy()
+    t3.remove_rows(np.arange(len(t2)))
+    for field in fields:
+        for value in np.unique(t2[field]):
+            t3 = vstack((t3,t2[t2[field]==value][-int(number):]))
+    t2=t3
+    
     try:
         numbers = t2[list(fields)].as_array()
     except KeyError:
         numbers = [''] * len(t2)
+        
     for line,numbers in zip(t2, numbers):
         filename = line['Path']
         #print(fields)
@@ -979,7 +989,7 @@ def create_DS9regions_3(xim, yim, r1=None,r2=None, more=None, save=True, savenam
             rest = '{:.4f},{:.4f})'.format(r1[i], r2[i])#r[i], r1[i]
             rest += ' # color={}'.format(color[i])
         elif form[i] =='circle':
-            print('circle')
+            #print('circle')
             #print('Circle')
             rest = '{:.4f})'.format(r1[i])#[i]
             rest += ' # color={}'.format(color[i])
@@ -4381,16 +4391,31 @@ def Parallelize(function=lambda x:print(x),action_to_paralize=[],parameters=[], 
 
     
 def DS9PlotEMCCD(xpapoint):
-    from matplotlib.widgets import  Button, RadioButtons, TextBox # Slider
+    from matplotlib.widgets import  Button# Slider, RadioButtons, TextBox 
     from matplotlib.widgets import  CheckButtons #RadioButtons,
     from dataphile.graphics.widgets import Slider
+    from astropy.io import fits
     d = DS9n(xpapoint)    
-    im=getdata(d)
+    #im=getdata(d)
+    #name = getfilename(d)
+#    im = d.get_pyfits()[0].data[1172:2145,0:2069]
+    if len(d.get('regions selected').split('\n'))>3:
+        print('Taking region')
+        im=getdata(d)
+    else:
+        im = d.get_pyfits()[0].data[1300:2000,1172:2145]#,:800]#
     val, bins = np.histogram(im.flatten(),bins=np.linspace(2000,7000,500))
     bins = (bins[1:]+bins[:-1])/2
-    #tab = Table.read('/tmp/test.dat', format='ascii')
-    #xdata,ydata = tab['col1'], tab['col2']
-    #xdata,ydata =xdata[xdata<7000],np.log10(ydata[xdata<7000])
+    val = np.array(val,dtype=float)
+    
+
+#    tab = Table.read('/Users/Vincent/DS9BackUp/190626-17H04_HistogramSum.csv')
+#    bins,val = tab['col0'][tab['col0']<10000],tab['col1'][tab['col0']<10000]
+#xdata,ydata =xdata[xdata<7000],np.log10(ydata[xdata<7000])
+    #val[~np.isfinite(np.log10(val))] = np.nan
+    #xdata,ydata = bins, np.log10(val)#[np.isfinite(np.log10(val))]
+    #val+=1
+    val[(val==0)&(bins>3000)]=1
     xdata,ydata = bins[np.isfinite(np.log10(val))], np.log10(val)[np.isfinite(np.log10(val))]
     n = np.log10(np.sum([10**yi for yi in ydata]))
     #n=len(xdata)
@@ -4405,15 +4430,19 @@ def DS9PlotEMCCD(xpapoint):
     
       
     dict_values={'a':1,'b':1,'c':1,'d':1,'x':x,'xdata':xdata,'ydata':ydata}
-    EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=n-2)
-    EMCCD_noise = lambda x,biais,RN: EMCCD(x,biais,RN, EmGain=0,flux=0, bright_surf=n-2)
+#    EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=n)#-2
+#    EMCCD_noise = lambda x,biais,RN: EMCCD(x,biais,RN, EmGain=0,flux=0, bright_surf=n)#-2
+    EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=ydata)#-2
+    EMCCD_noise = lambda x,biais,RN: EMCCD(x,biais,RN, EmGain=0,flux=0, bright_surf=ydata)#-2
     
-    datal,  = plt.plot(xdata,ydata, '.',c='black',label='Data')
-    l, = plt.plot(x, EMCCD_new(x,3350,107,600,0.1), lw=1,label='EMCCD model')
-    s, = plt.plot(np.ones(2)*3350+5.5*107/2.35, [l.get_ydata().min(),l.get_ydata().max()], lw=1,color='red',linestyle='dotted',label='$5.5\sigma$ Threshold')
-    noise, = plt.plot(x[x>3350+2*107/2.35], EMCCD_noise(x,3350,107)[x>3350+2*107/2.35], lw=1,color='black',linestyle='dotted',label='Readout noise')
+    datal,  = plt.plot(xdata,ydata, '-',c='black',label='Data')
+    y = EMCCD_new(x,bins[np.nanargmax(val)],107,600,0.1)
+    #l, = plt.plot(xdata, EMCCD_new(xdata,bins[np.nanargmax(val)],107,600,0.1), '.-', lw=1,label='EMCCD model')
+    l, = plt.plot(x, EMCCD_new(x,bins[np.nanargmax(val)],107,600,0.1), '-', lw=1,label='EMCCD model')
+    s, = plt.plot(np.ones(2)*bins[np.nanargmax(val)]+5.5*107/2.35, [l.get_ydata().min(),l.get_ydata().max()], lw=1,color='red',label='$5.5\sigma$ Threshold')#
+    noise, = plt.plot(x[x>bins[np.nanargmax(val)]+2*107/2.35], EMCCD_noise(x,bins[np.nanargmax(val)],107)[x>bins[np.nanargmax(val)]+2*107/2.35], lw=1,color='black',linestyle='dotted',label='Readout noise')
     #plt.fill_between(np.linspace(3350+5.5*107/2.35,3350+10*107/2.35,len(x)), EMCCD_noise(x,3350,107)*0,EMCCD_noise(x,3350,107), label='Readout noise is PC mode')
-    ax.set_ylim((0.9*ydata.min(),1.1*ydata.max()))
+    ax.set_ylim((0.9*np.nanmin(ydata),1.1*np.nanmax(ydata)))
     ax.set_ylabel('Log (Frequency of occurence)',fontsize=15)
         
     ax.margins(x=0)
@@ -4425,9 +4454,9 @@ def DS9PlotEMCCD(xpapoint):
     
     
     button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), 'Fit', color='white', hovercolor='0.975')
-    #delete_button = Button(plt.axes([0.72, 0.025, 0.04, 0.04]), 'x', color='white', hovercolor='0.975')
+    delete_button = Button(plt.axes([0.70, 0.025, 0.08, 0.04]), 'Save', color='white', hovercolor='0.975')
     #replace_ax = plt.axes([0.77, 0.025, 0.1, 0.04])    
-    
+
     
     for edge in 'left', 'right', 'top', 'bottom':
         #rax.spines[edge].set_visible(False)
@@ -4478,6 +4507,8 @@ def DS9PlotEMCCD(xpapoint):
         ax.set_ylim(np.min(ydata), np.max(ydata))
         plt.draw()
         return text
+
+
     
     def update(val):
         try:
@@ -4509,8 +4540,8 @@ def DS9PlotEMCCD(xpapoint):
     #scalex.on_clicked(scalefuncx)
     #   data_button.on_clicked(loadData)
     
-    b_a = Slider(figure=fig, location=[0.3, 0.17, 0.6, 0.03], label='Bias [ADU]',  bounds=(2500, 4000), init_value=3350)#,valfmt="%1.2f")
-    b_b = Slider(figure=fig, location=[0.3, 0.14, 0.6, 0.03], label='ReadNoise [$e^-$]', bounds=(0, 150), init_value=107)
+    b_a = Slider(figure=fig, location=[0.3, 0.17, 0.6, 0.03], label='Bias [ADU]',  bounds=(2200, 4000), init_value=bins[np.nanargmax(val)])#,valfmt="%1.2f")
+    b_b = Slider(figure=fig, location=[0.3, 0.14, 0.6, 0.03], label='ReadNoise [$e^-$]', bounds=(0, 150), init_value=107)#107)
     b_c = Slider(figure=fig, location=[0.3, 0.11, 0.6, 0.03], label='EmGain [ADU/ADU]',  bounds=(200, 2000), init_value=600)
     b_d = Slider(figure=fig, location=[0.3, 0.08, 0.6, 0.03], label='Flux [$e^-$]',  bounds=(0, 1.9  ), init_value=0.1)#10.9
     
@@ -4569,10 +4600,7 @@ def DS9PlotEMCCD(xpapoint):
         b_b.widget.set_val(popt[1])
         b_c.widget.set_val(popt[2])
         b_d.widget.set_val(popt[3])
-    
-    def delete(event):
-        text_box.set_val("")
-        return 
+
     button.on_clicked(fit)
     def onclick(event):
     
@@ -4598,11 +4626,39 @@ def DS9PlotEMCCD(xpapoint):
     #    else:
     #        ax.set_ylim((ymin,ymax))
         #print(dict_values['ydata'])
-        plt.draw()
+
         #xmin, xmax = ax.get_xaxis()
         return 
     #cid = fig.canvas.mpl_connect('draw_event', onclick)
+    name = getfilename(d)
+    header = fits.getheader(name)
+    #print(header)
+    try:
+        plt.figtext(0.55,0.5,'Gain: {} \nExp: {} \nTemp: {}\nDate: {}'.format(header['EMGAIN'],header['EXPTIME'],header['EMCCDBAC'],header['date']),bbox={'facecolor':'black', 'alpha':0,'color':'white', 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
+    except KeyError:
+        pass
+
+    def delete(event):
+        try:
+            a = b_a.value
+            b = b_b.value
+            c = b_c.value
+            d = b_d.value
+        except AttributeError:
+            a = b_a.val
+            b = b_b.val
+            c = b_c.val
+            d = b_d.val   
+        os.system('echo %s, %s, %s, %s, %s, %s, %s, %s >>/tmp/emccd_fitting.csv'%(header['EMGAIN'],header['EXPTIME'],header['EMCCDBAC'],header['date'],a,b,c,d,)) 
+        return     
+    delete_button.on_clicked(delete)
+
+
+
+    plt.draw()
     ax.legend(loc='upper right',fontsize=15)
+    ax.set_title(name)
+    
     plt.show()
 
 def CreateCatalog_new_old(files, ext=0, config=my_conf):
@@ -4688,7 +4744,7 @@ def CreateCatalog_new(files, ext=[0], config=my_conf):
     from tqdm import  tqdm #tqdm_gui,
     warnings.simplefilter('ignore', UserWarning)
     files.sort()
-    #path = files[0]    
+    path = files[0]    
 
     file_header = []
     files_name = []
@@ -4733,7 +4789,7 @@ def CreateCatalog_new(files, ext=[0], config=my_conf):
     from astropy.io import ascii
     path_db =  os.environ['HOME'] + '/DS9BackUp/HeaderDataBase/HeaderCatalog_%s.csv'%(datetime.now().strftime("%y%m%d-%HH%Mm%Ss"))
     ascii.write(table_header.filled(''),path_db,  format='csv')   
-    #csvwrite(hstack(table_header),os.path.dirname(path) + '/HeaderCatalog.csv')#fill_values=[(ascii.masked, 'N/A')]
+    csvwrite(table_header.filled(''),os.path.dirname(path) + '/HeaderCatalog.csv')#fill_values=[(ascii.masked, 'N/A')]
     #hstack(table_header).write(os.path.dirname(path) + '/HeaderCatalog.fits')
     table_header.pprint_all(max_lines=-1)
     print('\nTable saved : ', path_db)
@@ -5658,7 +5714,18 @@ def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,S
     #print(x)
     #print('x1-x0 = ',x[1]-x[0],np.log(x[1]-x[0]))
     #verboseprint(bright_surf)
-    return bright_surf + n*2  + np.log10(convolve(y[:],kernel))
+    y_final  = np.log10(convolve(y[:],kernel)) #+ bright_surf 
+    y_final -= y_final.min()
+    #offsets = np.arange(0,70,0.1)
+    offsets = np.arange(0,20,0.01)
+    #sums = [np.sum((y_final-offset)[y_final>offset]) for offset in offsets] 
+    
+    sums = [np.log10(np.sum(10**(y_final-offset)[y_final>offset])) for offset in offsets] 
+    #offset = offsets[np.argmin(abs(sums-bright_surf.sum()))]
+    offset = offsets[np.argmin(abs(sums-np.log10(np.sum([10**bright_surf]))))]
+    #print(offset)
+    return y_final - offset  #- y_final[y_final>0].sum() #+ n*2 
+    #return np.log10(convolve(y[:],kernel)) + np.log10(np.sum([10**bright_surf]))
 
 
 class GeneralFit_Function(Demo):
@@ -6142,6 +6209,7 @@ def Function(xpapoint, config=my_conf):
     scale = RadioButtons(rax, ('linear','log'), active=0)
     def scalefunc(label):
           gui.ax.set_yscale(label)
+          gui.ax.set_ylim(ymin=0)
           gui.figure.canvas.draw_idle()
     scale.on_clicked(scalefunc)
 
