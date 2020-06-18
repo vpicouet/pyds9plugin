@@ -289,6 +289,12 @@ hmenu Instrumentation - AIT
 		DS9Utils $xpa_method ColumnLineCorrelation $param(Images-to-analyze); "$path"   | $text  
 
 
+		EMCCD histogram #29
+		*
+		menu
+		DS9Utils $xpa_method DS9PlotEMCCD $param(EMCCD);  $smearing | $text  
+
+
 	endhmenu
 
 
@@ -546,7 +552,9 @@ DS9Utils $xpa_method ComputeFluctuation $param(ComputeFluctuation) $Number $Radi
 
 
 
-
+param EMCCD
+smearing checkbox {Smearing} 0 {Use smearing model}
+endparam
 
 param Aperture-photometry
 aper entry {Apertures} 5,10,15 {Apertures radius in pixel}

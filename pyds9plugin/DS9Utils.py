@@ -4388,9 +4388,330 @@ def Parallelize(function=lambda x:print(x),action_to_paralize=[],parameters=[], 
             job.join()
     return
 
+def VariableSmearingKernels(image, Smearing=1.5, SmearExpDecrement=50000):
+
+    smearing_length = Smearing*np.exp(-image/SmearExpDecrement)
+    smearing_kernels = np.exp(-np.arange(6)[:,np.newaxis,np.newaxis]/smearing_length )
+    smearing_kernels /= smearing_kernels.sum(axis=0)
+
+    return smearing_kernels
+
+
+def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
+    from scipy.sparse import dia_matrix
+    import inspect
+    from matplotlib.widgets import  Button# Slider, RadioButtons, TextBox 
+    from matplotlib.widgets import  CheckButtons #RadioButtons,
+    from dataphile.graphics.widgets import Slider
+    from astropy.io import fits
+    if len(sys.argv)>1:
+        smearing = bool(int(sys.argv[-1]))
+    d = DS9n(xpapoint)    
+    if len(d.get('regions selected').split('\n'))>3:
+        verboseprint('Taking region')
+        im=getdata(d)
+    else:
+        verboseprint('Taking nominal center region')
+        im = d.get_pyfits()[0].data[1300:2000,1172:2145]#,:800]#
+    val, bins = np.histogram(im.flatten(),bins=np.linspace(2000,7000,500))
+    bins = (bins[1:]+bins[:-1])/2
+    val = np.array(val,dtype=float)
+    val*=im.size/len(im[np.isfinite(im)])
+    if path is not None:
+        tab = Table.read(path)
+        bins,val = tab['col0'][tab['col0']<10000],tab['col1'][tab['col0']<10000]#-1e5
 
     
-def DS9PlotEMCCD(xpapoint):
+    val[(val==0)&(bins>3000)]=1
+    xdata,ydata = bins[np.isfinite(np.log10(val))], np.log10(val)[np.isfinite(np.log10(val))]
+    n = np.log10(np.sum([10**yi for yi in ydata]))
+    lims = np.array([0,2])
+        
+    np_function = {a:getattr(np, a) for a in dir(np)}
+    
+    #EMCCD_noise = lambda x,biais,RN: EMCCD(x,biais,RN, EmGain=0,flux=0, bright_surf=ydata)#-2
+    
+    
+    
+    
+    def SimulateFIREBallemCCDHist(x,data, ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, Dark, Smearing, SmearExpDecrement, exposure,  n_registers,flux, sCIC=0):
+        #bins, ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, Dark, Smearing, SmearExpDecrement, exposure,  n_registersbins, ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, Dark, Smearing, SmearExpDecrement, exposure,  n_registers = args
+    #ConversionGain=0.53, EmGain=1500, Bias=3000, RN=80, p_pCIC=1, p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50,  n_registers=604    
+    #    imaADU, imaADU_wo_RN, imaADU_RN = SimulateFIREBallemCCDImage(ConversionGain=ConversionGain, EmGain=EmGain, Bias=Bias, RN=RN, 
+    #                                                                 p_pCIC=p_pCIC, p_sCIC=p_sCIC, 
+    #                                                                 Dark=Dark, Smearing=Smearing, SmearExpDecrement=SmearExpDecrement, 
+    #                                                                 exposure=exposure,  n_registers=n_registers, flux=flux, save=False)
+        #n, bins = np.histogram(imaADU[:,1066:2124].flatten(),range=[0,2**16], bins = int(2**16/2**2))#, range=(-200,11800))
+        
+    
+        #Bias = float(Bias) / ConversionGain
+        #im=np.ones(int(np.sum(10**ydata)))
+        n_registers = 604
+        
+        imaADU = np.random.gamma(flux*ConversionGain, EmGain, size=im.shape)  
+    
+#        prob_pCIC = np.random.rand(size[1],size[0])    #Draw a number prob in [0,1]
+#        image[prob_pCIC <  p_pCIC] += 1    
+        prob_sCIC = np.random.rand(im.shape[0],im.shape[1])    #Draw a number prob in [0,1]
+        id_scic = prob_sCIC <  sCIC # sCIC positions
+        # partial amplification of sCIC
+        register = np.random.randint(1, n_registers, size=id_scic.sum())  #Draw at which stage of the EM register the electorn is created
+        imaADU[id_scic] += np.random.exponential(np.power(EmGain, register/n_registers))       
+
+        if Smearing>0:
+            #print(SmearExpDecrement)
+            smearing_kernels = VariableSmearingKernels(imaADU, Smearing, SmearExpDecrement)
+            offsets = np.arange(6)
+            A = dia_matrix((smearing_kernels.reshape((6,-1)), offsets), shape=(imaADU.size,imaADU.size))
+            #print(imaADU==A.dot(imaADU.ravel()).reshape(imaADU.shape))
+            imaADU = A.dot(imaADU.ravel()).reshape(imaADU.shape)
+            
+    
+        imaADU += np.random.normal(Bias, RN*ConversionGain, size=im.shape)  
+        n, bins = np.histogram(imaADU.flatten(),range=[np.nanmin(x), np.nanmax(x)],bins = len(x))#, range=(-200,11800))
+        #print(len(imaADU),len(data))
+        #print(len(n),len(x))
+        #print(imaADU.shape,data.shape)
+        #print(n.sum())#,np.sum(n*len(x)/500),np.nansum(data))
+        #print(data)
+#        return n*len(x)/500#imaADU[:,1066:2124]#n#, (bins[:-1]+bins[1:])/2
+        if path is None:    
+            return n#*len(x)/500#imaADU[:,1066:2124]#n#, (bins[:-1]+bins[1:])/2
+        else:    
+            return n*np.sum(10**ydata)/np.sum(n)#*len(x)/500#imaADU[:,1066:2124]#n#, (bins[:-1]+bins[1:])/2
+        
+    print((10**ydata).sum())
+    
+    x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), len(ydata))
+    
+      
+    dict_values={'a':1,'b':1,'c':1,'d':1,'x':x,'xdata':xdata,'ydata':ydata}
+    EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=ydata)#-2
+ 
+    if smearing:
+        function = lambda   x, Bias, RN, EmGain, flux, smearing, SmearExpDecrement, sCIC: np.log10(SimulateFIREBallemCCDHist(x=x,data=im, ConversionGain=0.53, EmGain=EmGain, Bias=Bias, RN=RN, p_pCIC=0, p_sCIC=0, Dark=0, Smearing=smearing, SmearExpDecrement=SmearExpDecrement, exposure=50,  n_registers=604,flux=flux, sCIC=sCIC))
+        lims = [(2e3,4.5e3),(0,200),(100,1500),(0.001,1.5),(0,3),(1e4,9e4),(0,1)]#,(0,1)]
+        centers = [np.mean(np.array(lim)) for lim in lims]
+    else:
+        function = EMCCD_new#lambda   x, Bias, RN, EmGain, flux : SimulateFIREBallemCCDHist(x=x,ConversionGain=0.53, EmGain=EmGain, Bias=Bias, RN=RN, p_pCIC=0, p_sCIC=0, Dark=0, Smearing=0.7, SmearExpDecrement=50000, exposure=50,  n_registers=604,flux=flux/50)
+        lims = [(2e3,4.5e3),(80,140),(100,1500),(0.001,1.5)]
+        centers = [np.mean(np.array(lim)) for lim in lims]
+
+    args_number = len(inspect.getargspec(function).args)-1
+    
+    fig, ax = plt.subplots(figsize=(10,7))
+    #plt.subplots_adjust(bottom=0.25)
+    plt.subplots_adjust(bottom=0.05+0.08+args_number*0.03)
+    
+    
+    names=inspect.getargspec(function).args[1:]
+    #lims = [(0,2)]*args_number
+    #lims = [(0,2)]*args_number
+    #centers=[3004, 107, 600, 0.1]
+    #EMCCD_new(x,bins[np.nanargmax(val)],107,600,0.1)
+    y = function(x,*centers)
+    datal,  = plt.plot(xdata,ydata, '-',c='black',label='Data')
+    l, = plt.plot(x, function(x,*centers), '-', lw=1,label='EMCCD model')
+    #s, = plt.plot(np.ones(2)*bins[np.nanargmax(val)]+5.5*107/2.35, [l.get_ydata().min(),l.get_ydata().max()], lw=1,color='red',label='$5.5\sigma$ Threshold')#
+    #noise, = plt.plot(x[x>bins[np.nanargmax(val)]+2*107/2.35], EMCCD_noise(x,bins[np.nanargmax(val)],107)[x>bins[np.nanargmax(val)]+2*107/2.35], lw=1,color='black',linestyle='dotted',label='Readout noise')
+    ax.set_ylim((0.9*np.nanmin(ydata),1.1*np.nanmax(ydata)))
+    ax.set_ylabel('Log (Frequency of occurence)',fontsize=15)
+        
+    ax.margins(x=0)
+    
+    bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor='None')
+    
+    
+    button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), 'Fit', color='white', hovercolor='0.975')
+    delete_button = Button(plt.axes([0.70, 0.025, 0.08, 0.04]), 'Save', color='white', hovercolor='0.975')
+    
+    
+    for edge in 'left', 'right', 'top', 'bottom':
+        #rax.spines[edge].set_visible(False)
+        #raxx.spines[edge].set_visible(False)
+        #data_box.spines[edge].set_visible(False)
+        bounds_box.spines[edge].set_visible(False)
+        #replace_ax.spines[edge].set_visible(False)
+    #scale = CheckButtons(rax, ['log'])
+    #scalex = CheckButtons(raxx, ['log'])
+    #data_button = CheckButtons(data_box, ['Data'],[True])
+    bounds_button = CheckButtons(bounds_box, ['Bounds'],[False])
+    #replace_button = Button(replace_ax, ['Replace'],[False])
+    
+    #def scalefunc(label):
+    #    #print(scale)
+    #    if (ax.get_yscale()=='linear') :#& ((dict_values['ydata']>1).any() | (dict_values['y']>1).any()):
+    #        ax.set_yscale('log')
+    #    elif ax.get_yscale()=='log':
+    #        ax.set_yscale('linear')
+    #    fig.canvas.draw_idle()
+    #def scalefuncx(label):
+    #    #print(scale)
+    #    if (ax.get_xscale()=='linear') & (dict_values['x']>1).any():
+    #        ax.set_xscale('log')
+    #    elif ax.get_xscale()=='log':
+    #        ax.set_xscale('linear')        
+    #    fig.canvas.draw_idle()
+    
+    #def loadData(label):
+    #    #from astropy.table import Table
+    #    if data_button.get_status()[0]:
+    #        datal.set_marker('.')
+    #    else:
+    #        datal.set_marker(None)        
+    #    fig.canvas.draw_idle()
+    
+    
+            
+    
+    #def submit(text):
+    #    x = dict_values['x'] 
+    #    a = dict_values['a'] 
+    #    b = dict_values['b'] 
+    #    c = dict_values['c'] 
+    #    d = dict_values['d'] 
+    #    ydata = eval(text,np_function,dict_values)
+    #    l.set_ydata(ydata)
+    #    ax.set_ylim(np.min(ydata), np.max(ydata))
+    #    plt.draw()
+    #    return text
+    
+    
+    
+    def update(val):
+        vals = [] 
+        try:
+            for slid in sliders:
+                vals.append(slid.value)
+                dict_values[slid.label] = slid.value
+        except AttributeError:
+            for slid in sliders:
+                vals.append(slid.val)
+                dict_values[slid.label] = slid.val
+                
+        x = dict_values['x'] 
+        l.set_ydata(function(x,*vals))
+        #s.set_xdata(np.ones(2)*a+5.5*b/2.35)
+        #noise.set_data(x[x>a+2*b/2.35],EMCCD_noise(x,a,b)[x>a+2*b/2.35])
+    
+    
+     
+        fig.canvas.draw_idle()
+        
+        return 
+    
+    
+    sliders=[]
+    for i, lim in enumerate(lims[::-1]):
+        if names is None:
+            slid = Slider(figure=fig, location=[0.3, 0.08+i*0.03, 0.6, 0.03], label='param %i'%(i),  bounds=lim, init_value=np.array(lim).mean())
+        else:
+            slid = Slider(figure=fig, location=[0.3, 0.08+i*0.03, 0.6, 0.03], label=names[::-1][i],  bounds=lim, init_value=np.array(lim).mean())
+        sliders.append(slid)
+    sliders=sliders[::-1]
+    for slider in sliders:
+        slider.on_changed(update)
+    
+        
+    def reset(event):
+        for slider in sliders:
+            slider.reset()
+    
+    
+    def fit(event):
+        from pyds9fb.DS9FB import calc_emccdParameters
+        from scipy.optimize import curve_fit
+        vals = [bins[np.nanargmax(val)]] 
+        bias, sigma, emgain = list(calc_emccdParameters(xdata, ydata))
+        vals = [bias, sigma, emgain]
+        print(args_number)
+        if args_number==4:
+            new_function = lambda x, a : function(x, bias, sigma, emgain, a)
+        else:
+            new_function = lambda x, a : function(x, bias, sigma, emgain, a, smearing=0, SmearExpDecrement=50000)
+        popt, pcov = curve_fit(new_function,xdata[(xdata<5000)&(ydata>1)],ydata[(xdata<5000)&(ydata>1)], p0=0.1)#
+        print(popt, pcov)
+        vals.append(popt)
+        vals.append(0)
+        vals.append(50000)
+
+        n=6
+        try:
+            for slid in sliders[n:]:
+                vals.append(slid.value)
+        except AttributeError:
+            for slid in sliders[n:]:
+                vals.append(slid.val)
+        l.set_ydata(function(x,*vals[:args_number]))
+        plt.draw()
+
+        for slid, vali in zip(sliders,vals):
+            slid.widget.set_val(vali)
+
+    
+    button.on_clicked(fit)
+    def onclick(event):
+    
+        #print(ax.get_xlim())
+        xmin, xmax = ax.get_xlim()
+        x = np.linspace(xmin, xmax,n)
+        a = dict_values['a'] 
+        b = dict_values['b']
+        c = dict_values['c'] 
+        d = dict_values['d']
+        dict_values['x'] = x
+        #text = dict_values['function']
+        y = EMCCD_new(x,a,b,c,d)#eval(text,np_function,dict_values)
+        dict_values['y'] = y
+        l.set_xdata(x)
+        l.set_ydata(y)
+    #    ymax = 1.1 * np.nanmax(y) if np.nanmax(y)>0 else 0.9 * np.nanmax(y)
+    #    ymin = 0.9 * np.nanmin(y) if np.nanmin(y)>0 else 1.1 * np.nanmin(y)
+    #    ymax2 = 1.1 * np.nanmax(datal.get_ydata()) if np.nanmax(datal.get_ydata())>0 else 0.9 * np.nanmax(datal.get_ydata())
+    #    ymin2 = 0.9 * np.nanmin(datal.get_ydata()) if np.nanmin(datal.get_ydata())>0 else 1.1 * np.nanmin(datal.get_ydata())
+    #    if datal.get_marker() is not None:
+    #        ax.set_ylim((np.nanmin([ymin,ymin2]),np.nanmax([ymax,ymax2])))
+    #    else:
+    #        ax.set_ylim((ymin,ymax))
+        #print(dict_values['ydata'])
+    
+        #xmin, xmax = ax.get_xaxis()
+        return 
+    #cid = fig.canvas.mpl_connect('draw_event', onclick)
+    name = getfilename(d)
+    header = fits.getheader(name)
+    #print(header)
+    try:
+        plt.figtext(0.55,0.5,'Gain: {} \nExp: {} \nTemp: {}\nDate: {}'.format(header['EMGAIN'],header['EXPTIME'],header['EMCCDBAC'],header['date']),bbox={'facecolor':'black', 'alpha':0,'color':'white', 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
+    except KeyError:
+        pass
+    
+    #def delete(event):
+    #    try:
+    #        a = b_a.value
+    #        b = b_b.value
+    #        c = b_c.value
+    #        d = b_d.value
+    #    except AttributeError:
+    #        a = b_a.val
+    #        b = b_b.val
+    #        c = b_c.val
+    #        d = b_d.val   
+    #    os.system('echo %s, %s, %s, %s, %s, %s, %s, %s >>/tmp/emccd_fitting.csv'%(header['EMGAIN'],header['EXPTIME'],header['EMCCDBAC'],header['date'],a,b,c,d,)) 
+    #    return     
+    #delete_button.on_clicked(delete)
+    
+    
+    
+    plt.draw()
+    ax.legend(loc='upper right',fontsize=15)
+    ax.set_title(name)
+    
+    plt.show()
+    return
+#DS9PlotEMCCD(None,'/Users/Vincent/DS9BackUp/190626-17H04_HistogramSum.csv')
+    
+def DS9PlotEMCCD_old(xpapoint):
     from matplotlib.widgets import  Button# Slider, RadioButtons, TextBox 
     from matplotlib.widgets import  CheckButtons #RadioButtons,
     from dataphile.graphics.widgets import Slider
@@ -4400,9 +4721,10 @@ def DS9PlotEMCCD(xpapoint):
     #name = getfilename(d)
 #    im = d.get_pyfits()[0].data[1172:2145,0:2069]
     if len(d.get('regions selected').split('\n'))>3:
-        print('Taking region')
+        verboseprint('Taking region')
         im=getdata(d)
     else:
+        verboseprint('Taking nominal center region')
         im = d.get_pyfits()[0].data[1300:2000,1172:2145]#,:800]#
     val, bins = np.histogram(im.flatten(),bins=np.linspace(2000,7000,500))
     bins = (bins[1:]+bins[:-1])/2
@@ -5683,9 +6005,9 @@ def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,S
 #    p_sCIC=2
     #bright_surf=7
     n_registers = 604
-    coeff = 0.53
+    coeff = 0.53 #ADU/e-
     RN *= coeff
-    EmGain *= coeff/np.log(2)
+    #EmGain = coeff/np.log(2)
     #ybias = np.zeros(len(x))#np.exp(-np.square(x-biais)/(2*RN**2))
     shape = flux*coeff#(Dark+flux)*exposure
 #    ycounts = x**(shape-1)*(np.exp(-x/EmGain) /(sps.gamma(shape)*EmGain**shape))    
@@ -5697,12 +6019,12 @@ def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,S
     yscic = [np.exp(-x/np.power(EmGain, register/n_registers))/np.power(EmGain, register/n_registers) for register in np.arange(n_registers)]
     yscic = np.sum(yscic,axis=0)
     #plt.plot(np.sum(yscic,axis=0)/len(yscic));plt.plot(yscic[1]);plt.plot(yscic[-1]);n=500;plt.plot(np.exp(-x/np.power(EmGain, n/n_registers))/np.power(EmGain, n/n_registers))
-    ycounts[(x>biais)] = ycounts[:-np.sum(x<=biais)] #PPPPPbbbbbbb
-    #ycounts[(x>biais) & (x<x[-1])] = ycounts[1:-np.sum(x<=biais)] #PPPPPbbbbbbb
-    ycounts[x<biais] = 0
+    if biais>x[0]:
+        ycounts[(x>biais)] = ycounts[:-np.sum(x<=biais)] #PPPPPbbbbbbb    #ycounts[(x>biais) & (x<x[-1])] = ycounts[1:-np.sum(x<=biais)] #PPPPPbbbbbbb
+        ycounts[x<biais] = 0
     #plot(x,10*np.log10(10*yscic))
-    yscic[x>biais] = yscic[:-np.sum(x<=biais)]
-    yscic[x<biais] = 0
+#    yscic[x>biais] = yscic[:-np.sum(x<=biais)]
+#    yscic[x<biais] = 0
     #plt.semilogy(x, ybias+ycounts)
     y = ycounts#*(x[1]-x[0])#*10**bright_surf*
     #plot(x,np.log10(convolve(y[:],Gaussian1DKernel(stddev=RN/(x[1]-x[0])))));ylim((-5,13))
@@ -5718,14 +6040,14 @@ def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,S
     y_final -= y_final.min()
     #offsets = np.arange(0,70,0.1)
     offsets = np.arange(0,20,0.01)
-    #sums = [np.sum((y_final-offset)[y_final>offset]) for offset in offsets] 
+    return np.log10(convolve(y[:],kernel)) + np.log10(np.sum([10**bright_surf]))
     
-    sums = [np.log10(np.sum(10**(y_final-offset)[y_final>offset])) for offset in offsets] 
+#    sums = [np.log10(np.sum(10**(y_final-offset)[y_final>offset])) for offset in offsets] 
+#    offset = offsets[np.argmin(abs(sums-np.log10(np.sum([10**bright_surf]))))]
+#    return y_final - offset  #- y_final[y_final>0].sum() #+ n*2 
+    #sums = [np.sum((y_final-offset)[y_final>offset]) for offset in offsets] 
     #offset = offsets[np.argmin(abs(sums-bright_surf.sum()))]
-    offset = offsets[np.argmin(abs(sums-np.log10(np.sum([10**bright_surf]))))]
     #print(offset)
-    return y_final - offset  #- y_final[y_final>0].sum() #+ n*2 
-    #return np.log10(convolve(y[:],kernel)) + np.log10(np.sum([10**bright_surf]))
 
 
 class GeneralFit_Function(Demo):
@@ -8207,8 +8529,8 @@ def main():
     if len(sys.argv)==1:
         CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/')
         PresentPlugIn()
-        LoadDS9QuickLookPlugin()
     elif (len(sys.argv)==2) & ((sys.argv[-1]=='help')|(sys.argv[-1]=='h')):
+        CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9BackUp/')
         PresentPlugIn()
         from shutil import which
         print("which('DS9Utils') =", which('DS9Utils'))
@@ -8217,6 +8539,7 @@ def main():
         print('Python version = ', sys.version)
         print('DS9 analysis file = ', resource_filename('pyds9plugin','QuickLookPlugIn.ds9.ans'))
         print('Python main file = ', resource_filename('pyds9plugin','DS9Utils.py'))
+        LoadDS9QuickLookPlugin()
         sys.exit()
 
 
@@ -8239,7 +8562,7 @@ def main():
                                 'ReplaceWithNans': DS9replaceNaNs,'InterpolateNaNs': DS9InterpolateNaNs,'Trimming': DS9Trimming,
                                 'ColumnLineCorrelation': DS9CLcorrelation,'ComputeEmGain':DS9ComputeEmGain,
                                 'DS9_2D_FFT':DS9_2D_FFT,'2D_autocorrelation': DS9_2D_autocorrelation,'get_depth_image': get_depth_image,
-                                 }
+                                 'DS9PlotEMCCD':DS9PlotEMCCD}
     
     
         DictFunction_SOFT =   {'DS9SWARP':DS9SWARP,'DS9PSFEX': DS9PSFEX,'RunSextractor':RunSextractor,'DS9saveColor':DS9saveColor,'AperturePhotometry':AperturePhotometry,
