@@ -13,6 +13,7 @@ requires = ['numpy >=1.8', #'PyQt5','Pillow',
             'pyds9',
             'photutils',
             'tqdm',
+            'pyvista', 
             'datetime',  
             'pandas',       
             'dataphile']

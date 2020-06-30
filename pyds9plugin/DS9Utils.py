@@ -73,6 +73,7 @@ def DS9n(xpapoint=None, stop=False):
                 xpapoint=xpapoints[0]
             
     try:
+        verboseprint('DS9(%s)'%(xpapoint))
         d=DS9(xpapoint)
     except (FileNotFoundError, ValueError) as e:
         verboseprint(e)
@@ -2601,8 +2602,152 @@ def PlotArea3D(xpapoint, cmap='twilight_shifted'):
     plt.show()
     return
 
+def PlotArea3D(xpapoint):
+    #import pyvista as pv
+    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
+    d = DS9n(xpapoint)
+    data = getdata(xpapoint)
+    #x = np.arange(data.shape[0])
+    #factor = (data.max() - data.min()) / (x.max() - x.min()) 
+    if len (data.shape)==2:
+        xx, yy = np.indices(data.shape)#np.meshgrid(x, y)
+        #points = np.c_[xx.reshape(-1), yy.reshape(-1), (data/factor).reshape(-1)]
+        #foo.rotate_z(36.6)
+    
+        set_plot_theme("document")
+        range_ = [np.nanpercentile(data,30),np.nanpercentile(data,99)]
+    
+      
+        p = Plotter(notebook=False,window_size=[2*1024, 2*768],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D')
+    #    mesh = StructuredGrid()
+    #    points = np.c_[xx.reshape(-1), yy.reshape(-1), (data).reshape(-1)]
+    #    foo = PolyData(points)
+    #    mesh.points = foo.points
+    #    mesh.dimensions = [data.shape[0], data.shape[1], 1]
+        #p.add_mesh(mesh, clim=range_,scalars=data, opacity=0.7,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        #p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+      
+        def callback(value):
+            #p.remove_actor('Data')
+            mesh = StructuredGrid()
+            verboseprint((value*data).reshape(-1))
+            points = np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data))*value).reshape(-1)]
+            foo = PolyData(points)
+            #foo.rotate_z(36.6)
+            mesh.points = foo.points
+            mesh.dimensions = [data.shape[0], data.shape[1], 1]
+            verboseprint(1)
+            #mesh['z']= data.reshape(-1)
+            p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+            verboseprint(2)
+            #mesh.overwrite(mesh)
+            #mesh.set_active_scalars("z")
+            return   
+        
+        #p.add_mesh_clip_plane(mesh,normal='z', invert=True,)#p.add_floor()#p.add_bounding_box()
+        #p.add_mesh_isovalue(mesh)
+        #p.add_mesh_slice_spline(mesh)
+        #p.add_mesh_threshold(mesh, invert=True, clim=range_, opacity=0.7,flip_scalars=True)
+        #p.enable_parallel_projection()#p.add_plane_widget(mesh)
+        #p.add_orientation_widget(mesh)
+        #p.add_bounds_axes()#p.add_mesh(mesh,scalars=data, clim=[data.min(),data.max()])
+        p.add_slider_widget(callback, rng=[0,np.max([1,data.shape[0]/(data.max() - data.min())  ])], value=1, title='Stretching', color=None, pass_widget=False, event_type='end', style=None)
+        #p.view_isometric()
+        p.add_axes()
 
+        p.show()
+    else:
+        CreateCube(d, data)
 
+def CreateCube(d, data):
+    from pyvista import Plotter, set_plot_theme, wrap
+    class Change3dMesh():
+        def __init__(self, mesh):
+            self.output = mesh # Expected PyVista mesh type
+            # default parameters
+            self.kwargs = {
+                'DensityMin': 0.5,
+                'DensityMax': 0.5,
+                'StretchingFactor': 0.5,
+            }
+    
+        def __call__(self, param, value):
+            self.kwargs[param] = value
+            self.update()
+        
+        def update(self):
+            result = createMesh(**self.kwargs)
+            self.output.overwrite(result)
+            return
+     
+    set_plot_theme("document")
+    #data=fits.open('/Users/Vincent/Downloads/lya_cube_merged_with_artificial_source_CU_1pc.fits')[0].data#[:n,:n,:n]
+    #data = getdata(d)
+
+    lx,ly,lz = data.shape
+    #data = data[::int(lx/ly),:,:]
+    if d.get('scale')=='log':
+        data = np.log10(data[:,:,:])
+    else:
+        data = data[:,:,:]
+    
+    mask = np.ones(len(data.ravel()),dtype=bool)#
+    mask=np.isfinite(data.ravel())#>np.nanpercentile(data,2)
+    mask=(data.ravel()>np.nanpercentile(data,0.1)) & (data.ravel()<np.nanpercentile(data,99.9))
+    
+    #print(np.sum(mask)/len(mask))
+    xx, yy, zz = np.indices(data.shape)#np.me 
+    starting_mesh = wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],xx.ravel()[mask]]).T)   
+    starting_mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+    
+    def createMesh(DensityMin=0.5,DensityMax=0.5,StretchingFactor=0.5):
+        #mask = (data.ravel()>DensityMin) & (data.ravel()<DensityMax)
+        mask = (data.ravel()>np.nanpercentile(data[np.isfinite(data)],DensityMin)) & (data.ravel()<np.nanpercentile(data[np.isfinite(data)],DensityMax))
+        mesh =  wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],StretchingFactor*xx.ravel()[mask]-np.nanmean(StretchingFactor*xx.ravel()[mask])]).T)
+        mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+        return mesh
+    
+    engine = Change3dMesh(starting_mesh)
+    
+    
+    
+    p = Plotter(notebook=False,window_size=[2*1024, 2*768], title='3D')
+    p.add_mesh(starting_mesh, show_edges=True,point_size=5,nan_opacity=0,cmap='jet')
+    m = p.add_slider_widget(
+        callback=lambda value: engine('DensityMin', int(value)),
+#        rng=[np.nanmin(data[np.isfinite(data)]),np.nanmax(data[np.isfinite(data)])],
+#        value=np.nanmin(data[np.isfinite(data)]),
+        rng = [0,100],
+        value=0,
+        title="Density Threshold Min",
+        pointa=(.025, .9), pointb=(.31, .9),
+    )
+    p.add_slider_widget(
+        callback=lambda value: engine('DensityMax', int(value)),
+#        rng=[np.nanmin(data[np.isfinite(data)]),np.nanmax(data[np.isfinite(data)])],
+#        value=np.nanmax(data[np.isfinite(data)]),
+        rng = [0,100],
+        value=100,
+        title="Density Threshold Max",
+        pointa=(.35, .9), pointb=(.64, .9),
+    )
+    p.add_slider_widget(
+        callback=lambda value: engine('StretchingFactor', value),
+        rng=[0, 1],
+        value=0.5,
+        title="Stretching Factor",
+        pointa=(.67, .9), pointb=(.98, .9),
+    )
+#    def my_plane_func(normal, origin):
+#        slc = mesh.slice(normal=normal, origin=origin)
+#        arrows = slc.glyph(orient='vectors', scale="scalars", factor=0.01)
+#        p.add_mesh(arrows, name='arrows')
+#    
+#    #p.add_mesh_clip_plane(starting_mesh,normal='z', invert=True)#p.add_floor()#p.add_bounding_box()
+    #    p.add_plane_widget(my_plane_func)
+    #p.view_isometric()
+    p.add_axes()
+    p.show() 
 
 
 def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False):
@@ -4409,7 +4554,7 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
     d = DS9n(xpapoint)    
     if len(d.get('regions selected').split('\n'))>3:
         verboseprint('Taking region')
-        im=getdata(d)
+        im=getdata(xpapoint)
     else:
         verboseprint('Taking nominal center region')
         im = d.get_pyfits()[0].data[1300:2000,1172:2145]#,:800]#
@@ -4722,7 +4867,7 @@ def DS9PlotEMCCD_old(xpapoint):
 #    im = d.get_pyfits()[0].data[1172:2145,0:2069]
     if len(d.get('regions selected').split('\n'))>3:
         verboseprint('Taking region')
-        im=getdata(d)
+        im=getdata(xpapoint)
     else:
         verboseprint('Taking nominal center region')
         im = d.get_pyfits()[0].data[1300:2000,1172:2145]#,:800]#
