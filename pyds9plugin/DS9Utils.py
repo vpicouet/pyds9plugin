@@ -156,9 +156,9 @@ plt.rcParams['grid.linestyle'] = ':'
 plt.rcParams['axes.grid'] = True
 plt.rcParams['image.interpolation'] = None
 #plt.rcParams['savefig.transparent'] = True
-plt.rcParams['xtick.labelsize'] = 'large'
-plt.rcParams['ytick.labelsize'] = 'large'
-plt.rcParams['axes.labelsize'] = 'large'
+plt.rcParams['xtick.labelsize'] = 'x-large'
+plt.rcParams['ytick.labelsize'] = 'x-large'
+plt.rcParams['axes.labelsize'] = 'x-large'
 plt.rcParams['axes.titlesize'] = 'x-large'
 
 #################################
@@ -1107,7 +1107,7 @@ def getdata(xpapoint, Plot=False):
     return data
 
 
-def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
+def fitsgaussian2D_(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
     """2D gaussian fitting of the encricled region in DS9
     """
     from astropy.io import fits
@@ -1255,6 +1255,183 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         plt.show()
         return
 
+
+
+
+
+def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
+    """2D gaussian fitting of the encricled region in DS9
+    """
+    from astropy.io import fits
+    from scipy.optimize import curve_fit
+    import matplotlib
+    import matplotlib.pyplot as plt
+    #from mpl_toolkits.mplot3d import axes3d
+    #from mpl_toolkits import mplot3d
+    #from matplotlib.widgets import  CheckButtons #RadioButtons,
+
+    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme, wrap
+
+    from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
+    fwhm, center, test = sys.argv[-3:]
+    d = DS9n(xpapoint)
+    #region = getregion(d, quick=True)
+    region = getregion(d,selected=True, message=True)#[0]
+    if bool(int(test)):
+        Plot=False
+        filename = getfilename(d)
+        try:
+            Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+        except Exception:
+            d.set("analysis message {Please create and select a region (Circle/Box) before runnning this analysis}");sys.exit() 
+
+        print(Xinf, Xsup, Yinf, Ysup)
+        data = fits.open(filename)[0].data
+        size = Xsup - Xinf
+        xinfs, yinfs = np.random.randint(1100,1900,size=n), np.random.randint(100,1900,size=n)
+        images = [data[Yinf:Yinf+size,Xinf:Xinf+size] for Xinf, Yinf in zip(xinfs, yinfs)]
+        verboseprint('Test: number of images = %s'%(len(images)))
+        
+    else:
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        data = d.get_pyfits()[0].data
+        images = [data[Yinf:Ysup,Xinf:Xsup] - np.nanpercentile(data[Yinf:Ysup,Xinf:Xsup],30)]
+    fluxes = []
+    for i,image in enumerate(images):
+        while np.isfinite(image).all() == False:
+            kernel = Gaussian2DKernel(stddev=2)
+            image = interpolate_replace_nans(image, kernel)#.astype('float16')
+            verboseprint(np.isfinite(image).all())
+
+        lx, ly = image.shape
+        lx, ly = ly, lx
+        x = np.linspace(0,lx-1,lx)
+        y = np.linspace(0,ly-1,ly)
+        x, y = np.meshgrid(x,y)
+
+         
+        if fwhm.split('-')[0] == '':
+            if bool(int(center)):
+                Param = (np.nanmax(image),lx/2,ly/2,2,2,np.percentile(image,15))
+                bounds = ([-np.inf, lx/2-0.5,ly/2-0.00001, 0.5,0.5,-np.inf], [np.inf, lx/2+0.00001,ly/2+0.5, 10,10,np.inf])#(-np.inf, np.inf)#
+            else:
+                xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
+                Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
+                bounds = ([-np.inf, xo-10 , yo-10, 0.5,0.5,-np.inf], [np.inf, xo+10 , yo+10, 10,10,np.inf])#(-np.inf, np.inf)#
+        else:
+            stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
+            if bool(int(center)):
+                Param = (np.nanmax(image),lx/2,ly/2, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
+                bounds = ([-np.inf, lx/2-0.5,ly/2-0.00001, stdmin, stdmin,-np.inf], [np.inf, lx/2+0.00001,ly/2+0.5, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
+            else:
+                xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
+                Param = (np.nanmax(image),xo, yo, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
+                bounds = ([-np.inf, xo-10 , yo-10, stdmin, stdmin,-np.inf], [np.inf, xo+10 , yo+10, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
+        verboseprint('bounds = ',bounds)
+        verboseprint('\nParam = ', Param)
+        try:
+            popt,pcov = curve_fit(twoD_Gaussian2,(x,y),image.flat,Param)#,bounds=bounds)
+        except RuntimeError as e:
+            logger.warning(e)
+            popt = [0,0,0,0,0,0]
+        else:
+            verboseprint('\npopt = ', popt)
+        fluxes.append(2*np.pi*popt[3]*popt[4]*popt[0])
+    verboseprint(fluxes)
+
+    if Plot:
+        z = twoD_Gaussian2((x,y),*popt).reshape(x.shape)
+        xx, yy = np.indices(image.shape)
+        set_plot_theme("document")
+        range_ = [np.nanpercentile(data,30),np.nanpercentile(data,99)]
+        p = Plotter(notebook=False,window_size=[2*1024, 2*768],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D plot, FLUX = %0.1f'%(fluxes[0])+'amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],180*popt[5]/np.pi))
+
+        value = image
+
+#        def callback(value):
+#            mesh = StructuredGrid()
+#            verboseprint((value*data).reshape(-1))
+#            points = np.c_[xx.reshape(-1), yy.reshape(-1), ((image-np.nanmin(image))*value).reshape(-1)]
+#            foo = PolyData(points)
+#            mesh.points = foo.points
+#            mesh.dimensions = [data.shape[0], data.shape[1], 1]
+#            verboseprint(1)
+#            p.add_mesh(mesh,clim=range_, scalars=image.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+#            p.add_mesh(mesh,clim=range_, scalars=z.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+#            verboseprint(2)
+#            return   
+#        p.add_slider_widget(callback, rng=[0,np.max([1,data.shape[0]/(data.max() - data.min())  ])], value=1, title='Stretching', color=None, pass_widget=False, event_type='end', style=None)
+#        p.add_axes()
+        z, image = image, z
+
+        
+        value=image.shape[0]/(image.max() - image.min()) 
+        fit = StructuredGrid()
+        data_mesh =  StructuredGrid()#wrap(np.array([xx.ravel(),yy.ravel(),((z-np.nanmin(z))*value).reshape(-1)]).T)
+        data_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((z-np.nanmin(z))*value).reshape(-1)]).points
+        data_mesh['Intensity']= image.ravel()#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+        data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
+#        verboseprint((value*data).reshape(-1))
+        points = np.c_[xx.reshape(-1), yy.reshape(-1), ((image-np.nanmin(image))*value).reshape(-1)]
+        foo = PolyData(points)
+        fit.points = foo.points
+        fit['z'] = image.ravel()
+        fit.dimensions = [image.shape[1], image.shape[0], 1]
+        verboseprint(1)
+        #p.add_mesh(fit,clim=range_, scalars=z.ravel(),opacity=0.5,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        
+        #p.add_mesh_clip_plane(fit, assign_to_axis='z',value=0.0,normal='x',opacity=0.5,nan_opacity=0, scalars='z',flip_scalars=True,stitle='Value',tubing=False, origin_translation=True, outline_translation=False, implicit=False)
+        def callback(value):
+            #verboseprint(1)
+            p.add_mesh(fit,clim=range_, scalars=z.ravel(),opacity=value,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+            p.add_mesh(data_mesh,clim=range_, scalars=image.ravel(),opacity=1-value,nan_opacity=0,use_transparency=False,flip_scalars=True,stitle='Value')#y=True, opacity=0.3,,pickable=True)
+            #verboseprint(2)
+            return   
+        
+        p.add_slider_widget(callback, rng=[0,1 ], value=0.7, title='Transparency ratio', color=None, pass_widget=False, event_type='end', style=None)
+
+
+        #p.add_mesh(data_mesh,clim=range_,opacity=0.5    ,scalars=image.ravel(),point_size=5,nan_opacity=0, flip_scalars=True)
+        #p.add_mesh(data_mesh,show_edges=True,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        p.clear_box_widgets()
+        p.add_axes()
+        p.show()        
+        
+        
+    
+#        ax.text(popt[1],popt[2], np.nanmax(image),s='amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],180*popt[5]/np.pi))    
+#        ax.set_title()
+#        ax.set_xlabel('X')
+#        ax.set_ylabel('Y')
+#        ax.set_zlabel('Pixel value')
+        #ax.axis('equal')
+        #ax.axis('tight')
+        xn, yn = popt[1], popt[2]
+        verboseprint('New center = ', popt[1], popt[2])
+        verboseprint('New center = ', Xinf, Yinf)
+        verboseprint(Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi )
+        d.set('regions format ds9')
+        d.set('regions system detector')
+        d.set('regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "' % ( Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi ))
+        plt.show()
+    else:
+        L = np.array(fluxes)
+        median, mean, std = np.median(L), np.mean(L),np.std(L)
+        limit = median + 3 * std
+        mask = L >  limit
+        if len(xinfs[mask])>0:
+            create_DS9regions([xinfs[mask]+size/2],[yinfs[mask]+size/2], radius=[size,size], form = ['circle']*len(xinfs[mask]),save=True, savename='/tmp/centers',ID=[L[mask].astype(int)])
+            d.set('regions /tmp/centers.reg')
+        fig = plt.figure()
+        #plt.hist(fluxes, bins=np.linspace(min(fluxes),max(fluxes),100))
+        plt.hist(L[~mask],label='mean = %0.1f, std = %0.1f'%(mean, std), alpha=0.3,bins=50)
+        plt.hist(L[mask],label='Detections', alpha=0.3)#,bins=50)
+        plt.vlines(limit, 0, 10, label='5 sigma limit')
+        plt.ylabel('Frequency')
+        plt.xlabel('Flux estimator [log(ADU)]')
+        plt.legend()
+        plt.show()
+        return
 
 
 
@@ -2520,7 +2697,7 @@ def set_axes_equal(ax):
 #    def log_tick_formatter(val, pos=None):
 #        return "{:.2e}".format(10**val)
 
-def PlotArea3D(xpapoint, cmap='twilight_shifted'):
+def PlotArea3D_(xpapoint, cmap='twilight_shifted'):
     """Plot the image area defined in DS9 in 3D, should add some kind of 2D
     polynomial fit
     """
@@ -2606,7 +2783,9 @@ def PlotArea3D(xpapoint):
     #import pyvista as pv
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
     d = DS9n(xpapoint)
+    #data = getdata(xpapoint)
     data = getdata(xpapoint)
+
     #x = np.arange(data.shape[0])
     #factor = (data.max() - data.min()) / (x.max() - x.min()) 
     if len (data.shape)==2:
@@ -2626,16 +2805,16 @@ def PlotArea3D(xpapoint):
     #    mesh.dimensions = [data.shape[0], data.shape[1], 1]
         #p.add_mesh(mesh, clim=range_,scalars=data, opacity=0.7,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
         #p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-      
+        if d.get('scale') =='log':
+            data = data#np.log10(data - np.nanmin(data))
         def callback(value):
             #p.remove_actor('Data')
             mesh = StructuredGrid()
             verboseprint((value*data).reshape(-1))
-            points = np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data))*value).reshape(-1)]
+            points = np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]
             foo = PolyData(points)
-            #foo.rotate_z(36.6)
             mesh.points = foo.points
-            mesh.dimensions = [data.shape[0], data.shape[1], 1]
+            mesh.dimensions = [data.shape[1], data.shape[0], 1]
             verboseprint(1)
             #mesh['z']= data.reshape(-1)
             p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
@@ -2661,6 +2840,42 @@ def PlotArea3D(xpapoint):
 
 def CreateCube(d, data):
     from pyvista import Plotter, set_plot_theme, wrap
+
+     
+    set_plot_theme("document")
+    #data = getdata(d)
+
+    lx,ly,lz = data.shape
+    #data = data[::int(lx/ly),:,:]
+    if d.get('scale')=='log':
+        data = np.log10(data[:,:,:] - np.nanmin(data[:,:,:]))
+    else:
+        data = data[:,:,:]
+    
+    mask = np.ones(len(data.ravel()),dtype=bool)#
+    #mask=np.isfinite(data.ravel())#>np.nanpercentile(data,2)
+    #mask=(data.ravel()>np.nanpercentile(data,0.1)) & (data.ravel()<np.nanpercentile(data,99.9))
+    
+    #print(np.sum(mask)/len(mask))
+    xx, yy, zz = np.indices(data.shape)#np.me 
+    starting_mesh = wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],xx.ravel()[mask]]).T)   
+    starting_mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+    
+    def createMesh(DensityMin=0.5,DensityMax=0.5,StretchingFactor=0.5,PointSize=5):
+        #mask = (data.ravel()>DensityMin) & (data.ravel()<DensityMax)
+        mask = (data.ravel()>np.nanpercentile(data[np.isfinite(data)],DensityMin)) & (data.ravel()<np.nanpercentile(data[np.isfinite(data)],DensityMax))
+        mesh =  wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],StretchingFactor*xx.ravel()[mask]-np.nanmean(StretchingFactor*xx.ravel()[mask])]).T)
+        mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+        #mesh['PointSize']= PointSize#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+        return mesh
+    
+    
+    
+    
+    p = Plotter(notebook=False,window_size=[2*1024, 2*768], title='3D')
+
+
+
     class Change3dMesh():
         def __init__(self, mesh):
             self.output = mesh # Expected PyVista mesh type
@@ -2669,6 +2884,7 @@ def CreateCube(d, data):
                 'DensityMin': 0.5,
                 'DensityMax': 0.5,
                 'StretchingFactor': 0.5,
+                'PointSize': 5,
             }
     
         def __call__(self, param, value):
@@ -2676,78 +2892,196 @@ def CreateCube(d, data):
             self.update()
         
         def update(self):
-            result = createMesh(**self.kwargs)
-            self.output.overwrite(result)
-            return
-     
-    set_plot_theme("document")
-    #data=fits.open('/Users/Vincent/Downloads/lya_cube_merged_with_artificial_source_CU_1pc.fits')[0].data#[:n,:n,:n]
-    #data = getdata(d)
+            if (self.kwargs['DensityMin']==-1) & (self.kwargs['DensityMax']==100) & (self.kwargs['StretchingFactor']==0.5) & (self.kwargs['PointSize']==5):
+                self.output.overwrite(mesh)
+                return
+            else:
+#                verboseprint(self.kwargs['DensityMin']);verboseprint(np.nanmin(result['Intensity']))
+                result = createMesh(**self.kwargs)
+                self.output.overwrite(result)
+                p.update_scalar_bar_range([result['Intensity'].min(),result['Intensity'].max()])
+                verboseprint(1)
+                #p.remove_actor('Data')
+                
+                #p.add_mesh(result, show_edges=False,point_size=self.kwargs['PointSize'],opacity=0.1,nan_opacity=0,cmap='jet',clim=[np.nanmin(result['Intensity']),np.nanmax(result['Intensity'])],name='Data',use_transparency=True,ambient=0.5)#,smooth_shading=True)    
+                return
 
-    lx,ly,lz = data.shape
-    #data = data[::int(lx/ly),:,:]
-    if d.get('scale')=='log':
-        data = np.log10(data[:,:,:])
-    else:
-        data = data[:,:,:]
-    
-    mask = np.ones(len(data.ravel()),dtype=bool)#
-    mask=np.isfinite(data.ravel())#>np.nanpercentile(data,2)
-    mask=(data.ravel()>np.nanpercentile(data,0.1)) & (data.ravel()<np.nanpercentile(data,99.9))
-    
-    #print(np.sum(mask)/len(mask))
-    xx, yy, zz = np.indices(data.shape)#np.me 
-    starting_mesh = wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],xx.ravel()[mask]]).T)   
-    starting_mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
-    
-    def createMesh(DensityMin=0.5,DensityMax=0.5,StretchingFactor=0.5):
-        #mask = (data.ravel()>DensityMin) & (data.ravel()<DensityMax)
-        mask = (data.ravel()>np.nanpercentile(data[np.isfinite(data)],DensityMin)) & (data.ravel()<np.nanpercentile(data[np.isfinite(data)],DensityMax))
-        mesh =  wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],StretchingFactor*xx.ravel()[mask]-np.nanmean(StretchingFactor*xx.ravel()[mask])]).T)
-        mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
-        return mesh
-    
+
     engine = Change3dMesh(starting_mesh)
-    
-    
-    
-    p = Plotter(notebook=False,window_size=[2*1024, 2*768], title='3D')
-    p.add_mesh(starting_mesh, show_edges=True,point_size=5,nan_opacity=0,cmap='jet')
+
+
+
+
+
+
+    p.add_mesh(starting_mesh, show_edges=True,point_size=engine.kwargs['PointSize'] ,nan_opacity=0,cmap='jet',name='Data')
+    #p.add_mesh(starting_mesh, show_edges=True,point_size=5,opacity=0.5,nan_opacity=0,cmap='jet',clim=[np.nanmin(starting_mesh['Intensity']),np.nanmax(starting_mesh['Intensity'])],name='Data')
+    mmax = 0.92
     m = p.add_slider_widget(
         callback=lambda value: engine('DensityMin', int(value)),
-#        rng=[np.nanmin(data[np.isfinite(data)]),np.nanmax(data[np.isfinite(data)])],
-#        value=np.nanmin(data[np.isfinite(data)]),
         rng = [0,100],
-        value=0,
-        title="Density Threshold Min",
-        pointa=(.025, .9), pointb=(.31, .9),
+        value=90,
+        title="",#"Density Threshold Min",
+        pointa=(.025, mmax), pointb=(.31, mmax),
     )
     p.add_slider_widget(
         callback=lambda value: engine('DensityMax', int(value)),
-#        rng=[np.nanmin(data[np.isfinite(data)]),np.nanmax(data[np.isfinite(data)])],
-#        value=np.nanmax(data[np.isfinite(data)]),
         rng = [0,100],
         value=100,
-        title="Density Threshold Max",
-        pointa=(.35, .9), pointb=(.64, .9),
+        title="Density Threshold Min/Max",
+#        pointa=(.35, .9), pointb=(.64, .83),
+        pointa=(.025, .83), pointb=(.31, .83),
     )
     p.add_slider_widget(
         callback=lambda value: engine('StretchingFactor', value),
         rng=[0, 1],
         value=0.5,
         title="Stretching Factor",
-        pointa=(.67, .9), pointb=(.98, .9),
+        pointa=(.67, mmax), pointb=(.98, mmax),
     )
-#    def my_plane_func(normal, origin):
-#        slc = mesh.slice(normal=normal, origin=origin)
-#        arrows = slc.glyph(orient='vectors', scale="scalars", factor=0.01)
-#        p.add_mesh(arrows, name='arrows')
-#    
-#    #p.add_mesh_clip_plane(starting_mesh,normal='z', invert=True)#p.add_floor()#p.add_bounding_box()
-    #    p.add_plane_widget(my_plane_func)
-    #p.view_isometric()
+    p.add_slider_widget(
+        callback=lambda value: engine('PointSize', value),
+        rng=[0, 20],
+        value=5,
+        title="Point Size",
+#        pointa=(.67, .8), pointb=(.98, .8),
+        pointa=(.35, mmax), pointb=(.64, mmax),
+    )
     p.add_axes()
     p.show() 
+
+
+
+
+
+
+
+
+
+
+def CreateCube_clip(d, data):
+    from pyvista import Plotter, set_plot_theme, wrap
+
+     
+    set_plot_theme("document")
+    #data = getdata(d)
+
+    lx,ly,lz = data.shape
+    #data = data[::int(lx/ly),:,:]
+    if d.get('scale')=='log':
+        data = np.log10(data[:,:,:] - np.nanmin(data[:,:,:]))
+    else:
+        data = data[:,:,:]
+    
+    mask = np.ones(len(data.ravel()),dtype=bool)#
+    mask=np.isfinite(data.ravel())#>np.nanpercentile(data,2)
+    mask=(data.ravel()>np.nanpercentile(data,30)) & (data.ravel()<np.nanpercentile(data,50))
+    
+    #print(np.sum(mask)/len(mask))
+    xx, yy, zz = np.indices(data.shape)#np.me 
+    starting_mesh = wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],xx.ravel()[mask]]).T)   
+    starting_mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+    
+    def createMesh(DensityMin=0.5,DensityMax=0.5,StretchingFactor=0.5,PointSize=5):
+        #mask = (data.ravel()>DensityMin) & (data.ravel()<DensityMax)
+        mask = (data.ravel()>np.nanpercentile(data[np.isfinite(data)],DensityMin)) & (data.ravel()<np.nanpercentile(data[np.isfinite(data)],DensityMax))
+        mesh =  wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],StretchingFactor*xx.ravel()[mask]-np.nanmean(StretchingFactor*xx.ravel()[mask])]).T)
+        mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+        #mesh['PointSize']= PointSize#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+        return mesh
+
+    p = Plotter(notebook=False,window_size=[2*1024, 2*768], title='3D')
+    class Change3dMesh():
+        def __init__(self, mesh):
+            self.input = mesh
+            self.mesh = mesh.copy()
+            # default parameters
+            self.kwargs = {
+                'DensityMin': 0.5,
+                'DensityMax': 0.5,
+                'StretchingFactor': 0.5,
+                'PointSize': 5,
+            }
+            self.size = self.kwargs['PointSize']
+            self._last_normal = 'z'
+            self._last_origin = self.mesh.center
+
+        def __call__(self, param, value):
+            self.kwargs[param] = value
+            self.update()
+        
+        def update(self):
+#            if (self.kwargs['DensityMin']==-1) & (self.kwargs['DensityMax']==100) & (self.kwargs['StretchingFactor']==0.5) & (self.kwargs['PointSize']==5):
+#                self.output.overwrite(mesh)
+#                return
+#            else:
+#                verboseprint(self.kwargs['DensityMin']);verboseprint(np.nanmin(result['Intensity']))
+            result = createMesh(**self.kwargs)
+            self.mesh.overwrite(result)
+            p.update_scalar_bar_range([result['Intensity'].min(),result['Intensity'].max()])
+            p.update_bounds_axes()
+            verboseprint(1)
+            self.update_clip(self._last_normal, self._last_origin)
+            verboseprint(2)
+            #p.remove_actor('Data')
+            
+            #p.add_mesh(result, show_edges=False,point_size=self.kwargs['PointSize'],opacity=0.1,nan_opacity=0,cmap='jet',clim=[np.nanmin(result['Intensity']),np.nanmax(result['Intensity'])],name='Data',use_transparency=True,ambient=0.5)#,smooth_shading=True)    
+           # return
+
+        
+        def update_clip(self, normal, origin):
+            self.mesh.overwrite(self.mesh.clip(normal=normal, origin=origin, invert=True))
+#            self.mesh.clip(normal=normal, origin=origin, invert=True)
+            verboseprint(1)
+            self._last_normal = normal
+            verboseprint(2)
+            self._last_origin = origin
+            verboseprint(3)
+        
+
+
+    engine = Change3dMesh(starting_mesh)
+    p.add_mesh(engine.mesh, show_edges=True,
+               nan_opacity=0, cmap='jet',point_size=engine.size )
+    
+    p.add_plane_widget(
+        callback=lambda n, o: engine.update_clip(n, o), normal='z', 
+    )
+
+    mmax = 0.92
+    m = p.add_slider_widget(
+        callback=lambda value: engine('DensityMin', int(value)),
+        rng = [0,100],
+        value=90,
+        title="",#"Density Threshold Min",
+        pointa=(.025, mmax), pointb=(.31, mmax),
+    )
+    p.add_slider_widget(
+        callback=lambda value: engine('DensityMax', int(value)),
+        rng = [0,100],
+        value=100,
+        title="Density Threshold Min/Max",
+        pointa=(.025, .83), pointb=(.31, .83),
+    )
+    p.add_slider_widget(
+        callback=lambda value: engine('StretchingFactor', value),
+        rng=[0, 1],
+        value=0.5,
+        title="Stretching Factor",
+        pointa=(.67, mmax), pointb=(.98, mmax),
+    )
+    p.add_slider_widget(
+        callback=lambda value: engine('PointSize', value),
+        rng=[0, 20],
+        value=5,
+        title="Point Size",
+        pointa=(.35, mmax), pointb=(.64, mmax),
+    )
+    p.add_axes()
+    p.show() 
+
+
+
 
 
 def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False):
@@ -4424,7 +4758,7 @@ def get(d, sentence, exit_=True):
     try:
         path = d.get("""analysis entry {%s}"""%(sentence))
     except (TypeError) as e:
-        print(1,e)
+        verboseprint(1,e)
         time.sleep(0.2)
         try:
             path = d.get("""analysis entry {%s}"""%(sentence))
@@ -7114,7 +7448,7 @@ def DS9Resample(xpapoint):
 def DS9PSFEX(xpapoint):
     """Run PSFex software form DS9
     """
-    print(1)
+    #print(1)
     from astropy.table import Table
     from shutil import which
     from astropy.io import fits
@@ -8363,12 +8697,16 @@ def GenericToolsTutorial(xpapoint,i=0,n=1):
 * with your fits images. It will go through the following functions: 
 * Change Display Parameters - Plot Region In 3D 
 * Create Header Catalog  - Create Image Subset
+
+Please take some time to adjust the scale/threshold/color to improve the image 
+rendering in order to the objects in the image. When it is done,
                                 [Hit n]""")      
-    pprint(1)
+    #pprint(1)
     WaitForN(xpapoint)
-    pprint(2)
+    #pprint(2)
 
     d.set("""analysis message {Now let me show you a much easier and quicker way to change the display settings at once! This function will make you gain a lot of time. }""")
+
     pprint("""********************************************************************************
                                Change settings at once
   (Analysis->)Generic functions->Setup->Change display parameters [or Shift+S]
@@ -8377,16 +8715,17 @@ def GenericToolsTutorial(xpapoint,i=0,n=1):
 
     d.set('analysis task "Change Display Parameters (S) "')
 
+
+
     pprint(""" %i/%i - Now create a region in a dark area, SELECT IT!
         and re-run the function (Shift+S). As you will see, the scale's 
         thresholds for the image will be computed based on the encircled data! 
         
 
- %i/%i - If you want to continue changing the parameters, re-run the function. 
-          (If you want to fo back to previous thresholds, unselect the region
-          before runing it). 
-          Else [Hit n]"""%(i,n,i+1,n))
-    i+=1
+         If you want to continue changing the parameters, re-run the function. 
+         (If you want to fo back to previous thresholds, unselect the region
+         before runing it). 
+         Else [Hit n]"""%(i,n))
     i+=1
         
     WaitForN(xpapoint)
@@ -8414,6 +8753,7 @@ def GenericToolsTutorial(xpapoint,i=0,n=1):
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
         WaitForN(xpapoint)
     d.set('analysis task "Plot Region In 3D"')
+    time.sleep(2)
     pprint("""* Well done!
 * If you smooth the image in DS9 is it will plot it as it is displayed! 
 * You can use this function on circle or box regions and use log scale.
@@ -8509,12 +8849,18 @@ def DS9tsuite(xpapoint):
                                General Instructions
 ********************************************************************************\n
 I will follow you during this tutorial so please do not close me.
-You can move/displace/increase fontsize of the instruction window.
+You can move/displace/increase fontsize of this instruction window.
   
 After a function has run you can run it again with different parameters
 by launching it from the Analysis menu [always explicited under function's name]
-[Hit n]: When you are done with a function, click on the main window and
-         Hit the n key (next) so that you go to the next function.""")
+
+* To quit the tutorial click again on the 'Give it a Go' button (analysis menu)
+
+[Hit n]: When you are done with a function, CLICK ON THE IMAGE and
+         Hit the n key (next) so that you go to the next function.
+         
+                 Please [Hit n]""")
+    WaitForN(xpapoint)
 
     d.set('frame new')
     d.set('tile no')
@@ -8524,7 +8870,7 @@ by launching it from the Analysis menu [always explicited under function's name]
     #print('tutorial_number = ', tutorial_number)
     i=1
     if '1' in tutorial_number:
-        GenericToolsTutorial(xpapoint,i=i,n=14)
+        GenericToolsTutorial(xpapoint,i=i,n=13)
     if '2' in tutorial_number:
         PhotometricAnalysisTutorial(xpapoint,i=i,n=13)
     if '3' in tutorial_number:
@@ -8651,7 +8997,8 @@ def DS9RemoveImage(xpapoint):
         d.set('file ' + name)  
     return
 
-
+def Quit(xpapoint):
+    return
 
 #@fn_timer
 def main():
@@ -8698,7 +9045,7 @@ def main():
                                  'stack': DS9stack_new,'lock': DS9lock,'CreateHeaderCatalog':DS9CreateHeaderCatalog,'SubstractImage': DS9RemoveImage,
                                  'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
                                  'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings,'next_step':next_step,'BackgroundEstimationPhot': DS9BackgroundEstimationPhot,'verbose':verbose,
-                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting}#,'NextButton':NextButton
+                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting,'Quit':Quit}#,'NextButton':NextButton
                        
         DictFunction_AIT =     {'centering':DS9center, 'radial_profile':DS9rp,
                                 'throughfocus':DS9throughfocus, 'ComputeFluctuation':ComputeFluctuation,

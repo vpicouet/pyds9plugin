@@ -13,6 +13,12 @@ hmenu Generic Functions
 #    menu
 #    $data | DS9Utils $xpa_method setup  $data
 
+
+	Quit #7
+	*
+	bind q
+	DS9Utils $xpa_method quit  
+
 	hmenu Setups
 		Change Display Parameters (S) #7
 		*
@@ -596,12 +602,7 @@ N_aper entry {number of random apertures} 10000 {Number of random apertures}
 endparam
 
 
-param Plot-Comparison-Redshift
-path entry {Path} - {Catalog path}
-var1 entry {Redshift 1} - {Field name of the redshift 1}
-var2 entry {Redshift 2} - {Field name of the redshift 2}
-Bins entry {Bins} 0,1,2,5 {Bins on wich compute sigma estimator}
-endparam
+
 
 param Plot-Comparison-Mag
 path entry {Path} - {Catalog path}
