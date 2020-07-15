@@ -8628,6 +8628,10 @@ def ImageProcessingTutorial(xpapoint,i=0,n=1):
         
       
     WaitForN(xpapoint)
+    while d.get('plot') == '':
+        d.set("analysis message {Please create a plot by creating a Region->Shape->Projection to run this function. Hit n when it is done.}")
+        WaitForN(xpapoint)
+
     pprint("""%i/%i - Choose the background and the number of gaussians you want
          to fit the data with.
 %i/%i - Now, you adjust each parameter of each feature! Change by hand the 
@@ -8657,7 +8661,7 @@ def ImageProcessingTutorial(xpapoint,i=0,n=1):
 %i/%i - Hit n when you want to go to next function."""%(i,n,i+1,n));i+=2
 
     while d.get('plot') == '':
-        d.set("analysis message {Please create a plot by creating a Region->Shape->Projection to run this function. Hit n when it is done.}")  ;sys.exit()  
+        d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")  
         WaitForN(xpapoint)
         
 
@@ -8697,7 +8701,7 @@ def ImageProcessingTutorial(xpapoint,i=0,n=1):
 *    ds9=ds9[:100,:100]                           -> Trim the image
 *    ds9+=np.random.normal(0,0.5*ds9.std(),size=ds9.shape)  -> Add noise to the image
 *    ds9[ds9>2]=np.nan                            -> Mask a part of the image
-*    ds9=1/ds9, ds9+=1, ds9+=1                    -> Different basic expressions
+*    ds9=1/ds9, ds9+=1, ds9-=1                    -> Different basic expressions
 *    ds9=convolve(ds9,np.ones((1,9)))[1:-1,9:-9]  -> Convolve unsymetrically
 *    ds9+=np.linspace(0,1,ds9.size).reshape(ds9.shape) -> Add background
 *    ds9+=30*(ds9-gaussian_filter(ds9, 1))        -> Sharpening
@@ -8941,7 +8945,7 @@ by launching it from the Analysis menu [always explicited under function's name]
     if '3' in tutorial_number:
         ImageQualityAssesment(xpapoint,i=i,n=13)
     if '4' in tutorial_number:
-        ImageProcessingTutorial(xpapoint,i=i,n=14)
+        ImageProcessingTutorial(xpapoint,i=i,n=15)
     if tutorial=='5-All-In-One':
         #d.set("analysis message {You are now ready to use the DS9 Quick Look plugin by yourself.}")    
         pprint("""
