@@ -19,6 +19,11 @@ hmenu Generic Functions
 	bind q
 	DS9Utils $xpa_method quit  
 
+	Button #7
+	*
+	bind B
+	DS9Utils $xpa_method button  
+
 	hmenu Setups
 		Change Display Parameters (S) #7
 		*

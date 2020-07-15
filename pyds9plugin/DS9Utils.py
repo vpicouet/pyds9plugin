@@ -1299,7 +1299,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
     fluxes = []
     for i,image in enumerate(images):
         while np.isfinite(image).all() == False:
-            kernel = Gaussian2DKernel(stddev=2)
+            kernel = Gaussian2DKernel(x_stddev=2,y_stddev=2)
             image = interpolate_replace_nans(image, kernel)#.astype('float16')
             verboseprint(np.isfinite(image).all())
 
@@ -1343,7 +1343,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         z = twoD_Gaussian2((x,y),*popt).reshape(x.shape)
         xx, yy = np.indices(image.shape)
         set_plot_theme("document")
-        range_ = [np.nanpercentile(data,30),np.nanpercentile(data,99)]
+        range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
         p = Plotter(notebook=False,window_size=[2*1024, 2*768],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D plot, FLUX = %0.1f'%(fluxes[0])+'amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],180*popt[5]/np.pi))
 
         value = image
@@ -1379,20 +1379,26 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         fit.dimensions = [image.shape[1], image.shape[0], 1]
         verboseprint(1)
         #p.add_mesh(fit,clim=range_, scalars=z.ravel(),opacity=0.5,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        #p1 = p.add_mesh(fit,clim=range_, scalars='z',opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        #p2 = p.add_mesh(data_mesh,clim=range_, scalars='Intensity',opacity=1-0.7,nan_opacity=0,use_transparency=False,flip_scalars=True,stitle='Value')#y=True, opacity=0.3,,pickable=True)
+        p1 = p.add_mesh(fit,opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        p2 = p.add_mesh(data_mesh,opacity=1-0.7,nan_opacity=0,use_transparency=False,flip_scalars=True,stitle='Value')#y=True, opacity=0.3,,pickable=True)
         
         #p.add_mesh_clip_plane(fit, assign_to_axis='z',value=0.0,normal='x',opacity=0.5,nan_opacity=0, scalars='z',flip_scalars=True,stitle='Value',tubing=False, origin_translation=True, outline_translation=False, implicit=False)
         def callback(value):
-            #verboseprint(1)
-            p.add_mesh(fit,clim=range_, scalars=z.ravel(),opacity=value,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-            p.add_mesh(data_mesh,clim=range_, scalars=image.ravel(),opacity=1-value,nan_opacity=0,use_transparency=False,flip_scalars=True,stitle='Value')#y=True, opacity=0.3,,pickable=True)
-            #verboseprint(2)
+            verboseprint(1)
+            #print(p1.GetProperty())
+            p1.GetProperty().SetOpacity(value)
+            verboseprint(2)
+            p2.GetProperty().SetOpacity(1-value)
+            verboseprint(3)
             return   
         
         p.add_slider_widget(callback, rng=[0,1 ], value=0.7, title='Transparency ratio', color=None, pass_widget=False, event_type='end', style=None)
 
 
         #p.add_mesh(data_mesh,clim=range_,opacity=0.5    ,scalars=image.ravel(),point_size=5,nan_opacity=0, flip_scalars=True)
-        #p.add_mesh(data_mesh,show_edges=True,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        #p.add_mesh(data_mesh,show_edges=False,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
         p.clear_box_widgets()
         p.add_axes()
         p.show()        
@@ -2809,8 +2815,11 @@ def PlotArea3D(xpapoint):
             data = data#np.log10(data - np.nanmin(data))
         def callback(value):
             #p.remove_actor('Data')
+            mask = np.isfinite(data)
             mesh = StructuredGrid()
             verboseprint((value*data).reshape(-1))
+            #data[~np.isfinite(data)] = np.nanmin(data)
+            verboseprint(np.sum(data ))
             points = np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]
             foo = PolyData(points)
             mesh.points = foo.points
@@ -2823,15 +2832,38 @@ def PlotArea3D(xpapoint):
             #mesh.set_active_scalars("z")
             return   
         
+        
+        
+        value = np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
+        mesh = StructuredGrid()
+        mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]).points
+        mesh['test'] = data.reshape(-1)
+        mesh.dimensions = [data.shape[1], data.shape[0], 1]
+        a = p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        def callback2(value):
+            #p.update_coordinates(PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]),mesh=mesh)
+            p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)],mesh=mesh)
+            return
+        
         #p.add_mesh_clip_plane(mesh,normal='z', invert=True,)#p.add_floor()#p.add_bounding_box()
         #p.add_mesh_isovalue(mesh)
         #p.add_mesh_slice_spline(mesh)
         #p.add_mesh_threshold(mesh, invert=True, clim=range_, opacity=0.7,flip_scalars=True)
         #p.enable_parallel_projection()#p.add_plane_widget(mesh)
         #p.add_orientation_widget(mesh)
-        #p.add_bounds_axes()#p.add_mesh(mesh,scalars=data, clim=[data.min(),data.max()])
-        p.add_slider_widget(callback, rng=[0,np.max([1,data.shape[0]/(data.max() - data.min())  ])], value=1, title='Stretching', color=None, pass_widget=False, event_type='end', style=None)
+        #p.add_bounds_axes()#
+        p.add_slider_widget(callback2, rng=[0,np.max([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data))  ])], value=value, title='Stretching', color=None, pass_widget=False, event_type='end', style=None)
+
+
+
         #p.view_isometric()
+#        mesh = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), np.zeros_like(yy.reshape(-1))])
+#        mesh['test'] = data.reshape(-1)
+#        surf = mesh.delaunay_2d()
+#        surf.plot()
+#        warped = surf.warp_by_scalar(factor=1e-3)
+#        warped.plot()
+        
         p.add_axes()
 
         p.show()
@@ -2914,7 +2946,7 @@ def CreateCube(d, data):
 
 
 
-    p.add_mesh(starting_mesh, show_edges=True,point_size=engine.kwargs['PointSize'] ,nan_opacity=0,cmap='jet',name='Data')
+    a = p.add_mesh(starting_mesh, show_edges=True,point_size=engine.kwargs['PointSize'] ,nan_opacity=0,cmap='jet',name='Data')
     #p.add_mesh(starting_mesh, show_edges=True,point_size=5,opacity=0.5,nan_opacity=0,cmap='jet',clim=[np.nanmin(starting_mesh['Intensity']),np.nanmax(starting_mesh['Intensity'])],name='Data')
     mmax = 0.92
     m = p.add_slider_widget(
@@ -2940,13 +2972,40 @@ def CreateCube(d, data):
         pointa=(.67, mmax), pointb=(.98, mmax),
     )
     p.add_slider_widget(
-        callback=lambda value: engine('PointSize', value),
-        rng=[0, 20],
-        value=5,
-        title="Point Size",
-#        pointa=(.67, .8), pointb=(.98, .8),
+        callback = a.GetProperty().SetOpacity,
+        rng=[0, 1],
+        value=0.5,
+        title="Opacity",
         pointa=(.35, mmax), pointb=(.64, mmax),
     )
+#    p.add_slider_widget(
+#        callback = a.GetProperty().SetMetallic,
+#        rng=[0, 1],
+#        value=0.5,
+#        title="SetMetallic",
+#        pointa=(.35, 0.7), pointb=(.64, 0.7),
+#    )
+#    p.add_slider_widget(
+#        callback = a.GetProperty().SetRoughness,
+#        rng=[0, 1],
+#        value=0.5,
+#        title="SetRoughness",
+#        pointa=(.35, 0.6), pointb=(.64, 0.6),
+#    )
+#    p.add_slider_widget(
+#        callback = a.GetProperty().SetNormalScale,
+#        rng=[0, 1],
+#        value=0.5,
+#        title="SetNormalScale",
+#        pointa=(.35, 0.5), pointb=(.64, 0.5),
+#    )
+#    p.add_slider_widget(
+#        callback = a.GetProperty().SetSpecularPower,
+#        rng=[0, 1],
+#        value=0.5,
+#        title="SetSpecularPower",
+#        pointa=(.35, 0.4), pointb=(.64, 0.4),
+#    )
     p.add_axes()
     p.show() 
 
@@ -2959,7 +3018,7 @@ def CreateCube(d, data):
 
 
 
-def CreateCube_clip(d, data):
+def CreateCube_(d, data):
     from pyvista import Plotter, set_plot_theme, wrap
 
      
@@ -3041,12 +3100,13 @@ def CreateCube_clip(d, data):
 
 
     engine = Change3dMesh(starting_mesh)
-    p.add_mesh(engine.mesh, show_edges=True,
+    a = p.add_mesh(engine.mesh, show_edges=True,
                nan_opacity=0, cmap='jet',point_size=engine.size )
     
-    p.add_plane_widget(
+    w = p.add_plane_widget(
         callback=lambda n, o: engine.update_clip(n, o), normal='z', 
     )
+    w.PlaceWidget(engine.mesh.bounds)
 
     mmax = 0.92
     m = p.add_slider_widget(
@@ -3071,10 +3131,11 @@ def CreateCube_clip(d, data):
         pointa=(.67, mmax), pointb=(.98, mmax),
     )
     p.add_slider_widget(
-        callback=lambda value: engine('PointSize', value),
-        rng=[0, 20],
+        #callback=lambda value: engine('PointSize', value),
+        callback = a.GetProperty().SetOpacity,
+        rng=[0, 1],
         value=5,
-        title="Point Size",
+        title="Opacity",
         pointa=(.35, mmax), pointb=(.64, mmax),
     )
     p.add_axes()
@@ -4804,7 +4865,7 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
     except TypeError:
         d=DS9n(xpapoint)
     if ext != 1:
-        extent = get(d, "Your image contains %i extensions, write the ones you want to use, eg 0,1,3  put all for all extensions and let it blank for primary header."%(ext), exit_=False) 
+        extent = get(d, "Your image contains %i extensions, write the ones you want to use, eg 0,1,3  put all for all extensions or let it blank for primary header."%(ext), exit_=False) 
         if extent == 'all':
             extentsions = np.arange(ext)
         elif extent == '':
@@ -8425,7 +8486,7 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
         WaitForN(xpapoint)
     d.set('analysis task  "Fit Gaussian 2D"')
-
+    time.sleep(2)
     pprint("""* Perfect!
 * As you can see it also created an ellipse around the region!
 * The major/minor axis are the gaussian's FWHMs, the angle is also saved.
@@ -8729,9 +8790,9 @@ rendering in order to the objects in the image. When it is done,
     i+=1
         
     WaitForN(xpapoint)
-    while  getregion(d,selected=True) is None:
-        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
-        WaitForN(xpapoint)
+#    while  getregion(d,selected=True) is None:
+#        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
+#        WaitForN(xpapoint)
  
     
     d.set("analysis message {Now let us do some 3D plotting}")    
@@ -8825,9 +8886,13 @@ rendering in order to the objects in the image. When it is done,
     
     return
 
+
 def DS9tsuite(xpapoint):
     """Teste suite: run several fucntions in DS9
     """
+    from subprocess import Popen
+    Popen([' DS9Utils %s Button'%(xpapoint)], shell=True,
+             stdin=None, stdout=None, stderr=None, close_fds=True)
     d = DS9n(xpapoint)
     verbose(xpapoint,verbose='0')
     tutorial = sys.argv[-1]
@@ -8895,6 +8960,9 @@ by launching it from the Analysis menu [always explicited under function's name]
        You can access/change the default parameters of each function here: 
        %s  
 ********************************************************************************\n"""%(tutorial,resource_filename('pyds9plugin', 'QuickLookPlugIn.ds9.ans')))
+    time.sleep(2)
+    Popen(["ps -eaf|grep 'DS9Utils.*Button' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "], shell=True,
+             stdin=None, stdout=None, stderr=None, close_fds=True)
 
     sys.exit()    
     return
@@ -9000,6 +9068,51 @@ def DS9RemoveImage(xpapoint):
 def Quit(xpapoint):
     return
 
+
+        
+def Button(xpapoint):
+    from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QLabel)
+    from PyQt5.QtGui import QIcon, QPixmap
+    class Window(QWidget):
+        def __init__(self):
+            super(Window, self).__init__()
+            self.setWindowTitle("DS9")
+            self.buttonNext = QPushButton('Next', self)
+            self.buttonQuit = QPushButton('Quit tutorial', self)
+            self.label = QLabel(self)
+            self.d = DS9n(xpapoint)
+            self.label.setText('When you are ready click on Next')
+            self.buttonNext.clicked.connect(self.handleButtonNext)
+            self.buttonQuit.clicked.connect(self.handleButtonQuit)
+            layout = QVBoxLayout(self)
+            layout.addWidget(self.label)
+            layout.addWidget(self.buttonNext)
+            layout.addWidget(self.buttonQuit)
+    
+        def handleButtonNext(self):
+#            if self.d.get('cmap')=='cool':
+#                self.d.set('cmap heat')
+#            else:
+#                self.d.set('cmap heat')                
+            self.d.set('nan grey')
+            verboseprint('Button Clicked!')
+            #self.label.setText('Computing...')
+            #time.sleep(0.5)
+            #self.label.setText('')
+        def handleButtonQuit(self):
+            from subprocess import Popen
+            Popen(["ps -eaf|grep 'DS9Utils.*test' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "], shell=True,
+                  stdin=None, stdout=None, stderr=None, close_fds=True)
+            Popen(["ps -eaf|grep 'DS9Utils.*Button' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "], shell=True,
+                  stdin=None, stdout=None, stderr=None, close_fds=True)
+
+    app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(QPixmap(resource_filename('pyds9plugin','doc/ref/features_files/sun.gif'))))
+    window = Window()
+    window.show()
+    sys.exit(app.exec_())    
+
+
 #@fn_timer
 def main():
     """Main function where the arguments are defined and the other functions called
@@ -9045,7 +9158,7 @@ def main():
                                  'stack': DS9stack_new,'lock': DS9lock,'CreateHeaderCatalog':DS9CreateHeaderCatalog,'SubstractImage': DS9RemoveImage,
                                  'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
                                  'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings,'next_step':next_step,'BackgroundEstimationPhot': DS9BackgroundEstimationPhot,'verbose':verbose,
-                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting,'Quit':Quit}#,'NextButton':NextButton
+                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting,'Quit':Quit,'Button':Button}#,'NextButton':NextButton
                        
         DictFunction_AIT =     {'centering':DS9center, 'radial_profile':DS9rp,
                                 'throughfocus':DS9throughfocus, 'ComputeFluctuation':ComputeFluctuation,
