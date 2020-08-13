@@ -6,7 +6,28 @@
 #echo "$width $height $depth $bitpix $data $filename $x $y $xcen $ycen" | $text
 
 
-hmenu Generic Functions
+hmenu Quick Look Plugin
+
+	Quick Look Plugin Help
+	*
+	web
+	#file:$env(DS9Function)
+	file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
+	#file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
+
+
+	Give it a go !
+	*
+	menu
+	#echo "$filename" | $text 
+	#echo "$env(DS9Function)" | $text 
+	DS9Utils $xpa_method test $param(Tutorials); $tutorials   | $text   
+endhmenu
+
+
+
+---
+hmenu 1. Generic Functions
 
 #    Test $data
 #    *.fits
@@ -75,7 +96,7 @@ hmenu Generic Functions
 		DS9Utils $xpa_method CreateHeaderCatalog  $param(Click-Enter-For-Only-DS9-Image-); "$path"  $info - | $text  
 
 
-		Create Image Subset
+		Filtering & organizing images
 		*
 		menu
 		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" $number $Fields "$Mask" | $text  
@@ -118,8 +139,8 @@ hmenu Generic Functions
 		Replace Regions With NaNs
 		*
 		menu
-		DS9Utils $xpa_method ReplaceWithNans   $message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)    | $text  
-
+		DS9Utils $xpa_method ReplaceWithNans   "$entry(Number by which you want to replace the encircled pixels, eg. 5.4, nan, -inf. WARNING: you are about to run an invasive method. The original image will be deleted!)"   | $text  
+#$message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)  
 
 	endhmenu
 
@@ -192,19 +213,19 @@ hmenu Generic Functions
 	Open Image (O)
 	*
 	menu
-	DS9Utils $xpa_method open $param(open); "$path" $type   | $text
+	DS9Utils $xpa_method open $param(open); "$path" $type  $clip | $text
 
 	Open Image Key
 	*
 	bind O
-	DS9Utils $xpa_method open $param(open); "$path" $type   | $text
+	DS9Utils $xpa_method open $param(open); "$path" $type   $clip  | $text
 
 	Stack Images (s)  #20
 	*
 	menu
 	DS9Utils $xpa_method stack $param(Stacking); $Path $stack -  $output | $text  
 
-	Stack Images Key
+	Stack Images key
 	*
 	bind s
 	DS9Utils $xpa_method stack "$entry(Number of the images to stack: first-last)" "$entry(Number of dark images first-last to stack and  subtract, press enter if no dark)"   | $text  
@@ -235,7 +256,7 @@ endhmenu
 
 
 
-hmenu Instrumentation - AIT
+hmenu 2. Instrumentation - AIT
 
 	hmenu Focus
 
@@ -351,7 +372,7 @@ endhmenu
 
 
 
-hmenu Astronomical Softwares
+hmenu 3. Astronomical Softwares
 
 
 
@@ -482,9 +503,6 @@ endhmenu
 
 
 
-
----
-
 #help 
 #Main Help
 #A help message may contain
@@ -493,20 +511,7 @@ endhmenu
 #endhelp
 
 
-DS9Functions Help !
-*
-web
-#file:$env(DS9Function)
-file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-#file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
 
-
-Give it a go !
-*
-menu
-#echo "$filename" | $text 
-#echo "$env(DS9Function)" | $text 
-DS9Utils $xpa_method test $param(Tutorials); $tutorials   | $text   
 
 
 
@@ -584,6 +589,7 @@ endparam
 
 param open
 path entry {Path of the image(s) to open}    {} #NORMAL
+clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
 type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE {} 
 endparam
 
@@ -891,10 +897,10 @@ endparam
 
 
 param subset_
-cat entry {Header catalog} - {Path of the header catalog to create subset}
-number menu {Number of images} 1|2|5|10|100|all {Number of images having the same characteristics}
-Fields entry {Re-arange} Directory {Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2}
+cat entry {Inout Header catalog} - {Path of the input header catalog to filter/organize files}
 Mask entry {Selection} - {Selection to be applied.  Use \| for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) \| (EMGAIN>0) }
+Fields entry {Re-arange} Directory {Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2}
+number menu {Number of images} all|1|2|5|10|100 {Number of images having the same characteristics}
 endparam
 
 param autocorr
@@ -1389,167 +1395,6 @@ endparam
 ###########################################################################################################################################
 
 
-param Galaxy-star-classification
-path entry {Path} - {Path of the catalog}
-bzk checkbox {BZK} 1 {BZK diagram estimator}
-chi2 checkbox {Chi2} 1 {Chi2 estimator}
-compactness checkbox {Compactness} 1 {Compactness estimator}
-endparam
-
-
-#param Noise-Calculator
-#BACK_FILTTHRESH entry {Detector type} 0.0 {}
-#baxckground (500/A)
-#fixed pattern noise
-#percentage of data perdue
-#dark
-#cic
-#amplification noise
-#photo ocinting
-#endparam
-
-param Lephare-Filters
-LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
-LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
-PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_COUPON_NUV_FUV.para.ini {PARAM_FILE}
-FILTER_LIST entry {FILTER_LIST} cfht/CLAUDS/u.pb,cfht/CLAUDS/uS.pb,hsc/gHSC.pb,hsc/rHSC.pb,hsc/iHSC.pb,hsc/zHSC.pb,hsc/yHSC.pb,vista/Y.pb,vista/J.pb,vista/H.pb,vista/K.pb,galex/NUV.pb,galex/FUV.pb {FILTER_LIST}
-TRANS_TYPE menu {TRANS_TYPE} -|1|0 {}
-FILTER_CALIB menu {FILTER_CALIB} -|0|1|2|3|4 {}
-FILTER_FILE entry {FILTER_FILE} - {FILTER_FILE}
-endparam
-
-param Lephare-SedToLib
-LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
-LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
-PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_COUPON_NUV_FUV.para.ini {PARAM_FILE}
-
-STAR_c checkbox {STAR} 1 {Run stellar library}
-QSO_c checkbox {QSO} 1 {Run quasar library}
-GALAXY_c checkbox {GALAXY} 1 {Run galaxy library}
-
-STAR_SED entry {STAR_SED} - {STAR_SED full path}
-STAR_LIB entry {STAR_LIB} - {STAR_LIB}
-
-QSO_SED entry {QSO_SED} - {STAR_SED full path}
-QSO_LIB entry {QSO_LIB} - {QSO_LIB}
-
-GAL_SED entry {GAL_SED} - {GAL_SED full path}
-GAL_LIB entry {GAL_LIB} - {GAL_LIB}
-SEL_AGE entry {SEL_AGE} - {SEL_AGE}
-AGE_RANGE entry {AGE_RANGE} - {AGE_RANGE}
-endparam
-
-
-param Lephare-MagGal
-LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
-LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
-PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_COUPON_NUV_FUV.para.ini {PARAM_FILE}
-
-STAR_c checkbox {STAR} 1 {Run stellar library}
-QSO_c checkbox {QSO} 1 {Run quasar library}
-GALAXY_c checkbox {GALAXY} 1 {Run galaxy library}
-
-STAR_LIB_IN entry {STAR_LIB_IN} - {STAR_LIB_IN}
-STAR_LIB_OUT entry {STAR_LIB_OUT} - {STAR_LIB_OUT}
-
-QSO_LIB_IN entry {QSO_LIB_IN} - {QSO_LIB_IN}
-QSO_LIB_OUT entry {QSO_LIB_OUT} - {QSO_LIB_OUT}
-
-GAL_LIB_IN entry {GAL_LIB_IN} - {GAL_LIB_IN}
-GAL_LIB_OUT entry {GAL_LIB_OUT} - {GAL_LIB_OUT}
-
-MAGTYPE menu {MAGTYPE} -|AB|VEGA {MAGTYPE}
-Z_STEP entry {Z_STEP} - {Z_STEP}
-COSMOLOGY entry {COSMOLOGY} - {COSMOLOGY}
-MOD_EXTINC entry {MOD_EXTINC} - {MOD_EXTINC}
-EXTINC_LAW entry {EXTINC_LAW} - {EXTINC_LAW}
-EB_V entry {EB_V} - {EB_V}
-EM_LINES menu {EM_LINES} -|YES|NO {EM_LINES}
-Z_FORM entry {Z_FORM} - {Z_FORM}
-endparam
-
-
-
-param Lephare-Zphot
-LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
-LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
-PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_COUPON_NUV_FUV.para.ini {PARAM_FILE}
-ZPHOTLIB entry {ZPHOTLIB} - {ZPHOTLIB}
-CAT_IN entry {CAT_IN} - {CAT_IN}
-CAT_OUT entry {CAT_OUT} - {CAT_OUT}
-endparam
-
-param Lephare-Limits
-LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
-LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
-PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_COUPON_NUV_FUV.para.ini {PARAM_FILE}
-LIMITS_INPUT entry {LIMITS_INPUT} - {LIMITS_INPUT}
-LIMITS_OUTPUT entry {LIMITS_OUTPUT} - {LIMITS_OUTPUT}
-ZPHOTLIB entry {ZPHOTLIB} - {ZPHOTLIB}
-LF_MABS_REF entry {LF_MABS_REF} - {LF_MABS_REF}
-LF_MAPP_SEL entry {LF_MAPP_SEL} - {LF_MAPP_SEL}
-LF_MAPP_CUT entry {LF_MAPP_CUT} - {LF_MAPP_CUT}
-LIMITS_ZBIN entry {LIMITS_ZBIN} - {LIMITS_ZBIN}
-MF_METHOD entry {MF_METHOD} - {MF_METHOD}
-MF_MODEL entry {MF_MODEL} - {MF_MODEL}
-MF_M2L entry {MF_M2L} - {MF_M2L}
-MF_CONVERS entry {MF_CONVERS} - {MF_CONVERS}
-endparam
-
-
-
-param Lephare-LF
-LEPHARE_DIR entry {LEPHARE_DIR} /Users/Vincent/Nextcloud/Work/LePhare/lephare_200509 {LEPHARE_DIR}
-LEPHARE_WORK entry {LEPHARE_WORK} /Users/Vincent/Nextcloud/Work/LePhare/work {LEPHARE_WORK}
-PARAM_FILE menu {PARAM_FILE} /Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_old_FUV_NUV.para.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_LFandMF_NUV_FUV_BC03.ini|/Users/Vincent/Nextcloud/Work/LePhare/param/V_COUPON_NUV_FUV.para.ini {PARAM_FILE}
-MF menu {MF} -|NO|YES {MF}
-LF_ESTI menu {LF_ESTI} -|Vmax|SWML|STY|Vmax,SWML|Vmax,STY|SWML,STY|Vmax,SWML,STY {LF_ESTI}
-LF_INPUT entry {LF_INPUT} - {LF_INPUT}
-LF_OUTPUT entry {LF_OUTPUT} - {LF_OUTPUT}
-ZPHOTLIB entry {ZPHOTLIB} - {ZPHOTLIB}
-LF_AREA entry {LF_AREA} - {LF_AREA}
-LF_WEIGHT entry {LF_WEIGHT} - {LF_WEIGHT}
-USE_WEIGHT menu {USE_WEIGHT} -|YES|NO {USE_WEIGHT}
-LF_ZBIN entry {LF_ZBIN} - {LF_ZBIN}
-LF_NBSTEP entry {LF_NBSTEP} - {LF_NBSTEP}
-LF_MABS_RANGE entry {LF_MABS_RANGE} - {LF_MABS_RANGE}
-LF_RM_BIAS menu {LF_RM_BIAS} -|YES|NO {LF_RM_BIAS}
-LF_SELECT_1 entry {LF_SELECT} - {LF_SELECT}
-LF_SELECT_IN entry {LF_SELECT_IN} - {LF_SELECT_IN}
-LF_SELECT_RG entry {LF_SELECT_RG} - {LF_SELECT_RG}
-STY_DCHI2 entry {STY_DCHI2} - {STY_DCHI2}
-STY_FIX_ALPHA entry {STY_FIX_ALPHA} - {STY_FIX_ALPHA}
-STY_FIX_MSTAR entry {STY_FIX_MSTAR} - {STY_FIX_MSTAR}
-SWML_CONSTRAIN entry {SWML_CONSTRAIN} - {SWML_CONSTRAIN}
-endparam
-
-
-
-
-param Field
-field menu {Masking factor} F1_119|F2_-161|F3_-121|F4_159|None {Name of the field}
-endparam
-
-
-param Frame
-Field menu {Field} F2_-161|F1_119|F3_-121|F4_159 {Name of the field}
-Frame menu {Frame} RestFrame|ObservedFrame {Frame}
-Wave entry {Wavelength center} 1216 {wavelength observed in Angstrom}
-kernel entry {Convolution kernel} 8 {Slit size in pixel to convolve the signal}
-threshold entry {Detection threshold} 5 {Detection theshold / sigma}
-type menu {Object types} All|Lya_Gal|QSO|Lyc_Gal|OVI_Gal {Type of the objects you want to stack, use All for observed frame}
-magnitude entry {Limiting magnitude} 15,23 {Magnitude min, magnitude max}
-endparam
-
-
-param Overscan-Correction
-line menu {Overscan correction} LineByLine|Normal {Overscan correction type}
-overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use to apply the correction}
-limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
-column menu {Column correction} None|ColumnByColumn {If not None will subtract each column by its average value}
-endparam
-
-
 
 
 
@@ -1570,68 +1415,6 @@ noise checkbox {Noise measurement} 0 {Run the analysis on 200 random position}
 endparam
 
 
-param Add-Gaussian-2D
-Flux entry {Flux} 100 {Flux of the point like source}
-FWHM entry {FWHM} - {FWHM limits in pixel for the fit. Eg: 6-7}
-endparam
-
-param Image-test
-header checkbox {Gain header} 1 {Tcheck if header is compatible with overscan level}
-size checkbox {Image size} 1 {Tcheck that all the images are complete}
-endparam
-
-
-
-
-param ProbLaw
-prob menu {Probability Law} beta|binomial|geometric|pareto|poisson|power|rand|standard_exponential|standard_gamma|standard_normal|standard_t|randint {Please choose a probability law}
-endparam
-
-
-
-param RealLaw
-prob menu {Probability Law} gamma|poisson|pareto|beta|power|geometric {Please choose a probability law}
-endparam
-
-
-
-
-param TotalReduction
-cr checkbox {Cosmic-rays} 1 {Detect and mask cosmic rays impact/tail}
-os checkbox {OS-correction} 1 {Apply OS-correction line by line}
-bck checkbox {Background-Subtraction} 0 {Apply background subtraction}
-d checkbox {Delete} 1 {Delete intermediate files - Only keep raw data and reduced data}
-cc checkbox {Create-Catalog} 1 {Create header + analysis catalog on the reduced data}
-si checkbox {StackImages} 1 {Stack reduced data with same Folder/Exposure/Gain/T}
-endparam
-
-param subset
-cat entry {Header catalog} - {Path of the header catalog to create subset}
-number entry {Number of image} 2 {Number of images having the same characteristics}
-fpath checkbox {Folder} 1 {Images must belong to same folder}
-gain checkbox {Gain} 1 {Images must have the same gain}
-exp checkbox {Exposure} 1 {Images must have the same exposure time}
-temp checkbox {Temperatures} 1 {Images must have the same exposure detector temperature}
-f1 entry {Field} date {Catalog field to select}
-v1 entry {Value} - {Selection: Val / min-max / list. Eg: 190222 / 190222,190224 / 190222,190224,190301 for date}
-f2 entry {Field} EXPTIME {Catalog field to select}
-v2 entry {Value} - {Selection. Eg: 0 / 9000,9200 / 9200,9400,9600}
-f3 entry {Field} EMGAIN {Catalog field to select}
-v3 entry {Value} - {Selection. Eg: 1 / 1,5 / 1,10,100 for exposure}
-f4 entry {Field} EMCCDBAC {Catalog field to select}
-v4 entry {Value} - {Selection. Eg: -109 / -109,-111 / -109,-111,-116 for temp}
-f5 entry {Field} MeanADUValue|EMCCDBAC|date|EXPTIME|EMGAIN {Catalog field to select}
-v5 entry {Value} - {Selection. Eg: 10,100 for ADU value}
-endparam
-
-
-
-param smearing
-pathc entry {Path} - {Path of the .reg/.csv region catalog for stack}
-fields entry {XY fields} - {If csv catalog enter the x, y column names. Eg: xc-yc}
-thresholds entry {Detection thresholds} - {Thresholds to be used to detect hot pixels if no regions are not loaded}
-endparam
-
 
 
 param CreateHeaderCat
@@ -1642,38 +1425,6 @@ formatImage entry {Image time format} - {Image time format: Derive it automatica
 formatCat entry {Catalog time format} - {Catalog time format: Derive it automatically if -}
 endparam
 
-
-
-param Plot-LF
-Path entry {Path} - {Path of the folder containing the ALF points}
-Filter menu {Filter} U|FUV|NUV {Number of pixels to mask in the y+ direction}
-endparam
-
-
-
-param Analysis
-Max checkbox {Max} 1 {Compute the max of the region}
-Std checkbox {Std} 1 {Compute the standard deviation of the region}
-Flux checkbox {Flux} 0 {Compute the flux in the region}
-endparam
-
-
-
-param EmGain
-box entry {Aperture} 30,30 {Aperture size [in pixels] in which compute the variance and intensity}
-path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
-endparam
-
-
-
-param EmGainFB
-subtract checkbox {Subtract Image} 0 {Subtract image to have better assesment of the variance}
-number entry {Number/path} - {Number/path image to subtract, let - to automatically take the +/- consecutive image}
-box entry {Bin size} 30,30 {Size of the bins on which compute the variance and intensity}
-overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use}
-limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
-path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
-endparam
 
 
 param -Click-Enter-For-Only-DS9-Image-
