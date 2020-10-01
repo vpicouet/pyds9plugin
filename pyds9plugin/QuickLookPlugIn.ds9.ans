@@ -99,7 +99,7 @@ hmenu 1. Generic Functions
 		Filtering & organizing images
 		*
 		menu
-		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" $number $Fields "$Mask" | $text  
+		DS9Utils $xpa_method DS9createSubset $param(subset_); "$cat" "all" $Fields "$Mask" | $text  
 
 
 		Add header Field
@@ -900,7 +900,7 @@ param subset_
 cat entry {Inout Header catalog} - {Path of the input header catalog to filter/organize files}
 Mask entry {Selection} - {Selection to be applied.  Use \| for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) \| (EMGAIN>0) }
 Fields entry {Re-arange} Directory {Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2}
-number menu {Number of images} all|1|2|5|10|100 {Number of images having the same characteristics}
+#number menu {Number of images} all|1|2|5|10|100 {Number of images having the same characteristics}
 endparam
 
 param autocorr

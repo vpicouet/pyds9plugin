@@ -1,4 +1,4 @@
-    #!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jul  4 10:35:13 2018
@@ -359,7 +359,7 @@ def FitsExt(fitsimage):
     return ext
 
 
-@fn_timer
+#@fn_timer
 def CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9QuickLookPlugIn/'):#DS9BackUp
     """Create the folders in which are stored DS9 related data
     """
@@ -662,7 +662,7 @@ def create_repositories(path, field, values):
 
 
 
-def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.'):
+def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.',ax=None):
     """ PlotFit1D(np.arange(100),np.arange(100)**2 + 1000*np.random.poisson(1,size=100),2)
     """
     #ajouter exp, sqrt, power low, gaussian, 
@@ -684,13 +684,14 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         std = np.nanstd(y[index])
         
     if Plot:
-        fig = plt.figure()#figsize=(10,6))
-        gs = gridspec.GridSpec(2, 1, height_ratios=(4,1))
-        ax1 = fig.add_subplot(gs[0])
-        ax2 = fig.add_subplot(gs[1])
-        #fig, (ax1, ax2) = plt.subplots(2, sharex=True,figsize=(10,6),height_ratios=[4,1])
-        ax1.plot(x, y, fmt,label='Data')
-        ax1.plot(x, np.ones(len(x))*np.nanmean(y[index]) + std, linestyle='dotted',label='Standard deviation')
+        if ax is None:
+            fig = plt.figure()#figsize=(10,6))
+            gs = gridspec.GridSpec(2, 1, height_ratios=(4,1))
+            ax1 = fig.add_subplot(gs[0])
+            ax2 = fig.add_subplot(gs[1])
+            #fig, (ax1, ax2) = plt.subplots(2, sharex=True,figsize=(10,6),height_ratios=[4,1])
+            ax1.plot(x, y, fmt,label='Data')
+            ax1.plot(x, np.ones(len(x))*np.nanmean(y[index]) + std, linestyle='dotted',label='Standard deviation')
     xp = np.linspace(x.min(),x.max(), 1000)
 
     if type(deg)==int:
@@ -731,26 +732,32 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         res = None
         #plt.plot(xp, , '--', label='Fit: ')
     if Plot:
-        if deg=='gaus':
-            ax1.text(popt[1],popt[0]**2,'Max = %0.1f std'%(popt[0]**2/std))
-        if title:
-            fig.suptitle(title,y=1)
-        if xlabel:
-            ax2.set_xlabel(xlabel)
-        if ylabel:
-            ax1.set_ylabel(ylabel)
-        ax1.tick_params(
-        axis='x',          # changes apply to the x-axis
-        which='both',      # both major and minor ticks are affected
-        bottom=False,      # ticks along the bottom edge are off
-        top=False,         # ticks along the top edge are off
-        labelbottom=False)
-        ax2.set_ylabel('Error')
-        ax1.plot(xp, zp, '--', label=name)
-        ax2.plot(x, y-zz, 'x', label=name)
-        ax1.grid(linestyle='dotted');ax2.grid(linestyle='dotted')
-        ax1.legend()
-        plt.tight_layout()
+        if ax is None:
+            if deg=='gaus':
+                ax1.text(popt[1],popt[0]**2,'Max = %0.1f std'%(popt[0]**2/std))
+            if title:
+                fig.suptitle(title,y=1)
+            if xlabel:
+                ax2.set_xlabel(xlabel)
+            if ylabel:
+                ax1.set_ylabel(ylabel)
+            ax1.tick_params(
+            axis='x',          # changes apply to the x-axis
+            which='both',      # both major and minor ticks are affected
+            bottom=False,      # ticks along the bottom edge are off
+            top=False,         # ticks along the top edge are off
+            labelbottom=False)
+            ax2.set_ylabel('Error')
+            ax1.plot(xp, zp, '--', label=name)
+            ax2.plot(x, y-zz, 'x', label=name)
+            ax1.grid(linestyle='dotted');ax2.grid(linestyle='dotted')
+            ax1.legend()
+            plt.tight_layout()
+        else:
+            xp = np.linspace(-1000,1000,1000)
+            ax.plot(xp, np.poly1d(z)(xp),ls='dotted')
+            ax1,ax2=ax,ax
+            
         return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x': x}
     return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x}
 
@@ -2902,10 +2909,10 @@ def CreateCube(d, data):
     lx,ly,lz = data.shape
     #data = data[::int(lx/ly),:,:]
     if d.get('scale')=='log':
-        data = np.log10(np.array(data[:,:,:] - np.nanmin(data[:,:,:]+1),dtype=float))
+        data = np.log10(np.array(data[:,:,:] - np.nanmin(data[np.isfinite(data)])+1,dtype=float))
     else:
         data = np.array(data[:,:,:],dtype=float)
-    
+    #verboseprint(data)
     mask = np.ones(len(data.ravel()),dtype=bool)#
     #mask=np.isfinite(data.ravel())#>np.nanpercentile(data,2)
     #mask=(data.ravel()>np.nanpercentile(data,0.1)) & (data.ravel()<np.nanpercentile(data,99.9))
@@ -4273,15 +4280,6 @@ def MaskCosmicRays2(image, cosmics, top=0, bottom=0, left=4, right=0, cols=None,
 
 
 
-def RunFunction(Fonction, args, return_dict):
-    """Run a function in order to performe multi processing
-    """
-    #print(*args)
-    out = Fonction(*args)
-    #verboseprint(out)
-    return_dict['output'] = out
-    return 
-
 
 
 
@@ -4875,7 +4873,7 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
     if xpapoint:    
         if files is None:
             files =   globglob( sys.argv[3], ds9_im=False) 
-            print(files)
+            verboseprint(files)
             while len(files)==0:
                 d=DS9n(xpapoint)
                 path = get(d, "No file matching the regular expression. Please give a new pattern matching (*/?/[9-16], etc)", exit_=True) 
@@ -4940,6 +4938,7 @@ def GetColumns(path):
     return cols
 
 def Parallelize(function=lambda x:print(x),action_to_paralize=[],parameters=[], number_of_thread=10):
+    from pyds9plugin.BasicFunctions import  RunFunction
     from tqdm import tqdm
     from multiprocessing import Process, Manager
     info = [action_to_paralize[x:x+number_of_thread] for x in range(0, len(action_to_paralize), number_of_thread)]
@@ -5629,21 +5628,22 @@ def CreateCatalog_new(files, ext=[0], config=my_conf):
     from astropy.table import Column,  vstack#hstack,
     from datetime import datetime
     import warnings
-    from tqdm import  tqdm #tqdm_gui,
+    from tqdm import  tqdm, tqdm_gui
     warnings.simplefilter('ignore', UserWarning)
     files.sort()
     path = files[0]    
 
     file_header = []
     files_name = []
-    for i  in tqdm(range(len(files)), file=sys.stdout, desc='Number of files : ', ncols=100):
+    #for i  in tqdm(range(len(files)), file=sys.stdout, desc='Number of files : ', ncols=100):
+    for i  in tqdm_gui(range(len(files)), file=sys.stdout, desc='Number of files : ', ncols=100):
         try:
             table = CreateTableFromHeader(files[i], exts=ext)
             if table is not None:
                 file_header.append(table)
                 files_name.append(files[i])
         except OSError:
-            verboseprint('Empty or corrupt FITS file :', files[i])
+            #verboseprint('Empty or corrupt FITS file :', files[i])
             pass
     table_header = vstack(file_header) 
 #    master_header = [] 
@@ -5661,7 +5661,7 @@ def CreateCatalog_new(files, ext=[0], config=my_conf):
 #                pass
 #        master_header.append(vstack(file_header))
 #    table_header = hstack(master_header)
-    verboseprint('Stacking all the headers...')
+    #verboseprint('Stacking all the headers...')
     table_header.add_column(Column(np.arange(len(table_header)),name='Index',dtype=str), index=0, rename_duplicate=True)
     table_header.add_column(Column(files_name,name='Path'), index=1, rename_duplicate=True)
     table_header.add_column(Column([os.path.basename(file) for file in files_name]),name='Filename', index=2, rename_duplicate=True)
@@ -5679,9 +5679,12 @@ def CreateCatalog_new(files, ext=[0], config=my_conf):
     ascii.write(table_header.filled(''),path_db,  format='csv')   
     csvwrite(table_header.filled(''),os.path.dirname(path) + '/HeaderCatalog.csv')#fill_values=[(ascii.masked, 'N/A')]
     #hstack(table_header).write(os.path.dirname(path) + '/HeaderCatalog.fits')
-    table_header.pprint_all(max_lines=-1)
-    print('\nTable saved : ', path_db)
-    print('\nYou can use this table with the Create Image subset [Analysis -> Generic Functions -> Header & Data Base]. This function will help you create well ordered folders of you fits images, respecting possible conditions.')
+    #table_header.pprint_all(max_lines=-1)
+    print('\nTable saved : \n', path_db)
+    print("""You can use this table with the Filtering & Ordering images. 
+
+This function will help you create well ordered folders of you fits images, 
+respecting possible conditions.""")
     return table_header
 
 def remove_duplicates(hdr):
@@ -5703,7 +5706,7 @@ def CreateTableFromHeader(path, exts=[0]):
     from astropy.table import Table, hstack
     from astropy.io import fits
     tabs = []
-    if exts is 'all':
+    if exts == 'all':
         verboseprint(path)
         with fits.open(path) as file:
             exts = np.arange(len(file))
@@ -6455,9 +6458,9 @@ class GeneralFit_new(Demo):
         for i,amp,center in zip(range(self.nb_moffats), amps, centers):
             Models.append(Model(Moffat1D,
                   Parameter(value=amps[0], bounds=(-1.2*ampm, 1.2*ampm), label='Amplitude'),
-                  Parameter(value=center,bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label='Center'),
+                  Parameter(value=center,bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label='Alpha'),
                   Parameter(value=np.min([2,np.max(x)/10]), bounds=(1e-5, (np.nanmax(x)-np.nanmin(x))/2), label='Width'),
-                  Parameter(value=center,bounds=(0, np.nanmax(xdata_i)), label='Alpha'),
+                  Parameter(value=center,bounds=(0, np.nanmax(xdata_i)), label='Center'),
                   label='Moffat%i'%(i)))   
             
         for i,amp,center in zip(range(self.nb_voigt1D), amps, centers):
@@ -6558,7 +6561,7 @@ class GeneralFit_new(Demo):
         #xsample = np.linspace(xdata_i.min(),xdata_i.max(),len(xdata_i)*100)
         curves = [] 
         for modeli in Models:
-            a, = self.ax.plot(xsample, modeli(xsample), color='grey', label=None, linestyle='dotted')
+            #a, = self.ax.plot(xsample, modeli(xsample), color='grey', label=None, linestyle='dotted')
             curves.append(a)
             
         model_curve, = self.ax.plot(xsample, model(xsample), color='steelblue', label='model')
@@ -6567,7 +6570,7 @@ class GeneralFit_new(Demo):
         self.ax.set_ylim((yinf,ysup))
         verboseprint('autogui')
         verboseprint([model_curve]+curves)
-        gui = AutoGUI(model, [model_curve]+curves, bbox=[0.20, 0.07, 0.75, 0.17],
+        gui = AutoGUI(model, [model_curve], bbox=[0.20, 0.07, 0.75, 0.17],#+curves
                       slider_options={'color': 'steelblue'}, data=(xdata_i, ydata_i))#[model_curve]+curves
 #        for modeli in Models:
 #            AutoGUI(modeli, [model_curve], bbox=[0.20, 0.07, 0.75, 0.17],
@@ -7442,10 +7445,10 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         else:
             if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
                 verboseprint('Using WCS header for regions :', cat_path + '.reg')
-                create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3['MAG_AUTO'],0)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=1)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+                create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3['MAG_AUTO'],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=1)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
             else:
                 verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
-                create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3['MAG_AUTO'],0)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=1)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+                create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3['MAG_AUTO'],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=1)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
             if path is None:
                 if len(cat3)<5e4:
                     d.set('regions ' + cat_path + '.reg')
@@ -9079,7 +9082,7 @@ by launching it from the Analysis menu [always explicited under function's name]
 #    
 #    d.set('frame delete all')
 #    d.set('frame new')
-#    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/Guidance/stack25055816_Trimm.fits')
+#    d.set('file /Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/CESAM/Guidance/stack25055816_Trimm.fits')
 #    DS9setup2(xpapoint, color='cool')
 #    d.set("analysis message {Let us ty some real time simplistic guiding code in the case you need it for your observing nights. Select around ~3 stars by creating a circle regin around them and hit m.}")    
 #    WaitForN(xpapoint)
@@ -9092,7 +9095,7 @@ by launching it from the Analysis menu [always explicited under function's name]
 ##    conf_dir
 ##    WaitForN(xpapoint)
 ##    #####Cubes
-##    d.set('file /Users/Vincent/Nextcloud/Work/Keynotes/DS9Presentation/CESAM/Test/_104002019_objcube.fits')
+##    d.set('file /Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/CESAM/Test/_104002019_objcube.fits')
 ##    DS9setup2(xpapoint, color='cool')
 ##    d.set("analysis message {This package also allows you to work on data cube such as spatio-spectral 3D images. For instance here, we will extract the spectra at different location in order to compare them.}")    
 ##    WaitForN(xpapoint)
@@ -9291,13 +9294,26 @@ def main():
         if function not in ['verbose','setup','next_step']:
             verboseprint('\n****************************************************\nDS9Utils ' + ' '.join(sys.argv[1:])+'\n****************************************************')# %s %s '%(xpapoint, function) + ' '.join())
             verboseprint(sys.argv)
-        try:
+        if sys.stdin is None:
+            try:
+                a = DictFunction[function](xpapoint=xpapoint) 
+            except Exception as e: #Exception #ValueError #SyntaxError
+                a=0
+                #verboseprint(e) 
+                
+                # print(1)
+                # print(e)
+                # print(2)
+                import traceback
+                pprint(traceback.format_exc())
+                pprint('To have more information about the error run this in the terminal:')
+                pprint(' '.join(sys.argv))
+        else:
+            print('STDIN detected')
             a = DictFunction[function](xpapoint=xpapoint) 
-        except SyntaxError as e: #Exception #ValueError #SyntaxError
-            a=0
-            #verboseprint(e) 
-            #print(e)
-            d = DS9n(xpapoint);d.set('analysis message {%s}'%(e));sys.exit()
+
+                # pprint(sys.argv.join(' '))
+            # d = DS9n(xpapoint);d.set('analysis message {%s}'%(e));sys.exit()
 
         if (type(a) == list) and (type(a[0]) == dict):
             for key in a[0].keys():

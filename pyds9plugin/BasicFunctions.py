@@ -34,6 +34,15 @@ else:
     
  
 
+def RunFunction(Fonction, args, return_dict):
+    """Run a function in order to performe multi processing
+    """
+    #print(*args)
+    out = Fonction(*args)
+    #verboseprint(out)
+    return_dict['output'] = out
+    return 
+
 
 
 
@@ -68,10 +77,10 @@ def galex2Ph_s_A(f200=2.9e-4, atm=0.37, throughput=0.13, QE=0.5, area=7854):
 
 
 
-    def connect(host='http://google.com'):
-    import urllib.request
-    try:
-        urllib.request.urlopen(host) #Python 3.x
-        return True
-    except:
-        return False
+    # def connect(host='http://google.com'):
+    # import urllib.request
+    # try:
+    #     urllib.request.urlopen(host) #Python 3.x
+    #     return True
+    # except:
+    #     return False
