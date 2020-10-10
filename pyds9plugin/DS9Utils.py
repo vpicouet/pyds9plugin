@@ -662,7 +662,7 @@ def create_repositories(path, field, values):
 
 
 
-def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.',ax=None):
+def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.',ax=None,c='black',Type='normal'):
     """ PlotFit1D(np.arange(100),np.arange(100)**2 + 1000*np.random.poisson(1,size=100),2)
     """
     #ajouter exp, sqrt, power low, gaussian, 
@@ -693,16 +693,26 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             ax1.plot(x, y, fmt,label='Data')
             ax1.plot(x, np.ones(len(x))*np.nanmean(y[index]) + std, linestyle='dotted',label='Standard deviation')
     xp = np.linspace(x.min(),x.max(), 1000)
-
+    def linear_func(p, x):
+       m, c = p
+       return m*x + c
     if type(deg)==int:
         z, res, rank, singular, rcond = np.polyfit(x, y, deg, full=True)
         pcov = None
         popt = np.poly1d(z)
+        if (deg==1) & (Type=='ortho'):
+            import scipy
+            linear_model = scipy.odr.Model(linear_func)
+            data = scipy.odr.RealData(x, y)
+            odr = scipy.odr.ODR(data, linear_model, beta0=[0., 1.])
+            out = odr.run()
+            popt = np.poly1d(out.beta)
         zp = popt(xp)
         zz = popt(x)
         degs = [' %0.2f * x^%i'%(a,i) for i,a in enumerate(popt.coef[::-1])]
 #        name = 'Fit: ' + '+'.join(popt.coef.astype(int).astype(str))
         name = 'Fit: ' + '+'.join(degs)
+            
     else:
         from scipy.optimize import curve_fit
         if deg=='exp':
@@ -755,7 +765,7 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             plt.tight_layout()
         else:
             xp = np.linspace(-1000,1000,1000)
-            ax.plot(xp, np.poly1d(z)(xp),ls='dotted')
+            ax.plot(xp, np.poly1d(z)(xp),ls='dotted',c=c)
             ax1,ax2=ax,ax
             
         return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x': x}
@@ -2851,6 +2861,7 @@ def PlotArea3D(xpapoint):
             verboseprint(np.sum(data ))
             points = np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]
             foo = PolyData(points)
+            
             mesh.points = foo.points
             mesh.dimensions = [data.shape[1], data.shape[0], 1]
             verboseprint(1)
@@ -2866,6 +2877,7 @@ def PlotArea3D(xpapoint):
         value = np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
         mesh = StructuredGrid()
         mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]).points
+        #PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]).plot(render_points_as_spheres=True)
         mesh['test'] = data.reshape(-1)
         mesh.dimensions = [data.shape[1], data.shape[0], 1]
         a = p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
