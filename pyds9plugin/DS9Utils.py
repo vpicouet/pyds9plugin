@@ -943,14 +943,14 @@ def AperturePhotometry(xpapoint):
         
     return phot
 
-def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, system='image', font=10):#of fk5
+def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=['circle'], color=['green'], ID=None, system='image', font=10,lw=1):#of fk5
     """Returns and possibly save DS9 region (circles) around sources with a given radius
     """
     
     regions = """# Region file format: DS9 version 4.1
-    global color=green dashlist=8 3 width=1 font="helvetica %s normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+    global color=green dashlist=8 3 width=%s font="helvetica %s normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
     %s
-    """%(font,system)
+    """%(lw,font,system)
     if (type(radius) == int) or (type(radius) == float) or (type(radius) == np.int64) or (type(radius) == np.float64) :
         r, r1 = radius, radius # np.ones(len(xim))*radius, np.ones(len(xim))*radius #radius, radius
     else:
@@ -973,7 +973,11 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
         #print(form[i])
         if form[i] == 'box':
             #print('Box')
-            rest = '{:.4f},{:.4f})'.format(r, r1)#r[i], r1[i]
+            try:
+                rest = '{:.4f},{:.4f})'.format(r, r1)#r[i], r1[i]
+            except UnboundLocalError:
+                rest = '{:.4f},{:.4f})'.format(r[i], r[i])#r[i], r1[i]
+                
             rest += ' # color={}'.format(color[i])
         elif form[i] =='circle':
             #print('Circle')
