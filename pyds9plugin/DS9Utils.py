@@ -2828,13 +2828,24 @@ def PlotArea3D_(xpapoint, cmap='twilight_shifted'):
     plt.show()
     return
 
-def PlotArea3D(xpapoint):
+def PlotArea3D(xpapoint,color=False):
     #import pyvista as pv
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
+    from matplotlib import cm
     d = DS9n(xpapoint)
     #data = getdata(xpapoint)
+    filename = d.get('file')
+    if ('.tif' in filename) | ('.tift' in filename) | ('.png' in filename) | ('.jpeg' in filename) | ('.jpg' in filename):
+        color=True
+    if color:
+        size = [int(0.8*1024), int(2.5*768)]
+        d.set('rgb channel green')
+        color = cm.get_cmap('Greens_r', 128)
+    else:
+        size =[2*1024, 2*768]
+        color = None
     data = getdata(xpapoint)
-
+    
     #x = np.arange(data.shape[0])
     #factor = (data.max() - data.min()) / (x.max() - x.min()) 
     if len (data.shape)==2:
@@ -2844,9 +2855,7 @@ def PlotArea3D(xpapoint):
     
         set_plot_theme("document")
         range_ = [np.nanpercentile(data,30),np.nanpercentile(data,99)]
-    
-      
-        p = Plotter(notebook=False,window_size=[2*1024, 2*768],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D')
+        p = Plotter(notebook=False,window_size=size,line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D')
     #    mesh = StructuredGrid()
     #    points = np.c_[xx.reshape(-1), yy.reshape(-1), (data).reshape(-1)]
     #    foo = PolyData(points)
@@ -2881,14 +2890,13 @@ def PlotArea3D(xpapoint):
         value = np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
         mesh = StructuredGrid()
         mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]).points
-        #PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]).plot(render_points_as_spheres=True)
         mesh['test'] = data.reshape(-1)
         mesh.dimensions = [data.shape[1], data.shape[0], 1]
-        a = p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-        def callback2(value):
-            #p.update_coordinates(PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]),mesh=mesh)
-            p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)],mesh=mesh)
-            return
+        a = p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',cmap = color)#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+
+
+      
+
         
         #p.add_mesh_clip_plane(mesh,normal='z', invert=True,)#p.add_floor()#p.add_bounding_box()
         #p.add_mesh_isovalue(mesh)
@@ -2897,10 +2905,34 @@ def PlotArea3D(xpapoint):
         #p.enable_parallel_projection()#p.add_plane_widget(mesh)
         #p.add_orientation_widget(mesh)
         #p.add_bounds_axes()#
+        if color:
+
+            d.set('rgb channel blue')
+            blue_data = getdata(xpapoint)
+            blue_mesh = StructuredGrid()
+            zb = np.nanmax(mesh.points[:,2])+((blue_data-np.nanmin(blue_data[np.isfinite(blue_data)]))*value)
+            blue_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), zb.reshape(-1)]).points
+            blue_mesh['test1'] = blue_data.reshape(-1)
+            blue_mesh.dimensions = [blue_data.shape[1], data.shape[0], 1]
+            blue = p.add_mesh(blue_mesh,clim=range_, scalars=blue_data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data2',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Blues_r', 128))#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+
+            d.set('rgb channel red')
+            red_data = getdata(xpapoint)
+            red_mesh = StructuredGrid()
+            zr=- np.nanmax(mesh.points[:,2])+((red_data-np.nanmin(red_data[np.isfinite(red_data)]))*value)
+            red_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1),  zr.reshape(-1)]).points
+            red_mesh['test2'] = red_data.reshape(-1)
+            red_mesh.dimensions = [red_data.shape[1], red_data.shape[0], 1]
+            red = p.add_mesh(red_mesh,clim=range_, scalars=red_data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data3',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Reds_r', 128))#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        def callback2(value):
+            #p.update_coordinates(PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]),mesh=mesh)
+            if color:
+                p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zb.reshape(-1)- value*(np.nanmax(mesh.points[:,2]))] ,mesh=blue_mesh)
+                p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zr.reshape(-1)+ value*(np.nanmax(mesh.points[:,2]))] ,mesh=red_mesh)
+            else:
+                p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)],mesh=mesh)
+            return 
         p.add_slider_widget(callback2, rng=[0,np.max([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data))  ])], value=value, title='Stretching', color=None, pass_widget=False, event_type='end', style=None)
-
-
-
         #p.view_isometric()
 #        mesh = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), np.zeros_like(yy.reshape(-1))])
 #        mesh['test'] = data.reshape(-1)
@@ -2908,9 +2940,7 @@ def PlotArea3D(xpapoint):
 #        surf.plot()
 #        warped = surf.warp_by_scalar(factor=1e-3)
 #        warped.plot()
-        
         p.add_axes()
-
         p.show()
     else:
         CreateCube(d, data)
@@ -8377,7 +8407,7 @@ def DS9open(xpapoint, filename=None):
                     d.set("jpeg {}".format(filename))
                 elif (filename[-4:].lower() == '.png') :
                     d.set("png {}".format(filename))#
-                elif (filename[-5:].lower() == '.tiff') :
+                elif (filename[-5:].lower() == '.tiff')| (filename[-4:].lower() == '.tif') :
                     d.set("tiff {}".format(filename))#
                 elif (filename[-4:].lower() == '.gif') :
                     d.set("gif {}".format(filename))#
@@ -8400,6 +8430,11 @@ def DS9open(xpapoint, filename=None):
                     d.set("jpeg {}".format(filename))
                 elif (filename[-4:].lower() == '.png') :
                     d.set("png {}".format(filename))#
+                elif (filename[-5:].lower() == '.tiff')| (filename[-4:].lower() == '.tif') :
+                    d.set("tiff {}".format(filename))#
+                elif (filename[-4:].lower() == '.gif') :
+                    d.set("gif {}".format(filename))#
+
                 else:
                     d.set("slice new {}".format(filename))#a = OpenFile(xpaname,filename = filename)
 
