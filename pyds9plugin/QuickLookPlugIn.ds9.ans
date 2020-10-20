@@ -464,6 +464,13 @@ hmenu 3. Astronomical Softwares
 		DS9Utils $xpa_method CosmologyCalculator LambdaCDM 1 70 0.2 0.7 -  | $text  
 
 
+
+		Spectra/Filter simulator
+		*
+		menu
+		DS9Utils $xpa_method PlotSpectraFilters  | $text  
+
+
 		Convertissor
 		*
 		menu
@@ -839,13 +846,13 @@ Autocorr_region_2D entry {Autocorr region 2D} '1500-2000-1500-2000' {}
 endparam
 
 
-param foobar
-var1 entry {Variable 1} default {this is a entry}
-var2 entry {Variable 1} default {this is a entry}
-var2 checkbox {Variable 2} 1 {this is a checkbox}
-var3 checkbox {Variable 3} 2 {thilkns is a checkbox}
-var4 menu {Variable 4} AAA|BBB|CCC {this is a menu}
-endparam
+#param foobar
+#var1 entry {Variable 1} default {this is a entry}
+#var2 entry {Variable 1} default {this is a entry}
+#var2 checkbox {Variable 2} 1 {this is a checkbox}
+#var3 checkbox {Variable 3} 2 {thilkns is a checkbox}
+#var4 menu {Variable 4} AAA|BBB|CCC {this is a menu}
+#endparam
 
 param radial_profile
 center menu {Centering algorithm} Maximum|User|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting {Algorithm used for centering.}
@@ -1436,3 +1443,10 @@ e entry {Last image} - {Number of the last image to process}
 list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
 path entry {RegExp Path} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/.fits}
 stack checkbox {Only on stacked} 0 {Run analysis only on stacked images }
+
+
+
+
+
+
+
