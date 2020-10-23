@@ -493,6 +493,7 @@ def PlotSpectraFilters(xpapoint):
     ax1.set_ylabel('$-\Delta mag$')
     plt.tight_layout()
     fig.subplots_adjust(bottom=0.15)
+
     plt.show()
     return
 
