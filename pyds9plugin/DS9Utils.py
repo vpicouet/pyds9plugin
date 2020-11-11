@@ -91,10 +91,95 @@ def DS9n(xpapoint=None, stop=False):
     return d
         
 
-if int(datetime.date.today().strftime("%Y%m%d"))>20210425:
-    d=DS9n()
-    d.set('analysis message {Your license is over. Please by a new one.}');sys.exit()
-#sys.stderr = sys.stdout
+
+
+def Log(v=None): 
+    import logging
+    from logging.handlers import RotatingFileHandler
+    logger = logging.getLogger()# création de l'objet logger qui va nous servir à écrire dans les logs
+    if v is None:
+        v = int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))# on met le niveau du logger à DEBUG, comme ça il écrit tout
+    if v == 0:
+        logger.setLevel(logging.ERROR)
+#    if v == 1:
+#        logger.setLevel(logging.WARNING)
+    if v == 1:
+        logger.setLevel(logging.DEBUG)# création d'un formateur qui va ajouter le temps, le niveau de chaque message quand on écrira un message dans le log
+    #formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
+    #formatter = logging.Formatter('%(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
+    file_handler = RotatingFileHandler('/tmp/activity.log', 'a', 1000000, 1)# on lui met le niveau sur DEBUG, on lui dit qu'il doit utiliser le formateur créé précédement et on ajoute ce handler au logger
+    #file_handler.setLevel(logging.DEBUG)
+    #file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    
+#    stream_handler = logging.StreamHandler(sys.stdout)
+#    stream_handler.setLevel(logger.getEffectiveLevel())
+#    logger.addHandler(stream_handler)
+    logging.getLogger('matplotlib.font_manager').disabled = True
+    return logger
+
+logger = Log()
+
+
+
+def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))))):
+    #did not manage to save log in .log but not display it....
+    
+    st = ' '.join([str(arg) for arg in args])
+    logger.critical(st)
+#    with open('/tmp/activity.log','a') as f:
+#        f.write(str(*args))
+    #print(verbose)
+    if bool(int(verbose)):
+        from tqdm import tqdm
+        print(*args)
+        with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}",
+                  postfix=["", dict(value='')], file=sys.stdout) as t:
+            for i in range(0):
+                t.update()
+    else:
+        pass
+    return  
+
+
+def get(d, sentence, exit_=True):
+    try:
+        path = d.get("""analysis entry {%s}"""%(sentence))
+    except (TypeError) as e:
+        verboseprint(1,e)
+        time.sleep(0.2)
+        try:
+            path = d.get("""analysis entry {%s}"""%(sentence))
+        except (TypeError) as e:
+            print(2,e)
+            time.sleep(0.2)
+            d=DS9n()
+            path = d.get("""analysis entry {%s}"""%(sentence))
+    if exit_ & (path==''):
+        sys.exit()
+    else:
+        return path
+
+def License(limit_date=20210425):
+    today = int(datetime.date.today().strftime("%Y%m%d"))   
+    path = os.environ['HOME'] + '/.ds9/.npy'
+    if os.path.exists(path) is False:
+        np.save(path,'00')
+    license_ = np.load(path)
+    if ((today > limit_date) or str(license_)[0]!='v') & (today<20220425):
+        d=DS9n(sys.argv[1])
+       # d.set('analysis message {Your license is over. Please by a new one.}');sys.exit()  
+        l = get(d, "Your two weeeks trial are over. We hope you enjoyed our pyds9plugin. Please buy a license at https://people.lam.fr/picouet.vincent/pyds9plugin/ or enter your license key here:", exit_=False) 
+        if l[0]=='v':
+            np.save(path,l)
+            d.set('analysis message {Thanks for activating pyds9 plugin! Enjoy your time using it!}')
+        else:
+            d.set('analysis message {Your license key is not valid. Verify it or contact the support if you did buy a license.}');sys.exit()
+        return
+    else:
+        return
+License()
+           #sys.stderr = sys.stdout
 #sys.stderr, sys.stdout = sys.stdout, sys.stderr
 
 try:
@@ -192,32 +277,8 @@ plt.rcParams['axes.titlesize'] = 'x-large'
 #    """
 
 
-def Log(v=None): 
-    import logging
-    from logging.handlers import RotatingFileHandler
-    logger = logging.getLogger()# création de l'objet logger qui va nous servir à écrire dans les logs
-    if v is None:
-        v = int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))# on met le niveau du logger à DEBUG, comme ça il écrit tout
-    if v == 0:
-        logger.setLevel(logging.ERROR)
-#    if v == 1:
-#        logger.setLevel(logging.WARNING)
-    if v == 1:
-        logger.setLevel(logging.DEBUG)# création d'un formateur qui va ajouter le temps, le niveau de chaque message quand on écrira un message dans le log
-    #formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
-    #formatter = logging.Formatter('%(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
-    file_handler = RotatingFileHandler('/tmp/activity.log', 'a', 1000000, 1)# on lui met le niveau sur DEBUG, on lui dit qu'il doit utiliser le formateur créé précédement et on ajoute ce handler au logger
-    #file_handler.setLevel(logging.DEBUG)
-    #file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    
-#    stream_handler = logging.StreamHandler(sys.stdout)
-#    stream_handler.setLevel(logger.getEffectiveLevel())
-#    logger.addHandler(stream_handler)
-    logging.getLogger('matplotlib.font_manager').disabled = True
-    return logger
 
-logger = Log()
+
 #logger.critical('critical')
 #logger.error('error')
 #logger.warning('warning')
@@ -254,26 +315,6 @@ def DS9lock(xpapoint):
 
     return
 
-
-
-def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))))):
-    #did not manage to save log in .log but not display it....
-    
-    st = ' '.join([str(arg) for arg in args])
-    logger.critical(st)
-#    with open('/tmp/activity.log','a') as f:
-#        f.write(str(*args))
-    #print(verbose)
-    if bool(int(verbose)):
-        from tqdm import tqdm
-        print(*args)
-        with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}",
-                  postfix=["", dict(value='')], file=sys.stdout) as t:
-            for i in range(0):
-                t.update()
-    else:
-        pass
-    return  
 
 class config(object):
     """Configuration class
@@ -876,6 +917,9 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         elif deg=='power':
             law = lambda x, amp, index, offset: amp * (x**index) + offset
             P0 = None
+        elif callable(deg):
+            law = deg
+            
         try:
             popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds)
         except RuntimeError as e:
@@ -903,18 +947,22 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             top=False,         # ticks along the top edge are off
             labelbottom=False)
             ax2.set_ylabel('Error')
-            ax1.plot(xp, zp, '--', label=name)
+            l = ax1.plot(xp, zp, '--', label=name)
             ax2.plot(x, y-zz, 'x', label=name)
             ax1.grid(linestyle='dotted');ax2.grid(linestyle='dotted')
             ax1.legend()
             plt.tight_layout()
         else:
-            xp = np.linspace(-1000,1000,1000)
-            ax.plot(xp, np.poly1d(z)(xp),ls='dotted',c=c)
+            xp = np.linspace(np.nanmin(xp) - 2*xp.ptp(),np.nanmax(xp) + 2*xp.ptp(),5*len(xp))
+            try:
+                l = ax.plot(xp, np.poly1d(z)(xp),ls='dotted',c=c,label=name)
+            except UnboundLocalError:
+                l = ax.plot(xp,law(xp,*popt),ls='dotted',c=c,label=name)
+            #l = ax.plot(xp, zp,ls='dotted',c=c,label=name)
             ax1,ax2=ax,ax
             
-        return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x': x}
-    return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x}
+        return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x':x, 'curve':l}
+    return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':l}
 
 
 def CreateRegions(regions,savename='/tmp/region.reg', texts='               '):
@@ -1270,7 +1318,7 @@ def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test
         return 
 
     
-def getdata(xpapoint, Plot=False):
+def getdata(xpapoint, Plot=False,selected=False):
     """Get data from DS9 display in the definied region
     """
     import matplotlib.pyplot as plt
@@ -1279,170 +1327,32 @@ def getdata(xpapoint, Plot=False):
         d = DS9n(xpapoint)
     except Exception:
         d = DS9n(xpapoint)
-    region = getregion(d, quick=True)
-    Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
-    data = d.get_pyfits()[0].data
-    if len(data.shape) == 2:
-        data = data[Yinf:Ysup,Xinf:Xsup]
-        if Plot:
-            plt.imshow(data)
-            plt.colorbar()
-    if len(data.shape) == 3:
-        data = data[:,Yinf:Ysup,Xinf:Xsup]
+    
+    regions = getregion(d, quick=True,selected=selected)
+    if type(regions)!=list:
+        regions=[regions]
+    datas=[]
+    for region in regions:
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+        data = d.get_pyfits()[0].data
+        if len(data.shape) == 2:
+            data = data[Yinf:Ysup,Xinf:Xsup]
+            datas.append(data)
+            if Plot:
+                plt.imshow(data)
+                plt.colorbar()
+        if len(data.shape) == 3:
+            data = data[:,Yinf:Ysup,Xinf:Xsup]
+            datas.append(data)
 #    if hasattr(region, 'r'):
 #        data[data>region.r] = np.nan
-    return data
-
-
-def fitsgaussian2D_(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
-    """2D gaussian fitting of the encricled region in DS9
-    """
-    from astropy.io import fits
-    from scipy.optimize import curve_fit
-    import matplotlib
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import axes3d
-    from mpl_toolkits import mplot3d
-    from matplotlib.widgets import  CheckButtons #RadioButtons,
-
-
-    from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
-    fwhm, center, test = sys.argv[-3:]
-    d = DS9n(xpapoint)
-    #region = getregion(d, quick=True)
-    region = getregion(d,selected=True, message=True)#[0]
-    if bool(int(test)):
-        Plot=False
-        filename = getfilename(d)
-        try:
-            Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
-        except Exception:
-            d.set("analysis message {Please create and select a region (Circle/Box) before runnning this analysis}");sys.exit() 
-
-        print(Xinf, Xsup, Yinf, Ysup)
-        data = fits.open(filename)[0].data
-        size = Xsup - Xinf
-        xinfs, yinfs = np.random.randint(1100,1900,size=n), np.random.randint(100,1900,size=n)
-        images = [data[Yinf:Yinf+size,Xinf:Xinf+size] for Xinf, Yinf in zip(xinfs, yinfs)]
-        verboseprint('Test: number of images = %s'%(len(images)))
-        
+    if len(datas)>1:
+        return datas
     else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
-        data = d.get_pyfits()[0].data
-        images = [data[Yinf:Ysup,Xinf:Xsup] - np.nanpercentile(data[Yinf:Ysup,Xinf:Xsup],30)]
-    fluxes = []
-    for i,image in enumerate(images):
-        while np.isfinite(image).all() == False:
-            kernel = Gaussian2DKernel(stddev=2)
-            image = interpolate_replace_nans(image, kernel)#.astype('float16')
-            verboseprint(np.isfinite(image).all())
+        return datas[0]
 
-        lx, ly = image.shape
-        lx, ly = ly, lx
-        x = np.linspace(0,lx-1,lx)
-        y = np.linspace(0,ly-1,ly)
-        x, y = np.meshgrid(x,y)
 
-         
-        if fwhm.split('-')[0] == '':
-            if bool(int(center)):
-                Param = (np.nanmax(image),lx/2,ly/2,2,2,np.percentile(image,15))
-                bounds = ([-np.inf, lx/2-0.5,ly/2-0.00001, 0.5,0.5,-np.inf], [np.inf, lx/2+0.00001,ly/2+0.5, 10,10,np.inf])#(-np.inf, np.inf)#
-            else:
-                xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
-                Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
-                bounds = ([-np.inf, xo-10 , yo-10, 0.5,0.5,-np.inf], [np.inf, xo+10 , yo+10, 10,10,np.inf])#(-np.inf, np.inf)#
-        else:
-            stdmin, stdmax = np.array(fwhm.split('-'), dtype=float)/2.35
-            if bool(int(center)):
-                Param = (np.nanmax(image),lx/2,ly/2, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
-                bounds = ([-np.inf, lx/2-0.5,ly/2-0.00001, stdmin, stdmin,-np.inf], [np.inf, lx/2+0.00001,ly/2+0.5, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
-            else:
-                xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
-                Param = (np.nanmax(image),xo, yo, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
-                bounds = ([-np.inf, xo-10 , yo-10, stdmin, stdmin,-np.inf], [np.inf, xo+10 , yo+10, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
-        verboseprint('bounds = ',bounds)
-        verboseprint('\nParam = ', Param)
-        try:
-            popt,pcov = curve_fit(twoD_Gaussian2,(x,y),image.flat,Param)#,bounds=bounds)
-        except RuntimeError as e:
-            logger.warning(e)
-            popt = [0,0,0,0,0,0]
-        else:
-            verboseprint('\npopt = ', popt)
-        fluxes.append(2*np.pi*popt[3]*popt[4]*popt[0])
-    verboseprint(fluxes)
-    import matplotlib.cm as cmx
-    cm = plt.get_cmap(cmap)
-    cNorm = matplotlib.colors.Normalize(vmin=np.nanmin(image), vmax=np.nanmax(image))
-    scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=cm)
-    if Plot:
-        xn, yn = popt[1], popt[2]
-        verboseprint('New center = ', popt[1], popt[2])
-        verboseprint('New center = ', Xinf, Yinf)
-        verboseprint(Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi )
-        d.set('regions format ds9')
-        d.set('regions system detector')
-        d.set('regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "' % ( Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi ))
-
-        z = twoD_Gaussian2((x,y),*popt).reshape(x.shape)
-        fig = plt.figure()    
-        ax = fig.add_subplot(111, projection='3d')#axes3d.name)  
-        rax = plt.axes([0.8, 0.7, 0.15, 0.15], facecolor='None')
-        for edge in 'left', 'right', 'top', 'bottom':
-            rax.spines[edge].set_visible(False)       
-        scale = CheckButtons(rax, ['log'])
-        
-        a = ax.scatter(x,y, image, s=5, c=scalarMap.to_rgba(image.flatten()),vmin=np.nanmin(image),vmax=np.nanmax(image))#, cstride=1, alpha=0.2)
-        b = ax.plot_surface(x,y,z,  label = 'amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]), cmap=cmap,vmin=np.nanmin(image),vmax=np.nanmax(image), shade=True, alpha=0.7)#
-        
-        dict_ = {'a':a,'b':b}
-        def scalefunc(label):
-            a = dict_['a']
-            b = dict_['b']
-            b.remove()
-            a.remove()
-            if scale.get_status()[0]:
-                a = ax.scatter(x,y, np.log10(image), s=5, c=scalarMap.to_rgba(image.flatten()),vmin=np.nanmin(np.log10(image)),vmax=np.nanmax(np.log10(image)))#, cstride=1, alpha=0.2)
-                z[np.log10(z)<np.nanmin(np.log10(image))] = np.nan
-                b = ax.plot_surface(x,y, np.log10(z),  label = 'amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]), cmap=cmap,vmin=np.nanmin(np.log10(image)),vmax=np.nanmax(np.log10(image)), shade=True, alpha=0.7)#
-                #ax.zaxis.set_major_formatter(mticker.FuncFormatter(log_tick_formatter))
-            else:
-                a = ax.scatter(x,y, image, s=5, c=scalarMap.to_rgba(image.flatten()),vmin=np.nanmin(image),vmax=np.nanmax(image))#, cstride=1, alpha=0.2)
-                b = ax.plot_surface(x,y,z,  label = 'amp = %0.3f, sigx = %0.3f, sigy = %0.3f '%(popt[0],popt[3],popt[4]), cmap=cmap,vmin=np.nanmin(image),vmax=np.nanmax(image), shade=True, alpha=0.7)#
-                #ax.zaxis.set_major_formatter(ticks)
-            dict_['a'] = a
-            dict_['b'] = b
-    
-            fig.canvas.draw_idle()
-        scale.on_clicked(scalefunc)        
-        ax.set_title('3D plot, FLUX = %0.1f'%(fluxes[0]))
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Pixel value')
-        #ax.axis('equal')
-        #ax.axis('tight')
-        ax.text(popt[1],popt[2], np.nanmax(image),s='amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],180*popt[5]/np.pi))    
-        plt.show()
-    else:
-        L = np.array(fluxes)
-        median, mean, std = np.median(L), np.mean(L),np.std(L)
-        limit = median + 3 * std
-        mask = L >  limit
-        if len(xinfs[mask])>0:
-            create_DS9regions([xinfs[mask]+size/2],[yinfs[mask]+size/2], radius=[size,size], form = ['circle']*len(xinfs[mask]),save=True, savename='/tmp/centers',ID=[L[mask].astype(int)])
-            d.set('regions /tmp/centers.reg')
-        fig = plt.figure()
-        #plt.hist(fluxes, bins=np.linspace(min(fluxes),max(fluxes),100))
-        plt.hist(L[~mask],label='mean = %0.1f, std = %0.1f'%(mean, std), alpha=0.3,bins=50)
-        plt.hist(L[mask],label='Detections', alpha=0.3)#,bins=50)
-        plt.vlines(limit, 0, 10, label='5 sigma limit')
-        plt.ylabel('Frequency')
-        plt.xlabel('Flux estimator [log(ADU)]')
-        plt.legend()
-        plt.show()
-        return
-
+# 
 
 
 
@@ -1454,9 +1364,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
     from scipy.optimize import curve_fit
     import matplotlib
     import matplotlib.pyplot as plt
-    #from mpl_toolkits.mplot3d import axes3d
-    #from mpl_toolkits import mplot3d
-    #from matplotlib.widgets import  CheckButtons #RadioButtons,
+
 
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme, wrap
 
@@ -1540,26 +1448,8 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         set_plot_theme("document")
         range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
         p = Plotter(notebook=False,window_size=[2*1024, 2*768],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D plot, FLUX = %0.1f'%(fluxes[0])+'amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],(180*popt[5]/np.pi)%180))
-
         value = image
-
-#        def callback(value):
-#            mesh = StructuredGrid()
-#            verboseprint((value*data).reshape(-1))
-#            points = np.c_[xx.reshape(-1), yy.reshape(-1), ((image-np.nanmin(image))*value).reshape(-1)]
-#            foo = PolyData(points)
-#            mesh.points = foo.points
-#            mesh.dimensions = [data.shape[0], data.shape[1], 1]
-#            verboseprint(1)
-#            p.add_mesh(mesh,clim=range_, scalars=image.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-#            p.add_mesh(mesh,clim=range_, scalars=z.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-#            verboseprint(2)
-#            return   
-#        p.add_slider_widget(callback, rng=[0,np.max([1,data.shape[0]/(data.max() - data.min())  ])], value=1, title='Stretching', color=None, pass_widget=False, event_type='end', style=None)
-#        p.add_axes()
         z, image = image, z
-
-        
         value=image.shape[0]/(image.max() - image.min()) 
         fit = StructuredGrid()
         data_mesh =  StructuredGrid()#wrap(np.array([xx.ravel(),yy.ravel(),((z-np.nanmin(z))*value).reshape(-1)]).T)
@@ -1589,24 +1479,10 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
             verboseprint(3)
             return   
         
-        p.add_slider_widget(callback, rng=[0,1 ], value=0.7, title='Transparency ratio', color=None, pass_widget=False, event_type='end', style=None)
-
-
-        #p.add_mesh(data_mesh,clim=range_,opacity=0.5    ,scalars=image.ravel(),point_size=5,nan_opacity=0, flip_scalars=True)
-        #p.add_mesh(data_mesh,show_edges=False,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        p.add_slider_widget(callback, rng=[0,1 ], value=0.7, title='Transparency ratio', color=None, pass_widget=False, event_type='always', style=None)
         p.clear_box_widgets()
         p.add_axes()
         p.show()        
-        
-        
-    
-#        ax.text(popt[1],popt[2], np.nanmax(image),s='amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],180*popt[5]/np.pi))    
-#        ax.set_title()
-#        ax.set_xlabel('X')
-#        ax.set_ylabel('Y')
-#        ax.set_zlabel('Pixel value')
-        #ax.axis('equal')
-        #ax.axis('tight')
         plt.show()
     else:
         L = np.array(fluxes)
@@ -1936,7 +1812,7 @@ def ENC(x,ENCa):
 
 
 
-def throughfocus(center, files,x=None, 
+def throughfocus(center, files,datas=None, x=None, 
                  fibersize=0, center_type='barycentre', SigmaMax= 4,Plot=True,
                  Type=None, ENCa_center=None, pas=None, WCS=False, DS9backUp = DS9_BackUp_path, config=my_conf):
     """How to use: Open an image of the through focus which is close to the focus.  Click on region. Then click
@@ -2126,7 +2002,7 @@ def throughfocus(center, files,x=None,
         t = vstack((OldTable,t))
         #print ('new',newTable)
         t.write(os.path.dirname(filename) + '/Throughfocus.csv',overwrite=True)
-    return fwhm, EE50, EE80
+    return images#fwhm, EE50, EE80
 
 
 def throughfocusWCS(center, files,x=None, 
@@ -2370,7 +2246,8 @@ def throughfocusWCS(center, files,x=None,
         #print ('new',newTable)
         t.write(os.path.dirname(filename) + '/Throughfocus.csv',overwrite=True)
 
-    return fwhm, EE50, EE80
+    return images#fwhm, EE50, EE80
+#    return fwhm, EE50, EE80
 
 
 def AnalyzeSpot(data, center, size=40, n=1.5,radius=40, fit=True, center_type='barycentre', radius_ext=12, platescale=None,fibersize = 100,SigmaMax=4):
@@ -2476,8 +2353,78 @@ def DS9throughfocus(xpapoint, Plot=True):
                      center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas,WCS=True)
         
     else:
-        throughfocus(center = rp['Center'], files=path,x = x,fibersize=0,
+        datas = throughfocus(center = rp['Center'], files=path,x = x,fibersize=0,
                      center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas)
+
+    
+
+    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
+    from matplotlib import cm
+    set_plot_theme("document")
+    verboseprint('Orient the view, then press "q" to close window and produce movie')
+    p = Plotter(notebook=False,window_size=[1500,1600],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='Orient the view, then press "q" to watch and save thoughfocus to /tmp/throughfocus.gif')
+    value = datas[0].shape[0]/np.max(np.ptp(datas,axis=(1,2)))
+    mesh = CreateMesh(datas[0], value=value)
+    p.add_mesh(mesh,opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True)#, cmap='jet')
+    p.show(auto_close=False)
+    points = mesh.points.copy()
+    p.open_gif("/tmp/throughfocus.gif")
+    #from itertools import cycle
+    p.add_text('Image: 0', name="mylabel")
+    def update_text(text):
+        p.add_text(text, name="mylabel")
+    labels=list(np.arange(len(datas))+1)
+    n=4
+    images = datas+datas[::-1]
+    for i, (data, lab)  in enumerate(zip(images*n,(labels+labels[::-1])*n)):#+datas+datas+datas+datas+datas+datas:
+        #print(points[:, -1],points[:, -1].shape)
+        #print(value*(data-np.nanmin(data)).reshape(-1)  ,value*(data-np.nanmin(data)).reshape(-1))
+        points[:, -1] = value*(data-np.nanmin(data)).reshape(-1)   
+        p.update_coordinates(points, render=False)
+        p.update_scalars(data.ravel(), render=False)
+        update_text("Image: %i"%(lab))
+
+        #p.mesh.compute_normals(cell_normals=False, inplace=True)
+        if i<len(datas+datas[::-1]):
+            p.write_frame()
+        else :
+            time.sleep(0.05)
+            p.render()
+        # if i>n:
+        #     sys.exit()
+        #p.render()
+   # p.show() 
+ #   time.sleep(10)
+  #  p.close()
+    # value = datas[0].shape[0]/np.max(datas[0].ptp())
+    # cols = int(np.round(np.sqrt(len(datas))))
+    # rows = cols
+    # while rows * cols < len(datas):
+    #     rows += 1
+    # cols, rows =  rows,cols#cols = 1; rows = len(datas)
+    # p = Plotter(notebook=False,window_size=[2000,1500],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D',shape=(rows,cols))
+    # for i,data in enumerate(datas):
+    #     p.subplot(int(i/cols),i%cols)
+    #     p.add_mesh(CreateMesh(data, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=False)
+    #     p.link_views()
+    #     p.add_axes()
+    # p.show()
+
+
+    # value = datas[0].shape[0]/np.max(datas[0].ptp())
+    # cols = int(np.round(np.sqrt(len(datas))))
+    # rows = cols
+    # while rows * cols < len(datas):
+    #     rows += 1
+    # cols, rows =  rows,cols#cols = 1; rows = len(datas)
+    # p = Plotter(notebook=False,window_size=[2000,1500],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D',shape=(rows,cols))
+    # for i,data in enumerate(datas):
+    #     p.subplot(int(i/cols),i%cols)
+    #     p.add_mesh(CreateMesh(data, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=False)
+    #     p.link_views()
+    #     p.add_axes()
+    # p.show()
+
 
     return 
 
@@ -2519,6 +2466,9 @@ def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None,
     
     if Plot:
         plt.show()
+        
+        
+    
     #d.set('regions command "circle %0.3f %0.3f %0.3f # color=red"' % (spot['Center'][0]+1,spot['Center'][1]+1,40))
     return
 
@@ -2973,6 +2923,230 @@ def PlotArea3D_(xpapoint, cmap='twilight_shifted'):
     plt.show()
     return
 
+def CreateMesh(array, value = None):
+    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme, wrap
+    xx, yy = np.indices(array.shape)
+    if value is None:
+        value=array.shape[0]/(array.max() - array.min()) 
+    data_mesh =  StructuredGrid()#wrap(np.array([xx.ravel(),yy.ravel(),((z-np.nanmin(z))*value).reshape(-1)]).T)
+    data_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), value*(array-np.nanmin(array)).reshape(-1)]).points
+    data_mesh['Intensity']= (array-np.nanmin(array)).reshape(-1)#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+    data_mesh.dimensions = [array.shape[1], array.shape[0], 1]
+    return data_mesh
+
+def PlotArea3DColor(d):
+    #import pyvista as pv
+    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
+    from matplotlib import cm
+    #d = DS9n(xpapoint)
+    #data = getdata(xpapoint)
+    size = [2000,700]
+    color = cm.get_cmap('Greens_r', 128)
+    d.set('rgb channel green')
+    data_green = getdata(d)
+    d.set('rgb channel red')
+    data_red = getdata(d)
+    d.set('rgb channel blue')
+    data_blue = getdata(d)
+
+
+    
+    set_plot_theme("document")
+    #p = Plotter(notebook=False, shape=(1,3))
+    value = data_blue.shape[0]/np.max([data_blue.ptp(),data_green.ptp(),data_red.ptp()])
+    
+    mesh_blue = CreateMesh(data_blue, value=value)
+    mesh_green = CreateMesh(data_green, value=value)
+    mesh_red = CreateMesh(data_red, value=value)
+    
+    p = Plotter(notebook=False,window_size=size,line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D',shape=(1,4))
+ #   p.add_mesh(CreateMesh(data_blue), point_size=8.0, render_points_as_spheres=True, show_edges=True)
+    p.add_mesh(CreateMesh(data_blue, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,cmap = cm.get_cmap('Blues_r', 128),show_scalar_bar=False)
+    p.add_axes()
+    p.subplot(0,1)
+#    p.add_mesh(CreateMesh(data_green), point_size=8.0, render_points_as_spheres=True, show_edges=True)
+    p.add_mesh(CreateMesh(data_green, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,cmap = cm.get_cmap('Greens_r', 128),show_scalar_bar=False)
+    p.add_axes()
+    p.subplot(0,2)
+    p.add_mesh(CreateMesh(data_red, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,cmap = cm.get_cmap('Reds_r', 128),show_scalar_bar=False)
+    
+    p.link_views()
+    #p.show_bounds()
+    p.add_axes()
+
+
+    p.subplot(0,3)
+    xx, yy = np.indices(data_blue.shape)#np.meshgrid(x, y)
+
+
+    p.add_mesh(mesh_green, opacity=0.9,nan_opacity=0,use_transparency=False,flip_scalars=True,cmap = cm.get_cmap('Greens_r', 128),show_scalar_bar=False)
+    zb = np.nanmax(CreateMesh(data_green, value=value).points[:,2])+((data_blue-np.nanmin(data_blue[np.isfinite(data_blue)]))*value)
+
+    blue = p.add_mesh(mesh_blue, scalars=data_blue.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data2',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Blues_r', 128),show_scalar_bar=False)#_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+
+    zr=- np.nanmax(mesh_green.points[:,2])+((data_red-np.nanmin(data_red[np.isfinite(data_red)]))*value)
+    # red_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1),  zr.reshape(-1)]).points
+    # red_mesh['test2'] = red_data.reshape(-1)
+    # red_mesh.dimensions = [red_data.shape[1], red_data.shape[0], 1]
+    red = p.add_mesh(mesh_red, scalars=data_red.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data3',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Reds_r', 128),show_scalar_bar=False)#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+
+
+
+    def callback2(value):
+        #p.update_coordinates(PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]),mesh=mesh)
+        if color:
+            p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zb.reshape(-1)- value*(np.nanmax(mesh_green.points[:,2]))] ,mesh=mesh_blue)
+            p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zr.reshape(-1)+ value*(np.nanmax(mesh_green.points[:,2]))] ,mesh=mesh_red)
+        else:
+            p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data_green[np.isfinite(data_green)]))*value).reshape(-1)],mesh=mesh_green)
+        return 
+    p.add_slider_widget(callback2, rng=[0,np.max([1,data_green.shape[0]/(np.nanmax(data_green) - np.nanmin(data_green))  ])], value=value, title='Stretching', color=None, pass_widget=False, event_type='always', style=None)
+    p.add_axes()
+
+
+    p.show()
+
+
+
+
+
+
+
+
+#clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+
+def AnalyzeFWHMThroughField(xpapoint):
+    from astropy.io import fits
+    from scipy.optimize import curve_fit
+    import matplotlib
+    import matplotlib.pyplot as plt
+    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme, wrap
+
+    from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
+    fwhm, center, test = sys.argv[-3:]
+    d = DS9n(xpapoint)
+    #region = getregion(d, quick=True)
+    region = getregion(d,selected=True, message=True)#[0]
+
+    Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+    data = d.get_pyfits()[0].data
+    images = [data[Yinf:Ysup,Xinf:Xsup] - np.nanpercentile(data[Yinf:Ysup,Xinf:Xsup],30)]
+    fluxes = []
+    image= images[0].shape[0] * (images[0] - np.nanmin(images[0]) )/ images[0].ptp()   #image.shape[0]/(image.max() - image.min()) 
+    while np.isfinite(image).all() == False:
+        kernel = Gaussian2DKernel(stddev=2)
+        image = interpolate_replace_nans(image, kernel)#.astype('float16')
+        verboseprint(np.isfinite(image).all())
+
+    lx, ly = image.shape
+    lx, ly = ly, lx
+    x = np.linspace(0,lx-1,lx)
+    y = np.linspace(0,ly-1,ly)
+    x, y = np.meshgrid(x,y)
+
+    xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
+    Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
+    bounds = ([-np.inf, xo-10 , yo-10, 0.5,0.5,-np.inf], [np.inf, xo+10 , yo+10, 10,10,np.inf])#(-np.inf, np.inf)#
+    verboseprint('bounds = ',bounds)
+    verboseprint('\nParam = ', Param)
+    try:
+        popt,pcov = curve_fit(twoD_Gaussian2,(x,y),image.flat,Param)#,bounds=bounds)
+    except RuntimeError as e:
+        logger.warning(e)
+        popt = [0,0,0,0,0,0]
+    else:
+        verboseprint('\npopt = ', popt)
+    fluxes.append(2*np.pi*popt[3]*popt[4]*popt[0])
+    z = twoD_Gaussian2((x,y),*popt).reshape(x.shape)
+    xx, yy = np.indices(image.shape)
+    set_plot_theme("document")
+    range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
+    p = Plotter(notebook=False,window_size=[1500,1500],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D plot, FLUX = %0.1f'%(fluxes[0])+'amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],(180*popt[5]/np.pi)%180))
+ 
+    fit = StructuredGrid()
+    data_mesh =  StructuredGrid()
+    data_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((image-np.nanmin(image))).reshape(-1)]).points
+    data_mesh['Intensity']= image.ravel()#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+    data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
+    #z = twoD_Gaussian2((x,y),*Param).reshape(x.shape)#.reshape(-1) 
+    
+    points = np.c_[xx.reshape(-1), yy.reshape(-1), ((z-np.nanmin(z))).reshape(-1)]
+    foo = PolyData(points)
+    fit.points = foo.points
+    fit['z'] = z.ravel()
+    fit.dimensions = [image.shape[1], image.shape[0], 1]
+    p2 = p.add_mesh(data_mesh,opacity=1-0.7,nan_opacity=0,use_transparency=False,flip_scalars=True,stitle='Value',show_scalar_bar=False)#y=True, opacity=0.3,,pickable=True)
+    p1 = p.add_mesh(fit,cmap='Greys_r', scalars=image.ravel()+z.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value',show_scalar_bar=False)##y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+    global args
+    args = popt
+    
+    def update_text(text):
+        p.add_text(text, name="mylabel",position=(70,10))
+
+    def callback2(value):
+        args[1] = value
+        points[:, -1] = twoD_Gaussian2((x,y),*args).reshape(x.shape).reshape(-1) 
+        p.update_coordinates(points,mesh=fit)
+        p.update_scalars(points[:, -1]+image.ravel(), render=False)
+        return 
+
+    def callback3(value):
+        args[2]= value
+        points[:, -1] = twoD_Gaussian2((x,y),*args).reshape(x.shape).reshape(-1) 
+        print(1)
+        print(2)
+        p.update_coordinates(points,mesh=fit)        
+        p.update_scalars(points[:, -1]+image.ravel(), render=False)
+        print(3)
+        return 
+
+    def callback(value):
+        
+        
+        print(1)
+        args = globals()['args']            
+        print('ok')
+        print('value', value)
+        if value is True:
+            print(0)
+            print( Param)
+            print('1 : ', args)
+            args, cov = curve_fit(twoD_Gaussian2,(x,y),image.flat,p0=args)#,bounds=bounds)
+            print('1 : ', args)
+        else:
+            args, cov = curve_fit(twoD_Gaussian2,(x,y),image.flat,p0=args)#,bounds=bounds)Param
+            print('2 : ', args)
+        
+        points[:, -1] = twoD_Gaussian2((x,y),*args).reshape(x.shape).reshape(-1) 
+        print(2)
+        p.update_coordinates(points,mesh=fit)
+        print(3)
+        update_text("Gaussian fit: FWHMs = %0.1f, %0.1f"%(args[3],args[4]))
+        return 
+    def opcacity(value):
+        verboseprint(1)
+        #print(p1.GetProperty())
+        p1.GetProperty().SetOpacity(value)
+        verboseprint(2)
+        p2.GetProperty().SetOpacity(1-value)
+        verboseprint(3)
+        return           
+    
+    p.add_slider_widget(opcacity, rng=[0,1 ], value=0.7, title='Transparency ratio', color=None, pass_widget=False, event_type='always', style=None,pointa=(.2, .1), pointb=(.9, .1))#,event_type='always')
+    p.add_slider_widget(callback2, rng=[0,xx.shape[0]], value=Param[1], title='x', color=None, pass_widget=False, event_type='always', style=None,pointa=(.1, .1), pointb=(.1, .9))
+    p.add_slider_widget(callback3, rng=[0,xx.shape[1]], value=Param[2], title='y', color=None, pass_widget=False, event_type='always', style=None,pointa=(.15, .93), pointb=(.9, .93))
+                                
+    p.view_xy()#[1,0,0]
+    p.add_checkbox_button_widget(callback)#,position=(200,10))#,position='upper_left')
+    p.add_text('Gaussian fit', name="mylabel",position=(70,10))#'lower_left')
+    p.clear_box_widgets()
+    #p.add_axes()
+    p.show()      
+    return
+        
+
+
+
 def PlotArea3D(xpapoint,color=False):
     #import pyvista as pv
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
@@ -2980,115 +3154,91 @@ def PlotArea3D(xpapoint,color=False):
     d = DS9n(xpapoint)
     #data = getdata(xpapoint)
     filename = d.get('file')
-    if ('.tif' in filename) | ('.tift' in filename) | ('.png' in filename) | ('.jpeg' in filename) | ('.jpg' in filename):
+    if ('.tif' in filename) | ('.tiff' in filename) | ('.png' in filename) | ('.jpeg' in filename) | ('.jpg' in filename):
         color=True
     if color:
         size = [int(0.8*1024), int(2.5*768)]
         d.set('rgb channel green')
-        color = cm.get_cmap('Greens_r', 128)
+        #color = cm.get_cmap('Greens_r', 128)
     else:
         size =[2*1024, 2*768]
-        color = None
-    data = getdata(xpapoint)
-    
-    #x = np.arange(data.shape[0])
-    #factor = (data.max() - data.min()) / (x.max() - x.min()) 
-    if len (data.shape)==2:
-        xx, yy = np.indices(data.shape)#np.meshgrid(x, y)
-        #points = np.c_[xx.reshape(-1), yy.reshape(-1), (data/factor).reshape(-1)]
-        #foo.rotate_z(36.6)
-    
-        set_plot_theme("document")
-        range_ = [np.nanpercentile(data,30),np.nanpercentile(data,99)]
-        p = Plotter(notebook=False,window_size=size,line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D')
-    #    mesh = StructuredGrid()
-    #    points = np.c_[xx.reshape(-1), yy.reshape(-1), (data).reshape(-1)]
-    #    foo = PolyData(points)
-    #    mesh.points = foo.points
-    #    mesh.dimensions = [data.shape[0], data.shape[1], 1]
-        #p.add_mesh(mesh, clim=range_,scalars=data, opacity=0.7,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-        #p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-        if d.get('scale') =='log':
-            data = data#np.log10(data - np.nanmin(data))
-        def callback(value):
-            #p.remove_actor('Data')
-            mask = np.isfinite(data)
+        #color = None
+    data = getdata(xpapoint,selected=True)
+    if type(data)!=list:
+        if (len (data.shape)==2) & (color):
+            PlotArea3DColor(d)
+        elif (len (data.shape)==2) & (~color):
+            xx, yy = np.indices(data.shape)#np.meshgrid(x, y)
+            set_plot_theme("document")
+            range_ = [np.nanpercentile(data,30),np.nanpercentile(data,99)]
+            p = Plotter(notebook=False,window_size=size,line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D')
+            if d.get('scale') =='log':
+                data = data#np.log10(data - np.nanmin(data))
+            value = data.shape[0]/(np.nanmax(data) - np.nanmin(data))#np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
+            value_=value
             mesh = StructuredGrid()
-            verboseprint((value*data).reshape(-1))
-            #data[~np.isfinite(data)] = np.nanmin(data)
-            verboseprint(np.sum(data ))
-            points = np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]
-            foo = PolyData(points)
-            
-            mesh.points = foo.points
+            points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]).points
+            mesh.points = points
+            mesh['test'] = data.reshape(-1)
             mesh.dimensions = [data.shape[1], data.shape[0], 1]
-            verboseprint(1)
-            #mesh['z']= data.reshape(-1)
-            p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-            verboseprint(2)
-            #mesh.overwrite(mesh)
-            #mesh.set_active_scalars("z")
-            return   
+            a = p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+            d={'log':False,'value':value}
         
+            def callback(value):
+                points = mesh.points
+                #points[:, -1] =((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
+                #points[:, -1] =((points[:, -1]-np.nanmin(points[:, -1][np.isfinite(points[:, -1])]))*value/value_).reshape(-1)
+                if d['log'] is False:
+                    points[:, -1] =((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
+                else:
+                    points[:, -1] =    value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
+                
+                p.update_coordinates(points,mesh=mesh)
+                d['value'] = value
+                return   
+            def log_callback(value):
+                verboseprint(1)
+                if value is True:
+                    verboseprint(2)
+                    points[:, -1] =  (np.nanmax(data) - np.nanmin(data)) *d['value']*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) )
+                    verboseprint(2.5)
+                    d['log']=True
+                else:
+                    verboseprint(2)
+                    points[:, -1] = ((data-np.nanmin(data[np.isfinite(data)]))*d['value']).reshape(-1)#data.ravel()+1
+                    verboseprint(2.5)
+                    #p.update_scalars(data.ravel(), render=False)
+                    d['log']=False
+
+                verboseprint(3)
+                p.update_coordinates(points,mesh=mesh)
+                return
+
+            p.add_slider_widget(callback, rng=[0,10*np.max([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data))  ])], value=value, title='Stretching', color=None, pass_widget=False, event_type='always', style=None)
+            p.add_checkbox_button_widget(log_callback)#,position=(200,10))#,position='upper_left')
+            p.add_text('Log scale', name="mylabel",position=(70,10))#'lower_left')
+            p.clear_box_widgets()
+            p.add_axes()
+            p.show()
         
-        
-        value = np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
-        mesh = StructuredGrid()
-        mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]).points
-        mesh['test'] = data.reshape(-1)
-        mesh.dimensions = [data.shape[1], data.shape[0], 1]
-        a = p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',cmap = color)#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-
-
-      
-
-        
-        #p.add_mesh_clip_plane(mesh,normal='z', invert=True,)#p.add_floor()#p.add_bounding_box()
-        #p.add_mesh_isovalue(mesh)
-        #p.add_mesh_slice_spline(mesh)
-        #p.add_mesh_threshold(mesh, invert=True, clim=range_, opacity=0.7,flip_scalars=True)
-        #p.enable_parallel_projection()#p.add_plane_widget(mesh)
-        #p.add_orientation_widget(mesh)
-        #p.add_bounds_axes()#
-        if color:
-
-            d.set('rgb channel blue')
-            blue_data = getdata(xpapoint)
-            blue_mesh = StructuredGrid()
-            zb = np.nanmax(mesh.points[:,2])+((blue_data-np.nanmin(blue_data[np.isfinite(blue_data)]))*value)
-            blue_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), zb.reshape(-1)]).points
-            blue_mesh['test1'] = blue_data.reshape(-1)
-            blue_mesh.dimensions = [blue_data.shape[1], data.shape[0], 1]
-            blue = p.add_mesh(blue_mesh,clim=range_, scalars=blue_data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data2',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Blues_r', 128))#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-
-            d.set('rgb channel red')
-            red_data = getdata(xpapoint)
-            red_mesh = StructuredGrid()
-            zr=- np.nanmax(mesh.points[:,2])+((red_data-np.nanmin(red_data[np.isfinite(red_data)]))*value)
-            red_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1),  zr.reshape(-1)]).points
-            red_mesh['test2'] = red_data.reshape(-1)
-            red_mesh.dimensions = [red_data.shape[1], red_data.shape[0], 1]
-            red = p.add_mesh(red_mesh,clim=range_, scalars=red_data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data3',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Reds_r', 128))#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-        def callback2(value):
-            #p.update_coordinates(PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]),mesh=mesh)
-            if color:
-                p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zb.reshape(-1)- value*(np.nanmax(mesh.points[:,2]))] ,mesh=blue_mesh)
-                p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zr.reshape(-1)+ value*(np.nanmax(mesh.points[:,2]))] ,mesh=red_mesh)
-            else:
-                p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)],mesh=mesh)
-            return 
-        p.add_slider_widget(callback2, rng=[0,np.max([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data))  ])], value=value, title='Stretching', color=None, pass_widget=False, event_type='end', style=None)
-        #p.view_isometric()
-#        mesh = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), np.zeros_like(yy.reshape(-1))])
-#        mesh['test'] = data.reshape(-1)
-#        surf = mesh.delaunay_2d()
-#        surf.plot()
-#        warped = surf.warp_by_scalar(factor=1e-3)
-#        warped.plot()
-        p.add_axes()
-        p.show()
+        else:
+            CreateCube(d, data)      
     else:
-        CreateCube(d, data)
+        datas=data
+        set_plot_theme("document")
+        value = datas[0].shape[0]/np.max(np.ptp(datas,axis=(1,2)))
+        cols = int(np.round(np.sqrt(len(datas))))
+        rows = cols
+        while rows * cols < len(datas):
+            rows += 1
+        cols, rows =  rows,cols#cols = 1; rows = len(datas)
+        p = Plotter(notebook=False,window_size=[2000,1500],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D',shape=(rows,cols))
+        for i,data in enumerate(datas):
+            p.subplot(int(i/cols),i%cols)#data.flatten()
+            p.add_mesh(CreateMesh(data, value=value),scalars=None,opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=False)
+            p.link_views()
+            p.add_axes()
+        p.show()        
 
 def CreateCube(d, data):
     from pyvista import Plotter, set_plot_theme, wrap
@@ -3126,7 +3276,7 @@ def CreateCube(d, data):
     
     
     p = Plotter(notebook=False,window_size=[2*1024, 2*768], title='3D')
-
+    #p.enable_joystick_style()
 
 
     class Change3dMesh():
@@ -3168,18 +3318,17 @@ def CreateCube(d, data):
 
 
     a = p.add_mesh(starting_mesh, show_edges=True,point_size=engine.kwargs['PointSize'] ,nan_opacity=0,cmap='jet',name='Data')
-    #p.add_mesh(starting_mesh, show_edges=True,point_size=5,opacity=0.5,nan_opacity=0,cmap='jet',clim=[np.nanmin(starting_mesh['Intensity']),np.nanmax(starting_mesh['Intensity'])],name='Data')
     mmax = 0.92
     m = p.add_slider_widget(
         callback=lambda value: engine('DensityMin', int(value)),
-        rng = [0,100],
+        rng = [0.0,99.9],
         value=90,
         title="",#"Density Threshold Min",
         pointa=(.025, mmax), pointb=(.31, mmax),
     )
     p.add_slider_widget(
         callback=lambda value: engine('DensityMax', int(value)),
-        rng = [0,100],
+        rng = [0.1,100],
         value=100,
         title="Density Threshold Min/Max",
 #        pointa=(.35, .9), pointb=(.64, .83),
@@ -3198,35 +3347,9 @@ def CreateCube(d, data):
         value=0.5,
         title="Opacity",
         pointa=(.35, mmax), pointb=(.64, mmax),
+        event_type='always', 
     )
-#    p.add_slider_widget(
-#        callback = a.GetProperty().SetMetallic,
-#        rng=[0, 1],
-#        value=0.5,
-#        title="SetMetallic",
-#        pointa=(.35, 0.7), pointb=(.64, 0.7),
-#    )
-#    p.add_slider_widget(
-#        callback = a.GetProperty().SetRoughness,
-#        rng=[0, 1],
-#        value=0.5,
-#        title="SetRoughness",
-#        pointa=(.35, 0.6), pointb=(.64, 0.6),
-#    )
-#    p.add_slider_widget(
-#        callback = a.GetProperty().SetNormalScale,
-#        rng=[0, 1],
-#        value=0.5,
-#        title="SetNormalScale",
-#        pointa=(.35, 0.5), pointb=(.64, 0.5),
-#    )
-#    p.add_slider_widget(
-#        callback = a.GetProperty().SetSpecularPower,
-#        rng=[0, 1],
-#        value=0.5,
-#        title="SetSpecularPower",
-#        pointa=(.35, 0.4), pointb=(.64, 0.4),
-#    )
+
     p.add_axes()
     p.show() 
 
@@ -5027,23 +5150,6 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
 
 
 
-def get(d, sentence, exit_=True):
-    try:
-        path = d.get("""analysis entry {%s}"""%(sentence))
-    except (TypeError) as e:
-        verboseprint(1,e)
-        time.sleep(0.2)
-        try:
-            path = d.get("""analysis entry {%s}"""%(sentence))
-        except (TypeError) as e:
-            print(2,e)
-            time.sleep(0.2)
-            d=DS9n()
-            path = d.get("""analysis entry {%s}"""%(sentence))
-    if exit_ & (path==''):
-        sys.exit()
-    else:
-        return path
         
 
 def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
@@ -7562,10 +7668,10 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     filename = getfilename(d)
     if which('sex') is None:
         d = DS9n(xpapoint);d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
-    params = np.array(sys.argv[-34:-1], dtype='<U256')#str)
+    params = np.array(sys.argv[-35:-2], dtype='<U256')#str)
     verboseprint(params)
     DETECTION_IMAGE = sys.argv[-35]
-
+    ID = sys.argv[-1]
 
     try:
         param_dir = resource_filename('pyds9plugin', 'Sextractor')
@@ -7574,7 +7680,9 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
     #params[0]= filename[:-5] + '_sex.fits' if  (params[0]=='-') or (params[0]=='.') else params[0]
     verboseprint(filename,params[0],filename + '_sex.fits')
-    params[8]='Y' if  params[8]=='1' else 'N'
+    #params[8]='Y' if  params[8]=='1' else 'N'
+    params[8]='N' if  params[9]=='NONE' else 'Y'
+
     params[12]='Y' if params[12]=='1' else 'N'
     if params[0]=='-':
         cat_path = filename[:-5] #.fits'
@@ -7616,8 +7724,8 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         #answer = subprocess.check_output('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]), shell=True, stderr=subprocess.STDOUT)
         #pprint(answer)
         answer = os.system('sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-        if answer != 0:
-            d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
+        # if answer != 0:
+        #     d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
 #try:
 #    xml = Table.read('/tmp/%s.xml'%(os.path.basename(filename)),table_id=1)
 #    os.system('echo %s, %s, %s, %s, %s, %s, %s, %s, %s >> /tmp/sextractor_background.csv'%(filename, xml['NDetect'][0],xml['NSextracted'][0],xml['Threshold'][0][0],xml['Threshold'][0][1],xml['Background_Mean'][0][0], xml['Background_Mean'][0][1],xml['Background_StDev'][0][0], xml['Background_StDev'][0][1]))
@@ -7631,20 +7739,22 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         if len(cat3)==1:
             cat3 = Table.read(params[0], format="fits", hdu='LDAC_OBJECTS')
         w = WCS(filename)
+        d.set('regions showtext no')
         if len(cat3)==0:
             d.set('analysis message {No source detected, verify you parameters...}')
         else:
             if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
                 verboseprint('Using WCS header for regions :', cat_path + '.reg')
-                create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3['MAG_AUTO'],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=1)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+                create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
             else:
                 verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
-                create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3['MAG_AUTO'],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=1)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+                create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
             if path is None:
                 if len(cat3)<5e4:
                     d.set('regions ' + cat_path + '.reg')
                 else:
                     d = DS9n(xpapoint);d.set('analysis message {%i sources detected, loading the regions in DS9 might crash DS9. The catalog was saved here: %s and the resgions here: %s}'%(len(cat3),params[0],cat_path + '.reg'));sys.exit()
+        pprint(cat3)
     else:
         verboseprint('Can not find the output sextractor catalog...')
     return
@@ -9105,7 +9215,7 @@ rendering in order to the objects in the image. When it is done,
 #* You can either rerun the function or HIT NEXT TO ACCESS THE NEXT FUNCTION.""")# and use log scale.
     reg = resource_filename('pyds9plugin', 'Images')
     d.set('frame delete')
-    d.set('file ' + os.path.join(reg,'Galaxy.fits'))
+    d.set('file ' + os.path.join(reg,'m33_hi.fits'))
     WaitForN(xpapoint)
     while  getregion(d,selected=True) is None:
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
@@ -9471,7 +9581,7 @@ def main():
                                 'ReplaceWithNans': ReplaceWithNans,'InterpolateNaNs': DS9InterpolateNaNs,'Trimming': DS9Trimming,
                                 'ColumnLineCorrelation': DS9CLcorrelation,'ComputeEmGain':DS9ComputeEmGain,
                                 'DS9_2D_FFT':DS9_2D_FFT,'2D_autocorrelation': DS9_2D_autocorrelation,'get_depth_image': get_depth_image,
-                                 'DS9PlotEMCCD':DS9PlotEMCCD}
+                                 'DS9PlotEMCCD':DS9PlotEMCCD,'AnalyzeFWHMThroughField':AnalyzeFWHMThroughField}
     
     
         DictFunction_SOFT =   {'DS9SWARP':DS9SWARP,'DS9PSFEX': DS9PSFEX,'RunSextractor':RunSextractor,'DS9saveColor':DS9saveColor,'AperturePhotometry':AperturePhotometry,
@@ -9497,7 +9607,6 @@ def main():
                 a=0
                 #verboseprint(e) 
                 
-                # print(1)
                 # print(e)
                 # print(2)
                 import traceback
@@ -9511,23 +9620,23 @@ def main():
                 # pprint(sys.argv.join(' '))
             # d = DS9n(xpapoint);d.set('analysis message {%s}'%(e));sys.exit()
 
-        if (type(a) == list) and (type(a[0]) == dict):
-            for key in a[0].keys():
-                l=[]
-                for i in range(len(a)):
-                    l.append(a[i][key])
-                verboseprint(key, l)
-                try:
-                    l=np.array(l)
-                    plt.figure()
-                    plt.hist(l)
-                    plt.title(key + '%i objets: M = %0.2f  -  Sigma = %0.3f'%(len(l), np.nanmean(l), np.nanstd(l)));plt.xlabel(key);plt.ylabel('Frequecy')
-                    plt.savefig(DS9_BackUp_path +'Plots/%s_Outputs_%s.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
-                    csvwrite(np.vstack((np.arange(len(l)), l)).T,DS9_BackUp_path +'CSVs/%s_Outputs_%s.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
-                except TypeError as e:
-                    logger.critical(e)
+        # if (type(a) == list) and (type(a[0]) == dict):
+        #     for key in a[0].keys():
+        #         l=[]
+        #         for i in range(len(a)):
+        #             l.append(a[i][key])
+        #         verboseprint(key, l)
+        #         try:
+        #             l=np.array(l)
+        #             plt.figure()
+        #             plt.hist(l)
+        #             plt.title(key + '%i objets: M = %0.2f  -  Sigma = %0.3f'%(len(l), np.nanmean(l), np.nanstd(l)));plt.xlabel(key);plt.ylabel('Frequecy')
+        #             plt.savefig(DS9_BackUp_path +'Plots/%s_Outputs_%s.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
+        #             csvwrite(np.vstack((np.arange(len(l)), l)).T,DS9_BackUp_path +'CSVs/%s_Outputs_%s.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
+        #         except TypeError as e:
+        #             logger.critical(e)
 
-                    pass
+        #             pass
         if function not in ['verbose','setup','next_step']:
             verboseprint('\n****************************************************')    
 

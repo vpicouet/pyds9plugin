@@ -399,12 +399,12 @@ hmenu 3. Astronomical Softwares
 		SExtractor #36
 		*
 		menu
-		DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits    0 | $text  
+		DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  1  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  1  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits    0  $REGION_NAME| $text  
 
 		SExtractor (Basic parameters)
 		*
 		menu
-		DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR-BASICS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  | $text  
+		DS9Utils $xpa_method RunSextractor $param(SEXTRACTOR-BASICS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  1  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  1  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME | $text  
 
 	endhmenu
 
@@ -1131,14 +1131,14 @@ THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
 DETECT_THRESH entry {DETECT_THRESH} 0.8 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
 ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
 
-FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
-FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/}
+#FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
+FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|NONE|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
 
 DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 64 {Number of deblending sub-thresholds}
 DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.0003 {Minimum contrast parameter for deblending}
 
-CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
-CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency}
+#CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
+CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency, 0 for no cleaning}
 MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
 
 WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
@@ -1169,6 +1169,7 @@ BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL an
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
 
 CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
+REGION_NAME menu {REGION_NAME} NUMBER|FWHM_IMAGE|MAG_AUTO|MAG_ISO|MAG_APER|MU_MAX|ELLIPTICITY|CLASS_STAR|THETA_IMAGE|ELONGATION {The name you want to display above each source on DS9}
 endparam
 
 #CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
@@ -1197,14 +1198,14 @@ THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
 DETECT_THRESH entry {DETECT_THRESH} 1.5 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
 ANALYSIS_THRESH entry {ANALYSIS_THRESH} 1.5 {sigmas or threshold,ZP in mag.arcsec-2}
 
-FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
-FILT_NAME menu {FILTER_NAME} default.conv|gauss_4.0_7x7.conv|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/}
+#FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
+FILT_NAME menu {FILTER_NAME} default.conv|NONE|gauss_4.0_7x7.conv|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
 
 DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 32 {Number of deblending sub-thresholds}
 DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.005 {Minimum contrast parameter for deblending}
 
-CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
-CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency}
+#CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
+CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency, 0 for no cleaning}
 MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
 
 WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
@@ -1232,8 +1233,8 @@ BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL an
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
 
 CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
-CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
-
+#CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
+REGION_NAME menu {REGION_NAME} NUMBER|FWHM_IMAGE|MAG_AUTO|MAG_ISO|MAG_APER|MU_MAX|ELLIPTICITY|CLASS_STAR|THETA_IMAGE|ELONGATION {The name you want to display above each source on DS9}
 
 endparam
 
@@ -1294,7 +1295,7 @@ BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL an
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
 
 CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
-CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
+#CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
 
 #MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
 #MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
