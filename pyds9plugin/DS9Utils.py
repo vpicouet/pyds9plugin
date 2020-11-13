@@ -848,7 +848,7 @@ def create_repositories(path, field, values):
 
 
 
-def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.',ax=None,c='black',Type='normal'):
+def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.',ax=None,c='black',Type='normal',sigma=None):
     """ PlotFit1D(np.arange(100),np.arange(100)**2 + 1000*np.random.poisson(1,size=100),2)
     """
     #ajouter exp, sqrt, power low, gaussian, 
@@ -921,7 +921,7 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             law = deg
             
         try:
-            popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds)
+            popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds,sigma=sigma)
         except RuntimeError as e:
             logger.warning(e)
             return np.zeros(len(P0))
