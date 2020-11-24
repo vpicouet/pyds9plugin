@@ -90,7 +90,7 @@ def DS9n(xpapoint=None, stop=False):
         d=DS9()
     return d
         
-def CreateFolders(DS9_BackUp_path):#DS9BackUp
+def CreateFolders(DS9_BackUp_path= os.environ['HOME'] + '/DS9QuickLookPlugIn/'):#DS9BackUp
     """Create the folders in which are stored DS9 related data
     """
     if not os.path.exists(os.path.dirname(DS9_BackUp_path)):
@@ -107,7 +107,7 @@ def CreateFolders(DS9_BackUp_path):#DS9BackUp
 
 DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
 if len(sys.argv)==1:
-    CreateFolders(DS9_BackUp_path=DS9_BackUp_path)
+    CreateFolders()
 
     
 def Log(v=None): 
