@@ -90,9 +90,26 @@ def DS9n(xpapoint=None, stop=False):
         d=DS9()
     return d
         
+def CreateFolders(DS9_BackUp_path):#DS9BackUp
+    """Create the folders in which are stored DS9 related data
+    """
+    if not os.path.exists(os.path.dirname(DS9_BackUp_path)):
+        os.makedirs(os.path.dirname(DS9_BackUp_path))
+    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/Plots'):
+        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/Plots')
+    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/CSVs'):
+        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/CSVs')
+    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/HeaderDataBase'):
+        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/HeaderDataBase')
+    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/subsets'):
+        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/subsets')
+    return  DS9_BackUp_path
 
+DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
+if len(sys.argv)==1:
+    CreateFolders(DS9_BackUp_path=DS9_BackUp_path)
 
-
+    
 def Log(v=None): 
     import logging
     from logging.handlers import RotatingFileHandler
@@ -107,7 +124,7 @@ def Log(v=None):
         logger.setLevel(logging.DEBUG)# création d'un formateur qui va ajouter le temps, le niveau de chaque message quand on écrira un message dans le log
     #formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
     #formatter = logging.Formatter('%(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
-    file_handler = RotatingFileHandler('/tmp/activity.log', 'a', 1000000, 1)# on lui met le niveau sur DEBUG, on lui dit qu'il doit utiliser le formateur créé précédement et on ajoute ce handler au logger
+    file_handler = RotatingFileHandler(DS9_BackUp_path + 'pyds9plugin_activity.log', 'a', 1000000, 1)# on lui met le niveau sur DEBUG, on lui dit qu'il doit utiliser le formateur créé précédement et on ajoute ce handler au logger
     #file_handler.setLevel(logging.DEBUG)
     #file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -117,6 +134,9 @@ def Log(v=None):
 #    logger.addHandler(stream_handler)
     logging.getLogger('matplotlib.font_manager').disabled = True
     return logger
+
+
+
 
 logger = Log()
 
@@ -162,7 +182,7 @@ def get(d, sentence, exit_=True):
 
 def License(limit_date=20210425):
     today = int(datetime.date.today().strftime("%Y%m%d"))   
-    path = os.environ['HOME'] + '/.ds9/.npy'
+    path = DS9_BackUp_path +  '.npy'
     if os.path.exists(path) is False:
         np.save(path,'00')
     license_ = np.load(path)
@@ -178,7 +198,8 @@ def License(limit_date=20210425):
         return
     else:
         return
-License()
+# if len(sys.argv)>2:
+#     License()
            #sys.stderr = sys.stdout
 #sys.stderr, sys.stdout = sys.stdout, sys.stderr
 
@@ -552,22 +573,7 @@ def FitsExt(fitsimage):
 
 
 #@fn_timer
-def CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9QuickLookPlugIn/'):#DS9BackUp
-    """Create the folders in which are stored DS9 related data
-    """
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path)):
-        os.makedirs(os.path.dirname(DS9_BackUp_path))
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/Plots'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/Plots')
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/CSVs'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/CSVs')
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/HeaderDataBase'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/HeaderDataBase')
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/subsets'):
-        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/subsets')
-    return  DS9_BackUp_path
 
-DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
 
 
 def LoadDS9QuickLookPlugin():
@@ -4577,7 +4583,7 @@ def ApplyQuery(cat=None, query=None, path=None, new_path=None,delete=False):
     
 
 
-def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None,system='image'):
+def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None,system='image',form='circle',size=10,wcs=False,query='-'):
     """
     """
     from astropy.wcs import WCS
@@ -4588,10 +4594,6 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
         d = DS9n(xpapoint)
     if name is None:
         name = sys.argv[3]
-    try:
-        x, y = sys.argv[4].replace(',','-').split('-')
-    except:
-        pass
 
     try:
         cat = Table.read(name.rstrip()[::-1].rstrip()[::-1])
@@ -4600,14 +4602,17 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
 
     cat = DeleteMultiDimCol(cat)
     
+    
+    if  (len(sys.argv)>3) & (sys.argv[2]=='DS9Catalog2Region'):
+        form = sys.argv[6] 
+        size = sys.argv[7] 
+        wcs = bool(int(sys.argv[8] ))
+        query = sys.argv[9]
+        x, y = sys.argv[4].replace(',','-').split('-')
 
-    if (ID is None) & (sys.argv[5] != '-'):
-        ID = sys.argv[5] 
+        if sys.argv[5] != '-':
+            ID = sys.argv[5] 
 
-    form = sys.argv[6] 
-    size = sys.argv[7] 
-    wcs = bool(int(sys.argv[8] ))
-    query = sys.argv[9]
     if query != '-':
         df = cat.to_pandas()
         new_table = df.query(query)    
@@ -4636,8 +4641,8 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
         size=float(size)#/3600
         size *= abs(wcs.wcs.cd[0][0])#*3600
         
-    verboseprint(cat[x,y])
-    if (sys.argv[5] == '-') & (ID is None):
+    verboseprint(cat)
+    if (ID == '-') :
         create_DS9regions2(cat[x],cat[y], radius=float(size), form = form, save=True,color = 'yellow', savename='/tmp/centers', system=system)
     else:
         create_DS9regions([cat[x]],[cat[y]], radius=np.ones(len(cat))*float(size), form = [form],save=True,color = ['yellow'], ID=[np.round(np.array(cat[ID], dtype=float),1)],savename='/tmp/centers', system=system)
@@ -7838,6 +7843,96 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         verboseprint('Can not find the output sextractor catalog...')
     return
 
+
+
+
+
+
+
+def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
+    """Run sextraxtor software
+    """
+    import astropy
+    from astropy.wcs import WCS
+    from shutil import which
+    d = DS9n(xpapoint)
+    filename = getfilename(d)
+    # if which('SourceXtractor++') is None:
+    #     d = DS9n(xpapoint);d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
+    param_names =  [ 'output-catalog-filename','output-catalog-format','detect-minarea','detection-threshold','partition-threshold-count','partition-min-contrast','use-cleaning','cleaning-minarea','weight-image','magnitude-zeropoint','background-cell-size','smoothing-box-size','thread-count']
+
+    params = np.array(sys.argv[4:6], dtype='<U256')#str)
+    verboseprint(params)
+    DETECTION_IMAGE = sys.argv[4]
+    ID = sys.argv[3]
+    
+    param_dict = {}
+    for key, val in zip(param_names, params):
+        param_dict[key] = val
+
+    param_dict['output-catalog-filename'] = filename[:-5] +'_cat.fits' if param_dict['output-catalog-filename']=='-' else param_dict['output-catalog-filename']
+    # try:
+    #     param_dir = resource_filename('pyds9plugin', 'Sextractor')
+    # except:
+    #     param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
+  
+    # verboseprint(filename,params[0],filename + '_sex.fits')
+
+    # param_dict['FILTER']='Y' if param_dict['FILTER']=='1' else 'N'
+    # param_dict['CLEAN']='Y' if param_dict['CLEAN']=='1' else 'N'
+    # param_dict['RESCALE_WEIGHTS']='Y' if param_dict['RESCALE_WEIGHTS']=='1' else 'N'
+    # param_dict['WEIGHT_GAIN']='Y' if param_dict['WEIGHT_GAIN']=='1' else 'N'
+    
+    if DETECTION_IMAGE == '-':
+        cat_path = filename[:-5] #.fits'
+    else:
+        cat_path = params[0]
+    # param_dict['CHECKIMAGE_NAME'] =   cat_path + '_check_%s.fits'%(param_dict['CHECKIMAGE_TYPE'])  
+
+
+    # param_dict['PARAMETERS_NAME'] = os.path.join(param_dir,param_dict['PARAMETERS_NAME'])
+    # param_dict['FILTER_NAME'] = os.path.join(param_dir,param_dict['FILTER_NAME'])
+    # param_dict['STARNNW_NAME'] = os.path.join(param_dir,param_dict['STARNNW_NAME'])
+
+    for key, val in zip(param_names, params):
+        verboseprint('%s : %s'%(key,param_dict[key]))
+
+    if DETECTION_IMAGE == '-':
+        DETECTION_IMAGE = None
+    else:
+        DETECTION_IMAGE =  DETECTION_IMAGE + ','
+    verboseprint('Image used for detection  = ' + str(DETECTION_IMAGE) )
+    verboseprint('Image used for photometry  = '+ str(filename) )
+    
+    verboseprint("""
+          ********************************************************************
+                                     Parameters sextractor:
+          ********************************************************************""")
+    verboseprint('\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]))
+    #os.system('sex -d > default.sex')
+    for key in list(param_dict.keys()):
+        if param_dict[key]=='-':
+            del param_dict[key]
+
+    command = 'SourceXtractor++ --detection-image %s  --'%(filename)  + ' --'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[:]])
+    verboseprint(command)
+    
+    answer = os.system(command)
+    try:
+        DS9Catalog2Region(xpapoint,name=param_dict['output-catalog-filename'] ,x='pixel_centroid_x',y='pixel_centroid_y',ID='-')
+    except KeyError:
+        DS9Catalog2Region(xpapoint,name=param_dict['output-catalog-filename'] ,x='col1',y='col2',ID='-')
+        
+
+    if  d.get('analysis message yesno {Analysis completed! Do you want to load the sextractor catalog with PRISM?}')=='1':
+        d.set('prism ' + param_dict['output-catalog-filename'])
+
+    return
+
+
+
+
+
 def RunSextractor_OLD(xpapoint, filename=None, detector=None, path=None):
     """Run sextraxtor software
     """
@@ -9756,7 +9851,7 @@ def main():
     
         DictFunction_SOFT =   {'DS9SWARP':DS9SWARP,'DS9PSFEX': DS9PSFEX,'RunSextractor':RunSextractor,'DS9saveColor':DS9saveColor,'AperturePhotometry':AperturePhotometry,
                                'ExtractSources':DS9ExtractSources,'CosmologyCalculator':CosmologyCalculator,'Convertissor': Convertissor,'WCS':DS9guider, 'DS9Resample':DS9Resample,
-                               'Function':Function, 'PlotSpectraFilters':PlotSpectraFilters}#'Function_parametric':Function_parametric
+                               'Function':Function, 'PlotSpectraFilters':PlotSpectraFilters,'RunSextractorPP':RunSextractorPP}#'Function_parametric':Function_parametric
      
        
         DictFunction = {}
