@@ -1153,8 +1153,8 @@ endparam
 
 param SEXTRACTOR
 tab {Basic Params}
-DETECTION_IMAGE open {DETECTION_IMAGE} $filename(full) {Image to use for detection of the sources. If - using DS9 image}
-CATALOG_NAME save {CATALOG_NAME} $filename(full)_cat.fits {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
+DETECTION_IMAGE open {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using DS9 image}
+CATALOG_NAME save {CATALOG_NAME} - {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
 PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
 
@@ -1495,9 +1495,9 @@ param SEXTRACTOR-NEW
 
 tab {EXTRACTION}
 
-DETECTION_IMAGE open {DETECTION_IMAGE} $filename {Image to use for detection of the sources. If - using DS9 image}
+DETECTION_IMAGE open {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using DS9 image}
 
-CATALOG_NAME save {CATALOG_NAME} $filename_cat.fits {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
+CATALOG_NAME save {CATALOG_NAME} - {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
 PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
 
