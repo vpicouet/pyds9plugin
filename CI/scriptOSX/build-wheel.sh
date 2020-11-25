@@ -3,16 +3,27 @@
 #rm -f wheel/*pyds9plugin*osx*.whl wheelhouse/*pyds9plugin*osx*.whl
 # Activate python environement
 # Build wheel
-# for PYENV in ${HOME}/venv/unsio*; do
-#     echo "Activate ${PYENV}...."
-#     source ${PYENV}/bin/activate
-#     pip wheel --no-deps ./ -w wheelhouse
-#     deactivate
-# done
+
+
+
+
+for PYENV in /Users/grunner/venv/unsio*; do
+    echo "Activate ${PYENV}...."
+    source ${PYENV}/bin/activate
+    python setup_cython.py bdist_wheel
+    # pip install cython --user
+    # pip wheel --no-deps ./ -w wheelhouse
+    deactivate
+done
+
 pip install cython --user
+python3 setup_cython.py bdist_wheel
+
+
+
+
 #pip install delocate --user
 #source /Users/grunner/venv/unsio37/bin/activate
-python3 setup_cython.py bdist_wheel
 
 #mv * dist/
 # ls 
