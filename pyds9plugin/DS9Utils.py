@@ -7745,6 +7745,8 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     import astropy
     from astropy.wcs import WCS
     from shutil import which
+    #lknceiopwndmew
+    #pprint(1)
     d = DS9n(xpapoint)
     filename = getfilename(d)
     if which('sex') is None:
@@ -7772,11 +7774,11 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     param_dict['CLEAN']='Y' if param_dict['CLEAN']=='1' else 'N'
     param_dict['RESCALE_WEIGHTS']='Y' if param_dict['RESCALE_WEIGHTS']=='1' else 'N'
     param_dict['WEIGHT_GAIN']='Y' if param_dict['WEIGHT_GAIN']=='1' else 'N'
-    
+    print('DETECTION_IMAGE =',DETECTION_IMAGE)
     if DETECTION_IMAGE == '-':
         cat_path = filename[:-5] #.fits'
     else:
-        cat_path = params[0]
+        cat_path = filename[:-5]#params[0]
     param_dict['CHECKIMAGE_NAME'] =   cat_path + '_check_%s.fits'%(param_dict['CHECKIMAGE_TYPE'])  
 
 
@@ -7800,8 +7802,8 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
           ********************************************************************""")
     verboseprint('\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]))
     #os.system('sex -d > default.sex')
-
     if DETECTION_IMAGE is not None:
+        print(2)
         command = 'sex ' + DETECTION_IMAGE + filename  + ' -WRITE_XML Y   -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[:]])
         verboseprint(command)
         answer = os.system(command)
@@ -7815,7 +7817,11 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         answer = os.system(command)
 
     colors =  ['Orange']  #['White','Yellow','Orange']  
-    if os.path.isfile(params[0]):
+    print(params[0])
+    #if os.path.isfile(params[0]):
+    if os.path.isfile(cat_path):
+        print(cat_path)
+
         try:
             cat3 = Table.read(params[0])
         except astropy.io.registry.IORegistryError:
@@ -7858,6 +7864,7 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
     import astropy
     from astropy.wcs import WCS
     from shutil import which
+    #pprint(1)
     d = DS9n(xpapoint)
     filename = getfilename(d)
     # if which('SourceXtractor++') is None:
@@ -7872,6 +7879,7 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
     param_dict = {}
     for key, val in zip(param_names, params):
         param_dict[key] = val
+        print(param_dict[key], val)
 
     param_dict['output-catalog-filename'] = filename[:-5] +'_cat.fits' if param_dict['output-catalog-filename']=='-' else param_dict['output-catalog-filename']
     # try:
