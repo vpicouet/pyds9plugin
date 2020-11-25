@@ -1,24 +1,25 @@
 #!/bin/bash
 
-#rm -f wheel/*pyds9plugin*osx*.whl wheelhouse/*pyds9plugin*osx*.whl
 # Activate python environement
 # Build wheel
 
 
 
+rm -f dist/*yds9plugin*osx*.whl 
 
 for PYENV in /Users/grunner/venv/unsio*; do
     echo "Activate ${PYENV}...."
     which python
     which pip
     source ${PYENV}/bin/activate
-	pip install cython --user
+	pip install cython 
     python setup_cython.py bdist_wheel
     # pip install cython --user
     # pip wheel --no-deps ./ -w wheelhouse
     deactivate
 done
 
+#pip install cython --user
 #python3 setup_cython.py bdist_wheel
 
 
