@@ -14,7 +14,7 @@ stages:
 
 
 variables :
-  WHEEL       : 0
+  WHEEL       : 1
   OSX         : 1
 #  TESTPYPI    : 0
 #  PYPI        : 0
@@ -47,12 +47,12 @@ manylinux2010 :
   cache:
     key: manylinux2010
     paths:
-      - wheel/
+      - dist/
   artifacts:
     name: "manylinux2010"
     paths:
-      - test-*.res
-      - wheel/*
+#      - test-*.res
+      - dist/*
     expire_in: 1 week
 
 
@@ -74,7 +74,7 @@ OSX:
   cache:
     key: osx
     paths:
-      - wheel/
+      - dist/
   artifacts:
     name: "osx-wheel"
     paths:

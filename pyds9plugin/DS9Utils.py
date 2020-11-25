@@ -5415,7 +5415,10 @@ def Parallelize(function=lambda x:print(x),action_to_paralize=[],parameters=[], 
             p.start()
         for job in jobs:
             job.join()
-    return return_dict['output']
+    try:    
+        return return_dict['output']
+    except KeyError:
+        return
 
 def VariableSmearingKernels(image, Smearing=1.5, SmearExpDecrement=50000):
 
