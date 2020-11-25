@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm -f wheel/*pyds9plugin*osx*.whl wheelhouse/*pyds9plugin*osx*.whl
+#rm -f wheel/*pyds9plugin*osx*.whl wheelhouse/*pyds9plugin*osx*.whl
 # Activate python environement
 # Build wheel
 # for PYENV in ${HOME}/venv/unsio*; do
