@@ -10,7 +10,8 @@
 #     deactivate
 # done
 pip install cython --user
-pip install delocate --user
+#pip install delocate --user
+source /Users/grunner/venv/unsio37/bin/activate
 
 python3 setup_cython.py bdist_wheel
 ls 
@@ -18,8 +19,8 @@ echo 'ls dist'
 ls dist
 #cp *.whl dist/
 echo 'repairing wheel'
-delocate-wheel heelhouse/pyds9plugin*.whl -w  ./dist
+delocate-wheel dist/pyds9plugin*.whl 
 
-
+deactivate
 #cp *.whl wheel/
 #cp *.whl wheel/
