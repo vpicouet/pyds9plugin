@@ -14,16 +14,14 @@ stages:
 
 
 variables :
-  TWINE_USERNAME: vpicouet
-  TWINE_PASSWORD: $TEST_PY_PASSWD
-  WHEEL       : 0
-  TESTPYPI    : 0
-  PYPI        : 0
-  OSX         : 0
-  TESTPYPIOSX : 0
-  PYPIOSX     : 0
+  WHEEL       : 1
+  OSX         : 1
+#  TESTPYPI    : 0
+#  PYPI        : 0
+#  TESTPYPIOSX : 0
+#  PYPIOSX     : 0
 
-before_script:
+#before_script:
   # clone
   #- git clone https://gitlab.lam.fr/vpicouet/DS9functions.git
   #- cd DS9functions
