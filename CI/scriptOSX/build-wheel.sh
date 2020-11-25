@@ -11,3 +11,4 @@
 # done
 pip install cython --user
 python3 setup_cython.py bdist_wheel
+mv *.whl wheel/
