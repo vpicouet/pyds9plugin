@@ -13,5 +13,6 @@ pip install cython --user
 python3 setup_cython.py bdist_wheel
 ls 
 ls dist
+cp *.whl dist/
 #cp *.whl wheel/
 #cp *.whl wheel/
