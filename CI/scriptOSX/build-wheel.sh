@@ -10,9 +10,16 @@
 #     deactivate
 # done
 pip install cython --user
+pip install delocate --user
+
 python3 setup_cython.py bdist_wheel
 ls 
+echo 'ls dist'
 ls dist
-cp *.whl dist/
+#cp *.whl dist/
+echo 'repairing wheel'
+delocate-wheel heelhouse/pyds9plugin*.whl -w  ./dist
+
+
 #cp *.whl wheel/
 #cp *.whl wheel/
