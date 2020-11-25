@@ -9,15 +9,17 @@
 
 for PYENV in /Users/grunner/venv/unsio*; do
     echo "Activate ${PYENV}...."
+    which python
+    which pip
     source ${PYENV}/bin/activate
+	pip install cython --user
     python setup_cython.py bdist_wheel
     # pip install cython --user
     # pip wheel --no-deps ./ -w wheelhouse
     deactivate
 done
 
-pip install cython --user
-python3 setup_cython.py bdist_wheel
+#python3 setup_cython.py bdist_wheel
 
 
 
