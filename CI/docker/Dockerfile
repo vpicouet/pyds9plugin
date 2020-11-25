@@ -12,9 +12,4 @@ RUN                               \
   /opt/python/cp37-cp37m/bin/pip  install numpy==1.14.5 twine    &&\
   /opt/python/cp38-cp38/bin/pip   install numpy==1.17.3 twine
 
-
-COPY --from=0 /opt/usr /opt/usr
-COPY --from=0 /opt/python /opt/python
-COPY --from=0 /opt/_internal /opt/_internal
-
 ENV PATH /opt/usr/bin/:$PATH

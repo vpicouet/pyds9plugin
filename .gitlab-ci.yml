@@ -69,8 +69,8 @@ OSX:
       - $OSX == "1"
   script:
     # build
+    - chmod +x CI/scriptOSX/build-wheel.sh
     - CI/scriptOSX/build-wheel.sh
-
   cache:
     key: osx
     paths:
