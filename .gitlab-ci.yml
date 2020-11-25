@@ -78,5 +78,5 @@ OSX:
   artifacts:
     name: "osx-wheel"
     paths:
-      - wheel/*
+      - dist/*
     expire_in: 1 week
