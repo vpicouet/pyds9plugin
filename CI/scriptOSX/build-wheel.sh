@@ -9,5 +9,5 @@ rm -f wheel/*pyds9plugin*osx*.whl wheelhouse/*pyds9plugin*osx*.whl
 #     pip wheel --no-deps ./ -w wheelhouse
 #     deactivate
 # done
-
+pip3 install cython
 python3 setup_cython.py bdist_wheel
