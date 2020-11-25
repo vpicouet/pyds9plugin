@@ -14,8 +14,8 @@ stages:
 
 
 variables :
-  WHEEL       : 0
-  OSX         : 1
+  WHEEL       : 1
+  OSX         : 0
 #  TESTPYPI    : 0
 #  PYPI        : 0
 #  TESTPYPIOSX : 0
@@ -32,7 +32,7 @@ variables :
 #
 manylinux2010 :
   stage : build
-  image : portus.lam.fr/vpicouet/DS9function-manylinux2010
+  image : portus.lam.fr/jclamber/unsio-manylinux2010
   only :
     variables:
       - $WHEEL == "1"
