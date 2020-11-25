@@ -14,7 +14,7 @@ stages:
 
 
 variables :
-  WHEEL       : 1
+  WHEEL       : 0
   OSX         : 1
 #  TESTPYPI    : 0
 #  PYPI        : 0
@@ -78,6 +78,5 @@ OSX:
   artifacts:
     name: "osx-wheel"
     paths:
-      - test-*.res
       - wheel/*
     expire_in: 1 week
