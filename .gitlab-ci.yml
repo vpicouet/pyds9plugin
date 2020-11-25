@@ -1,0 +1,85 @@
+#
+# Copyright Jean-Charles Lambert, 2018-2019
+#
+# - YAML file for Continous Integration / Continous Deployement
+# - unsio and python-unsio packages (RPM or DEB) are automatically
+#   generated at new commit for different linux distribution
+# - add manylinux building for python-module
+#
+# - Documentation :
+#   https://docs.gitlab.com/ee/ci/yaml/
+
+stages:
+- build
+
+
+variables :
+  TWINE_USERNAME: vpicouet
+  TWINE_PASSWORD: $TEST_PY_PASSWD
+  WHEEL       : 0
+  TESTPYPI    : 0
+  PYPI        : 0
+  OSX         : 0
+  TESTPYPIOSX : 0
+  PYPIOSX     : 0
+
+before_script:
+  # clone
+  #- git clone https://gitlab.lam.fr/vpicouet/DS9functions.git
+  #- cd DS9functions
+
+
+#
+# BUILD wheels for all linux flavors/python
+#
+manylinux2010 :
+  stage : build
+  image : portus.lam.fr/vpicouet/DS9function-manylinux2010
+  only :
+    variables:
+      - $WHEEL == "1"
+  script:
+    # build
+    #- CI/script/build-DS9function.sh
+    - CI/script/build-wheel.sh
+    - /opt/python/cp37-cp37m/bin/python setup.py  bdist -d wheel
+    #- CI/script/repair-wheel.sh
+    #- /opt/python/cp37-cp37m/bin/python setup.py  sdist -d wheel
+    #- CI/script/test-unsio.sh
+  cache:
+    key: manylinux2010
+    paths:
+      - wheel/
+  artifacts:
+    name: "manylinux2010"
+    paths:
+      - test-*.res
+      - wheel/*
+    expire_in: 1 week
+
+
+
+#
+# BUILD wheels for macosx
+#
+OSX:
+  stage : build
+  tags:
+    - osx_10.13.6
+  only :
+    variables:
+      - $OSX == "1"
+  script:
+    # build
+    - CI/scriptOSX/build-wheel.sh
+
+  cache:
+    key: osx
+    paths:
+      - wheel/
+  artifacts:
+    name: "osx-wheel"
+    paths:
+      - test-*.res
+      - wheel/*
+    expire_in: 1 week
