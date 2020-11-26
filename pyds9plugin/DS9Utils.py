@@ -116,6 +116,7 @@ def Log(v=None):
     logger = logging.getLogger()# création de l'objet logger qui va nous servir à écrire dans les logs
     if v is None:
         v = int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True))# on met le niveau du logger à DEBUG, comme ça il écrit tout
+        v = 1#int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True))# on met le niveau du logger à DEBUG, comme ça il écrit tout
     if v == 0:
         logger.setLevel(logging.ERROR)
 #    if v == 1:
@@ -142,7 +143,8 @@ logger = Log()
 
 
 
-def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True)))):
+#def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True)))):
+def verboseprint(*args, logger = logger, verbose=False):
     #did not manage to save log in .log but not display it....
     
     st = ' '.join([str(arg) for arg in args])
@@ -4642,7 +4644,7 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
         size *= abs(wcs.wcs.cd[0][0])#*3600
         
     verboseprint(cat)
-    if (ID == '-') :
+    if (ID == '-') or (ID is None) :
         create_DS9regions2(cat[x],cat[y], radius=float(size), form = form, save=True,color = 'yellow', savename='/tmp/centers', system=system)
     else:
         create_DS9regions([cat[x]],[cat[y]], radius=np.ones(len(cat))*float(size), form = [form],save=True,color = ['yellow'], ID=[np.round(np.array(cat[ID], dtype=float),1)],savename='/tmp/centers', system=system)
@@ -7776,11 +7778,16 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     param_dict['WEIGHT_GAIN']='Y' if param_dict['WEIGHT_GAIN']=='1' else 'N'
     print('DETECTION_IMAGE =',DETECTION_IMAGE)
     if DETECTION_IMAGE == '-':
-        cat_path = filename[:-5] #.fits'
-    else:
-        cat_path = filename[:-5]#params[0]
+        DETECTION_IMAGE = filename
+        
+    if param_dict['CATALOG_NAME'] == '-':
+        param_dict['CATALOG_NAME']  = DETECTION_IMAGE [:-5]  + '_cat.fits'
+    
+        cat_path = os.path.join(os.path.dirname(filename),os.path.basename(filename).split('.')[0]) #.fits'
+    #     params[0] = filename[:-5]  + '_cat.fits'
+    # else:
+    #     cat_path = filename[:-5]#
     param_dict['CHECKIMAGE_NAME'] =   cat_path + '_check_%s.fits'%(param_dict['CHECKIMAGE_TYPE'])  
-
 
     param_dict['PARAMETERS_NAME'] = os.path.join(param_dir,param_dict['PARAMETERS_NAME'])
     param_dict['FILTER_NAME'] = os.path.join(param_dir,param_dict['FILTER_NAME'])
@@ -7811,6 +7818,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
             #d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
             pprint(""" It seems that SExtractor encountered an error.\nPlease verify your image(s)/parameters. \nTo know more about the error run the following command in a terminal:\n%s"""%(command)) 
             sys.exit()
+        print(3)
     else:   
         command = 'sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[:]])
         verboseprint(command)
@@ -7819,34 +7827,40 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     colors =  ['Orange']  #['White','Yellow','Orange']  
     print(params[0])
     #if os.path.isfile(params[0]):
-    if os.path.isfile(cat_path):
-        print(cat_path)
+    #if os.path.isfile(params[0]):
+    if os.path.isfile(param_dict['CATALOG_NAME']):
+        print(param_dict['CATALOG_NAME'])
 
         try:
-            cat3 = Table.read(params[0])
+            cat3 = Table.read(param_dict['CATALOG_NAME'])
         except astropy.io.registry.IORegistryError:
-            cat3 = Table.read(params[0], format='ascii')   
+            print('Reading ascii')
+            cat3 = Table.read(param_dict['CATALOG_NAME'], format='ascii')   
         if len(cat3)==1:
-            cat3 = Table.read(params[0], format="fits", hdu='LDAC_OBJECTS')
+            print('Reading LDAC_OBJECT')
+            cat3 = Table.read(param_dict['CATALOG_NAME'], format="fits", hdu='LDAC_OBJECTS')
+        print(cat3)
         w = WCS(filename)
         d.set('regions showtext no')
         if len(cat3)==0:
             d.set('analysis message {No source detected, verify you parameters...}')
         else:
+            print('Creating regions')
             if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
                 verboseprint('Using WCS header for regions :', cat_path + '.reg')
                 create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
             else:
                 verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
                 create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-            if path is None:
-                if len(cat3)<5e4:
-                    d.set('regions ' + cat_path + '.reg')
-                    if  d.get('analysis message yesno {Analysis completed! Do you want to load the sextractor catalog with PRISM?}')=='1':
-                        d.set('prism ' + cat_path)
-                        
-                else:
-                    d = DS9n(xpapoint);d.set('analysis message {%i sources detected, loading the regions in DS9 might crash DS9. The catalog was saved here: %s and the resgions here: %s}'%(len(cat3),params[0],cat_path + '.reg'));sys.exit()
+            print('Regions created')
+            if len(cat3)<5e4:
+                print('Setting regions')
+                d.set('regions ' + cat_path + '.reg')
+                if  d.get('analysis message yesno {%i sources detected! Do you want to load the sextractor catalog with PRISM?}'%(len(cat3)))=='1':
+                    d.set('prism ' + cat_path)
+            else:
+                print('Too many regions')
+                d = DS9n(xpapoint);d.set('analysis message {%i sources detected, loading the regions in DS9 might crash DS9. The catalog was saved here: %s and the resgions here: %s}'%(len(cat3),params[0],cat_path + '.reg'));sys.exit()
         #pprint(cat3)
     else:
         verboseprint('Can not find the output sextractor catalog...')

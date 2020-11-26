@@ -32,7 +32,8 @@ variables :
 #
 manylinux2010 :
   stage : build
-  image : portus.lam.fr/jclamber/unsio-manylinux2010
+#  image : portus.lam.fr/jclamber/unsio-manylinux2010
+  image : portus.lam.fr/vpicouet/pyds9quicklook-many-linux
   only :
     variables:
       - $WHEEL == "1"
