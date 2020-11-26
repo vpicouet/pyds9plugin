@@ -16,6 +16,7 @@ for PYBIN in /opt/python/*/bin; do
 	echo "Compiling using pip version ${PYBIN}...."
 	${PYBIN}/pip install cython 
 	${PYBIN}/python setup_cython.py bdist_wheel
-done
 
+done
+ls -ltrh dist/
 #python3 setup_cython.py bdist_wheel
