@@ -148,12 +148,11 @@ hmenu 1. Generic Functions
 		Replace Regions With NaNs
 		*
 		menu
-		DS9Utils $xpa_method ReplaceWithNans   "$entry(Number by which you want to replace the encircled pixels, eg. 5.4, nan, -inf. WARNING: you are about to run an invasive method. The original image will be deleted!)"   | $text  
+		DS9Utils $xpa_method ReplaceWithNans  $param(Replace-region);  $number $overwrite   | $text  
+
 #$message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)  
 
 	endhmenu
-
-
 
 
 
@@ -165,17 +164,17 @@ hmenu 1. Generic Functions
 		*
 		menu
 #		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-		DS9Utils $xpa_method SubstractImage $param(Python-Command); $im_path "$exp" 0  "$path"   | $text  
+		DS9Utils $xpa_method SubstractImage $param(Python-Command); $im_path "$exp" 0  "$path"  $overwrite | $text  
 
 		Interactive 1D Fitting On Plot
 		*
 		menu
 		DS9Utils $xpa_method BackgroundFit1D  $param(Background-Fit-1D); x $background none $gaussians $moffats $voight 0 $other  | $text  
 
-		Interactive Manual Fitting
-		*
-		menu
-		DS9Utils $xpa_method ManualFitting | $text  
+#		Interactive Manual Fitting
+#		*
+#		menu
+#		DS9Utils $xpa_method ManualFitting | $text  
 
 		
 		Fit Gaussian 2D
@@ -235,15 +234,15 @@ hmenu 1. Generic Functions
 	bind O
 	DS9Utils $xpa_method open $param(open); "$path" $type   $clip  | $text
 
-	Stack Images (s)  #20
-	*
-	menu
-	DS9Utils $xpa_method stack $param(Stacking); $Path $stack -  $output | $text  
+#	Stack Images (s)  #20#
+#	*
+#	menu
+#	DS9Utils $xpa_method stack $param(Stacking); $Path $stack -  $output | $text  
 
-	Stack Images key
-	*
-	bind s
-	DS9Utils $xpa_method stack "$entry(Number of the images to stack: first-last)" "$entry(Number of dark images first-last to stack and  subtract, press enter if no dark)"   | $text  
+#	Stack Images key
+#	*
+#	bind s
+#	DS9Utils $xpa_method stack "$entry(Number of the images to stack: first-last)" "$entry(Number of dark images first-last to stack and  subtract, press enter if no dark)"   | $text  
 
 
 	Plot Region In 3D
@@ -279,6 +278,12 @@ hmenu 2. Instrumentation - AIT
 		*
 		menu
 		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS - $sort   | $text  #$steps
+
+		Explore Throughfocus PSFs #24
+		*
+		menu
+		DS9Utils $xpa_method ExploreThroughfocus $param(SWARP-Path); "$Path" $sort | $text  #$steps
+
 
 #		Throughfocus Image Key
 #		*
@@ -336,10 +341,10 @@ hmenu 2. Instrumentation - AIT
 		DS9Utils $xpa_method ColumnLineCorrelation $param(Images-to-analyze); "$path"   | $text  
 
 
-		EMCCD histogram #29
-		*
-		menu
-		DS9Utils $xpa_method DS9PlotEMCCD $param(EMCCD);  $smearing | $text  
+#		EMCCD histogram #29
+#		*
+#		menu
+#		DS9Utils $xpa_method DS9PlotEMCCD $param(EMCCD);  $smearing | $text  
 
 
 	endhmenu
@@ -360,7 +365,7 @@ hmenu 2. Instrumentation - AIT
 	Centering (C)
 	*
 	bind C
-	DS9Utils $xpa_method centering  $param(Centering); $method $background  | $text  
+	DS9Utils $xpa_method centering  $param(Centering); $method 0  | $text  
 
 	Transit/Through-Slit Analysis
 	*
@@ -654,7 +659,10 @@ var3 entry {Var_3} - {Var_3 in plot Var_1 - Var_2 in terms of Var_3 }
 Bins entry {Bins} 20,22,24,26 {Bins on wich compute sigma estimator}
 endparam
 
-
+param SWARP-Path
+Path open {Path} - {SExtractor catalog with VIGNETS}
+sort menu {Sorting-type} MAG_AUTO|FWHM_IMAGE|THETA_IMAGE|ELLIPTICITY|X_IMAGE|Y_IMAGE|AMPLITUDE {Column to use to sort the PSFs}
+endparam
 
 param Setup
 scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization|zscale|minmax {Scale}
@@ -670,6 +678,14 @@ param Stack-spectra
 wave entry {Wavelength-range} - {- for all or min-max. eg: 3700-4200 A}
 smooth entry {smooth} 1 {Smoothing kernel size in pixel (int unpair)}
 endparam
+
+
+
+param Replace-region
+number entry {Replacing value} nan {Value by which you want to replace the encircled pixels, eg. 5.4, nan, -inf.}
+overwrite checkbox {Overwrite} 0 {If False the new image will be saved at $filename_modified.fits}
+endparam
+
 
 
 param Extract-spectra
@@ -719,12 +735,12 @@ IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE 
 endtab
 
 tab {RESAMP. & BACKGROUND}
-RE-SAMPLING checkbox {RE-SAMPLING} 1|0 {Resample input images (Y/N)?}
+RE-SAMPLING checkbox {RE-SAMPLING} 1 {Resample input images ?}
 RESAMPLING_TYPE menu {RESAMPLING_TYPE} LANCZOS3|NEAREST|BILINEAR|LANCZOS2|LANCZOS4 {Image resampling method}
 OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0 means automatic.}
-INTERPOLATE checkbox {INTERPOLATE} 0|1 {Interpolate bad input pixels (Y/N)?}
+INTERPOLATE checkbox {INTERPOLATE} 0 {Interpolate bad input pixels ?}
 
-SUBTRACT_BACK checkbox {SUBTRACT_BACK} 1|0 {Subtraction sky background (Y/N)?}
+SUBTRACT_BACK checkbox {SUBTRACT_BACK} 1 {Subtraction sky background ?}
 BACK_SIZE entry {BACK_SIZE} 128 {Size in pixels of a background mesh.}
 BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Size in background meshes of the background-filtering mask.}
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Difference threshold (in ADUs) for the background-filtering}
@@ -759,7 +775,7 @@ PATH entry {PATHS} $filename {Path of the images you want to stack, use glob syn
 #PIXELSCALE_TYPE menu {PIXELSCALE_TYPE} MEDIAN|MIN|MAX|MANUAL|FIT {Tells SWarp how to adjust the output pixel size}
 PIXEL_SCALE entry {PIXEL_SCALE} 0.0 {Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.}
 IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic}
-#RE-SAMPLING checkbox {RE-SAMPLING} 1|0 {Resample input images (Y/N)?}
+#RE-SAMPLING checkbox {RE-SAMPLING} 1 {Resample input images (Y/N)?}
 RESAMPLING_TYPE menu {RESAMPLING_TYPE} LANCZOS3|NEAREST|BILINEAR|LANCZOS2|LANCZOS4 {Image resampling method}
 #OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0 means automatic.}
 RESAMPLE_SUFFIX   entry {RESAMPLE_SUFFIX}     .resamp.fits    {filename extension for resampled images}
@@ -894,8 +910,8 @@ endparam
 
 
 param Lock
-var1 menu {frame} image|none|wcs|physical {}
-var3 menu {crosshair} image|none|wcs|physical {}
+var1 menu {frame} image|none|wcs {}
+var3 menu {crosshair} image|none|wcs {}
 var2 checkbox {scalelimits} 1 {}
 var4 checkbox {smooth} 0 {} 
 var5 checkbox {colorbar} 1 {} 
@@ -1156,7 +1172,7 @@ tab {Basic Params}
 DETECTION_IMAGE open {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using DS9 image}
 CATALOG_NAME save {CATALOG_NAME} - {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
+PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
 
 DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
 DETECT_MINAREA entry {DETECT_MINAREA} 10 {}
@@ -1230,7 +1246,7 @@ param SEXTRACTOR-BASICS
 DETECTION_IMAGE entry {DETECTION_IMAGE} $filename {Image to use for detection of the sources. If - using ../DetectionImages/}
 CATALOG_NAME entry {CATALOG_NAME} - {Name of the output catalog. eg /tmp/catalog.fits, if -, saved in ../DetectionImages/Photometric_Catalogs/ }
 CATALOG_TYPE menu {CATALOG_TYPE} ASCII_HEAD|FITS_1.0|NONE|ASCII|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
+PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
 
 DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
 DETECT_MINAREA entry {DETECT_MINAREA} 3 {}
@@ -1288,7 +1304,7 @@ param SEXTRACTOR-CLAUDS
 DETECTION_IMAGE entry {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using ../DetectionImages/}
 CATALOG_NAME entry {CATALOG_NAME} - {Name of the output catalog. eg /tmp/catalog.fits, if -, saved in ../DetectionImages/Photometric_Catalogs/ }
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
+PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
 
 DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
 DETECT_MINAREA entry {DETECT_MINAREA} 10 {}
@@ -1434,6 +1450,7 @@ exp entry {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image
 im_path entry {image} - {Path of a second image to use. Keep '-' if not used}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
 path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
+overwrite checkbox {Overwrite} 0 {Overwrite the modification on the original file. USE WITH CAUTION!}
 endparam
 
 
@@ -1499,7 +1516,7 @@ DETECTION_IMAGE open {DETECTION_IMAGE} - {Image to use for detection of the sour
 
 CATALOG_NAME save {CATALOG_NAME} - {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME entry {PARAMETERS_NAME} sex.param {File name in ds9_package/Calibration/Sextractor/}
+PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
 
 DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
 DETECT_MINAREA entry {DETECT_MINAREA} 10 {min number of pixels above threshold}
@@ -1587,16 +1604,4 @@ NTHREADS menu {NTHREADS} 1|2|4|8|16|32 {Number of threads for multi processing}
 endtab
 
 endparam
-
-
-
-
-
-
-
-
-
-
-
-
 

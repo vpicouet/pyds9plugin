@@ -56,7 +56,7 @@ def verbose(xpapoint=None,verbose=None):
     return 
 
 if sys.stdin is not None:
-    print('STDIN detected')
+    #verboseprint('STDIN detected')
     verbose(xpapoint=None,verbose=1)
     #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 1)
 else:
@@ -103,6 +103,8 @@ def CreateFolders(DS9_BackUp_path= os.environ['HOME'] + '/DS9QuickLookPlugIn/'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/HeaderDataBase')
     if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/subsets'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/subsets')
+    #np.savetxt(DS9_BackUp_path + '/.verbose.txt',[int(1)])
+    os.system('echo 1 > ' + DS9_BackUp_path + '/.verbose.txt')
     return  DS9_BackUp_path
 
 DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
@@ -113,9 +115,11 @@ if len(sys.argv)==1:
 def Log(v=None): 
     import logging
     from logging.handlers import RotatingFileHandler
-    logger = logging.getLogger()# création de l'objet logger qui va nous servir à écrire dans les logs
+    #logger = logging.getLogger()# création de l'objet logger qui va nous servir à écrire dans les logs
+    logger = logging.getLogger('pyds9plugin')
+
     if v is None:
-        v = int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True))# on met le niveau du logger à DEBUG, comme ça il écrit tout
+        #v = int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True))# on met le niveau du logger à DEBUG, comme ça il écrit tout
         v = 1#int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True))# on met le niveau du logger à DEBUG, comme ça il écrit tout
     if v == 0:
         logger.setLevel(logging.ERROR)
@@ -134,6 +138,8 @@ def Log(v=None):
 #    stream_handler.setLevel(logger.getEffectiveLevel())
 #    logger.addHandler(stream_handler)
     logging.getLogger('matplotlib.font_manager').disabled = True
+    #logging.getLogger('pyds9plugin')
+
     return logger
 
 
@@ -141,7 +147,19 @@ def Log(v=None):
 
 logger = Log()
 
+#def yesno(d,question='',verbose=True):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
+def yesno(d,question='',verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.verbose.txt').read()))):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
+    if verbose:
+        print(question)
+        return bool(int(d.get("""analysis message yesno {%s}"""%(question))))
+    else:
+        return True
 
+def message(d,question='',verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.verbose.txt').read()))):#
+    if verbose:
+        return bool(int(d.set('analysis message {%s}'%(question))))
+    else:
+        return True
 
 #def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True)))):
 def verboseprint(*args, logger = logger, verbose=False):
@@ -319,20 +337,15 @@ def DS9lock(xpapoint):
     d = DS9n(xpapoint)
     l = sys.argv[-3:]
     ll = np.array(l,dtype='U3')
-    verboseprint(l,ll)
     l = np.array(l,dtype=int)
     ll[l==1]='yes'
     ll[l==0]='no'
-#    if ll[0] == 'no':
-#        d.set("lock frame %s"%(ll[0]))
-#    else:
+
     d.set("lock frame %s"%(sys.argv[-5]))
     d.set("lock crosshair %s"%(sys.argv[-4]))
         
     d.set("lock scalelimits  %s"%(ll[-3]))
-#    if ll[2] == 'no':
-#    else:
-#        d.set("lock crosshair physical")
+
     d.set("lock smooth  %s"%(ll[-2]))
     d.set("lock colorbar  %s"%(ll[-1]))
 
@@ -570,7 +583,7 @@ def PlotSpectraFilters(xpapoint):
 
 def FitsExt(fitsimage):
     ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
-    verboseprint('Taking extension: ',ext)
+    verboseprint('Taking extension: %s'%(ext))
     return ext
 
 
@@ -646,6 +659,10 @@ def ReplaceStringInFile(path, string1, string2):
 def PresentPlugIn():
     """Print presentation of the plug in.
     """
+    from shutil import which
+    if os.path.isfile(resource_filename('pyds9plugin','DS9Utils')) is False:
+        symlink_force(which('DS9Utils'), resource_filename('pyds9plugin','DS9Utils'))
+
     print(bcolors.BLACK_GREEN + 
  """                                                                                 
                      DS9 Quick Look Plug-in                                      
@@ -688,7 +705,6 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
         scale, cuts, smooth, color, invert, grid = sys.argv[-6:]
     except ValueError:
         scale, cuts, smooth, color, invert, grid = "Log",  '50-99.99',  '5', 'cool', '0', '0' 
-    verboseprint(scale, cuts, smooth, color, invert, grid)
     cuts = np.array(cuts.split('-'),dtype=float)
     region = getregion(d, all=False, quick=True,selected=True) 
     if region is None:
@@ -724,7 +740,7 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
     from astropy.io import fits
     fitsimage = fits.open(getfilename(d))
     fitsimage = fitsimage[FitsExt(fitsimage)].data
-    lx,ly = fitsimage.shape
+    lx,ly = fitsimage.shape[0], fitsimage.shape[1]
     if region is None:
         verboseprint('No region defined, big image, taking the center.')
         image_area = [int(lx/2),int(lx/2)+50,int(ly/2),int(ly/2)+50]
@@ -766,7 +782,6 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
         number=1000
     cat_path = cat_path.rstrip()[::-1].rstrip()[::-1]
     fields = np.array(fields.split(','),dtype=str)
-    verboseprint('cat, number, fields, query = ',cat, number, fields, query )
     try:
         cat = Table.read(cat_path )
     except Exception as e:
@@ -1347,10 +1362,13 @@ def getdata(xpapoint, Plot=False,selected=False):
                 plt.imshow(data[giveValue(Yinf+0.5):giveValue(Ysup),giveValue(Xinf+0.5):giveValue(Xsup)])
                 plt.colorbar()
 
-            data = data[giveValue(Yinf+0.5):giveValue(Ysup),giveValue(Xinf+0.5):giveValue(Xsup)]
+
+
+            data = data[np.max([giveValue(Yinf+0.5),0]):giveValue(Ysup),np.max([giveValue(Xinf+0.5),0]):giveValue(Xsup)]
             datas.append(data)
         if len(data.shape) == 3:
-            data = data[:,Yinf:Ysup,Xinf:Xsup]
+            #verboseprint(Yinf,Ysup,Xinf,Xsup)
+            data = data[:,np.max([giveValue(Yinf+0.5),0]):giveValue(Ysup),np.max([giveValue(Xinf+0.5),0]):giveValue(Xsup)]
             datas.append(data)
 #    if hasattr(region, 'r'):
 #        data[data>region.r] = np.nan
@@ -1428,20 +1446,16 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
                 xo, yo = np.where(image == np.nanmax(image))[1][0],  np.where(image == np.nanmax(image))[0][0]
                 Param = (np.nanmax(image),xo, yo, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
                 bounds = ([-np.inf, xo-10 , yo-10, stdmin, stdmin,-np.inf], [np.inf, xo+10 , yo+10, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
-        verboseprint('bounds = ',bounds)
-        verboseprint('\nParam = ', Param)
         try:
             popt,pcov = curve_fit(twoD_Gaussian2,(x,y),image.flat,Param)#,bounds=bounds)
         except RuntimeError as e:
             logger.warning(e)
             popt = [0,0,0,0,0,0]
-        else:
-            verboseprint('\npopt = ', popt)
         fluxes.append(2*np.pi*popt[3]*popt[4]*popt[0])
     verboseprint(fluxes)
     xn, yn = popt[1], popt[2]
-    verboseprint('New center = ', popt[1], popt[2])
-    verboseprint('New center = ', Xinf, Yinf)
+    verboseprint('New center = %s %s '%( popt[1], popt[2]))
+    verboseprint('New center = %s %s '%(Xinf, Yinf))
     verboseprint(Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi )
     d.set('regions format ds9')
     d.set('regions system detector')
@@ -1486,34 +1500,25 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         def update_text(text):
             p.add_text(text, name="mylabel",position=(70,10))
         def picking_callable(mesh):
-            verboseprint(1)
             dict_['mesh']=mesh
             verboseprint(dict_['mesh'])
             xinf,xsup, yinf, ysup =  np.array(dict_['mesh'].bounds[:4],dtype=int)
-            verboseprint(xinf,xsup, yinf, ysup)
             data = ((z[xinf:xsup, yinf: ysup]-np.nanmin(z[xinf:xsup, yinf: ysup]))*value)# image
             verboseprint(data.shape)
             x_new, y_new = x[xinf:xsup, yinf: ysup], y[xinf:xsup, yinf: ysup]
-            verboseprint(4)
             xo, yo = np.where(data == np.nanmax(data))[1][0],  np.where(data == np.nanmax(data))[0][0]
             P0 = 1, xo+xinf, yo+yinf, 2,2,np.percentile(data,15)
             P0 = 1,  yo+yinf,xo+xinf, 2,2,np.percentile(data,15)
             dict_['P0']=P0
             args, cov = curve_fit(twoD_Gaussian2,(x_new,y_new),data.flatten(),p0=P0)#,bounds=bounds)
             dict_['args']=args
-            verboseprint(5)
             points[:, -1] = twoD_Gaussian2((x,y),*args).reshape(x.shape).reshape(-1) 
             dict_['new_fit']=twoD_Gaussian2((x,y),*args).reshape(x.shape)
-            verboseprint(6)
             p.update_coordinates(points,mesh=fit)
             p.update_scalars(z.flatten() + points[:, -1]/value,mesh=fit)
-
-            verboseprint(7)
-            #update_text("Gaussian fit: FWHMs = %0.1f, %0.1f"%(args[3],args[4]))
             update_text("Gaussian fit: F = %0.0f, FWHMs = %0.1f, %0.1f, angle=%0.0fd"%(2*np.pi*args[3]*args[4]*args[0],args[3],args[4],(180*args[5]/np.pi)%180))#
             xn, yn = args[1], args[2]
             d.set('regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "' % ( Xinf + xn + 1 ,Yinf + yn + 1,2.35*args[3],2.35*args[4],180*args[5]/np.pi ))
-            verboseprint(8)
             return#scalars
         p.enable_cell_picking(mesh = data_mesh, callback=picking_callable, through=True, show=True, show_message='Press r to select another region to fit a 2D gaussian. \n r again to quit selection mode.', style='wireframe', line_width=2, color='black', font_size=14, start=False)
                 
@@ -1637,10 +1642,11 @@ def CreateWCS(PathExec, filename, Newfilename, params, type_='Image'):
         image = d.get_pyfits()[0]
         lx, ly = image.shape
         params += [lx, ly]
-        verboseprint(options, params)
+        verboseprint(options)
+        verboseprint(params)
     else:
         upload = "--upload "
-    verboseprint(type_,upload)
+    verboseprint(type_);verboseprint(upload)
     #params = ['-'] * len(options)
     parameters = ' '.join([option + str(param) for option,param in zip(options, params) if param!='-'])
     verboseprint(parameters)
@@ -2396,7 +2402,21 @@ def DS9throughfocus(xpapoint, Plot=True):
                      center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas)
 
     
+    # datas = Table.read('/Users/Vincent/Desktop/stack_cat.fits')['VIGNET']
+    # for data in datas[:100]:
+    #     plt.figure()
+    #     imshow(data);colorbar()
+    #     plt.show()
+    PyvistaThoughfocus(datas)
+    
+    
+    
+    # datas = Table.read('/Users/Vincent/Desktop/stack_cat.fits')['VIGNET']
+    # datas_1 = [(data-np.nanmin(data))/(data-np.nanmin(data)).ptp() for data in datas[:] if (data>-1e30).all()]
+    # ptp = [data.ptp() for data in datas[:] if (data>-1e30).all()]    
+    # PyvistaThoughfocus(np.array(datas_1)[np.array(ptp).argsort()]  )# datas_1[argsort(ptp)]
 
+def PyvistaThoughfocus(datas):
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
     from matplotlib import cm
     set_plot_theme("document")
@@ -2406,7 +2426,7 @@ def DS9throughfocus(xpapoint, Plot=True):
     mesh = CreateMesh(datas[0], value=value)
     p.add_mesh(mesh,opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True)#, cmap='jet')
     p.add_text('Image: 0', name="mylabel")
-
+    labels=list(np.arange(len(datas))+1)
     def update_text(text):
         p.add_text(text, name="mylabel")
 
@@ -2427,7 +2447,6 @@ def DS9throughfocus(xpapoint, Plot=True):
         points = mesh.points.copy()
         p.open_gif("/tmp/throughfocus.gif")
         p.add_text('Image: 0', name="mylabel")
-        labels=list(np.arange(len(datas))+1)
         n=1
         images = datas+datas[::-1]
         for i, (data, lab)  in enumerate(zip(images*n,(labels+labels[::-1])*n)):#+datas+datas+datas+datas+datas+datas:
@@ -2447,80 +2466,130 @@ def DS9throughfocus(xpapoint, Plot=True):
         return 
 
     p.add_slider_widget(throughfocus_callback, rng=[0,len(datas)], value=0, title='Frame', color=None, pass_widget=False, event_type='always', style=None)
+    #add_text_slider_widget(callback, data, value=None, pointa=(0.4, 0.9), pointb=(0.9, 0.9), color=None, event_type='end')
+
     p.add_checkbox_button_widget(CreateGIF)#,position=(200,10))#,position='upper_left')
     p.add_text('Create GIF in /tmp/thoughfocus.gif', name="button",position=(70,10))#'lower_left')
     p.show() 
     
-    
-    # from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
-    # from matplotlib import cm
-    # set_plot_theme("document")
-    # verboseprint('Orient the view, then press "q" to close window and produce movie')
-    # p = Plotter(notebook=False,window_size=[1500,1600],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='Orient the view, then press "q" to watch and save thoughfocus to /tmp/throughfocus.gif')
-    # value = datas[0].shape[0]/np.max(np.ptp(datas,axis=(1,2)))
-    # mesh = CreateMesh(datas[0], value=value)
-    # p.add_mesh(mesh,opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True)#, cmap='jet')
-    # p.show(auto_close=False)
-    # points = mesh.points.copy()
-    # p.open_gif("/tmp/throughfocus.gif")
-    # #from itertools import cycle
-    # p.add_text('Image: 0', name="mylabel")
-    # def update_text(text):
-    #     p.add_text(text, name="mylabel")
-    # labels=list(np.arange(len(datas))+1)
-    # n=4
-    # images = datas+datas[::-1]
-    # for i, (data, lab)  in enumerate(zip(images*n,(labels+labels[::-1])*n)):#+datas+datas+datas+datas+datas+datas:
-    #     #print(points[:, -1],points[:, -1].shape)
-    #     #print(value*(data-np.nanmin(data)).reshape(-1)  ,value*(data-np.nanmin(data)).reshape(-1))
-    #     points[:, -1] = value*(data-np.nanmin(data)).reshape(-1)   
-    #     p.update_coordinates(points, render=False)
-    #     p.update_scalars(data.ravel(), render=False)
-    #     update_text("Image: %i"%(lab))
-
-        #p.mesh.compute_normals(cell_normals=False, inplace=True)
-        # if i<len(datas+datas[::-1]):
-        #     p.write_frame()
-        # else :
-        #     time.sleep(0.05)
-        #     p.render()
-        # if i>n:
-        #     sys.exit()
-        #p.render()
-   # p.show() 
- #   time.sleep(10)
-  #  p.close()
-    # value = datas[0].shape[0]/np.max(datas[0].ptp())
-    # cols = int(np.round(np.sqrt(len(datas))))
-    # rows = cols
-    # while rows * cols < len(datas):
-    #     rows += 1
-    # cols, rows =  rows,cols#cols = 1; rows = len(datas)
-    # p = Plotter(notebook=False,window_size=[2000,1500],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D',shape=(rows,cols))
-    # for i,data in enumerate(datas):
-    #     p.subplot(int(i/cols),i%cols)
-    #     p.add_mesh(CreateMesh(data, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=False)
-    #     p.link_views()
-    #     p.add_axes()
-    # p.show()
-
-
-    # value = datas[0].shape[0]/np.max(datas[0].ptp())
-    # cols = int(np.round(np.sqrt(len(datas))))
-    # rows = cols
-    # while rows * cols < len(datas):
-    #     rows += 1
-    # cols, rows =  rows,cols#cols = 1; rows = len(datas)
-    # p = Plotter(notebook=False,window_size=[2000,1500],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D',shape=(rows,cols))
-    # for i,data in enumerate(datas):
-    #     p.subplot(int(i/cols),i%cols)
-    #     p.add_mesh(CreateMesh(data, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=False)
-    #     p.link_views()
-    #     p.add_axes()
-    # p.show()
-
 
     return 
+
+
+def ExploreThroughfocus(xpapoint):
+#    a = Table.read('/Users/Vincent/Desktop/stack_cat.fits')
+#    a = Table.read('/Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/PresentationLAM/F3_OpenCluster_cat.fits')
+    from astropy.convolution import convolve, Gaussian2DKernel
+    a = Table.read(sys.argv[-2])
+    mask = (np.nanmin(a['VIGNET'],axis=(1,2))>-1e30)
+    a = a[mask  ]
+    a['VIGNET1'] =  [(data-np.nanmin(data))/(data-np.nanmin(data)).ptp() for data in a['VIGNET']]
+    a['VIGNET2']  =   [convolve(data, Gaussian2DKernel(x_stddev=1) )for data in a['VIGNET1']]
+
+    a['AMPLITUDE'] = [data.ptp() for data in a['VIGNET']]
+    a.sort(sys.argv[-1])
+    PyvistaThoughfocus(a)
+    return     
+
+def PyvistaThoughfocus(a):
+
+    
+    #PyvistaThoughfocus(np.array(datas_1)[np.array(ptp).argsort()]  )# datas_1[argsort(ptp)]
+
+    n=60
+    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
+    from matplotlib import cm
+    set_plot_theme("document")
+    #verboseprint('Orient the view, then press "q" to close window and produce movie')
+    p = Plotter(notebook=False,window_size=[1500,1600],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='Throughfocus')
+    value = a['VIGNET1'][0].shape[0]
+    mesh = CreateMesh(a['VIGNET1'][0], value=value)
+    p.add_mesh(mesh,scalars=a['VIGNET1'][0],opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True)#, cmap='jet')
+    p.add_text('Image: 0', name="mylabel")
+    p.add_text('X, Y =  %0.1f, %0.1f'%(a['X_IMAGE'][0],a['Y_IMAGE'][0]), name="radec",position=(10,1500))
+    p.add_text('FWHM_IMAGE =  %0.1f'%(a['FWHM_IMAGE'][0]), name="fwhm" , position=(10,1500-n))
+    p.add_text('MAG_AUTO, ERR =  %0.1f, %0.1f'%(a['MAG_AUTO'][0], a['MAGERR_AUTO'][0]), name="mag" , position=(10,1500-2*n))
+    p.add_text('CLASS_STAR =  %0.1f'%(a['CLASS_STAR'][0]), name="star" , position=(10,1500-3*n))
+    p.add_text('THETA_IMAGE =  %0.1f'%(a['THETA_IMAGE'][0]), name="theta" , position=(10,1500-4*n))
+    p.add_text('ELLIPTICITY =  %0.1f'%(a['ELLIPTICITY'][0]), name="e" , position=(10,1500-5*n))
+    p.add_text('BACKGROUND =  %0.1f'%(a['BACKGROUND'][0]), name="background" , position=(10,1500-6*n))
+    dict_={'smooth':'VIGNET1','number':0}
+    #p.show() 
+    labels=list(np.arange(len(a))+1)
+
+    def update_text(text):
+        #pass
+        text=int(text)
+        #p.add_text("Image: %i"%(text), name="mylabel")
+        #p.add_text("X, Y =  %0.1f, %0.1f"%(a['X_IMAGE'][text],a['Y_IMAGE'][text]), name="radec",position=(10,1500))
+        p.add_text('FWHM_IMAGE =  %0.1f'%(a['FWHM_IMAGE'][text]), name="fwhm",position=(10,1500-n))
+        #p.add_text('MAG_AUTO, ERR =  %0.1f, %0.1f'%(a['MAG_AUTO'][text], a['MAGERR_AUTO'][text]), name="mag" , position=(10,1500-2*n))
+        #p.add_text('CLASS_STAR =  %0.1f'%(a['CLASS_STAR'][text]), name="star" , position=(10,1500-3*n))
+        p.add_text('THETA_IMAGE =  %0.1f'%(a['THETA_IMAGE'][text]), name="theta" , position=(10,1500-4*n))
+        p.add_text('ELLIPTICITY =  %0.1f'%(a['ELLIPTICITY'][text]), name="e" , position=(10,1500-5*n))
+        #p.add_text('BACKGROUND =  %0.1f'%(a['BACKGROUND'][text]), name="background" , position=(10,1500-6*n))
+    
+    def throughfocus_callback(val):
+        points = mesh.points.copy()
+        data = a[dict_['smooth']][int(val)]
+        points[:, -1] = value*(data-np.nanmin(data)).reshape(-1)   
+        p.update_coordinates(points, render=False)
+        scalar = a[dict_['smooth']][int(val)].ravel()
+        p.update_scalars(scalar, render=False)
+        p.update_scalar_bar_range([np.nanmin(scalar),np.nanmax(scalar)])
+        #p.add_mesh(CreateMesh(a['VIGNET1'][-10], value=value),scalars=a['VIGNET1'][-10],opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True, cmap=plt.colormaps()[int(val)])
+        update_text(int(val))
+        dict_['number']=val
+
+        return
+    def CreateGIF(val): 
+        
+        #p.show(auto_close=False)
+        points = mesh.points.copy()
+        p.open_gif("/tmp/throughfocus.gif")
+        p.add_text('Image: 0', name="mylabel")
+        n=1
+        images = a+a[::-1]
+        for i, (data, lab)  in enumerate(zip(images*n,(labels+labels[::-1])*n)):#+datas+datas+datas+datas+datas+datas:
+            points[:, -1] = value*(data-np.nanmin(data)).reshape(-1)   
+            p.update_coordinates(points)#, render=False)
+            p.update_scalars(data.ravel())#, render=False)
+            update_text("Image: %i"%(lab))
+            p.write_frame()
+
+        return 
+    def SmoothCallback(val):
+        if val:
+            name = 'VIGNET2'
+        else:
+            name = 'VIGNET1'
+            
+        points = mesh.points.copy()
+        data = a[name][int(dict_['number'])]
+        #print(1)
+        points[:, -1] = value*(data-np.nanmin(data)).reshape(-1)   
+        #print(2)
+        p.update_coordinates(points, render=False)
+        #print(3)
+        scalar = a[name][int(dict_['number'])].ravel()
+        p.update_scalars(scalar, render=False)
+
+        #print(4)
+        p.update_coordinates(points)#, render=False)
+        p.update_scalars(data.ravel())#, render=False)
+        dict_['smooth']=name
+        #print(5)
+        
+
+    p.add_slider_widget(throughfocus_callback, rng=[0,len(a)], value=0, title='Frame', color=None, pass_widget=False, event_type='always', style=None)
+    #p.add_slider_widget(throughfocus_callback, rng=[0,len(a)], value=0, title='Frame', color=None, pass_widget=False, event_type='end', style=None)
+    p.add_checkbox_button_widget(CreateGIF)#,position=(200,10))#,position='upper_left')
+    p.add_text('Create GIF in /tmp/thoughfocus.gif', name="button",position=(70,10))#'lower_left')
+    p.add_checkbox_button_widget(SmoothCallback,position=(10,80),value=False)#,position='upper_left')
+    p.add_text('Smooth', name="buttonSmooth",position=(70,80))#'lower_left')
+
+    p.show() 
+    
 #@profile
 def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None, log=None):
     """How to use: Click on region and select Circle shape (default one). Then click precisely on what you think is
@@ -3250,6 +3319,8 @@ def PlotArea3D(xpapoint,color=False):
     #import pyvista as pv
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
     from matplotlib import cm
+    from astropy.convolution import convolve, Gaussian2DKernel
+
     d = DS9n(xpapoint)
     #data = getdata(xpapoint)
     filename = d.get('file')
@@ -3274,51 +3345,128 @@ def PlotArea3D(xpapoint,color=False):
             if d.get('scale') =='log':
                 data = data#np.log10(data - np.nanmin(data))
             value = data.shape[0]/(np.nanmax(data) - np.nanmin(data))#np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
-            value_=value
+            value_= data.shape[0]#value
             mesh = StructuredGrid()
-            points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]).points
+            data_points =  ((data-np.nanmin(data[np.isfinite(data)])))/(np.nanmax(data) - np.nanmin(data))
+            log_data_points =  (np.log10(data_points - np.nanmin(data_points)+1) ) / np.nanmax(np.log10(data_points - np.nanmin(data_points)+1) )#-1
+            data_points_c  =   convolve(data_points, Gaussian2DKernel(x_stddev=1) )
+            log_data_points_c = convolve(log_data_points, Gaussian2DKernel(x_stddev=1) )
+            
+            points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1),1*data_points.reshape(-1)]).points
             mesh.points = points
             mesh['test'] = data.reshape(-1)
             mesh.dimensions = [data.shape[1], data.shape[0], 1]
+            mesh =  CreateMesh(data_points, value = None)
+            mesh_c =  CreateMesh(data_points_c, value = None)
             a = p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-            d={'log':False,'value':value}
-        
+            contours = mesh.contour()
+            contours_c = mesh_c.contour()
+            p.add_mesh(contours, color="white", line_width=5)
+            p.add_mesh(contours_c, color="white", line_width=5)
+            p.update_coordinates(np.nan*mesh.contour().points,mesh=contours_c)
+
+            d={'log':False,'value':value,'Contour':True,'smooth':False,'mesh':mesh,'data': (data-np.nanmin(data[np.isfinite(data)])) / (data-np.nanmin(data[np.isfinite(data)])).ptp() }
+            d['data_points'] = data_points
             def callback(value):
                 points = mesh.points
-                #points[:, -1] =((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
-                #points[:, -1] =((points[:, -1]-np.nanmin(points[:, -1][np.isfinite(points[:, -1])]))*value/value_).reshape(-1)
                 if d['log'] is False:
-                    points[:, -1] =((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
-                else:
-                    points[:, -1] =    value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
-                
-                p.update_coordinates(points,mesh=mesh)
+                    points[:, -1] =    d['data_points'].reshape(-1) * value   #((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
+                    #points[:, -1] =   ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
+                else:# d['data_points'].ravel() * value#
+                    points[:, -1] =   d['data_points'].reshape(-1) * value   # value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
+                    #points[:, -1] =   value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
                 d['value'] = value
+                d['points'] = points 
+                change_contour()
                 return   
+            
             def log_callback(value):
-                verboseprint(1)
+                verboseprint(1)    
                 if value is True:
                     verboseprint(2)
-                    points[:, -1] =  (np.nanmax(data) - np.nanmin(data)) *d['value']*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) )
+                    #points[:, -1] =  d['points'][:, -1] #(np.nanmax(data) - np.nanmin(data)) *d['value']*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) )
+                    #points[:, -1] =  (np.nanmax(data) - np.nanmin(data)) *d['value']*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) )
                     verboseprint(2.5)
-                    d['log']=True
+                    #data = log_data_points #* d['value']                    
+                    if d['smooth']:
+                        data = log_data_points_c #* d['value']
+                    else:
+                        data = log_data_points #* d['value']
                 else:
                     verboseprint(2)
-                    points[:, -1] = ((data-np.nanmin(data[np.isfinite(data)]))*d['value']).reshape(-1)#data.ravel()+1
+                    if d['smooth']:
+                        data = data_points_c #* d['value']
+                    else:
+                        data = data_points #* d['value']                      
                     verboseprint(2.5)
-                    #p.update_scalars(data.ravel(), render=False)
-                    d['log']=False
-
+                d['data_points'] = data
+                points[:, -1]  = d['value']*data.reshape(-1)
+                d['points']  = points
+                d['log']=value
                 verboseprint(3)
-                p.update_coordinates(points,mesh=mesh)
-                return
+                change_contour()
 
-            p.add_slider_widget(callback, rng=[0,10*np.max([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data))  ])], value=value, title='Stretching', color=None, pass_widget=False, event_type='always', style=None)
+                return
+            
+            def Contour_callback(value):
+                d['Contour'] = value                   
+                change_contour()
+                return
+            
+            
+            def GIF_callback(value):#p.show(auto_close=False)
+                path = p.generate_orbital_path(n_points=36, shift=mesh.length)
+                p.open_gif("/tmp/orbit.gif")
+                p.orbit_on_path(path, write_frames=True)                #p.close()
+                return
+            
+            def SmoothCallback(value):
+                verboseprint(1)    
+                if value is True:
+                    if d['log']:
+                        data = log_data_points_c   
+                    else:
+                        data = data_points_c                            
+                else:
+                    if d['log']:
+                        data = log_data_points  
+                    else:
+                        data = data_points                  
+                d['data_points'] = data
+                points[:, -1]  = d['value']*data.reshape(-1)
+                d['points']  = points
+                d['smooth']=value
+                change_contour()
+                return
+            
+            def change_contour():
+                p.update_coordinates(d['points'],mesh=mesh)
+                p.update_coordinates(d['points'],mesh=mesh_c)
+                if d['Contour'] :
+                    if d['smooth'] is True:
+                        p.update_coordinates(mesh_c.contour().points,mesh=contours_c)
+                        p.update_coordinates(np.nan*mesh.contour().points,mesh=contours)
+                    else:
+                        p.update_coordinates(mesh.contour().points,mesh=contours)
+                        p.update_coordinates(np.nan*mesh_c.contour().points,mesh=contours_c)
+                else :
+                    p.update_coordinates(np.nan*mesh.contour().points,mesh=contours)
+                    p.update_coordinates(np.nan*mesh_c.contour().points,mesh=contours_c)
+                return
+            #p.add_slider_widget(callback, rng=[0,10*np.max([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data))  ])], value=value_, title='Stretching', color=None, pass_widget=False, event_type='always', style=None)
+            p.add_slider_widget(callback, rng=[0,10*np.max([1, data.shape[0]])], value=data.shape[0], title='Stretching', color=None, pass_widget=False, event_type='always', style=None)
             #p.enable_cell_picking(through=False)
             p.add_checkbox_button_widget(log_callback)#,position=(200,10))#,position='upper_left')
-            p.add_text('Log scale', name="mylabel",position=(70,10))#'lower_left')
+            p.add_checkbox_button_widget(Contour_callback,position=(10,80),value=True)#,position='upper_left')
+            p.add_checkbox_button_widget(GIF_callback,position=(10,70+80))#,position='upper_left')
+            b =p.add_text('Log scale', name="log",position=(70,10))#'lower_left')
+            a = p.add_text('Contour', name="contour",position=(70,80))#'lower_left')
+            a = p.add_text('Create a GIF', name="gif",position=(70,70+80))#'lower_left')
+            p.add_checkbox_button_widget(SmoothCallback,position=(10,80+70+70),value=False)#,position='upper_left')
+            p.add_text('Smooth', name="buttonSmooth",position=(70,80+70+70))#'lower_left')
+
             p.clear_box_widgets()
-            p.add_axes()
+            p.add_axes()#interactive=True)
             p.show()
         
         else:
@@ -3589,7 +3737,7 @@ def CreateCube_(d, data):
 
 
 
-def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False):
+def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False,overwrite=False):
     """Combine two images and an evaluable expression 
     """
     from scipy.ndimage import grey_dilation, grey_erosion, gaussian_filter, median_filter, sobel, binary_propagation, binary_opening, binary_closing, label
@@ -3625,7 +3773,8 @@ def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False):
     except (SyntaxError, NameError) as e:
         d=DS9n(xpapoint)
         #d.set("analysis message {Could not execute the command. Please make sure your pythonic expression is valid or refer to the help.}")     ;sys.exit()  
-        if  d.get('analysis message yesno {Could not execute the command. Do you wish to see examples of one line python commands?}')=='1':
+#        if  d.get('analysis message yesno {Could not execute the command. Do you wish to see examples of one line python commands?}')=='1':
+        if  yesno(d,'Could not execute the command. Do you wish to see examples of one line python commands?'):
     
             pprint("""********************************************************************************
                                         Execute Python Command
@@ -3660,7 +3809,10 @@ def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False):
     ds9 = ldict['ds9']
     verboseprint(ds9)
     fitsimage.data = ds9#ds9
-    name = filename[:-5] + '_modified.fits'
+    if overwrite is False:
+        name = filename[:-5] + '_modified.fits'
+    else:
+        name = filename
     fitsimage.header['DS9'] = filename
     fitsimage.header['IMAGE'] = path2remove
     try:
@@ -4664,9 +4816,12 @@ def DS9Region2Catalog(xpapoint, name=None, new_name=None):
         new_name = sys.argv[-1]
     if name is not None:
         d.set('regions ' + name)
-    regions = getregion(d, all=True, quick=False)
+    d.set('regions select all')
+    regions = getregion(d, all=False, quick=False, selected=True)
     #print(regions)
     #filename = getfilename(d)
+    if regions is None:
+        message(d,'It seems that you did not create any region. Please create regions and re-run the analysis.'); sys.exit()
     if hasattr(regions[0], 'xc'):
         x, y = np.array([r.xc for r in regions]), np.array([r.yc for r in regions])
     else:
@@ -4676,7 +4831,7 @@ def DS9Region2Catalog(xpapoint, name=None, new_name=None):
     if new_name is None:
         new_name = '/tmp/regions.csv'
     verboseprint(new_name)
-    cat.write( new_name,overwrite=True)
+    cat.write( new_name,overwrite=True,format='csv')
     return cat
 
 
@@ -5173,19 +5328,25 @@ def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
     d = DS9n(xpapoint)
     filename = getfilename(d)
     system = sys.argv[-2]
-    path = globglob(sys.argv[-1])
+    if sys.argv[-1] == '-':
+        path = [getfilename(d)]
+    else:
+        path = globglob(sys.argv[-1])
     verboseprint('system = ',system)
     region = getregion(d, quick=True,selected=True,system=system,dtype=float)
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region[0],dtype=float)
     area = [Yinf, Ysup,Xinf, Xsup]
     verboseprint(Yinf, Ysup,Xinf, Xsup)
-    if get(d, 'Size = %s, continuing?[y/n]'%(np.array([region[0][3],region[0][2]],dtype=int)), exit_=True)=='y':
+    if (len(region[0])!=5) & (len(region[0])!=4):
+        message(d,'Trimming only works on box regions. Create and select a box region an d re-run the analysis.');sys.exit()
+    #if get(d, 'Size = %s, continuing?[y/n]'%(np.array([region[0][3],region[0][2]],dtype=int)), exit_=True)=='y':
+    else:
         for filename in path:
             verboseprint(filename)            
             verboseprint('Using WCS information.')
     #        result, name = cropCLAUDS(path=filename, area=area, all_ext=False)
             result, name = cropCLAUDS(path=filename, position=[region[0][0]-1,region[0][1]-1],size=np.array([region[0][3],region[0][2]],dtype=int), all_ext=False)
-        verboseprint(name) 
+    print(name) 
     if len(path) < 2:
         d.set('frame new')
         d.set('tile yes')
@@ -5334,7 +5495,8 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
         d=DS9n(xpapoint)
     if ext != 1:
         #extent = get(d, "Your image contains %i extensions, write the ones you want to use, eg 0,1,3  put all for all extensions or let it blank for primary header."%(ext), exit_=False) 
-        if  d.get('analysis message yesno {Your image contains %i extensions. Do you wish to analyze only the primary header?}'%(ext))=='1':
+        #if  d.get('analysis message yesno {Your image contains %i extensions. Do you wish to analyze only the primary header?}'%(ext))=='1':
+        if  yesno(d,'Your image contains %i extensions. Do you wish to analyze only the primary header?}'%(ext)):
             extentsions = [0]
         else:
             extentsions = np.arange(ext)
@@ -5356,7 +5518,8 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
     verboseprint(t1s)
     t1 = vstack(t1s)
     csvwrite(t1, path_db )
-    if  d.get('analysis message yesno {Analysis completed and saved to %s! Do you want to load the file with PRISM?}'%(path_db))=='1':
+#    if  d.get('analysis message yesno {Analysis completed and saved to %s! Do you want to load the file with PRISM?}'%(path_db))=='1':
+    if yesno(d,question='Analysis completed and saved to %s! Do you want to load the file with PRISM?'%(path_db)):
         d.set('prism import csv ' + path_db)
 
 
@@ -5417,10 +5580,13 @@ def Parallelize(function=lambda x:print(x),action_to_paralize=[],parameters=[], 
             p.start()
         for job in jobs:
             job.join()
-    try:    
-        return return_dict['output']
-    except KeyError:
-        return
+#    return
+    if len(action_to_paralize)>0:
+        try:    
+            return return_dict['output']
+        except (KeyError,UnboundLocalError, TypeError) as e:
+            print(e)
+            return
 
 def VariableSmearingKernels(image, Smearing=1.5, SmearExpDecrement=50000):
 
@@ -6288,7 +6454,8 @@ def ReplaceWithNans(xpapoint):
         d.set("analysis message {It seems that you did not create or select the region. Please make sure to click on the region after creating it and re-run the analysis.}")    
         return 
     fitsimage = d.get_pyfits()[0]#fits.open(filename)[0]
-    value = eval(sys.argv[-1])
+    value = eval(sys.argv[-2])
+    overwrite = bool(int(sys.argv[-1]))
     image = fitsimage.data.astype(float).copy()
     verboseprint(regions)
     try:
@@ -6323,7 +6490,10 @@ def ReplaceWithNans(xpapoint):
 #            image[Xinf:Xsup+1,Yinf:Ysup+2] = np.nan
             image[mask] = value#np.nan
     fitsimage.data = image
-    filename = fitswrite(fitsimage,filename)
+    if overwrite:
+        filename = fitswrite(fitsimage,filename)
+    else:
+        filename = fitswrite(fitsimage,filename+'_modified.fits')
     d.set('file '+ filename)
     #d.set('pan to %0.3f %0.3f physical' % (xc,yc))
     return
@@ -6344,11 +6514,12 @@ def InterpolateNaNs(path, stddev=1):
     while (~np.isfinite(result).all()):
         verboseprint(len(np.where(~np.isfinite(result))[0]), 'NaN values found!')
         verboseprint('Infinite values in the image, inteprolating NaNs with 2D Gaussian kernel of standard deviation = ', stddev)
-        kernel = Gaussian2DKernel(stddev=stddev)
+        kernel = Gaussian2DKernel(x_stddev=stddev,y_stddev=stddev)
         result = interpolate_replace_nans(result, kernel)#.astype('float16')
         stddev += 1
-    result -= offset
-    image.data = result.astype('uint32')
+    #result -= offset
+    image.data = result#.astype('uint32')
+    #image.data = result.astype('uint32')
     name = path[:-5] + '_NaNsFree.fits'
     fitswrite(image, name)
     return result, name
@@ -6366,7 +6537,7 @@ def DS9InterpolateNaNs(xpapoint):
         verboseprint(filename)
         result, name = InterpolateNaNs(filename, stddev=2)
         if len(path)<2:
-            d.set("lock frame physical")
+            d.set("lock frame image")
             d.set('frame new')
             d.set('tile yes')
             d.set('file ' + name)  
@@ -7810,7 +7981,6 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     verboseprint('\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]))
     #os.system('sex -d > default.sex')
     if DETECTION_IMAGE is not None:
-        print(2)
         command = 'sex ' + DETECTION_IMAGE + filename  + ' -WRITE_XML Y   -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[:]])
         verboseprint(command)
         answer = os.system(command)
@@ -7818,14 +7988,13 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
             #d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
             pprint(""" It seems that SExtractor encountered an error.\nPlease verify your image(s)/parameters. \nTo know more about the error run the following command in a terminal:\n%s"""%(command)) 
             sys.exit()
-        print(3)
     else:   
         command = 'sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[:]])
         verboseprint(command)
         answer = os.system(command)
 
     colors =  ['Orange']  #['White','Yellow','Orange']  
-    print(params[0])
+    verboseprint(params[0])
     #if os.path.isfile(params[0]):
     #if os.path.isfile(params[0]):
     if os.path.isfile(param_dict['CATALOG_NAME']):
@@ -7834,12 +8003,12 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         try:
             cat3 = Table.read(param_dict['CATALOG_NAME'])
         except astropy.io.registry.IORegistryError:
-            print('Reading ascii')
+            verboseprint('Reading ascii')
             cat3 = Table.read(param_dict['CATALOG_NAME'], format='ascii')   
         if len(cat3)==1:
-            print('Reading LDAC_OBJECT')
+            verboseprint('Reading LDAC_OBJECT')
             cat3 = Table.read(param_dict['CATALOG_NAME'], format="fits", hdu='LDAC_OBJECTS')
-        print(cat3)
+        verboseprint(cat3)
         w = WCS(filename)
         d.set('regions showtext no')
         if len(cat3)==0:
@@ -7852,20 +8021,21 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
             else:
                 verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
                 create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-            print('Regions created')
-            if len(cat3)<5e4:
-                print('Setting regions')
-                d.set('regions ' + cat_path + '.reg')
-                if  d.get('analysis message yesno {%i sources detected! Do you want to load the sextractor catalog with PRISM?}'%(len(cat3)))=='1':
-                    d.set('prism ' + cat_path)
+            verboseprint('Regions created')
+            verboseprint('Setting regions')
+            if  len(cat3)>1e4:
+               # if d.get('analysis message yesno {Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.}'%(len(cat3)))=='1':
+                if yesno(d,question='Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.}'%(len(cat3))):
+                    d.set('regions ' + cat_path + '.reg')
             else:
-                print('Too many regions')
-                d = DS9n(xpapoint);d.set('analysis message {%i sources detected, loading the regions in DS9 might crash DS9. The catalog was saved here: %s and the resgions here: %s}'%(len(cat3),params[0],cat_path + '.reg'));sys.exit()
+                d.set('regions ' + cat_path + '.reg')
+            #if  d.get('analysis message yesno {%i sources detected! Do you want to load the sextractor catalog with PRISM?}'%(len(cat3)))=='1':
+            if  yesno(d,"""%i sources detected! Do you want to load the sextractor catalog with PRISM?"""%(len(cat3))):
+                d.set('prism ' + param_dict['CATALOG_NAME'])
         #pprint(cat3)
     else:
         verboseprint('Can not find the output sextractor catalog...')
     return
-
 
 
 
@@ -7949,7 +8119,8 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
         DS9Catalog2Region(xpapoint,name=param_dict['output-catalog-filename'] ,x='col1',y='col2',ID='-')
         
 
-    if  d.get('analysis message yesno {Analysis completed! Do you want to load the sextractor catalog with PRISM?}')=='1':
+    #if  d.get('analysis message yesno {Analysis completed! Do you want to load the sextractor catalog with PRISM?}')=='1':
+    if yesno(d,'Analysis completed! Do you want to load the sextractor catalog with PRISM?'):
         d.set('prism ' + param_dict['output-catalog-filename'])
 
     return
@@ -8022,16 +8193,9 @@ def RunSextractor_OLD(xpapoint, filename=None, detector=None, path=None):
             sys.exit()
     else:   
         verboseprint('sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
-        #import subprocess
-        #answer = subprocess.check_output('sex ' + filename + ' -c  default.sex -' + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]), shell=True, stderr=subprocess.STDOUT)
-        #pprint(answer)
+
         answer = os.system('sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-        # if answer != 0:
-        #     d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
-#try:
-#    xml = Table.read('/tmp/%s.xml'%(os.path.basename(filename)),table_id=1)
-#    os.system('echo %s, %s, %s, %s, %s, %s, %s, %s, %s >> /tmp/sextractor_background.csv'%(filename, xml['NDetect'][0],xml['NSextracted'][0],xml['Threshold'][0][0],xml['Threshold'][0][1],xml['Background_Mean'][0][0], xml['Background_Mean'][0][1],xml['Background_StDev'][0][0], xml['Background_StDev'][0][1]))
-#    os.remove('/tmp/%s.xml'%(os.path.basename(filename)))
+
     colors =  ['Orange']  #['White','Yellow','Orange']  
     if os.path.isfile(params[0]):
         try:
@@ -8054,7 +8218,8 @@ def RunSextractor_OLD(xpapoint, filename=None, detector=None, path=None):
             if path is None:
                 if len(cat3)<5e4:
                     d.set('regions ' + cat_path + '.reg')
-                    if  d.get('analysis message yesno {Analysis completed! Do you want to load the sextractor catalog with PRISM?}')=='1':
+                    #if  d.get('analysis message yesno {Analysis completed! Do you want to load the sextractor catalog with PRISM?}')=='1':
+                    if  yesno(d,'Analysis completed! Do you want to load the sextractor catalog with PRISM?}'):
                         d.set('prism ' + cat_path)
                         
                 else:
@@ -8932,7 +9097,9 @@ def DS9open(xpapoint, filename=None):
             img.save('/tmp/clipboard_image.jpg', 'JPEG')
             filename = '/tmp/clipboard_image.jpg'
     filenames = globglob(filename, ds9_im = False)
-    d.set('tile yes')   
+    d.set('tile yes')
+    if d.get('file')=='':
+        d.set('frame delete')
     path=1
     while (filenames == []) & (path!=''):
         path = get(d, "File not found, please verify your path.  You can use global pattern matching", exit_=True)#(*/?/[9-16], etc)
@@ -9740,7 +9907,8 @@ def DS9PythonInterp(xpapoint):
     #a, b = float(a), float(b)
     #if len(sys.argv) > 5: path = Charge_path_new(filename, entry_point=5)
    # path = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and verboseprint('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-    path = globglob(sys.argv[-1],xpapoint)
+    path = globglob(sys.argv[-2],xpapoint)
+    overwrite=bool(int(sys.argv[-1]))
 
     if  ((int(d.get('block'))>1)|(d.get('smooth')=='yes')) & (len(path)==1):
         answer = ds9entry(xpapoint, 'It seems that your loaded image is modified (smoothed or blocked). Do you want to run the analysis on this modified image? [y/n]', quit_=False)
@@ -9764,7 +9932,7 @@ def DS9PythonInterp(xpapoint):
     # for filename in path:
     #     verboseprint(filename)
     #     result, name = ExecCommand(filename, xpapoint=xpapoint,path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_))) 
-    result, name = Parallelize(function=ExecCommand,parameters=[path2remove,exp,my_conf,xpapoint,bool(int(eval_))],action_to_paralize=path ,number_of_thread=10)    
+    result, name = Parallelize(function=ExecCommand,parameters=[path2remove,exp,my_conf,xpapoint,bool(int(eval_)),overwrite],action_to_paralize=path ,number_of_thread=10)    
                                         
     if len(path) < 2:
         d.set('frame new')
@@ -9838,11 +10006,11 @@ def main():
     if len(sys.argv)==1:
         CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9QuickLookPlugIn/')
         PresentPlugIn()
+        #LoadDS9QuickLookPlugin()
     elif (len(sys.argv)==2) & ((sys.argv[-1]=='help')|(sys.argv[-1]=='h')):
         CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9QuickLookPlugIn/')
         PresentPlugIn()
-        from shutil import which
-        print("which('DS9Utils') =", which('DS9Utils'))
+        #print("which('DS9Utils') =", which('DS9Utils'))
         print("__file__ =", __file__)
         print("__package__ =", __package__)
         print('Python version = ', sys.version)
@@ -9867,7 +10035,7 @@ def main():
         DictFunction_AIT =     {'centering':DS9center, 'radial_profile':DS9rp,
                                 'throughfocus':DS9throughfocus, 'ComputeFluctuation':ComputeFluctuation,
                                 'throughfocus_visualisation':DS9visualisation_throughfocus, 
-                                'throughslit': DS9throughslit,
+                                'throughslit': DS9throughslit,'ExploreThroughfocus':ExploreThroughfocus,
                                 'ReplaceWithNans': ReplaceWithNans,'InterpolateNaNs': DS9InterpolateNaNs,'Trimming': DS9Trimming,
                                 'ColumnLineCorrelation': DS9CLcorrelation,'ComputeEmGain':DS9ComputeEmGain,
                                 'DS9_2D_FFT':DS9_2D_FFT,'2D_autocorrelation': DS9_2D_autocorrelation,'get_depth_image': get_depth_image,
@@ -9887,7 +10055,7 @@ def main():
         xpapoint = sys.argv[1]
         function = sys.argv[2]
 
-        if function not in ['verbose','setup','next_step']:
+        if function not in ['verbose','next_step']:#,'setup'
             verboseprint('\n****************************************************\nDS9Utils ' + ' '.join(sys.argv[1:])+'\n****************************************************')# %s %s '%(xpapoint, function) + ' '.join())
             verboseprint(sys.argv)
         if sys.stdin is None:
@@ -9904,7 +10072,6 @@ def main():
                 pprint('To have more information about the error run this in the terminal:')
                 pprint(' '.join(sys.argv))
         else:
-            print('STDIN detected')
             a = DictFunction[function](xpapoint=xpapoint) 
 
                 # pprint(sys.argv.join(' '))
