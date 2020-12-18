@@ -22,6 +22,7 @@ except ImportError:
 else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
 from functools import wraps
+DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
 
 def readV(path):
     if os.path.isfile(path):
@@ -49,7 +50,9 @@ def verbose(xpapoint=None,verbose=None):
 #        v = 0
 #    if v == 'DEBUG':
 #        v = 1
-    np.save(os.path.join(conf_dir,'verbose'), int(v))
+    #np.save(os.path.join(conf_dir,'verbose'), int(v))
+    os.system('echo %s > %s'%(verbose, DS9_BackUp_path + '.verbose.txt'))
+
     if v is None:
         sys.exit()
     
@@ -103,11 +106,15 @@ def CreateFolders(DS9_BackUp_path= os.environ['HOME'] + '/DS9QuickLookPlugIn/'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/HeaderDataBase')
     if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/subsets'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/subsets')
+    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/tmp'):
+        os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/tmp')
     #np.savetxt(DS9_BackUp_path + '/.verbose.txt',[int(1)])
-    os.system('echo 1 > ' + DS9_BackUp_path + '/.verbose.txt')
+    if not os.path.exists(DS9_BackUp_path + '.verbose.txt'):
+        os.system('echo 1 > %s'%(DS9_BackUp_path + '.verbose.txt'))
+    if not os.path.exists(DS9_BackUp_path + '.message.txt'):
+        os.system('echo 1 > %s'%(DS9_BackUp_path + '.message.txt'))
     return  DS9_BackUp_path
 
-DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
 if len(sys.argv)==1:
     CreateFolders()
 
@@ -148,21 +155,21 @@ def Log(v=None):
 logger = Log()
 
 #def yesno(d,question='',verbose=True):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
-def yesno(d,question='',verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.verbose.txt').read()))):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
+def yesno(d,question='',verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.message.txt').read()))):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
     if verbose:
-        print(question)
+        verboseprint(question)
         return bool(int(d.get("""analysis message yesno {%s}"""%(question))))
     else:
         return True
 
-def message(d,question='',verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.verbose.txt').read()))):#
+def message(d,question='',verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.message.txt').read()))):#
     if verbose:
         return bool(int(d.set('analysis message {%s}'%(question))))
     else:
         return True
 
 #def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True)))):
-def verboseprint(*args, logger = logger, verbose=False):
+def verboseprint(*args, logger = logger, verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.verbose.txt').read()))):#False
     #did not manage to save log in .log but not display it....
     
     st = ' '.join([str(arg) for arg in args])
@@ -747,13 +754,19 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
         #image_area = [int(ly/2),int(ly/2)+50,int(lx/2),int(lx/2)+50]
         #image = parse_data(d.get("data image %i %i %i  %i no"%(int(lx/2),int(lx/2)+50,int(ly/2),int(ly/2)+50)))[-1]
     image = fitsimage[Yinf: Ysup,Xinf: Xsup]
-    d.set("cmap %s"%(color))
-    d.set("scale %s"%(scale))
+    # d.set("cmap %s"%(color))
+    # d.set("scale %s"%(scale))
+    # try:
+    #     image_ok = image[np.isfinite(image)]
+    #     d.set("scale limits %0.3f %0.3f "%(np.nanpercentile(image_ok,cuts[0]),np.nanpercentile(image_ok,cuts[1])))
+    # except ValueError:
+    #     pass
     try:
         image_ok = image[np.isfinite(image)]
-        d.set("scale limits %0.3f %0.3f "%(np.nanpercentile(image_ok,cuts[0]),np.nanpercentile(image_ok,cuts[1])))
+        d.set("cmap %s ; scale %s ; scale limits %0.3f %0.3f "%(color , scale, np.nanpercentile(image_ok,cuts[0]),np.nanpercentile(image_ok,cuts[1])))
     except ValueError:
-        pass
+        d.set("cmap %s ; scale %s "%(color , scale))
+    
     # if grid=='1':
     #     d.set("grid yes") 
     # elif grid=='0':
@@ -853,7 +866,8 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
 #        for f in files:
 #            print(f)
     d=DS9n(xpapoint)
-    d.set("""analysis message {Images are saved as symbolik links there : %s}"""%(path_date))
+    message(d,'Images are saved as symbolik links there : %s'%(path_date))
+    #d.set("""analysis message {Images are saved as symbolik links there : %s}"""%(path_date))
 
     return t2
 
@@ -1143,9 +1157,6 @@ def AperturePhotometry(xpapoint):
             phot['aper_bkg'] = bkg_median * apertures.area
             phot['aper_sum_bkgsub'] = phot['aperture_sum'] - phot['aper_bkg']
             Phot.add_row(phot[0])
-            # -2.5*np.log10(phot['aperture_sum'] -phot['aper_bkg']) + zero_point_magnitude
-            #M += '%0.1f - '%(-2.5*np.log10(phot['aperture_sum'] -phot['aper_bkg']) + zero_point_magnitude)
-            #d.set('regions command "circle {} {} {} # color=red  text={{{}}}"'.format(reg[0],reg[1],aper,float(-2.5*np.log10(phot['aperture_sum'] -phot['aper_bkg']) + zero_point_magnitude)))
     Phot['MAG_APER'] = np.around(-2.5*np.log10(Phot['aperture_sum'] -Phot['aper_bkg']) + zero_point_magnitude,1)
     for col in Phot.colnames:
         Phot[col].info.format = '%.8g'  # for consistent table output
@@ -1457,9 +1468,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
     verboseprint('New center = %s %s '%( popt[1], popt[2]))
     verboseprint('New center = %s %s '%(Xinf, Yinf))
     verboseprint(Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi )
-    d.set('regions format ds9')
-    d.set('regions system detector')
-    d.set('regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "' % ( Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi ))
+    d.set('regions format ds9 ; regions system detector ; regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "' % ( Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi ))
 
     if Plot:
         from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme, wrap
@@ -1792,8 +1801,7 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf,selected=
     """ Read a region from a ds9 instance.
     Returns a tuple with the data in the region.
     """
-    win.set("regions format ds9")
-    win.set("regions system %s"%(system))#rows = win.get("regions list")
+    win.set("regions format ds9 ; regions system %s"%(system))#rows = win.get("regions list")
     if all is False:
         regions = win.get("regions selected")#'# Region file format: DS9 version 4.1\nglobal color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1'#win.get("regions selected")
         verboseprint(regions)
@@ -1859,7 +1867,7 @@ def ENC(x,ENCa):
 
 def throughfocus(center, files,datas=None, x=None, 
                  fibersize=0, center_type='barycentre', SigmaMax= 4,Plot=True,
-                 Type=None, ENCa_center=None, pas=None, WCS=False, DS9backUp = DS9_BackUp_path, config=my_conf):
+                 Type=None, ENCa_center=None, pas=None, WCS=False, DS9backUp = DS9_BackUp_path, config=my_conf,offsets=10):
     """How to use: Open an image of the through focus which is close to the focus.  Click on region. Then click
     precisely on what you think is the centre of the PSF (the size does not matter). Select the region you created
     and press t (throughfocus) or go in analysis menu: throughfocus. This will open a dialog box that asks what
@@ -1873,8 +1881,8 @@ def throughfocus(center, files,datas=None, x=None,
     """
     from astropy.io import fits
     from astropy.table import Table, vstack
-    import matplotlib; matplotlib.use('TkAgg')  
-    import matplotlib.pyplot as plt
+    # import matplotlib; matplotlib.use('TkAgg')  
+    # import matplotlib.pyplot as plt
     from scipy.optimize import curve_fit
     color = 'black'
     fwhm = []
@@ -1889,10 +1897,10 @@ def throughfocus(center, files,datas=None, x=None,
     images=[]
     ENCa = []
     ext = FitsExt(fits.open(files[0]))
+    x=offsets
     for file in files:
         filename = file
         with fits.open(filename) as f:
-            #stack[:,:,i] = f[0].data
             fitsfile = f[ext]
             image = fitsfile.data
         time = fitsfile.header['DATE']
@@ -1903,8 +1911,6 @@ def throughfocus(center, files,datas=None, x=None,
             if ENCa_center is not None:
                 verboseprint('Actuator given: Center = {} , PAS = {}'.format(ENCa_center,pas))
                 ENCa = np.linspace(ENCa_center-nombre*pas, ENCa_center+nombre*pas, 2*nombre+1)[::-1]
-#            else:
-#                ENCa = np.linspace(100,100, 2*nombre+1)[::-1]
         day,h, m, s = float(time[-11:-9]),float(time[-8:-6]), float(time[-5:-3]), float(time[-2:])
         sec.append(t2s(h=h,m=m,s=s,d=day))
 
@@ -1925,80 +1931,70 @@ def throughfocus(center, files,datas=None, x=None,
         sumpix.append(d['Flux'])
         varpix.append(subimage.var())
     f = lambda x,a,b,c: a * (x-b)**2 + c#a * np.square(x) + b * x + c
-    x = np.arange(len(files))
-    fig, axes = plt.subplots(2, 2,figsize=(10,6),sharex=True)#, figsize=(10,6)
+    
+    # fig, axes = plt.subplots(2, 2,figsize=(10,6),sharex=True)#, figsize=(10,6)
     xtot = np.linspace(x.min(),x.max(),200)
+
     try:
         opt1,cov1 = curve_fit(f,x,fwhm)
-        axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted',color = color)
+        # axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted',color = color)
         bestx1 = xtot[np.argmin(f(xtot,*opt1))]
-        axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)],color = color,label='Square fit argmin: %0.2f'%(bestx1))
-#        if len(ENCa) > 0:
-#            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx1,ENC(bestx1,ENCa)))
-#        else:
-#            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx1))
-#            
+        # axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)],color = color,label='Square fit argmin: %0.2f'%(bestx1))
+        np.savetxt('/tmp/fwhm_fit.dat',np.array([xtot,f(xtot,*opt1)]).T)
+
     except RuntimeError as e:
         logger.warning(e)
-        opt1 = [0,0,0]
+        opt1 = [np.nan,np.nan,np.nan]#[0,0,0]
         bestx1 = np.nan
         pass 
     try:
         opt2,cov2 = curve_fit(f,x,EE50)
-        axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted',color = color)
+        # axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted',color = color)
         bestx2 = xtot[np.argmin(f(xtot,*opt2))]
-#        if len(ENCa) > 0:
-#            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx2,ENC(bestx2,ENCa)))
-#        else:
-#            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx2))
-        axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)],color = color,label='Square fit argmin: %0.2f'%(bestx2))
+        # axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)],color = color,label='Square fit argmin: %0.2f'%(bestx2))
+        np.savetxt('/tmp/EE50_fit.dat',np.array([xtot,f(xtot,*opt2)]).T)
     except RuntimeError as e:
         logger.warning(e)
-        opt2 = [0,0,0]
+        opt2 = [np.nan,np.nan,np.nan]#[0,0,0]
         bestx2 = np.nan
         pass     
     try:
         opt3,cov3 = curve_fit(f,x,EE80)
-        axes[1,1].plot(xtot,f(xtot,*opt3),linestyle='dotted',color = color)
+        # axes[1,1].plot(xtot,f(xtot,*opt3),linestyle='dotted',color = color)
         bestx3 = xtot[np.argmin(f(xtot,*opt3))]
-#        if len(ENCa) > 0:
-#            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx3,ENC(bestx3,ENCa)))
-#        else:
-#            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx3))
-        axes[1,1].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)],color = color,label='Square fit argmin: %0.2f'%(bestx3))
+        # axes[1,1].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)],color = color,label='Square fit argmin: %0.2f'%(bestx3))
+        np.savetxt('/tmp/EE80_fit.dat',np.array([xtot,f(xtot,*opt3)]).T)
     except RuntimeError as e:
         logger.warning(e)
-        opt3 = [0,0,0]
+        opt3 = [np.nan,np.nan,np.nan]#[0,0,0]
         bestx3 = np.nan
         pass     
     try:
+        maxpix /= np.nanmax(maxpix)
         opt4,cov4 = curve_fit(f,x,maxpix)
-        axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted',color = color)
+        # axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted',color = color)
         bestx4 = xtot[np.argmax(f(xtot,*opt4))]
-        axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)],color = color,label='Square fit argmin: %0.2f'%(bestx4))
-#        if len(ENCa) > 0:
-#            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx4,ENC(bestx4,ENCa)))
-#        else:
-#            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx4))
+        # axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)],color = color,label='Square fit argmin: %0.2f'%(bestx4))
+        np.savetxt('/tmp/maxpix_fit.dat',np.array([xtot,f(xtot,*opt4)]).T)
     except RuntimeError as e:
         logger.warning(e)
-        opt4 = [0,0,0]
+        opt4 = [np.nan,np.nan,np.nan]#[0,0,0]
         bestx4 = np.nan
         pass            
 
     bestx6, bestx6 = np.nan, np.nan
-    import matplotlib.ticker as mtick
-    axes[1,1].yaxis.set_label_position("right")
-    axes[0,1].yaxis.set_label_position("right")
-    axes[1,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
-    axes[0,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
-    axes[1,1].yaxis.tick_right()
-    axes[0,1].yaxis.tick_right()  
-    fig.tight_layout()
+    # import matplotlib.ticker as mtick
+    # axes[1,1].yaxis.set_label_position("right")
+    # axes[0,1].yaxis.set_label_position("right")
+    # axes[1,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
+    # axes[0,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
+    # axes[1,1].yaxis.tick_right()
+    # axes[0,1].yaxis.tick_right()  
+    # fig.tight_layout()
 
-    name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
-    fig.suptitle(name, y=1)
-    fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
+    # name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
+    # fig.suptitle(name, y=1)
+    # fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
     t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
     t.add_row((os.path.basename(filename),1,
                t2s(h=h,m=m,s=s,d=day), d['Center'][0],d['Center'][1],min(fwhm),
@@ -2007,37 +2003,39 @@ def throughfocus(center, files,datas=None, x=None,
                ENC(bestx3,ENCa),ENC(bestx4,ENCa),
                ENC(bestx6,ENCa)))#tbm
 
-    if Plot:
-        axes[0,0].plot(x,fwhm, '--o',label=r'$\sigma$[pix]'+', min=%0.1f'%(min(f(xtot,*opt1))),color = color, linewidth=0.5)
-        axes[0,0].legend()    
-        axes[1,0].plot(x,EE50, '--o',label=r'$EE_{50\%}[pix]$'+', min=%0.1f'%(min(f(xtot,*opt2))),color = color, linewidth=0.5)
-        axes[1,0].legend()    
-        axes[1,1].plot(x,EE80, '--o',label=r'$EE_{50\%}[pix]$'+', min=%0.1f'%(min(f(xtot,*opt3))),color = color, linewidth=0.5)
-        axes[1,1].legend()
+    
+    np.savetxt('/tmp/fwhm.dat',np.array([x, fwhm]).T)
+    np.savetxt('/tmp/EE50.dat',np.array([x, EE50]).T)
+    np.savetxt('/tmp/EE80.dat',np.array([x, EE80]).T)
+    np.savetxt('/tmp/maxpix.dat',np.array([x, maxpix]).T)
+    #if Plot:
+        # axes[0,0].plot(x,fwhm, '--o',label=r'$\sigma$[pix]'+', min=%0.1f'%(min(f(xtot,*opt1))),color = color, linewidth=0.5)
+        # axes[0,0].legend()    
+        # axes[1,0].plot(x,EE50, '--o',label=r'$EE_{50\%}[pix]$'+', min=%0.1f'%(min(f(xtot,*opt2))),color = color, linewidth=0.5)
+        # axes[1,0].legend()    
+        # axes[1,1].plot(x,EE80, '--o',label=r'$EE_{50\%}[pix]$'+', min=%0.1f'%(min(f(xtot,*opt3))),color = color, linewidth=0.5)
+        # axes[1,1].legend()
 
-        axes[0,1].plot(x,maxpix, '-o',label=r'$Max_{pix}$'+', max=%0.1f'%(max(f(xtot,*opt4))),color = color, linewidth=0.5)
-        axes[0,1].legend()       
-        fig.text(0.5, 0.01,'Index of the images [first=0]', ha='center',fontsize=12)
-        plt.show()
-        
-        
-        fig, axes = plt.subplots(1, 11,sharey=True)#,figsize=(24,3))
-        for i in range(len(images)):
-            axes[i].imshow(images[i])
-            axes[i].axis('equal')
-            #subname = os.path.basename(files[i])[6:-5] 
-            try:
-                axes[i].set_xlabel('%s - %0.2f'%(os.path.basename(files[i].split('.')[0]),float(ENCa[i])))
-                #axes[i].set_title(float(ENCa[i]))
-            except:
-                axes[i].set_xlabel(os.path.basename(files[i].split('.')[0]))
-                pass
+        # axes[0,1].plot(x,maxpix, '-o',label=r'$Max_{pix}$'+', max=%0.1f'%(max(f(xtot,*opt4))),color = color, linewidth=0.5)
+        # axes[0,1].legend()       
+        # fig.text(0.5, 0.01,'Index of the images [first=0]', ha='center',fontsize=12)
+        # plt.show()
 
-        fig.suptitle(name,y=1)
-        #fig.subplots_adjust(top=0.88)   
-        fig.tight_layout()
-        #plt.axis('equal')
-        fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
+
+        
+        # fig, axes = plt.subplots(1, 11,sharey=True)#,figsize=(24,3))
+        # for i in range(len(images)):
+        #     axes[i].imshow(images[i])
+        #     axes[i].axis('equal')
+        #     try:
+        #         axes[i].set_xlabel('%s - %0.2f'%(os.path.basename(files[i].split('.')[0]),float(ENCa[i])))
+        #     except:
+        #         axes[i].set_xlabel(os.path.basename(files[i].split('.')[0]))
+        #         pass
+
+        # fig.suptitle(name,y=1)
+        # fig.tight_layout()
+        # fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
     try:
         OldTable = Table.read(os.path.dirname(filename) + '/Throughfocus.csv')
     except IOError as e:
@@ -2045,14 +2043,88 @@ def throughfocus(center, files,datas=None, x=None,
         t.write(os.path.dirname(filename) + '/Throughfocus.csv')
     else:
         t = vstack((OldTable,t))
-        #print ('new',newTable)
         t.write(os.path.dirname(filename) + '/Throughfocus.csv',overwrite=True)
+
+
+
+    d = []
+    d.append('plot line open')
+    #d.append("plot axis x grid no ")  
+    d.append("plot axis y grid no ")
+    d.append("plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt1)),xtot[np.argmin(f(xtot,*opt1))]))
+    d.append("plot title y 'FWHM' ")
+    d.append("plot load /tmp/fwhm.dat xy")
+    d.append("plot line shape circle ")
+    d.append("plot line width 0 ")
+    d.append("plot line shape color black") 
+    #d.append("plot legend yes ")
+    d.append("plot legend position right ")
+    d.append("plot load /tmp/fwhm_fit.dat xy")
+    d.append("plot line dash yes ")
+    d.append("plot title legend ''")  
+    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
+      
+      
+    d.append("plot add graph ")
+    d.append("plot axis y grid no ")
+    d.append("plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "%(np.nanmax(f(xtot,*opt4)),xtot[np.argmax(f(xtot,*opt4))]))
+    d.append("plot load /tmp/maxpix.dat xy")
+    d.append("plot title y 'Max pix' ")
+    d.append("plot line shape circle ")
+    d.append("plot line width 0 ")
+    d.append("plot line shape color black") 
+    #d.append("plot legend yes ")
+    d.append("plot legend position right ")
+    d.append("plot load /tmp/maxpix_fit.dat xy")
+    d.append("plot line dash yes ")
+    d.append("plot title legend ''")  
+    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
+      
+    d.append("plot add graph ")
+    d.append("plot axis y grid no ")
+    d.append("plot title 'Fit: Best EE50 = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt2)),xtot[np.argmin(f(xtot,*opt2))]))
+      
+    d.append("plot load /tmp/EE50.dat xy")
+    d.append("plot title y 'Radial profile' ")
+    d.append("plot line shape circle ")
+    d.append("plot line width 0 ")
+    d.append("plot line shape color black") 
+    #d.append("plot legend yes ")
+    d.append("plot legend position right ")
+    d.append("plot load /tmp/EE50_fit.dat xy")
+    d.append("plot line dash yes ")
+    d.append("plot title legend ''")  
+    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
+    
+    d.append("plot add graph ")
+    d.append("plot axis y grid no ")
+    d.append("plot title 'Fit: Best EE80 = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt3)),xtot[np.argmin(f(xtot,*opt3))]))
+    d.append("plot load /tmp/EE80.dat xy")
+    d.append("plot title y 'Radial profile' ")
+    d.append("plot line shape circle ")
+    d.append("plot line width 0 ")
+    d.append("plot line shape color black") 
+    #d.append("plot legend yes ")
+    d.append("plot legend position right ")
+    d.append("plot load /tmp/EE80_fit.dat xy")
+    d.append("plot line dash yes ")
+    d.append("plot title legend ''")  
+    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
+      
+    d.append("plot layout GRID ; plot layout STRIP scale 100")
+    d.append("plot font legend size 9 ")
+    d.append("plot font labels size 13 ")
+      
+    ds9=DS9()
+    ds9.set(' ; '.join(d)) 
+      
+
     return images#fwhm, EE50, EE80
 
 
 def throughfocusWCS(center, files,x=None, 
                  fibersize=0, center_type='barycentre', SigmaMax= 4,Plot=True,
-                 Type=None, ENCa_center=None, pas=None, WCS=False, DS9backUp = DS9_BackUp_path):
+                 Type=None, ENCa_center=None, pas=None, WCS=False, DS9backUp = DS9_BackUp_path, offsets=10):
     """Same algorithm than throughfocus except it works on WCS coordinate 
     and not on pixels. Then the throughfocus can be run on stars even
     with a sky drift
@@ -2062,6 +2134,8 @@ def throughfocusWCS(center, files,x=None,
     import matplotlib; matplotlib.use('TkAgg')  
     import matplotlib.pyplot as plt
     from scipy.optimize import curve_fit
+    x=offsets
+
     fwhm = []
     EE50 = []
     EE80 = [] 
@@ -2372,6 +2446,17 @@ def DS9throughfocus(xpapoint, Plot=True):
         verboseprint('No actuator given, taking header ones for guider images, none for detector images')
         ENCa_center, pas = None, None        
     x = np.arange(len(path))
+    if len(path)<3:
+        message(d,'You need at least 3 images to perform a throughfocus analysis. Select at least 3 images and re-run the analysis.'),sys.exit()
+
+
+    if sys.argv[-1]=='-':                    
+        offsets  = np.arange(len(path))
+    else:
+        offsets  = np.array([float(value) for value in sys.argv[-1].split(',') if value !=''] )
+        if len(offsets) != len(path):
+            message(d,'You entered %i offsets but you have %i images. Please re-run the analysis and provide consistent number of offsets.'%(len(offsets), len(path))),sys.exit()
+
     
     image = fits.open(filename)[0]
     rp = AnalyzeSpot(image.data,center = [np.int(a.xc),
@@ -2384,7 +2469,16 @@ def DS9throughfocus(xpapoint, Plot=True):
     if image.header['BITPIX'] == -32:
         Type = 'guider'
     else:
-        Type = 'detector'        
+        Type = 'detector'   
+        
+    # if yesno(d,'Are the throughfocus images taken uniformely? If not you will be asked to provide the offset of each image. If yes we will only use the index of each image.') is False:
+    #     ENCa_center = get(d, 'Please provide the offset of each image. You need %s values separated by commas, eg: %s'%(len(path), ('%s'%(repr(np.round(np.linspace(0.1,0.9,len(path)),1)))).replace(' ','').replace('[','').replace(']','').replace('array(','').replace(')','')))
+    #     offsets = np.array([float(value) for value in ENCa_center.split(',')] )
+    #     if len(offsets) != len(path):
+    #         message(d,'You entered %i offsets but you have %i images. Please re-run the analysis and provide consistent number of offsets.'%(len(offsets), len(path))),sys.exit()
+    # else:
+    #     offsets  = np.arange(len(path))
+        
     if WCS:
         from astropy import wcs
         w = wcs.WCS(image.header)
@@ -2395,11 +2489,11 @@ def DS9throughfocus(xpapoint, Plot=True):
         
         #alpha, delta = float(alpha), float(delta)
         throughfocusWCS(center = [alpha,delta], files=path,x = x,fibersize=0,
-                     center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas,WCS=True)
+                     center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas,WCS=True,offsets=offsets)
         
     else:
         datas = throughfocus(center = rp['Center'], files=path,x = x,fibersize=0,
-                     center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas)
+                     center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas, offsets=offsets)
 
     
     # datas = Table.read('/Users/Vincent/Desktop/stack_cat.fits')['VIGNET']
@@ -2407,9 +2501,22 @@ def DS9throughfocus(xpapoint, Plot=True):
     #     plt.figure()
     #     imshow(data);colorbar()
     #     plt.show()
-    PyvistaThoughfocus(datas)
+    from astropy.convolution import convolve, Gaussian2DKernel
+    dat  = [(data-np.nanmin(data))/np.max(np.ptp(datas,axis=(1,2))) for data in datas]#/(data-np.nanmin(data)).ptp() 
+    datc = [convolve(data, Gaussian2DKernel(x_stddev=1) )for data in dat]
+    ptp = [data.ptp() for data in dat]
+    a = Table([dat,datc,ptp],names=('VIGNET1','VIGNET2','AMPLITUDE'))
+    PyvistaThoughfocus(a)
     
-    
+    # a = Table.read(sys.argv[-2])
+    # mask = (np.nanmin(a['VIGNET'],axis=(1,2))>-1e30)
+    # a = a[mask  ]
+    # a['VIGNET1'] =  [(data-np.nanmin(data))/(data-np.nanmin(data)).ptp() for data in a['VIGNET']]
+    # a['VIGNET2']  =   [convolve(data, Gaussian2DKernel(x_stddev=1) )for data in a['VIGNET1']]
+
+    # a['AMPLITUDE'] = [data.ptp() for data in a['VIGNET']]
+    # a.sort(sys.argv[-1])
+    # PyvistaThoughfocus(a)
     
     # datas = Table.read('/Users/Vincent/Desktop/stack_cat.fits')['VIGNET']
     # datas_1 = [(data-np.nanmin(data))/(data-np.nanmin(data)).ptp() for data in datas[:] if (data>-1e30).all()]
@@ -2483,7 +2590,7 @@ def ExploreThroughfocus(xpapoint):
     a = Table.read(sys.argv[-2])
     mask = (np.nanmin(a['VIGNET'],axis=(1,2))>-1e30)
     a = a[mask  ]
-    a['VIGNET1'] =  [(data-np.nanmin(data))/(data-np.nanmin(data)).ptp() for data in a['VIGNET']]
+    a['VIGNET1'] =  [(data-np.nanmin(data))/(data-np.nanmin(data)).ptp()  for data in a['VIGNET']]#
     a['VIGNET2']  =   [convolve(data, Gaussian2DKernel(x_stddev=1) )for data in a['VIGNET1']]
 
     a['AMPLITUDE'] = [data.ptp() for data in a['VIGNET']]
@@ -2505,14 +2612,14 @@ def PyvistaThoughfocus(a):
     value = a['VIGNET1'][0].shape[0]
     mesh = CreateMesh(a['VIGNET1'][0], value=value)
     p.add_mesh(mesh,scalars=a['VIGNET1'][0],opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True)#, cmap='jet')
-    p.add_text('Image: 0', name="mylabel")
-    p.add_text('X, Y =  %0.1f, %0.1f'%(a['X_IMAGE'][0],a['Y_IMAGE'][0]), name="radec",position=(10,1500))
-    p.add_text('FWHM_IMAGE =  %0.1f'%(a['FWHM_IMAGE'][0]), name="fwhm" , position=(10,1500-n))
-    p.add_text('MAG_AUTO, ERR =  %0.1f, %0.1f'%(a['MAG_AUTO'][0], a['MAGERR_AUTO'][0]), name="mag" , position=(10,1500-2*n))
-    p.add_text('CLASS_STAR =  %0.1f'%(a['CLASS_STAR'][0]), name="star" , position=(10,1500-3*n))
-    p.add_text('THETA_IMAGE =  %0.1f'%(a['THETA_IMAGE'][0]), name="theta" , position=(10,1500-4*n))
-    p.add_text('ELLIPTICITY =  %0.1f'%(a['ELLIPTICITY'][0]), name="e" , position=(10,1500-5*n))
-    p.add_text('BACKGROUND =  %0.1f'%(a['BACKGROUND'][0]), name="background" , position=(10,1500-6*n))
+    #p.add_text('Image: 0', name="mylabel")
+    # p.add_text('X, Y =  %0.1f, %0.1f'%(a['X_IMAGE'][0],a['Y_IMAGE'][0]), name="radec",position=(10,1500))
+    # p.add_text('FWHM_IMAGE =  %0.1f'%(a['FWHM_IMAGE'][0]), name="fwhm" , position=(10,1500-n))
+    # p.add_text('MAG_AUTO, ERR =  %0.1f, %0.1f'%(a['MAG_AUTO'][0], a['MAGERR_AUTO'][0]), name="mag" , position=(10,1500-2*n))
+    # p.add_text('CLASS_STAR =  %0.1f'%(a['CLASS_STAR'][0]), name="star" , position=(10,1500-3*n))
+    # p.add_text('THETA_IMAGE =  %0.1f'%(a['THETA_IMAGE'][0]), name="theta" , position=(10,1500-4*n))
+    # p.add_text('ELLIPTICITY =  %0.1f'%(a['ELLIPTICITY'][0]), name="e" , position=(10,1500-5*n))
+    # p.add_text('BACKGROUND =  %0.1f'%(a['BACKGROUND'][0]), name="background" , position=(10,1500-6*n))
     dict_={'smooth':'VIGNET1','number':0}
     #p.show() 
     labels=list(np.arange(len(a))+1)
@@ -2520,13 +2627,13 @@ def PyvistaThoughfocus(a):
     def update_text(text):
         #pass
         text=int(text)
-        #p.add_text("Image: %i"%(text), name="mylabel")
+        p.add_text("Image: %i"%(text), name="mylabel")
         #p.add_text("X, Y =  %0.1f, %0.1f"%(a['X_IMAGE'][text],a['Y_IMAGE'][text]), name="radec",position=(10,1500))
-        p.add_text('FWHM_IMAGE =  %0.1f'%(a['FWHM_IMAGE'][text]), name="fwhm",position=(10,1500-n))
+        #p.add_text('FWHM_IMAGE =  %0.1f'%(a['FWHM_IMAGE'][text]), name="fwhm",position=(10,1500-n))
         #p.add_text('MAG_AUTO, ERR =  %0.1f, %0.1f'%(a['MAG_AUTO'][text], a['MAGERR_AUTO'][text]), name="mag" , position=(10,1500-2*n))
         #p.add_text('CLASS_STAR =  %0.1f'%(a['CLASS_STAR'][text]), name="star" , position=(10,1500-3*n))
-        p.add_text('THETA_IMAGE =  %0.1f'%(a['THETA_IMAGE'][text]), name="theta" , position=(10,1500-4*n))
-        p.add_text('ELLIPTICITY =  %0.1f'%(a['ELLIPTICITY'][text]), name="e" , position=(10,1500-5*n))
+        #p.add_text('THETA_IMAGE =  %0.1f'%(a['THETA_IMAGE'][text]), name="theta" , position=(10,1500-4*n))
+        #p.add_text('ELLIPTICITY =  %0.1f'%(a['ELLIPTICITY'][text]), name="e" , position=(10,1500-5*n))
         #p.add_text('BACKGROUND =  %0.1f'%(a['BACKGROUND'][text]), name="background" , position=(10,1500-6*n))
     
     def throughfocus_callback(val):
@@ -2538,7 +2645,7 @@ def PyvistaThoughfocus(a):
         p.update_scalars(scalar, render=False)
         p.update_scalar_bar_range([np.nanmin(scalar),np.nanmax(scalar)])
         #p.add_mesh(CreateMesh(a['VIGNET1'][-10], value=value),scalars=a['VIGNET1'][-10],opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True, cmap=plt.colormaps()[int(val)])
-        update_text(int(val))
+        #update_text(int(val))
         dict_['number']=val
 
         return
@@ -2581,7 +2688,8 @@ def PyvistaThoughfocus(a):
         #print(5)
         
 
-    p.add_slider_widget(throughfocus_callback, rng=[0,len(a)], value=0, title='Frame', color=None, pass_widget=False, event_type='always', style=None)
+    #p.add_slider_widget(throughfocus_callback, rng=[0,len(a)], value=0, title='Frame', color=None, pass_widget=False, event_type='always', style=None)
+    p.add_text_slider_widget(throughfocus_callback, data=['%i'%(i) for i in np.arange(len(a))], value=0, event_type='always')
     #p.add_slider_widget(throughfocus_callback, rng=[0,len(a)], value=0, title='Frame', color=None, pass_widget=False, event_type='end', style=None)
     p.add_checkbox_button_widget(CreateGIF)#,position=(200,10))#,position='upper_left')
     p.add_text('Create GIF in /tmp/thoughfocus.gif', name="button",position=(70,10))#'lower_left')
@@ -2602,8 +2710,8 @@ def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None,
     •Return the characteristics of the spot (see image: EE50, FWHM, source size. . . )  and plot the radial
     profile of the spot 
     """
-    import matplotlib; matplotlib.use('TkAgg')  
-    import matplotlib.pyplot as plt
+    #import matplotlib; matplotlib.use('TkAgg')  
+    #import matplotlib.pyplot as plt
     d = DS9n(xpapoint)#DS9n(xpapoint)
     if center_type is None:
         verboseprint(sys.argv[3])
@@ -2627,8 +2735,8 @@ def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None,
     except AttributeError:
         d.set("analysis message {Please define a circle region and select it. The radius of the region is used to define the radial profile.}");sys.exit()    
     
-    if Plot:
-        plt.show()
+    #if Plot:
+        #zplt.show()
         
         
     
@@ -2719,113 +2827,124 @@ def estimateBackground(data, center, radius=30, n=1.8):
     return fond
 
 
-#@profile
+
+
+
 def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=False,angle=30, radius=40, ptype='linear', fit=True, center_type='barycentre', maxplot=0.013, minplot=-1e-5, radius_ext=12, platescale=None,fibersize = 100,SigmaMax=4, DS9backUp = DS9_BackUp_path, config=my_conf, name=''):
   """Function used to plot the radial profile and the encircled energy of a spot,
   Latex is not necessary
   """
-  import matplotlib; matplotlib.use('TkAgg')  
-  import matplotlib.pyplot as plt
+
   from scipy.optimize import curve_fit
   from scipy import interpolate
-  from matplotlib.widgets import  CheckButtons #RadioButtons,
-  import matplotlib.ticker as mticker
-  fmt = mticker.FuncFormatter(lambda x,pos : "${}$".format(mticker.ScalarFormatter(useOffset=False, useMathText=True)._formatSciNotation('%1.10e' % np.round(x,2))))
 
   fontsize=10
   rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, anisotrope=anisotrope, angle=angle, radius=radius, n=n, center_type=center_type, size=size)
   profile = profile[:size]#(a[:n] - min(a[:n]) ) / np.nansum((a[:n] - min(a[:n]) ))
   rmean_long = np.linspace(0,rmean[:size].max(),1000)
-  fig, ax1 = plt.subplots(figsize=(10,5))
-  rax = plt.axes([0.02, 0.8, 0.05, 0.15], facecolor='None')
-  for edge in 'left', 'right', 'top', 'bottom':
-    rax.spines[edge].set_visible(False)
-  scale = CheckButtons(rax, ['log'])
-  def scalefunc(label):
-      if ax1.get_yscale()=='linear':
-          ax1.set_yscale('log')
-      elif ax1.get_yscale()=='log':
-          ax1.set_yscale('linear')
-      fig.canvas.draw_idle()
-  scale.on_clicked(scalefunc)
 
   fiber = float(fibersize) #/ (2*1.08*(1/0.083))
   if fiber == 0:
       gaus = lambda x, a, sigma: a**2 * np.exp(-np.square(x / sigma) / 2)
       popt, pcov = curve_fit(gaus, rmean[:size], profile, p0=[1, 2])#,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
-      if log:
-          ax1.semilogy(np.linspace(0,size,10*size), gaus(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
-      else:
-          try:
-              popt_m, pcov_m = curve_fit(Moffat1D,rmean[:size], profile,p0=[profile.max(),4,2.5])
-              #ax1.plot(rmean_long, Moffat1D(rmean_long,*popt_m),label=r'Moffat fit: A=%0.3f, $\alpha$=%0.2f, $\beta$=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
-              ax1.plot(rmean_long, Moffat1D(rmean_long,*popt_m),label=r'Moffat fit: A={}, $\alpha$={}, $\beta$={}'.format(fmt(popt_m[0]),fmt(popt_m[1]),fmt(popt_m[2])))
-          except RuntimeError:
-              pass
+      try:
+        popt_m, pcov_m = curve_fit(Moffat1D,rmean[:size], profile,p0=[profile.max(),4,2.5])
+      except RuntimeError:
+        pass
   else:
       stddev /= profile.max()
       profile /= profile.max() 
       popt_m, pcov_m = curve_fit(Moffat1D,rmean[:size], profile,p0=[profile.max(),4,2.5])
       popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[np.nanmax(profile),fiber,2, np.nanmin(profile)],bounds=([1e-3*(profile.max()-profile.min()),0.8*fiber,1,profile.min()],[1e3*(profile.max()-profile.min()),1.2*fiber,SigmaMax,profile.max()]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
-      if log:
-          ax1.semilogy(np.linspace(0,size,10*size), ConvolveDiskGaus2D(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
-      else:
-          #ax1.plot(rmean_long, Moffat1D(rmean_long,*popt_m),label=r'Moffat fit: A=%0.3f, $\alpha$=%0.2f, $\beta$=%0.2f'%(popt_m[0],popt_m[1],popt_m[2]))
-          ax1.plot(np.linspace(0,size,10*size), ConvolveDiskGaus2D(np.linspace(0, size, 10*size), *popt), c='royalblue') #)r"$\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!"
-          #ax1.fill_between(rmean[:size], profile - 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), profile + 1.5*np.abs(profile - ConvolveDiskGaus2D(rmean[:size], *popt)), alpha=0.3, label=r"3*Residuals")
-  if log:
-      p = ax1.semilogy(rmean[:size], profile, '.', c='black', label='Normalized isotropic profile')#, linestyle='dotted')
-      ax1.set_ylim(ymin=1e-4)#, ymax=20*np.nanmax(np.log10(profile))
-  else:
-      p = ax1.plot(rmean[:size], profile, linestyle='dotted', c='black', label='Normalized isotropic profile')
-      ax1.errorbar(rmean, profile, yerr = stddev, fmt='o', color=p[0].get_color(), alpha=0.5)
-      #ax1.set_ylim((minplot, np.nanmax([np.nanmax(1.1*(profile)), maxplot])))
 
-  ax1.set_xlabel('Distance to center [pix]', fontsize=fontsize+2)                      
-  ax1.set_ylabel('Radial Profile', color='b', fontsize=fontsize+2)
-  ax1.tick_params('y', colors='b')
-  ax2 = ax1.twinx()
   EE_interp = interpolate.interp1d(rsurf[:size], EE[:size],kind='cubic')
   ninterp = 10
   xnew = np.linspace(rsurf[:size].min(),rsurf[:size].max(),ninterp*len(rsurf[:size]))
-  ax2.plot(xnew,EE_interp(xnew),linestyle='dotted',c='r')
-
-  
-  ax2.plot(rsurf[:size], EE[:size], 'rx')
-
   mina = min(xnew[EE_interp(xnew)[:ninterp*size]>79])
   minb = min(xnew[EE_interp(xnew)[:ninterp*size]>49])
 
-  ax2.plot(np.linspace(minb, minb, 2), np.linspace(0, 50, 2), 'r-o')                    
-  ax2.plot(np.linspace(minb, size, 2), np.linspace(50, 50, 2), 'r-o')
-  ax2.plot(np.linspace(mina, mina, 2), np.linspace(0, 80, 2), 'r-o')                    
-  ax2.plot(np.linspace(mina, size, 2), np.linspace(80, 80, 2), 'r-o')
-  ax2.set_ylim((0, 110))
-  ax2.set_ylabel('Encircled Energy', color='r', fontsize=fontsize+2)
-  ax2.tick_params('y', colors='r')
-  ax1.xaxis.grid(True)
-  ax2.yaxis.grid(False)
-  ax1.tick_params(axis='x', labelsize=fontsize)
-  ax1.tick_params(axis='y', labelsize=fontsize)
-  ax2.tick_params(axis='y', labelsize=fontsize)                    
-  ax1.legend(loc = (0.54,0.05),fontsize=fontsize)
+  np.savetxt('/tmp/1.dat',np.array([rmean, profile,stddev]).T)
+  np.savetxt('/tmp/2.dat',np.array([xnew[EE_interp(xnew)>0],EE_interp(xnew)[EE_interp(xnew)>0]]).T)
+  np.savetxt('/tmp/3.dat',np.array([rmean_long, Moffat1D(rmean_long,*popt_m)]).T)
+  np.savetxt('/tmp/4.dat',np.array([[minb,minb,0],[0,50,50]]).T)
+  np.savetxt('/tmp/5.dat',np.array([[mina,mina,0], [0,80,80]]).T)
+  np.savetxt('/tmp/6.dat',np.array([[0,size], [100,100]]).T)
+
   if fiber == 0:
       flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
-      plt.figtext(0.63,0.53,"Flux = %0.0f\n$r_{in}$ = %0.1f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (flux,0,abs(popt[1]),minb,mina), 
-                  fontsize=fontsize,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":flux,"SizeSource":0,"Sigma":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       verboseprint("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
   else:
-      plt.figtext(0.63,0.53,"Amp = %0.3f\n$r_{in}$ = %0.3f pix \n$\sigma_{PSF}$ = %0.3f pix \n$EE^{50-80\%%}$ = %0.2f - %0.2f p" % (popt[0],popt[1],popt[2],minb,mina), 
-                  fontsize=fontsize,bbox={'facecolor':'blue', 'alpha':0.2, 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
       d = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       verboseprint("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
-  plt.title('{} - {}'.format(os.path.basename(name),np.round(NewCenter,1)),y=1)
-  fig.tight_layout()
-  plt.savefig(DS9backUp + 'Plots/%s_RdialProfile.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss")) )
   csvwrite(np.vstack((rmean[:size], profile,ConvolveDiskGaus2D(rmean[:size], *popt))).T, DS9backUp + 'CSVs/%s_RadialProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
   csvwrite(np.vstack((rsurf, EE)).T, DS9backUp + 'CSVs/%s_EnergyProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
+
+  # #d.set("plot title 'Radial & encircled energy profiles' ")
+  # d=DS9()  plt.title('{} - {}'.format(os.path.basename(name),np.round(NewCenter,1)),y=1)
+
+  d = []
+  d.append('plot line open')
+  d.append("plot axis x grid no ")  
+  d.append("plot axis y grid no ")
+  d.append("plot title '%s , %0.1f - %0.1f' "%(os.path.basename(name),NewCenter[0],NewCenter[1]))
+  d.append("plot title y 'Radial profile' ")
+  d.append("plot load /tmp/1.dat xyey")
+  d.append("plot legend yes ")
+  d.append("plot legend position top ")
+#  d.append("plot title legend '%s , %0.1f - %0.1f' "%(os.path.basename(name),NewCenter[0],NewCenter[1]))
+  d.append("plot title legend ''")
+
+  d.append("plot name 'Data: Flux = %i, FWHM_fit = %0.1f' "%(flux,abs(popt[1])))
+  d.append("plot line shape circle ")
+  d.append("plot line dash yes ")
+  d.append("plot line shape color black") 
+  d.append("plot error color black ")
+  d.append("plot load /tmp/3.dat xy  ")
+  d.append("plot name 'Moffat: Amp=%0.1f, alpha=%0.1f, beta=%0.1f' "%(popt_m[0],popt_m[1],popt_m[2]))
+  d.append("plot line color cornflowerblue ")
+  d.append("plot add graph ")
+  d.append("plot axis x grid no")
+  d.append("plot axis y grid no ")
+  d.append("plot load /tmp/2.dat xy ")
+  d.append("plot line color black ")
+  d.append("plot title y 'Encircled energy' ")
+  d.append("plot name 'Data' ")
+  d.append("plot title x 'Distance from center' ")
+  d.append("plot load /tmp/4.dat xy ")
+  d.append("plot line color red ")
+  d.append("plot legend yes ")
+  #d.append("plot legend name ' ' ")
+  d.append("plot legend position bottom ")
+  d.append("plot title legend ''")
+  d.append("plot name 'EE50 = %0.1fpix' "%(minb))
+  d.append("plot load /tmp/5.dat xy ")
+  d.append("plot name 'EE80 = %0.1fpix' "%(mina))
+  d.append("plot line dash yes ")
+  d.append("plot line color red ")
+  d.append("plot load /tmp/6.dat xy ")
+  d.append("plot name '100 percent limit' "%(mina))
+  d.append("plot line dash yes ")
+  d.append("plot line color black ")
+  d.append("plot layout STRIP ; plot layout STRIP scale 100")
+  d.append("plot font legend size 9 ")
+  d.append("plot font labels size 13 ")
+  # d.append("plot pagesetup size letter")
+  # d.append("plot pagesetup orient portrait")
+  #d.append("plot font numbers size 15 ")
+  #d.append("plot font legend size 12 ")
+
+  ds9=DS9()
+  ds9.set(' ; '.join(d))  #d.set("""""")
+    #d.set("plot line color black ")
+  #d.set("plot color theme-color ")
+
+  # d.set('plot axis y auto no')
+  # d.set('plot axis y min 0')
+
   return d
+
+
 
       
 def ConvolveDiskGaus2D(r, amp = 2 , RR = 4, sig = 4/2.35, offset=0):
@@ -2928,18 +3047,14 @@ def DS9visualisation_throughfocus(xpapoint):
     except:
         verboseprint('Region not found')
         pass
-    d.set("frame delete")
-    d.set("smooth no")
+    d.set("frame delete ; smooth no")
     for filen in path[:]:
-        d.set('frame new')
-        d.set("fits {}".format(filen)) 
+        d.set('frame new ; fits {}'.format(filen)) 
     try:
         d.set("lock frame physical")
     except ValueError:
         pass
-    d.set("lock scalelimits yes") 
-    d.set("lock smooth yes") 
-    d.set("lock colorbar yes") 
+    d.set("lock scalelimits yes ; lock smooth yes ; lock colorbar yes") 
     try:
         d.set('pan to %0.3f %0.3f physical' % (a.xc,a.yc))
     except:
@@ -3733,7 +3848,41 @@ def CreateCube_(d, data):
     p.add_axes()
     p.show() 
 
-
+def ThrowApertures(xpapoint):
+    from astropy.io import fits
+    d=DS9(xpapoint)
+    filename=getfilename(d)
+    fitsimage = fits.open(filename)
+    fitsimage = fitsimage[FitsExt(fitsimage) ]
+    image = fitsimage.data  
+    region = getregion(d, quick=True,selected=True)
+    if region is None:
+        area = [0, image.shape[1],0, image.shape[0]]
+    else:
+        Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+        area = [Xinf, Xsup,Yinf, Ysup]
+        verboseprint(Xinf, Xsup,Yinf, Ysup)
+    radius=np.array(sys.argv[-3].split(','),dtype=int)
+    if type(radius)==int:
+        r1, r2 = radius, radius
+    else:
+        try:    
+            r1, r2 = radius
+        except TypeError:
+            r1 = r2 = radius
+    if sys.argv[-1] == 'Equidistributed':
+        areasd = CreateAreas(image, area=area, radius=radius)#    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
+        areas = areasd 
+    else:
+        print(area)
+        areas = np.array([np.random.randint(area[2],area[3],int(sys.argv[-4])),
+                          np.random.randint(area[2],area[3],int(sys.argv[-4])),
+                          np.random.randint(area[0],area[1],int(sys.argv[-4]))]).T
+        
+    create_DS9regions2(np.array(areas)[:,2]+float(r1)/2,np.array(areas)[:,0]+float(r2)/2, radius=radius, form = sys.argv[-2],
+                       save=True,color = 'yellow', savename='/tmp/centers')
+    d.set('regions /tmp/centers.reg')
+    return
 
 
 
@@ -3953,8 +4102,7 @@ def Convolve2d(xpapoint):
         #fitswrite(fitsfile,'/tmp/convolved_%s'%(os.path.basename(file)))
         fitsfile.writeto(file[:-5] + '_convolved.fits', overwrite=True)
     if len(paths)==1:
-        d.set('frame new')
-        d.set('file ' + file[:-5] + '_convolved.fits')
+        d.set('frame new ; file ' + file[:-5] + '_convolved.fits')
     return
 
 
@@ -4097,9 +4245,7 @@ def DS9stack_new(xpapoint, dtype=float, std=False, Type=None, clipping=None):
     if clipping=='-':
         clipping = 1e5
     image, name = StackImagesPath(paths, Type=Type,clipping=float(clipping), dtype=dtype, std=std, name=name) 
-    d.set('tile yes')
-    d.set('frame new')
-    d.set("file {}".format(name))
+    d.set("tile yes ; frame new ; file {}".format(name))
     try:
         d.set("lock frame physical")
     except ValueError:
@@ -4425,15 +4571,18 @@ def Lims_from_region(region=None, coords=None,  config=my_conf,dtype=int):
     """Return the pixel locations limits of a DS9 region
     """
     if coords is not None:
-        try:
-            xc, yc, w, h = coords[:4]
-        except ValueError:
-            try:
-                xc, yc, w = coords[:3] 
-                h, w = 2*coords[-1], 2*coords[-1]
-            except ValueError:
+        if len(coords)==1:
+            if len(coords[0])>3:
+                xc, yc, w, h = coords[0][:4]
+            else:
                 xc, yc, w = coords[0][:3] 
-                h, w  = 2*coords[0][-1], 2*coords[0][-1]
+                h, w = 2*coords[0][-1], 2*coords[[0]-1]
+        else:
+            if len(coords)>3:
+                xc, yc, w, h = coords[:4]
+            else:
+                xc, yc, w = coords[:3] 
+                h, w  = 2*coords[-1], 2*coords[-1]
     else:
         if hasattr(region, 'xc'):
             if hasattr(region, 'h'):
@@ -4788,9 +4937,7 @@ def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None
         dec_max = max([corner.dec.deg for corner in corners])
         dec_min = min([corner.dec.deg for corner in corners])
         cat = cat[(cat[x]<ra_max) & (cat[x]>ra_min) & (cat[y]<dec_max) & (cat[y]>dec_min)]
-        d.set('regions system wcs')
-        d.set('regions sky fk5')
-        d.set('regions skyformat degrees')
+        d.set('regions system wcs ; regions sky fk5 ; regions skyformat degrees')
         system='fk5'
         size=float(size)#/3600
         size *= abs(wcs.wcs.cd[0][0])#*3600
@@ -4812,6 +4959,8 @@ def DS9Region2Catalog(xpapoint, name=None, new_name=None):
     verboseprint(new_name)
     from astropy.table import Table
     d = DS9n(xpapoint)
+    image=d.get_pyfits()[0].data
+
     if new_name is None:
         new_name = sys.argv[-1]
     if name is not None:
@@ -4823,11 +4972,31 @@ def DS9Region2Catalog(xpapoint, name=None, new_name=None):
     if regions is None:
         message(d,'It seems that you did not create any region. Please create regions and re-run the analysis.'); sys.exit()
     if hasattr(regions[0], 'xc'):
-        x, y = np.array([r.xc for r in regions]), np.array([r.yc for r in regions])
+        x, y, r1, r2 = np.array([r.xc for r in regions]), np.array([r.yc for r in regions]), np.array([r.r if hasattr(r, 'r') else r.w for r in regions]), np.array([r.r if hasattr(r, 'r') else r.h for r in regions ])
     else:
-        x, y = np.array([r.xc for r in [regions]]), np.array([r.yc for r in [regions]])
-    cat = Table((x-1,y-1),names=('xcentroid','ycentroid'))    
+        #x, y = np.array([r.xc for r in [regions]]), np.array([r.yc for r in [regions]])
+        x, y, r1, r2 = np.array([r.xc for r in [regions]]), np.array([r.yc for r in [regions]]), np.array([r.r if hasattr(r, 'r') else r.w for r in [regions]]), np.array([r.r if hasattr(r, 'r') else r.h for r in [regions] ])
+    cat = Table((x-1,y-1,r1,r2),names=('x','y','w','h'))    
     verboseprint(cat)
+    images = []
+    w = int(cat[0]['w'])
+    h =  int(cat[0]['h'])
+    for x,y in zip(cat['x'].astype(int),cat['y'].astype(int)):
+        im = image[x-w:x+w,y-h:y+h]
+        if im.size==4*w*h:
+            #print(im.shape)
+            images.append(im)
+        else:
+            images.append(images[0]*np.nan)
+            
+    images = np.array(images)  
+    cat['var'] = np.nanvar(images,axis=(1,2))  
+    cat['std'] = np.nanstd(images,axis=(1,2))  
+    cat['mean'] = np.nanmean(images,axis=(1,2))
+    cat['median'] = np.nanmedian(images,axis=(1,2))
+    cat['min'] = np.nanmin(images,axis=(1,2))
+    cat['max'] = np.nanmax(images,axis=(1,2))
+    
     if new_name is None:
         new_name = '/tmp/regions.csv'
     verboseprint(new_name)
@@ -4857,9 +5026,7 @@ def DS9MaskRegions(xpapoint, length = 20):
         verboseprint(filename, length)
         fitsimage, name = MaskRegions2(filename, regions=cosmicRays, top=top, bottom=bottom, left=left, right=right)
     if (len(path)<2):    
-        d.set('frame new')
-        d.set('tile yes')
-        d.set('file ' + name)       
+        d.set('frame new ; tile yes ; file %s'%(name))       
     return fitsimage, name
 
 
@@ -4965,8 +5132,7 @@ def DS9_2D_autocorrelation(xpapoint):
         w = abs((area[1] - area[0]))
         h = abs((area[3] - area[2]))
         l=20
-        d.set('frame new')
-        d.set('file '+ name)
+        d.set('frame new ; file %s'%( name))
         d.set('regions command "projection %0.3f %0.3f %0.1f %0.1f  %0.1f # color=yellow"' % (3*h/2-l,3*w/2,3*h/2+l,3*w/2,0))
         d.set('regions command "projection %0.3f %0.3f %0.1f %0.1f  %0.1f # color=yellow"' % (3*h/2,3*w/2-l,3*h/2,3*w/2+l,0))
         DS9setup2(xpapoint)
@@ -5012,8 +5178,7 @@ def TwoD_FFT(filename, save=True, area=None, plot_flag=True, DS9backUp = DS9_Bac
     psd2D = np.abs(F)**2
     fitswrite(psd2D,'/tmp/test.fits')
     d = DS9n()
-    d.set('frame new')
-    d.set('file /tmp/test.fits')
+    d.set('frame new ; file /tmp/test.fits')
     return psd2D
 
 
@@ -5147,7 +5312,7 @@ def SigmaClipBinned(x,y, sig=1, Plot=True, ax=None, log=False):
     """Perform sigma clipped binning on a x, y dataset
     """
     x, y = np.array(x), np.array(y)
-    ob, bins = np.histogram(x,bins=[np.percentile(x,i) for i in np.linspace(0,100,2+len(x)/100)])
+    ob, bins = np.histogram(x,bins=[np.percentile(x,i) for i in np.linspace(0,100,int(2+len(x)/100))])
     index=[]
     xn, yn = [], []
     offset=0
@@ -5200,7 +5365,8 @@ def ComputeEmGain(filename, Path2substract=None, save=True, Plot=True, d=None, a
     import matplotlib.pyplot as plt
     from astropy.io import fits
     verboseprint("""##################\nSubtracting Image = %s \nPath to subtract = %s\nradius = %s \nArea = %s\n\nfilename = %s \nplot_flag = %s\n##################"""%(subtract,Path2substract, radius, area, filename, Plot),verbose=my_conf.verbose)
-    fitsimage = fits.open(filename)[0]
+    fitsimage = fits.open(filename)
+    fitsimage = fitsimage[FitsExt(fitsimage) ]
     image = fitsimage.data
     areasd = CreateAreas(image, area=area, radius=radius)#    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
 
@@ -5238,8 +5404,10 @@ def ComputeEmGain(filename, Path2substract=None, save=True, Plot=True, d=None, a
     ax0 = fig.add_axes([0.1, 0.30, 0.84, 0.66])     
     intensity_phys_n,var_phys_n = SigmaClipBinned(intensity_all,var_all/cst, sig=1, Plot=True, ax=ax0)
     #ax, emgain_phys = PlotComputeEmGain_old(intensity_phys_n, var_phys_n, emgain , r1*r2, filename=filename, len_area_det=len_area_det, ax=ax0, cst='(%i x %i)'%(cst,n))
-    from .dataphile.demos import auto_gui
-    auto_gui.GeneralFit_new(intensity_phys_n, var_phys_n,ax=ax0,background=1,nb_gaussians=0, marker='', linewidth=0)
+    #from .dataphile.demos import auto_gui
+    #from dataphile.demos import auto_gui
+
+    GeneralFit_new(intensity_phys_n, var_phys_n,ax=ax0,background=1,nb_gaussians=0, marker='', linewidth=0)
     ax0.set_ylim((1*var_phys_n.min(),1*var_phys_n.max()))
     ax0.set_xlim((1*intensity_phys_n.min(),1*intensity_phys_n.max()))
 
@@ -5293,8 +5461,8 @@ def PlotComputeEmGain(intensity, var, emgain, n, filename, len_area_det, ax=None
     """Compute emgain based on variance intensity diagram
     """
     import matplotlib; matplotlib.use('TkAgg')  
-    from .dataphile.demos import auto_gui
-    obj = auto_gui.GeneralFit_new(intensity,var,ax=ax,background=1,nb_gaussians=0,linestyle=None, marker='')
+    #from dataphile.demos import auto_gui
+    obj = GeneralFit_new(intensity,var,ax=ax,background=1,nb_gaussians=0,linestyle=None, marker='')
     obj.ax.set_ylabel('Variance [ADU] / %s'%(cst))
 
     return ax, emgain
@@ -5348,10 +5516,8 @@ def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
             result, name = cropCLAUDS(path=filename, position=[region[0][0]-1,region[0][1]-1],size=np.array([region[0][3],region[0][2]],dtype=int), all_ext=False)
     print(name) 
     if len(path) < 2:
-        d.set('frame new')
-        d.set('tile yes')
-        d.set("file %s" %(name))  
-        d.set('file ' + name)  
+        d.set('frame new ; tile yes ; file %s' %(name))  
+        #d.set('file ' + name)  
     return
 
 
@@ -5426,6 +5592,7 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     """
     import matplotlib; matplotlib.use('TkAgg')  
     from astropy.io import fits
+    from astropy.table import Table
     from matplotlib import pyplot as plt
     fitsimage = fits.open(path)[0]
     image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
@@ -5433,29 +5600,76 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     imagex = np.nanmean(image, axis=1)
     imagey = np.nanmean(image, axis=0)
     nbins=300
-    fig, ax = plt.subplots(2, 2)#, figsize=(12,7))
-    ax[0,0].hist(imagex[1:]-imagex[:-1],bins=np.linspace(np.percentile(imagex[1:]-imagex[:-1],5),np.percentile(imagex[1:]-imagex[:-1],95),nbins),histtype='step',label='Lines')
-    ax[1,0].hist(imagey[1:]-imagey[:-1],bins=np.linspace(np.percentile(imagey[1:]-imagey[:-1],5),np.percentile(imagey[1:]-imagey[:-1],95),nbins),histtype='step',label='Column', color='orange')
+    bins1 = np.linspace(np.percentile(imagex[1:]-imagex[:-1],5),np.percentile(imagex[1:]-imagex[:-1],95),nbins)
+    bins2 = np.linspace(np.percentile(imagey[1:]-imagey[:-1],5),np.percentile(imagey[1:]-imagey[:-1],95),nbins)
     x = (image[:,1:] - image[:,:-1]).flatten()
     y = (image[1:,:] - image[:-1,:]).flatten()
     x = x[np.isfinite(x)]
     y = y[np.isfinite(y)]
     verboseprint(x)
     verboseprint(y)
-    ax[0,1].hist(x,bins=np.linspace(np.percentile(x,5),np.percentile(x,95),nbins),histtype='step',label='Line')
-    ax[1,1].hist(x,bins=np.linspace(np.percentile(x,5),np.percentile(x,95),nbins),histtype='step',label='Line')
-    ax[1,1].hist(y,bins=np.linspace(np.percentile(y,5),np.percentile(y,95),nbins),histtype='step',label='Column', color='orange')
-    for axx in ax.flatten():
-        axx.grid()
-    ax[0,0].legend();    ax[0,1].legend()
-    ax[1,0].legend();    ax[1,1].legend()
-    ax[1,0].set_xlabel('abs(CL(n) - CL(n-1))')
-    ax[1,1].set_xlabel('abs(P(n) - P(n-1))')
-    verboseprint('ok')
-    fig.tight_layout()
-    fig.suptitle(os.path.basename(path), y=1)
-    fig.savefig(DS9_BackUp_path +'Plots/%s_ColumnlineCorrelation.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss")) )
-    plt.show()
+    
+    bins3 = np.linspace(np.percentile(x,5),np.percentile(x,95),nbins)
+    bins4 = np.linspace(np.percentile(y,5),np.percentile(y,95),nbins)
+    vals1, b_ = np.histogram(imagex[1:]-imagex[:-1],bins=bins1)
+    vals2, b_ = np.histogram(imagey[1:]-imagey[:-1],bins=bins2)
+    vals3, b_ = np.histogram(x,bins=bins3)
+    vals4, b_ = np.histogram(y,bins=bins4)
+
+    # Table([bins1,vals1],names=[bins1[0],vals1[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/1.dat',format='ascii',comment='#')
+    # Table([bins2,vals2],names=[bins2[0],vals2[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/2.dat',format='ascii')
+    # Table([bins3,vals3],names=[bins3[0],vals3[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/3.dat',format='ascii')
+    # Table([bins4,vals4],names=[bins4[0],vals4[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/4.dat',format='ascii')
+
+    np.savetxt('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/1.dat',np.array([(bins1[1:]+bins1[:-1])/2,vals1]).T)
+    np.savetxt('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/2.dat',np.array([(bins2[1:]+bins2[:-1])/2,vals2]).T)
+    np.savetxt('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/3.dat',np.array([(bins3[1:]+bins3[:-1])/2,vals3]).T)
+    np.savetxt('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/4.dat',np.array([(bins4[1:]+bins4[:-1])/2,vals4]).T)
+
+    # fig, ax = plt.subplots(2, 2)#, figsize=(12,7))
+    # ax[0,0].hist(imagex[1:]-imagex[:-1],bins=bins1,histtype='step',label='Lines')
+    # ax[1,0].hist(imagey[1:]-imagey[:-1],bins=bins2,histtype='step',label='Column', color='orange')
+
+    # for axx in ax.flatten():
+    #     axx.grid()
+    # ax[0,0].legend();    ax[0,1].legend()
+    # ax[1,0].legend();    ax[1,1].legend()
+    # ax[1,0].set_xlabel('abs(CL(n) - CL(n-1))')
+    # ax[1,1].set_xlabel('abs(P(n) - P(n-1))')
+    # fig.tight_layout()
+    # fig.suptitle(os.path.basename(path), y=1)
+    # ax[0,1].hist(x,bins=bins3,histtype='step',label='Line')
+    # ax[1,1].hist(x,bins=bins3,histtype='step',label='Line')
+    # ax[1,1].hist(y,bins=bins4,histtype='step',label='Column', color='orange')
+    # fig.savefig(DS9_BackUp_path +'Plots/%s_ColumnlineCorrelation.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss")) )
+    # plt.show()
+    
+    d=[]   
+    d.append('plot line open')
+    d.append("plot axis x grid no ")  
+    d.append("plot axis y grid no ")
+    d.append("plot title y 'Lines' ")
+    d.append("plot load /Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/1.dat xy  ")
+    d.append("plot add graph ")
+    d.append("plot axis x grid no")
+    d.append("plot axis y grid no ")
+    d.append("plot load /Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/3.dat xy  ")
+    d.append("plot add graph ")
+    d.append("plot title y 'delta chisqr' ")
+    d.append("plot load /Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/2.dat xy ")
+    d.append("plot title y 'Columns' ")
+    d.append("plot axis x grid no ")  
+    d.append("plot axis y grid no ")
+    d.append("plot title x 'Column/Line average difference' ")
+    d.append("plot add graph ")
+    d.append("plot load /Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/4.dat xy ")
+    d.append("plot title x 'Pixel value difference' ")
+    d.append("plot axis x grid no ")  
+    d.append("plot axis y grid no ")
+    d.append("plot layout grid")
+    ds9=DS9()
+    ds9.set(' ; '.join(d))
+
     return
 
 
@@ -6537,10 +6751,7 @@ def DS9InterpolateNaNs(xpapoint):
         verboseprint(filename)
         result, name = InterpolateNaNs(filename, stddev=2)
         if len(path)<2:
-            d.set("lock frame image")
-            d.set('frame new')
-            d.set('tile yes')
-            d.set('file ' + name)  
+            d.set("lock frame image ; frame new ; tile yes ; file %s"%( name)  )
     return
 
 
@@ -6561,8 +6772,7 @@ def DS9ExtractSources(xpapoint):
         sources = ExtractSources(filename, fwhm=fwhm, threshold=threshold, theta=float(theta), ratio=float(ratio), n=int(ErosionDilatation), iters=int(iters), deleteDoublons=int(deleteDoublons))
         if len(path)<2:
             create_DS9regions2(sources['xcentroid'],sources['ycentroid'], radius=10, form = 'circle',save=True,color = 'yellow', savename='/tmp/centers')
-            d.set('region delete all')
-            d.set('region {}'.format('/tmp/centers.reg')) 
+            d.set('region delete all ; region {}'.format('/tmp/centers.reg')) 
     csvwrite(sources, filename[:-5] + '.csv')
 
            
@@ -6705,8 +6915,7 @@ def AddHeaderField(xpapoint, field='', value='', comment='-'):
         fits.setval(filename, field[:8], value = value, comment = comment)
 
     if len(path)<2:
-        d.set('frame clear')
-        d.set('file '+ filename)
+        d.set('frame clear ; file '+ filename)
     return
 
 
@@ -6751,9 +6960,7 @@ def DS9BackgroundEstimationPhot(xpapoint, n=2, DS9backUp = DS9_BackUp_path, Plot
     
     if len(path)<2:
         #d.set("lock frame physical")
-        d.set('frame new')
-        d.set('tile yes')
-        d.set('file ' + name) 
+        d.set('frame new ; tile yes ; file ' + name) 
     return name
 
 
@@ -6862,8 +7069,7 @@ def CreateImageFromCatalogObject(xpapoint, nb = int(1e3), path=''):
         image_real = make_100gaussians_image()
     name = '/tmp/image_%s.fits'%(datetime.datetime.now().strftime("%y%m%d-%HH%MM%S"))
     fitswrite(image_real,name)
-    d.set('frame new')
-    d.set('file ' + name )
+    d.set('frame new ; file ' + name )
     return image_real
 
 
@@ -7024,22 +7230,22 @@ class GeneralFit_new(Demo):
         amps, centers = ys[:nb_features]-np.median(y), xs[:nb_features]
         for i,amp,center in zip(range(self.nb_gaussians), amps, centers):
             Models.append(Model(gaussian1D,
-                  Parameter(value=amps[0], bounds=(-1.2*ampm, 1.2*ampm), label='Amplitude'),
-                  Parameter(value=center,bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label='Center'),
+                  Parameter(value=amps[0], bounds=(-1.5*ampm, 1.5*ampm), label='Amplitude'),
+                  Parameter(value=center,bounds=(np.nanmin(xdata_i) - 2*2.35*2, np.nanmax(xdata_i)+2*2.35*2), label='Center'),
                   Parameter(value=np.min([2,np.max(x)/10]), bounds=(1e-5, (np.nanmax(x)-np.nanmin(x))/2), label='Sigma'),
                   label='Gaussian%i'%(i)))
         for i,amp,center in zip(range(self.nb_moffats), amps, centers):
             Models.append(Model(Moffat1D,
-                  Parameter(value=amps[0], bounds=(-1.2*ampm, 1.2*ampm), label='Amplitude'),
+                  Parameter(value=amps[0], bounds=(-1.5*ampm, 1.5*ampm), label='Amplitude'),
                   Parameter(value=center,bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label='Alpha'),
                   Parameter(value=np.min([2,np.max(x)/10]), bounds=(1e-5, (np.nanmax(x)-np.nanmin(x))/2), label='Width'),
-                  Parameter(value=center,bounds=(0, np.nanmax(xdata_i)), label='Center'),
+                  Parameter(value=center,bounds=(np.nanmin(xdata_i) - 2*2.35*2, np.nanmax(xdata_i)+2*2.35*2), label='Center'),
                   label='Moffat%i'%(i)))   
             
         for i,amp,center in zip(range(self.nb_voigt1D), amps, centers):
             Models.append(Model(voigt1D,
-                  Parameter(value=amps[0], bounds=(-1.2*ampm, 1.2*ampm), label='Amplitude'),
-                  Parameter(value=center,bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label='Center'),
+                  Parameter(value=amps[0], bounds=(-1.5*ampm, 1.5*ampm), label='Amplitude'),
+                  Parameter(value=center,bounds=(np.nanmin(xdata_i) - 2*2.35*2, np.nanmax(xdata_i)+2*2.35*2), label='Center'),
                   Parameter(value=np.min([2,np.max(x)/10]), bounds=(1e-5, (np.nanmax(x)-np.nanmin(x))/2), label='Sigma'),
                   Parameter(value=np.min([2,np.max(x)/10]),bounds=(0, np.nanmax(xdata_i)), label='Gamma'),
 #                  Parameter(value=2, bounds=(1e-5, (np.nanmax(x)-np.nanmin(x))/2), label='width'),
@@ -7444,6 +7650,21 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
         d.get('plot') 
     except TypeError:
         d.set("analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}")  ;sys.exit()  
+ # d=DS9()
+  # d.set('plot line open')
+  # d.set("plot axis x grid no ; plot axis y grid no ; plot title y 'Radial profile' ; plot load /tmp/1.dat xyey ; plot legend yes ; plot legend position top ; plot name 'Data: Flux = %i, FWHM_fit = %0.1f' "%(flux,abs(popt[1])))
+  # d.set("plot line shape circle ; plot line dash yes ; plot line shape color black ; plot error color black ; plot load /tmp/3.dat xy  ")
+  # d.set("plot name 'Moffat fit: Amp = %0.1f, alpha =  %0.1f, beta =  %0.1f' "%(popt_m[0],popt_m[1],popt_m[2]))
+  # d.set("plot line color cornflowerblue ; plot add graph ")
+  # d.set("plot axis x grid no; plot axis y grid no ; plot load /tmp/2.dat xy ; plot line color black ")
+  # d.set("plot title y 'Encircled energy' ; plot name 'Data' ; plot title x 'Distance from center' ; plot load /tmp/4.dat xy ; plot line color red; plot legend yes ")
+  # d.set("plot legend position bottom ")
+  # d.set("plot name 'EE50 = %0.1fpix' "%(minb))
+  # d.set("plot load /tmp/5.dat xy ")
+  # d.set("plot name 'EE80 = %0.1fpix' "%(mina))
+  # d.set("plot line dash yes ; plot line color red ; plot load /tmp/6.dat xy ")
+  # d.set("plot name '100 percent limit' "%(mina))
+  # d.set("plot line dash yes ; plot line color black ; plot layout STRIP ; plot layout STRIP scale 100")
 
     if d.get('plot') != '':
         plots = d.get('plot').split(' ')
@@ -7786,8 +8007,8 @@ def get_depth_image(xpapoint):
         mag_zp = float(mag_zp)
     aper_size = float(aper_size)
     N_aper = int(N_aper)
-    paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and verboseprint('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
-    for filename in paths:
+    #paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and verboseprint('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
+    for filename in [filename]:
         if mag_zp is None:
             if 'HSC' in filename:
                 mag_zp = 27
@@ -7795,6 +8016,7 @@ def get_depth_image(xpapoint):
                 mag_zp = 30
         verboseprint(filename)
         verboseprint('Zero point magnitude =', mag_zp)
+        print('main_coupon(fileInName=%s, fileOutName=None, ext=1, ext_seg=1, mag_zp=mag_zp, sub=None, aper_size=2, verbose=True, plot=True, fileSegName=None, type="image", nomemmap=False, N_aper=2000'%(filename))
         main_coupon(fileInName=filename, fileOutName=None, ext=1, ext_seg=1, mag_zp=mag_zp, sub=None, aper_size=aper_size, verbose=True, plot=True, fileSegName=None, type="image", nomemmap=False, N_aper=N_aper)
     return
 
@@ -7903,9 +8125,7 @@ def StackDataDubeSpectrally(xpapoint):
         mask = (lambda_>inf) & (lambda_<sup) 
     verboseprint(mask)
     fitswrite(np.sum(spectra[mask],axis=0),'/tmp/stacked.fits')
-    d.set('frame new')
-    d.set('tile yes')
-    d.set('file /tmp/stacked.fits')
+    d.set('frame new ; tile yes ; file /tmp/stacked.fits')
     return
 
 
@@ -7947,7 +8167,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     param_dict['CLEAN']='Y' if param_dict['CLEAN']=='1' else 'N'
     param_dict['RESCALE_WEIGHTS']='Y' if param_dict['RESCALE_WEIGHTS']=='1' else 'N'
     param_dict['WEIGHT_GAIN']='Y' if param_dict['WEIGHT_GAIN']=='1' else 'N'
-    print('DETECTION_IMAGE =',DETECTION_IMAGE)
+    verboseprint('DETECTION_IMAGE =',DETECTION_IMAGE)
     if DETECTION_IMAGE == '-':
         DETECTION_IMAGE = filename
         
@@ -7998,7 +8218,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     #if os.path.isfile(params[0]):
     #if os.path.isfile(params[0]):
     if os.path.isfile(param_dict['CATALOG_NAME']):
-        print(param_dict['CATALOG_NAME'])
+        verboseprint(param_dict['CATALOG_NAME'])
 
         try:
             cat3 = Table.read(param_dict['CATALOG_NAME'])
@@ -8014,7 +8234,7 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         if len(cat3)==0:
             d.set('analysis message {No source detected, verify you parameters...}')
         else:
-            print('Creating regions')
+            verboseprint('Creating regions')
             if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
                 verboseprint('Using WCS header for regions :', cat_path + '.reg')
                 create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
@@ -8025,13 +8245,15 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
             verboseprint('Setting regions')
             if  len(cat3)>1e4:
                # if d.get('analysis message yesno {Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.}'%(len(cat3)))=='1':
-                if yesno(d,question='Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.}'%(len(cat3))):
+                if yesno(d,question='Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.'%(len(cat3))):
                     d.set('regions ' + cat_path + '.reg')
             else:
                 d.set('regions ' + cat_path + '.reg')
-            #if  d.get('analysis message yesno {%i sources detected! Do you want to load the sextractor catalog with PRISM?}'%(len(cat3)))=='1':
+            #if  d.get('analysis message yesno {%i sources detected! Do you want to load the sextractor catalog with PRISM?}'%(len(cat; mode catalog
             if  yesno(d,"""%i sources detected! Do you want to load the sextractor catalog with PRISM?"""%(len(cat3))):
-                d.set('prism ' + param_dict['CATALOG_NAME'])
+                #d.set('prism ' + param_dict['CATALOG_NAME']) # ; catalog FILTER "$NUMBER<10000"; regions system wcs   ; catalog MAXROWS 10 
+                d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse; catalog symbol Size "$A_IMAGE * $KRON_RADIUS" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS"; catalog symbol angle "$THETA_IMAGE" ; mode catalog'%(param_dict['CATALOG_NAME']))
+
         #pprint(cat3)
     else:
         verboseprint('Can not find the output sextractor catalog...')
@@ -8063,7 +8285,7 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
     param_dict = {}
     for key, val in zip(param_names, params):
         param_dict[key] = val
-        print(param_dict[key], val)
+        verboseprint(param_dict[key], val)
 
     param_dict['output-catalog-filename'] = filename[:-5] +'_cat.fits' if param_dict['output-catalog-filename']=='-' else param_dict['output-catalog-filename']
     # try:
@@ -8127,109 +8349,6 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
 
 
 
-
-
-def RunSextractor_OLD(xpapoint, filename=None, detector=None, path=None):
-    """Run sextraxtor software
-    """
-    import astropy
-    from astropy.wcs import WCS
-    from shutil import which
-    d = DS9n(xpapoint)
-    filename = getfilename(d)
-    if which('sex') is None:
-        d = DS9n(xpapoint);d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
-    params = np.array(sys.argv[-35:-2], dtype='<U256')#str)
-    verboseprint(params)
-    DETECTION_IMAGE = sys.argv[-36]
-    ID = sys.argv[-1]
-
-    try:
-        param_dir = resource_filename('pyds9plugin', 'Sextractor')
-    except:
-        param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
-    param_names =  ['CATALOG_NAME', 'CATALOG_TYPE',  'PARAMETERS_NAME',  'DETECT_TYPE',  'DETECT_MINAREA' , 'THRESH_TYPE',  'DETECT_THRESH',  'ANALYSIS_THRESH',  'FILTER',  'FILTER_NAME',  'DEBLEND_NTHRESH', 'DEBLEND_MINCONT',  'CLEAN',  'CLEAN_PARAM',  'MASK_TYPE',  'WEIGHT_TYPE', 'WEIGHT_IMAGE',  'PHOT_APERTURES','PHOT_AUTOPARAMS',  'PHOT_PETROPARAMS',  'PHOT_FLUXFRAC',  'MAG_ZEROPOINT',  'PIXEL_SCALE',  'SEEING_FWHM', 'STARNNW_NAME',  'BACK_TYPE',  'BACK_SIZE',  'BACK_FILTERSIZE',  'BACKPHOTO_TYPE',  'BACKPHOTO_THICK','BACK_FILTTHRESH',  'CHECKIMAGE_TYPE', 'CHECKIMAGE_NAME']
-    #params[0]= filename[:-5] + '_sex.fits' if  (params[0]=='-') or (params[0]=='.') else params[0]
-    verboseprint(filename,params[0],filename + '_sex.fits')
-    #params[8]='Y' if  params[8]=='1' else 'N'
-    params[8]='N' if  params[9]=='NONE' else 'Y'
-
-    params[12]='Y' if params[12]=='1' else 'N'
-    if params[0]=='-':
-        cat_path = filename[:-5] #.fits'
-    else:
-        cat_path = params[0]
-    #params[0] = cat_path + '_cat.fits'
-
-    if params[-2]!='NONE': #CHECKIMAGE_TYPE
-        params[-1] = cat_path + '_check_%s.fits'%(params[-2])
-
-
-    params[2] = os.path.join(param_dir,params[2])
-    params[9] = os.path.join(param_dir,params[9])
-    params[24] = os.path.join(param_dir,params[24])
-
-    if DETECTION_IMAGE == '-':
-        DETECTION_IMAGE = None
-    else:
-        DETECTION_IMAGE =  DETECTION_IMAGE + ','
-    verboseprint('Image used for detection  = ' + str(DETECTION_IMAGE) )
-    verboseprint('Image used for photometry  = '+ str(filename) )
-    
-    verboseprint("""
-          ********************************************************************
-                                     Parameters sextractor:
-          ********************************************************************""")
-    verboseprint('\n'.join([name + ' = ' + str(value) for name, value in zip(param_names, params)]))
-    #os.system('sex -d > default.sex')
-
-    if DETECTION_IMAGE is not None:
-        command = 'sex ' + DETECTION_IMAGE + filename  + ' -WRITE_XML Y   -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])
-        verboseprint(command)
-        answer = os.system('sex ' + DETECTION_IMAGE + filename  + ' -WRITE_XML Y   -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-        if answer != 0:
-            #d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
-            pprint(""" It seems that SExtractor encountered an error.\nPlease verify your image(s)/parameters. \nTo know more about the error run the following command in a terminal:\n%s"""%(command)) 
-            sys.exit()
-    else:   
-        verboseprint('sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)])) 
-
-        answer = os.system('sex ' + filename + '  -WRITE_XML Y -XML_NAME /tmp/%s.xml -'%(os.path.basename(filename)) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params)]))
-
-    colors =  ['Orange']  #['White','Yellow','Orange']  
-    if os.path.isfile(params[0]):
-        try:
-            cat3 = Table.read(params[0])
-        except astropy.io.registry.IORegistryError:
-            cat3 = Table.read(params[0], format='ascii')   
-        if len(cat3)==1:
-            cat3 = Table.read(params[0], format="fits", hdu='LDAC_OBJECTS')
-        w = WCS(filename)
-        d.set('regions showtext no')
-        if len(cat3)==0:
-            d.set('analysis message {No source detected, verify you parameters...}')
-        else:
-            if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
-                verboseprint('Using WCS header for regions :', cat_path + '.reg')
-                create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-            else:
-                verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
-                create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-            if path is None:
-                if len(cat3)<5e4:
-                    d.set('regions ' + cat_path + '.reg')
-                    #if  d.get('analysis message yesno {Analysis completed! Do you want to load the sextractor catalog with PRISM?}')=='1':
-                    if  yesno(d,'Analysis completed! Do you want to load the sextractor catalog with PRISM?}'):
-                        d.set('prism ' + cat_path)
-                        
-                else:
-                    d = DS9n(xpapoint);d.set('analysis message {%i sources detected, loading the regions in DS9 might crash DS9. The catalog was saved here: %s and the resgions here: %s}'%(len(cat3),params[0],cat_path + '.reg'));sys.exit()
-        #pprint(cat3)
-    else:
-        verboseprint('Can not find the output sextractor catalog...')
-    return
-   
-
 def DS9SWARP(xpapoint):
     """Run swarp software from DS9
     """
@@ -8277,9 +8396,7 @@ def DS9SWARP(xpapoint):
         answer = os.system("swarp %s  -c default.swarp -"%(' '.join(paths)) + ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[:]]) )
         if answer != 0:
             d = DS9n(xpapoint);d.set('analysis message {PSFex encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
-    d.set('frame new')
-    d.set('tile no')
-    d.set('file %s'%(param_dict['IMAGEOUT_NAME']))
+    d.set('frame new ; tile no ; file %s'%(param_dict['IMAGEOUT_NAME']))
     return
 
 
@@ -8316,7 +8433,7 @@ def DS9Resample(xpapoint):
         verboseprint("globglob('%s') = %s"%(sys.argv[3],paths))
         
 
-    print('Images to coadd: %s'%(paths))
+    verboseprint('Images to coadd: %s'%(paths))
 
     if which('swarp') is None:
         d = DS9n(xpapoint);d.set('analysis message {SWARP do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
@@ -8329,9 +8446,7 @@ def DS9Resample(xpapoint):
         if answer != 0:
             d = DS9n(xpapoint);d.set('analysis message {PSFex encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
 
-    d.set('frame new')
-    d.set('tile no')
-    d.set('file %s'%(paths[0][:-5] + param_dict['RESAMPLE_SUFFIX']))
+    d.set('frame new ; tile no ; file %s'%(paths[0][:-5] + param_dict['RESAMPLE_SUFFIX']))
     return
 
 
@@ -8411,8 +8526,7 @@ def DS9PSFEX(xpapoint):
             d = DS9n(xpapoint);d.set('analysis message {PSFex encountered an error. Please verify your input catalog (LDAC) and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
             
     if (xpapoint is not None) & (len(paths)==1):
-        d.set('frame new')
-        d.set('file ' +paths[0][:-5] + '%s_homo.fits'%(param_dict['HOMOPSF_PARAMS'].replace(',','-')))
+        d.set('frame new ; file ' +paths[0][:-5] + '%s_homo.fits'%(param_dict['HOMOPSF_PARAMS'].replace(',','-')))
 
 #    x = np.linspace(0,1.8,50)
 #    plt.figure()
@@ -8502,15 +8616,11 @@ def DS9saveColor(xpapoint, filename=None):
             answer = os.system("stiff %s %s %s -"%(path1, path2, path3) + ' -'.join([name + ' ' + str(value) for name, value in zip(param_names, params[3:])]) )
             if answer != 0:
                 d = DS9n(xpapoint);d.set('analysis message {STIFF encountered an error. Please verify your images/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
-            d.set('frame delete all')
-            d.set('rgb')
+            d.set('frame delete all ; rgb')
             d.set('tiff %s'%(os.path.join(os.path.dirname(path1),param_dict['OUTFILE_NAME'])))
     
             for color in ['red','green','blue']:
-                d.set('rgb '+ color)
-                d.set('scale minmax')#
-              #  d.set('scale %s"%(scale))
-                d.set('scale linear')
+                d.set('rgb %s ; scale minmax ; scale linear'%( color))
 
     return 
 
@@ -9130,16 +9240,20 @@ def DS9open(xpapoint, filename=None):
                 d.set("regions load {}".format(filename))#a = OpenFile(xpaname,filename = filename)
                     
             elif type_ == 'Slice': 
-                if (filename[-4:].lower() == '.jpg') or (filename[-4:].lower()  == 'jpeg'):
-                    d.set("jpeg {}".format(filename))
-                elif (filename[-4:].lower() == '.png') :
-                    d.set("png {}".format(filename))#
-                elif (filename[-5:].lower() == '.tiff')| (filename[-4:].lower() == '.tif') :
-                    d.set("tiff {}".format(filename))#
-                elif (filename[-4:].lower() == '.gif') :
-                    d.set("gif {}".format(filename))#
-                else:
-                    d.set("fits new {}".format(filename))#a = OpenFile(xpaname,filename = filename)
+                try:
+                    if (filename[-4:].lower() == '.jpg') or (filename[-4:].lower()  == 'jpeg'):
+                        d.set("jpeg {}".format(filename))
+                    elif (filename[-4:].lower() == '.png') :
+                        d.set("png {}".format(filename))#
+                    elif (filename[-5:].lower() == '.tiff')| (filename[-4:].lower() == '.tif') :
+                        d.set("tiff {}".format(filename))#
+                    elif (filename[-4:].lower() == '.gif') :
+                        d.set("gif {}".format(filename))#
+                    else:
+                        d.set("fits new {}".format(filename))
+                except ValueError:
+                    d.set('frame delete')
+                    message(d,'Could not open %s as slice. Please verify your file is a non corrupted image.'%(filename))
     
             elif type_ == 'Multi-Frames-As-Cube': 
                 d.set("mecube new {}".format(filename))#a = OpenFile(xpaname,filename = filename)
@@ -9210,9 +9324,7 @@ Centering - Aperture Photometry - SExtractor (if available)
     WaitForN(xpapoint)
         
     d.set("analysis message {Now let us do some centering and aperture photometry!}")  
-    d.set('pan to 175 300')
-    d.set('zoom to 2')
-    d.set('regions delete all')
+    d.set('pan to 175 300 ; zoom to 2 ; regions delete all')
     pprint("""********************************************************************************
                                Centering (C)
                 Instrumentation / AIT -> Centering [or Shift+C]
@@ -9287,8 +9399,7 @@ Centering - Aperture Photometry - SExtractor (if available)
         
         
     d.set("analysis message {Let us do some 2D gaussian fitting!}")  
-    d.set('regions delete all')
-    d.set('zoom to 2')
+    d.set('regions delete all ; zoom to 2')
 
     pprint("""Well done!\n
 ********************************************************************************
@@ -9325,8 +9436,7 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
     WaitForN(xpapoint)
         
     d.set("analysis message {Let us do some 2D gaussian fitting!}")  
-    d.set('regions delete all')
-    d.set('zoom to 2')
+    d.set('regions delete all ; zoom to 2')
 
 
     pprint("""********************************************************************************
@@ -9401,8 +9511,7 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
 %i/%i - Hit [Next] to run the function"""%(i,n,resource_filename('pyds9plugin','Images/stack????????.fits'),i+1,n));i+=2
 
     WaitForN(xpapoint)
-    d.set('frame delete all')
-    d.set('frame new')
+    d.set('frame delete all ; frame new')
     pprint("""%i/%i - Then paste it in the RegExp path field and let Type=Slice
 * If you do not see any image, the cuts might not be right, 
 * hit shift+s to change it automatically.
@@ -9667,8 +9776,7 @@ rendering in order to the objects in the image. When it is done,
  
     
     #d.set("analysis message {Now let us do some 3D plotting}")    
-    d.set('pan to 630 230')
-    d.set('zoom to 1')
+    d.set('pan to 630 230 ; zoom to 1')
     
     pprint("""********************************************************************************
                                Plot Region In 3D
@@ -9693,8 +9801,7 @@ rendering in order to the objects in the image. When it is done,
  %i/%i - Please create a reagion """%(i,n));i+=1# and use log scale.
 #* You can either rerun the function or HIT NEXT TO ACCESS THE NEXT FUNCTION.""")# and use log scale.
     reg = resource_filename('pyds9plugin', 'Images')
-    d.set('frame delete')
-    d.set('file ' + os.path.join(reg,'m33_hi.fits'))
+    d.set('frame delete ; file ' + os.path.join(reg,'m33_hi.fits'))
     WaitForN(xpapoint)
     while  getregion(d,selected=True) is None:
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
@@ -9823,10 +9930,7 @@ by launching it from the Analysis menu [always explicited under function's name]
                  Please [Next]""")
     WaitForN(xpapoint)
 
-    d.set('frame new')
-    d.set('tile no')
-    d.set('file ' +  os.path.join(resource_filename('pyds9plugin', 'Images'),'stack.fits') )
-    d.set('zoom to fit')
+    d.set('frame new ; tile no ; file %s ; zoom to fit'%(os.path.join(resource_filename('pyds9plugin', 'Images'),'stack.fits') ))
     #WaitForN(xpapoint)
     #print('tutorial_number = ', tutorial_number)
     i=1
@@ -9935,9 +10039,7 @@ def DS9PythonInterp(xpapoint):
     result, name = Parallelize(function=ExecCommand,parameters=[path2remove,exp,my_conf,xpapoint,bool(int(eval_)),overwrite],action_to_paralize=path ,number_of_thread=10)    
                                         
     if len(path) < 2:
-        d.set('frame new')
-        d.set('tile yes')
-        d.set('file ' + name)  
+        d.set('frame new ; tile yes ; file ' + name)  
     return
 
 def Quit(xpapoint):
@@ -10030,7 +10132,7 @@ def main():
                                  'stack': DS9stack_new,'lock': DS9lock,'CreateHeaderCatalog':DS9CreateHeaderCatalog,'SubstractImage': DS9PythonInterp,
                                  'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
                                  'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings,'next_step':next_step,'BackgroundEstimationPhot': DS9BackgroundEstimationPhot,'verbose':verbose,
-                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting,'Quit':Quit,'Button':Button}#,'NextButton':NextButton
+                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting,'Quit':Quit,'Button':Button,'ThrowApertures':ThrowApertures}#,'NextButton':NextButton
                        
         DictFunction_AIT =     {'centering':DS9center, 'radial_profile':DS9rp,
                                 'throughfocus':DS9throughfocus, 'ComputeFluctuation':ComputeFluctuation,

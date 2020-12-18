@@ -141,7 +141,7 @@ hmenu 1. Generic Functions
 		*
 		menu
 		#DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
-		DS9Utils $xpa_method DS9Region2Catalog  "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils $xpa_method DS9Region2Catalog  $param(Catalog-name); "$save" 
 
 
 
@@ -149,6 +149,19 @@ hmenu 1. Generic Functions
 		*
 		menu
 		DS9Utils $xpa_method ReplaceWithNans  $param(Replace-region);  $number $overwrite   | $text  
+
+
+		Throw Apertures
+		*
+		menu
+		DS9Utils $xpa_method ThrowApertures  $param(Throw-Apertures);  $number $size  $form $spacing | $text  
+
+
+		Plot aperture's values
+		*
+		menu
+		DS9Utils $xpa_method AperturesParams  $param(Plot-Apertures);  "$path" $x $y  $select" | $text  
+
 
 #$message(okcancel,WARNING: you are about to run an invasive method. This function will replace all the pixel surounded by DS9 regions by NaN values! The original image will be deleted! Please click ok to continue, cancel to abort.)  
 
@@ -251,10 +264,10 @@ hmenu 1. Generic Functions
 	DS9Utils $xpa_method PlotArea3D | $text  
 
 
-#	Simulate Sky Image
-#	*
-#	menu
-#	DS9Utils $xpa_method CreateImageFromCatalogObject "$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"  | $text  
+	Simulate Sky Image
+	*
+	menu
+	DS9Utils $xpa_method CreateImageFromCatalogObject "$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"  | $text  
 
 
 endhmenu
@@ -269,7 +282,6 @@ endhmenu
 
 
 
-
 hmenu 2. Instrumentation - AIT
 
 	hmenu Focus
@@ -277,7 +289,7 @@ hmenu 2. Instrumentation - AIT
 		Throughfocus  #24
 		*
 		menu
-		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS - $sort   | $text  #$steps
+		DS9Utils $xpa_method throughfocus $param(Throughfocus); "$Path" $WCS - $sort $offsets  | $text  #$steps
 
 		Explore Throughfocus PSFs #24
 		*
@@ -629,6 +641,20 @@ clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+
 type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|PRISM {} 
 endparam
 
+
+param Catalog-name
+save save {Path where to save the catalog}  /tmp/test.csv  {} #NORMAL
+endparam
+
+param Plot-Apertures
+save save {Regions' catalog path}  /tmp/test.csv  {} #NORMAL
+x menu {X}  xcentroid|ycentroid|var|std|mean|median|min|max {} #NORMAL
+y menu {Y}  xcentroid|ycentroid|var|std|mean|median|min|max  {} #NORMAL
+select entry {Path where to save the catalog}    {} #NORMAL
+endparam
+
+
+
 param ComputeFluctuation
 Number entry {Number} 50000 {Number of aperture} #NORMAL
 Radius entry {Radius} 20 {Radius of the aperture in pixel} 
@@ -935,7 +961,7 @@ param Throughfocus
 Path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
 sort menu {Sorting type} 	AlphaNumerical|CreationDate|DS9-Order {Way to sort files to create throughfocus profile}
 WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
-#steps entry {Steps} - {Give first actuator center and step eg: 16.45-0.15. Leave '-' if not needed.}
+offsets entry {Steps} - {If throughfocus images not taken uniformely, provide the offset of each image separated by a coma, eg: 0,0.5,2,3}
 endparam
 
 param Click-Enter-For-Only-DS9-Image
@@ -1005,8 +1031,12 @@ left entry {Size x-} 4 {Number of pixels to mask in the x- direction}
 right entry {Size x+} 0 {Number of pixels to mask in the x+ direction}
 endparam
 
-
-
+param Throw-Apertures
+number entry {Number of apertures} 1000 {}
+size entry {Size of apertures} 10,10 {pixels}
+form menu {Apetures'forme} box|circle {}
+spacing menu {Apeture's position} Random|Equidistributed {}
+endparam
 
 
 param LostInSpace
