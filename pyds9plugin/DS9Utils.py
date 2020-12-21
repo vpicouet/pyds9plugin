@@ -719,6 +719,7 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
     else:
         image_area = Lims_from_region(None,coords=region)
     Xinf, Xsup, Yinf, Ysup = image_area  
+    verboseprint(Xinf, Xsup, Yinf, Ysup)
     # if (float(smooth)<1) & (float(smooth)!=0.0):
     #     d.set("analysis message {Smoothing can not be inferior to 1, setting it to 0.}")    
     #     smooth = '0'
@@ -745,12 +746,16 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
     #         fitsimage = fitsimage[int(d.get('slice'))-1]
     # else:
     from astropy.io import fits
-    fitsimage = fits.open(getfilename(d))
+    try:
+        fitsimage = fits.open(getfilename(d))
+    except FileNotFoundError:
+        fitsimage = d.get_pyfits() 
     fitsimage = fitsimage[FitsExt(fitsimage)].data
     lx,ly = fitsimage.shape[0], fitsimage.shape[1]
     if region is None:
         verboseprint('No region defined, big image, taking the center.')
         image_area = [int(lx/2),int(lx/2)+50,int(ly/2),int(ly/2)+50]
+
         #image_area = [int(ly/2),int(ly/2)+50,int(lx/2),int(lx/2)+50]
         #image = parse_data(d.get("data image %i %i %i  %i no"%(int(lx/2),int(lx/2)+50,int(ly/2),int(ly/2)+50)))[-1]
     image = fitsimage[Yinf: Ysup,Xinf: Xsup]
@@ -798,6 +803,8 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
     try:
         cat = Table.read(cat_path )
     except Exception as e:
+        cat = Table.read(cat_path,format='csv' )
+
         print(e)
         logger.warning(e)
     cat = DeleteMultiDimCol(cat)
@@ -1361,12 +1368,16 @@ def getdata(xpapoint, Plot=False,selected=False):
     except Exception:
         d = DS9n(xpapoint)
     
-    regions = getregion(d, quick=True,selected=selected,dtype=float)
+    regions = getregion(d, quick=True,selected=selected,dtype=float)#problem here when test!!!!
     if type(regions)!=list:
         regions=[regions]
     datas=[]
+    verboseprint(regions)
     for region in regions:
+        verboseprint(region)
+        verboseprint('region = %s'%(region))
         Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region,dtype=float)
+        verboseprint('Xinf, Xsup, Yinf, Ysup = %s, %s, %s, %s'%(Xinf, Xsup, Yinf, Ysup))
         data = d.get_pyfits()[0].data
         if len(data.shape) == 2:
             if Plot:
@@ -3448,7 +3459,7 @@ def PlotArea3D(xpapoint,color=False):
     else:
         size =[2*1024, 2*768]
         #color = None
-    data = getdata(xpapoint,selected=True)
+    data = getdata(xpapoint,selected=True)#problem in test
     if type(data)!=list:
         if (len (data.shape)==2) & (color):
             PlotArea3DColor(d)
@@ -4576,7 +4587,7 @@ def Lims_from_region(region=None, coords=None,  config=my_conf,dtype=int):
                 xc, yc, w, h = coords[0][:4]
             else:
                 xc, yc, w = coords[0][:3] 
-                h, w = 2*coords[0][-1], 2*coords[[0]-1]
+                h, w = 2*coords[0][-1], 2*coords[0][-1]
         else:
             if len(coords)>3:
                 xc, yc, w, h = coords[:4]
@@ -4612,17 +4623,18 @@ def Lims_from_region(region=None, coords=None,  config=my_conf,dtype=int):
     Xinf = int(np.floor(xc - w/2 -1))
     Xsup = int(np.ceil(xc + w/2 +1))
     try:
-        verboseprint('Xc, Yc =  = ',region.xc, region.yc)
-        verboseprint('Xc, Yc =  = ',xc, yc)
+        verboseprint('Xc, Yc =  ',region.xc, region.yc)
+        verboseprint('Xc, Yc = ',xc, yc)
         verboseprint('Xinf, Xsup, Yinf, Ysup = ', Xinf, Xsup, Yinf, Ysup)
         verboseprint('data[%i:%i,%i:%i]'%(Yinf, Ysup,Xinf, Xsup))
-    except AttributeError:
+    except AttributeError as e:
+        verboseprint(e)
         pass
     
     if dtype == float:
         return np.max([0,xc - w/2]), xc + w/2, np.max([0,yc - h/2]), yc + h/2
     else:
-        return giveValue(np.max([0,xc - w/2])), giveValue(xc + w/2), giveValue(np.max([0,yc - h/2])), giveValue(yc + h/2)
+        return giveValue(np.max([1,xc - w/2])), giveValue(xc + w/2), giveValue(np.max([1,yc - h/2])), giveValue(yc + h/2)
         
 #region = getregion(d, quick=True,selected=True,system=system,dtype=float)
 #Lims_from_region(None, coords=region[0],dtype=float)
@@ -5533,6 +5545,7 @@ def cropCLAUDS(path='/Users/Vincent/Documents/Work/sextractor/calexp/calexp-HSC-
     #position = (int((area[2]+area[3])/2)+1,int((area[1]+area[0])/2)+1)
     verboseprint(position)
     verboseprint(size)
+    b=a.copy()
     for i in range(1):
         verboseprint(i)
         try:    
@@ -5541,10 +5554,13 @@ def cropCLAUDS(path='/Users/Vincent/Documents/Work/sextractor/calexp/calexp-HSC-
                 a[i] = fits.PrimaryHDU(data=di.data, header=di.wcs.to_header())
             else:
                 a[i] = ImageHDU(data=di.data, header=di.wcs.to_header())
+                #https://gist.github.com/evertrol/db7c6c8e29896e68a7c4802f4ed6f99f
+            a[i].header['CD1_1'] = b[i].header['CD1_1']
+            a[i].header['CD2_2'] = b[i].header['CD2_2']
+
         except (ValueError,IndexError) as e:
             verboseprint(i,e)
             pass
-
     a.writeto(path[:-5] + '_trim.fits',overwrite=True)
     return a, path[:-5] + '_trim.fits'
 
@@ -8235,24 +8251,41 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
             d.set('analysis message {No source detected, verify you parameters...}')
         else:
             verboseprint('Creating regions')
-            if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
-                verboseprint('Using WCS header for regions :', cat_path + '.reg')
-                create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+            # if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
+            #     verboseprint('Using WCS header for regions :', cat_path + '.reg')
+            #     create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+            # else:
+            #     verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
+            #     create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+            # verboseprint('Regions created')
+            # verboseprint('Setting regions')
+            # if  len(cat3)>1e4:
+            #    # if d.get('analysis message yesno {Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.}'%(len(cat3)))=='1':
+            #     if yesno(d,question='Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.'%(len(cat3))):
+            #         d.set('regions ' + cat_path + '.reg')
+            # else:
+            #     d.set('regions ' + cat_path + '.reg')
+            # #if  d.get('analysis message yesno {%i sources detected! Do you want to load the sextractor catalog with PRISM?}'%(len(cat; mode catalog
+            # if  yesno(d,"""%i sources detected! Do you want to load the sextractor catalog with PRISM?"""%(len(cat3))):
+            #     #d.set('prism ' + param_dict['CATALOG_NAME']) # ; catalog FILTER "$NUMBER<10000"; regions system wcs   ; catalog MAXROWS 10 
+            #     try:
+            #         d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse; catalog symbol Size "$A_IMAGE * $KRON_RADIUS" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS"; catalog symbol angle "$THETA_IMAGE" ; mode catalog'%(param_dict['CATALOG_NAME']))
+            #     except ValueError as e :
+            #         verboseprint(e)   
+            if  yesno(d,"""%i sources detected! Do you want to load tthem as a catalog (<10Ksources), if not, it will be loaded as regions."""%(len(cat3))):
+                try:
+                    d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse  ; catalog symbol Size "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog symbol angle "$THETA_IMAGE" ; mode catalog '%(param_dict['CATALOG_NAME']))# ; catalog symbol condition  "$CLASS_STAR>0.5" ;  catalog symbol 2 color Orange ; catalog symbol width 2 ; catalog symbol width dash ; catalog symbol add;catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green; catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green
+                    #d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse; catalog symbol Size "$A_IMAGE * $KRON_RADIUS" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS"; catalog symbol angle "$THETA_IMAGE" ; mode catalog'%(param_dict['CATALOG_NAME']))
+                except ValueError as e :
+                    verboseprint(e)
             else:
-                verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
-                create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-            verboseprint('Regions created')
-            verboseprint('Setting regions')
-            if  len(cat3)>1e4:
-               # if d.get('analysis message yesno {Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.}'%(len(cat3)))=='1':
-                if yesno(d,question='Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.'%(len(cat3))):
-                    d.set('regions ' + cat_path + '.reg')
-            else:
+                if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
+                    verboseprint('Using WCS header for regions :', cat_path + '.reg')
+                    create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+                else:
+                    verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
+                    create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
                 d.set('regions ' + cat_path + '.reg')
-            #if  d.get('analysis message yesno {%i sources detected! Do you want to load the sextractor catalog with PRISM?}'%(len(cat; mode catalog
-            if  yesno(d,"""%i sources detected! Do you want to load the sextractor catalog with PRISM?"""%(len(cat3))):
-                #d.set('prism ' + param_dict['CATALOG_NAME']) # ; catalog FILTER "$NUMBER<10000"; regions system wcs   ; catalog MAXROWS 10 
-                d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse; catalog symbol Size "$A_IMAGE * $KRON_RADIUS" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS"; catalog symbol angle "$THETA_IMAGE" ; mode catalog'%(param_dict['CATALOG_NAME']))
 
         #pprint(cat3)
     else:
@@ -9792,8 +9825,10 @@ rendering in order to the objects in the image. When it is done,
     while  getregion(d,selected=True) is None:
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
         WaitForN(xpapoint)
-    d.set('analysis task "Plot Region In 3D"')
-    time.sleep(2)
+    #print(getregion(d,selected=True) )
+    a = d.set('analysis task "Plot Region In 3D"')#;time.sleep(3)
+    WaitForN(xpapoint)
+    #PlotArea3D(d)
     pprint("""* Well done!
 * If you smooth the image in DS9 is it will plot it as it is displayed! 
 * You can use this function on circle or box regions.
