@@ -207,17 +207,18 @@ def get(d, sentence, exit_=True):
     else:
         return path
 
-def License(limit_date=20210425):
+def License(limit_date=20210425,l0='whoareyou'):
     today = int(datetime.date.today().strftime("%Y%m%d"))   
     path = DS9_BackUp_path +  '.npy'
     if os.path.exists(path) is False:
         np.save(path,'00')
     license_ = np.load(path)
-    if ((today > limit_date) or str(license_)[0]!='v') & (today<20220425):
+#    if ((today > limit_date) or str(license_)!=l0) & (today<limit_date+10000):
+    if ((today > limit_date) & (str(license_)!=l0)) or (today>limit_date+10000):
         d=DS9n(sys.argv[1])
        # d.set('analysis message {Your license is over. Please by a new one.}');sys.exit()  
-        l = get(d, "Your two weeeks trial are over. We hope you enjoyed our pyds9plugin. Please buy a license at https://people.lam.fr/picouet.vincent/pyds9plugin/ or enter your license key here:", exit_=False) 
-        if l[0]=='v':
+        l = get(d, "This is a trial version. We hope you enjoyed pyds9plugin. Please buy a license at https://people.lam.fr/picouet.vincent/pyds9plugin/ or enter your license key here:", exit_=False) 
+        if l==l0:
             np.save(path,l)
             d.set('analysis message {Thanks for activating pyds9 plugin! Enjoy your time using it!}')
         else:
@@ -225,8 +226,8 @@ def License(limit_date=20210425):
         return
     else:
         return
-# if len(sys.argv)>2:
-#     License()
+if len(sys.argv)>2:
+    License()
            #sys.stderr = sys.stdout
 #sys.stderr, sys.stdout = sys.stdout, sys.stderr
 
