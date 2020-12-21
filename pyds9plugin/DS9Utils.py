@@ -231,12 +231,12 @@ if len(sys.argv)>2:
            #sys.stderr = sys.stdout
 #sys.stderr, sys.stdout = sys.stdout, sys.stderr
 
-try:
-    import matplotlib.pyplot as plt
-except:    
-    import matplotlib 
-    matplotlib.use('Agg') 
-    import matplotlib.pyplot as plt 
+# try:
+#     import matplotlib.pyplot as plt
+# except:    
+#     import matplotlib 
+#     matplotlib.use('Agg') 
+#     import matplotlib.pyplot as plt 
 
 
 
@@ -296,19 +296,19 @@ def ComputeFluctuation(xpapoint, fileOutName=None, ext=1, ext_seg=1, mag_zp=None
 ################################
 
 
-width = 23#root.winfo_screenmmwidth() / 25.4
-height = 14#root.winfo_screenmmheight() / 25.4
+# width = 23#root.winfo_screenmmwidth() / 25.4
+# height = 14#root.winfo_screenmmheight() / 25.4
 
-#IPython_default = plt.rcParams.copy()
-plt.rcParams['figure.figsize'] = (2*width/3, 3*height/5)
-plt.rcParams['grid.linestyle'] = ':'
-plt.rcParams['axes.grid'] = True
-plt.rcParams['image.interpolation'] = None
-#plt.rcParams['savefig.transparent'] = True
-plt.rcParams['xtick.labelsize'] = 'x-large'
-plt.rcParams['ytick.labelsize'] = 'x-large'
-plt.rcParams['axes.labelsize'] = 'x-large'
-plt.rcParams['axes.titlesize'] = 'x-large'
+# #IPython_default = plt.rcParams.copy()
+# plt.rcParams['figure.figsize'] = (2*width/3, 3*height/5)
+# plt.rcParams['grid.linestyle'] = ':'
+# plt.rcParams['axes.grid'] = True
+# plt.rcParams['image.interpolation'] = None
+# #plt.rcParams['savefig.transparent'] = True
+# plt.rcParams['xtick.labelsize'] = 'x-large'
+# plt.rcParams['ytick.labelsize'] = 'x-large'
+# plt.rcParams['axes.labelsize'] = 'x-large'
+# plt.rcParams['axes.titlesize'] = 'x-large'
 
 #################################
 #import matplotlib.pyplot as plt
@@ -1362,7 +1362,6 @@ def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test
 def getdata(xpapoint, Plot=False,selected=False):
     """Get data from DS9 display in the definied region
     """
-    import matplotlib.pyplot as plt
     #from astropy.io import fits
     try:
         d = DS9n(xpapoint)
@@ -1382,6 +1381,7 @@ def getdata(xpapoint, Plot=False,selected=False):
         data = d.get_pyfits()[0].data
         if len(data.shape) == 2:
             if Plot:
+                import matplotlib.pyplot as plt
                 plt.imshow(data[giveValue(Yinf+0.5):giveValue(Ysup),giveValue(Xinf+0.5):giveValue(Xsup)])
                 plt.colorbar()
 
@@ -2143,8 +2143,7 @@ def throughfocusWCS(center, files,x=None,
     """
     from astropy.io import fits
     from astropy.table import Table, vstack
-    import matplotlib; matplotlib.use('TkAgg')  
-    import matplotlib.pyplot as plt
+
     from scipy.optimize import curve_fit
     x=offsets
 
@@ -2224,111 +2223,118 @@ def throughfocusWCS(center, files,x=None,
 
    
     #x = np.array(ENCa)
-    fig, axes = plt.subplots(4, 2,sharex=True)#,figsize=(24,3)
+    # fig, axes = plt.subplots(4, 2,sharex=True)#,figsize=(24,3)
 
     try:
         opt1,cov1 = curve_fit(f,x,fwhm)
-        axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
+        # axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
         bestx1 = xtot[np.argmin(f(xtot,*opt1))]
-        axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)])
-        if len(ENCa) > 0:
-            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx1,ENC(bestx1,ENCa)))
-        else:
-            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx1))
+        np.savetxt('/tmp/fwhm_fit.dat',np.array([xtot,f(xtot,*opt1)]).T)
+#        axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)])
+#        if len(ENCa) > 0:
+#            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx1,ENC(bestx1,ENCa)))
+#        else:
+#            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx1))
             
     except RuntimeError as e:
         logger.warning(e)
-        opt1 = [0,0,0]
+        opt1 = [np.nan,np.nan,np.nan]#[0,0,0]
         bestx1 = np.nan
         pass 
     try:
         opt2,cov2 = curve_fit(f,x,EE50)
-        axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
+#        axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
         bestx2 = xtot[np.argmin(f(xtot,*opt2))]
-        if len(ENCa) > 0:
-            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx2,ENC(bestx2,ENCa)))
-        else:
-            axes[1,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx2))
-        axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)])
+        # if len(ENCa) > 0:
+        #     axes[1,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx2,ENC(bestx2,ENCa)))
+        # else:
+        #     axes[1,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx2))
+        # axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)])
+        np.savetxt('/tmp/EE50_fit.dat',np.array([xtot,f(xtot,*opt2)]).T)
     except RuntimeError:
-        opt2 = [0,0,0]
+        opt2 = [np.nan,np.nan,np.nan]#[0,0,0]
         bestx2 = np.nan
         pass     
     try:
         opt3,cov3 = curve_fit(f,x,EE80)
-        axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
+#        axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
         bestx3 = xtot[np.argmin(f(xtot,*opt3))]
-        if len(ENCa) > 0:
-            axes[2,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx3,ENC(bestx3,ENCa)))
-        else:
-            axes[2,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx3))
-        axes[2,0].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)])
+        np.savetxt('/tmp/EE80_fit.dat',np.array([xtot,f(xtot,*opt3)]).T)
+        # if len(ENCa) > 0:
+        #     axes[2,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx3,ENC(bestx3,ENCa)))
+        # else:
+        #     axes[2,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx3))
+        # axes[2,0].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)])
     except RuntimeError:
-        opt3 = [0,0,0]
+        opt3 = [np.nan,np.nan,np.nan]#[0,0,0]
         bestx3 = np.nan
         pass     
     try:
         opt4,cov4 = curve_fit(f,x,maxpix)
-        axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
+#        axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
         bestx4 = xtot[np.argmax(f(xtot,*opt4))]
-        axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)])
-        if len(ENCa) > 0:
-            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx4,ENC(bestx4,ENCa)))
-        else:
-            axes[0,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx4))
+        np.savetxt('/tmp/maxpix_fit.dat',np.array([xtot,f(xtot,*opt4)]).T)
+
+ #       axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)])
+    #     if len(ENCa) > 0:
+    #         axes[0,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx4,ENC(bestx4,ENCa)))
+    #     else:
+    #         axes[0,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx4))
     except RuntimeError:
-        opt4 = [0,0,0]
+        #opt4 = [0,0,0]
         bestx4 = np.nan
+        opt4 = [np.nan,np.nan,np.nan]#[0,0,0]
+
         pass            
     try:
         opt5,cov5 = curve_fit(f,x,sumpix)
-        axes[1,1].plot(xtot,f(xtot,*opt5),linestyle='dotted')
+#        axes[1,1].plot(xtot,f(xtot,*opt5),linestyle='dotted')
         bestx5 = xtot[np.argmax(f(xtot,*opt5))]
-        if len(ENCa) > 0:
-            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx5,ENC(bestx5,ENCa)))
-        else:
-            axes[1,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx5))
-        axes[1,1].plot(np.ones(2)*bestx5,[min(sumpix),max(sumpix)])
+        # if len(ENCa) > 0:
+        #     axes[1,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx5,ENC(bestx5,ENCa)))
+        # else:
+        #     axes[1,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx5))
+        # axes[1,1].plot(np.ones(2)*bestx5,[min(sumpix),max(sumpix)])
     except RuntimeError:
         opt5 = [0,0,0]
         bestx5 = np.nan
         pass
     try:
         opt6,cov6 = curve_fit(f,x,varpix)
-        axes[2,1].plot(xtot,f(xtot,*opt6),linestyle='dotted')
+#        axes[2,1].plot(xtot,f(xtot,*opt6),linestyle='dotted')
         bestx6 = xtot[np.argmax(f(xtot,*opt6))]
-        if len(ENCa) > 0:
-            axes[2,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx6,ENC(bestx6,ENCa)))
-        else:
-            axes[2,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx6))
-        axes[2,1].plot(np.ones(2)*bestx6,[min(varpix),max(varpix)])
+        # if len(ENCa) > 0:
+        #     axes[2,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx6,ENC(bestx6,ENCa)))
+        # else:
+        #     axes[2,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx6))
+        # axes[2,1].plot(np.ones(2)*bestx6,[min(varpix),max(varpix)])
     except RuntimeError:
         opt6 = [0,0,0]
         bestx6 = np.nan
         pass
-    axes[0,0].plot(x,fwhm, '-o')
-    axes[0,0].set_ylabel('Sigma')
+    # axes[0,0].plot(x,fwhm, '-o')
+    # axes[0,0].set_ylabel('Sigma')
 
-    axes[1,0].plot(x,EE50, '-o')
-    axes[1,0].set_ylabel('EE50')
+    # axes[1,0].plot(x,EE50, '-o')
+    # axes[1,0].set_ylabel('EE50')
 
-    axes[2,0].plot(x,EE80, '-o')
-    axes[2,0].set_ylabel('EE80')
+    # axes[2,0].plot(x,EE80, '-o')
+    # axes[2,0].set_ylabel('EE80')
 
-    axes[3,0].plot(x,xo, '-o')
-    axes[3,0].set_ylabel('y center')
+    # axes[3,0].plot(x,xo, '-o')
+    # axes[3,0].set_ylabel('y center')
 
-    axes[0,1].plot(x,maxpix, '-o')
-    axes[0,1].set_ylabel('Max pix')
+    # axes[0,1].plot(x,maxpix, '-o')
+    # axes[0,1].set_ylabel('Max pix')
 
-    axes[1,1].plot(x,sumpix, '-o')
-    axes[1,1].set_ylabel('Flux')
+    # axes[1,1].plot(x,sumpix, '-o')
+    # axes[1,1].set_ylabel('Flux')
     
-    axes[2,1].plot(x,varpix, '-o')
-    axes[2,1].set_ylabel('Var pix (d=50)')
-    axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
-    axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
-    axes[3,1].set_ylabel('y center')
+    # axes[2,1].plot(x,varpix, '-o')
+    # axes[2,1].set_ylabel('Var pix (d=50)')
+    # axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
+    # axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
+    # axes[3,1].set_ylabel('y center')
    
     mean = np.nanmean(np.array([ENC(bestx1,ENCa),ENC(bestx2,ENCa),
                ENC(bestx3,ENCa),ENC(bestx4,ENCa),
@@ -2345,27 +2351,31 @@ def throughfocusWCS(center, files,x=None,
                ENC(bestx1,ENCa),ENC(bestx2,ENCa),
                ENC(bestx3,ENCa),ENC(bestx4,ENCa),
                ENC(bestx6,ENCa)))
+    np.savetxt('/tmp/fwhm.dat',np.array([x, fwhm]).T)
+    np.savetxt('/tmp/EE50.dat',np.array([x, EE50]).T)
+    np.savetxt('/tmp/EE80.dat',np.array([x, EE80]).T)
+    np.savetxt('/tmp/maxpix.dat',np.array([x, maxpix]).T)
     #name = '%s - %i - %i'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
-    fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
-    if Plot:        
-        plt.show()
-        fig, axes = plt.subplots(1, 11,figsize=(24,3),sharey=True)
-        for i in range(len(images)):
-            axes[i].imshow(images[i])
-            axes[i].axis('equal')
-            subname = os.path.basename(files[i])[6:11] 
-            try:
-                axes[i].set_xlabel('%i - %0.2f'%(int(subname),float(ENCa[i])))
-                #axes[i].set_title(float(ENCa[i]))
-            except Exception as e:
-                logger.warning(e)
-                axes[i].set_xlabel(int(subname))
-                pass
-        fig.suptitle(name)
-        fig.subplots_adjust(top=0.88)   
-        fig.tight_layout()
-        #plt.axis('equal')
-        fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
+    # fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
+    # if Plot:        
+    #     plt.show()
+    #     fig, axes = plt.subplots(1, 11,figsize=(24,3),sharey=True)
+    #     for i in range(len(images)):
+    #         axes[i].imshow(images[i])
+    #         axes[i].axis('equal')
+    #         subname = os.path.basename(files[i])[6:11] 
+    #         try:
+    #             axes[i].set_xlabel('%i - %0.2f'%(int(subname),float(ENCa[i])))
+    #             #axes[i].set_title(float(ENCa[i]))
+    #         except Exception as e:
+    #             logger.warning(e)
+    #             axes[i].set_xlabel(int(subname))
+    #             pass
+    #     fig.suptitle(name)
+    #     fig.subplots_adjust(top=0.88)   
+    #     fig.tight_layout()
+    #     #plt.axis('equal')
+    #     fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
         #fig.show()
     try:
         OldTable = Table.read(os.path.dirname(filename) + '/Throughfocus.csv')
@@ -2376,7 +2386,64 @@ def throughfocusWCS(center, files,x=None,
         t = vstack((OldTable,t))
         #print ('new',newTable)
         t.write(os.path.dirname(filename) + '/Throughfocus.csv',overwrite=True)
-
+    d = []
+    d.append('plot line open')#d.append("plot axis x grid no ")  
+    d.append("plot axis y grid no ")
+    d.append("plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt1)),xtot[np.argmin(f(xtot,*opt1))]))
+    d.append("plot title y 'FWHM' ")
+    d.append("plot load /tmp/fwhm.dat xy")
+    d.append("plot line shape circle ")
+    d.append("plot line width 0 ")
+    d.append("plot line shape color black") #d.append("plot legend yes ")
+    d.append("plot legend position right ")
+    d.append("plot load /tmp/fwhm_fit.dat xy")
+    d.append("plot line dash yes ")
+    d.append("plot title legend ''")  
+    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
+    d.append("plot add graph ")
+    d.append("plot axis y grid no ")
+    d.append("plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "%(np.nanmax(f(xtot,*opt4)),xtot[np.argmax(f(xtot,*opt4))]))
+    d.append("plot load /tmp/maxpix.dat xy")
+    d.append("plot title y 'Max pix' ")
+    d.append("plot line shape circle ")
+    d.append("plot line width 0 ")
+    d.append("plot line shape color black") #d.append("plot legend yes ")
+    d.append("plot legend position right ")
+    d.append("plot load /tmp/maxpix_fit.dat xy")
+    d.append("plot line dash yes ")
+    d.append("plot title legend ''")  
+    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
+    d.append("plot add graph ")
+    d.append("plot axis y grid no ")
+    d.append("plot title 'Fit: Best EE50 = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt2)),xtot[np.argmin(f(xtot,*opt2))]))      
+    d.append("plot load /tmp/EE50.dat xy")
+    d.append("plot title y 'Radial profile' ")
+    d.append("plot line shape circle ")
+    d.append("plot line width 0 ")
+    d.append("plot line shape color black")     #d.append("plot legend yes ")
+    d.append("plot legend position right ")
+    d.append("plot load /tmp/EE50_fit.dat xy")
+    d.append("plot line dash yes ")
+    d.append("plot title legend ''")  
+    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))    
+    d.append("plot add graph ")
+    d.append("plot axis y grid no ")
+    d.append("plot title 'Fit: Best EE80 = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt3)),xtot[np.argmin(f(xtot,*opt3))]))
+    d.append("plot load /tmp/EE80.dat xy")
+    d.append("plot title y 'Radial profile' ")
+    d.append("plot line shape circle ")
+    d.append("plot line width 0 ")
+    d.append("plot line shape color black")     #d.append("plot legend yes ")
+    d.append("plot legend position right ")
+    d.append("plot load /tmp/EE80_fit.dat xy")
+    d.append("plot line dash yes ")
+    d.append("plot title legend ''")  
+    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))      
+    d.append("plot layout GRID ; plot layout STRIP scale 100")
+    d.append("plot font legend size 9 ")
+    d.append("plot font labels size 13 ")      
+    ds9=DS9()
+    ds9.set(' ; '.join(d)) 
     return images#fwhm, EE50, EE80
 #    return fwhm, EE50, EE80
 
@@ -3140,8 +3207,6 @@ def set_axes_equal(ax):
 #     """Plot the image area defined in DS9 in 3D, should add some kind of 2D
 #     polynomial fit
 #     """
-#     import matplotlib; matplotlib.use('TkAgg')  
-#     import matplotlib.pyplot as plt
 #     from mpl_toolkits.mplot3d import axes3d
 #     from matplotlib.widgets import  CheckButtons #RadioButtons,
 #     #import matplotlib.ticker as mticker
@@ -4360,8 +4425,8 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     and give the number of the image with the maximum of flux in title. Note that the x axis only give the index
     of the image, not its number.
     """
-    import matplotlib; matplotlib.use('TkAgg')  
-    import matplotlib.pyplot as plt
+    # import matplotlib; matplotlib.use('TkAgg')  
+    # import matplotlib.pyplot as plt
     from astropy.io import fits
     from scipy.optimize import curve_fit
 
@@ -4388,6 +4453,9 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
         fluxes.append(flux)
     fluxesn = (fluxes - min(fluxes)) / max(fluxes - min(fluxes))    
     x = np.arange(len(path))+1
+    verboseprint(x)
+    verboseprint(fluxesn)
+
     popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(),3,0])#,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):    
     xl = np.linspace(x.min(),x.max(),100)
     maxf = xl[np.where(Gaussian(xl,*popt)==np.nanmax(Gaussian(xl,*popt)))[0][0]]#[0]
@@ -4395,22 +4463,46 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     name =  DS9backUp + 'CSVs/%s_ThroughSlit.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"))
     csvwrite(np.vstack((x, fluxesn)).T,name )
     csvwrite(np.vstack((xl, Gaussian(xl,*popt))).T,name[:-4]+'_fit.csv' )
-    plt_=False
+    plt_=True
     if plt_:
-        plt.figure()
-        plt.plot(x, fluxesn,'o',label='data')
-        plt.plot(xl, Gaussian(xl,*popt),'--',label='Gaussian fit')
-        plt.legend()
-        plt.plot(np.linspace(maxf, maxf, len(fluxes)), fluxesn/max(fluxesn))
-        plt.grid(linestyle='dotted')
-        plt.xlabel('# image')
-        plt.title('Best image : {}'.format(maxf))
-        plt.ylabel('Estimated flux (Sum pixel)') 
-        name = 'Through slit analysis\n%0.3f - %s - %s'%(maxf,[int(a.xc),int(a.yc)],fitsfile.header['DATE'])
-        verboseprint(name) 
-        plt.title(name)
-        plt.savefig(os.path.dirname(file) + '/' + name + '.jpg')
-        plt.show()
+        # plt.figure()
+        # plt.plot(x, fluxesn,'o',label='data')
+        # plt.plot(xl, Gaussian(xl,*popt),'--',label='Gaussian fit')
+        # plt.legend()
+        # plt.plot(np.linspace(maxf, maxf, len(fluxes)), fluxesn/max(fluxesn))
+        # plt.grid(linestyle='dotted')
+        # plt.xlabel('# image')
+        # plt.title('Best image : {}'.format(maxf))
+        # plt.ylabel('Estimated flux (Sum pixel)') 
+        # name = 'Through slit analysis\n%0.3f - %s - %s'%(maxf,[int(a.xc),int(a.yc)],fitsfile.header['DATE'])
+        # verboseprint(name) 
+        # plt.title(name)
+        # plt.savefig(os.path.dirname(file) + '/' + name + '.jpg')
+        # plt.show()
+
+        np.savetxt('/tmp/throughslit.dat',np.array([x,fluxesn]).T)
+        np.savetxt('/tmp/throughslit_fit.dat',np.array([xl,Gaussian(xl,*popt)]).T)
+        np.savetxt('/tmp/middle.dat',np.array([np.linspace(maxf, maxf, len(fluxes)), fluxesn/max(fluxesn)]).T)
+
+        d = []
+        d.append('plot line open')#d.append("plot axis x grid no ")  
+        d.append("plot axis y grid no ")
+        #d.append("plot title  'Through slit analysis\n%0.3f - %s - Max = %0.1f'"%(maxf,[int(a.xc),int(a.yc)],maxf))
+        d.append("plot title y 'Flux' ")
+        d.append("plot title x 'Image number - Maximum flux at: %0.1f' "%(maxf))
+        d.append("plot legend position right ")
+        d.append("plot load /tmp/throughslit_fit.dat xy")
+        d.append("plot line dash yes ")
+        d.append("plot load /tmp/middle.dat xy")
+        d.append("plot load /tmp/throughslit.dat xy")
+        d.append("plot line shape circle ")
+        d.append("plot line width 0 ")
+        d.append("plot line shape color black") #d.append("plot legend yes ")
+
+        d.append("plot font legend size 9 ")
+        d.append("plot font labels size 13 ")      
+        ds9=DS9()
+        ds9.set(' ; '.join(d))         
     else:
         a = Table(np.vstack((x, fluxesn)).T)
         b = Table(np.vstack((xl, Gaussian(xl,*popt))).T)
@@ -5607,10 +5699,10 @@ def DS9CLcorrelation(xpapoint, config=my_conf):
 def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, config=my_conf):
     """Performs a column to column or or line to line auto-correlation on a DS9 image
     """
-    import matplotlib; matplotlib.use('TkAgg')  
+    # import matplotlib; matplotlib.use('TkAgg')  
     from astropy.io import fits
     from astropy.table import Table
-    from matplotlib import pyplot as plt
+    # from matplotlib import pyplot as plt
     fitsimage = fits.open(path)[0]
     image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
     #image = image[area[0]:area[1],area[2]:area[3]]
@@ -7145,6 +7237,7 @@ class GeneralFit_new(Demo):
         from dataphile.statistics.distributions import linear1D, polynomial1D, gaussian1D, voigt1D, sinusoid1D
         from dataphile.statistics.distributions import uniform
         from scipy.optimize import curve_fit
+        import matplotlib.pyplot as plt
         #from astropy import units
         verboseprint('nb_gaussians,  nb_moffats ,nb_voigt1D,nb_sinusoid = ', nb_gaussians,  nb_moffats ,nb_voigt1D,nb_sinusoid1D)    
         super().__init__(polynomial1D, [100, -0.01, -1e-5], (0, 2400), linspace=True,
@@ -7640,6 +7733,7 @@ def linear1D_centered(x: np.ndarray, intercept, slope, x0=0) -> np.ndarray:
 def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, double_schechter=False,schechter=False,Type='Linear',EMCCD_=False,nb_blackbody=0):
     """Fit background 1d with different features
     """
+    import matplotlib.pyplot as plt
     from matplotlib.widgets import  CheckButtons #RadioButtons,
     d = DS9n(xpapoint)
     axis, background, function, nb_gaussians,  nb_moffats ,nb_voigt1D,nb_sinusoid, other = sys.argv[-8:]
