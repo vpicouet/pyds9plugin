@@ -284,6 +284,7 @@ def ComputeFluctuation(xpapoint, fileOutName=None, ext=1, ext_seg=1, mag_zp=None
 
     # plot histogram
     if plot:
+        import matplotlib.pyplot as plt
         plot_histo(flux, flux_std, aper_size, title)
         plt.savefig(fileInName[:-5] + '_depth.png')
         plt.show()
@@ -2341,8 +2342,8 @@ def throughfocusWCS(center, files,x=None,
                ENC(bestx6,ENCa)]))
     name = '%s - %i - %i - %s - %0.3f'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
 
-    fig.suptitle(name, y=0.99)
-    fig.tight_layout()
+#    fig.suptitle(name, y=0.99)
+#    fig.tight_layout()
 
     t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
     t.add_row((os.path.basename(filename),os.path.basename(filename)[5:11],
@@ -4339,10 +4340,10 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
     i = FitsExt(fitsfile)
     Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
     stds = np.array([np.nanstd(fits.open(image)[i].data[Xinf:Xsup, Yinf:Ysup]) for image in paths])
-    plt.figure()
-    plt.hist(stds)
-    plt.title( 'Stds - M = %0.2f  -  Sigma = %0.3f'%(np.nanmean(stds), np.nanstd(stds)));plt.xlabel('Stds');plt.ylabel('Frequecy')
-    plt.savefig(DS9_BackUp_path +'Plots/%s_Outputs_%s.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),'stds'))
+    # plt.figure()
+    # plt.hist(stds)
+    # plt.title( 'Stds - M = %0.2f  -  Sigma = %0.3f'%(np.nanmean(stds), np.nanstd(stds)));plt.xlabel('Stds');plt.ylabel('Frequecy')
+    # plt.savefig(DS9_BackUp_path +'Plots/%s_Outputs_%s.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),'stds'))
     index = stds < np.nanmean(stds) + clipping * np.nanstd(stds) 
     paths = np.array(paths)
     if std is False:
@@ -4540,6 +4541,7 @@ def DS9Plot(d=None,path='', title='', name='', xlabel='', ylabel='', type_='xy',
 def DS9Update(xpapoint,Plot=True, reg=True,style='--o',lw=0.5):
     """Always display last image of the repository and will upate with new ones
     """
+    import matplotlib.pyplot as plt
     import time
     d = DS9n(xpapoint)#DS9n(xpapoint)
 
@@ -5429,6 +5431,7 @@ def SigmaClipBinned(x,y, sig=1, Plot=True, ax=None, log=False):
         xn.append(xi)
         yn.append(yi)
         if Plot:
+            import matplotlib.pyplot as plt
             if ax is None:
                 fig = plt.figure()#figsize=(12,4.5))
                 ax = fig.add_subplot(111)
@@ -6021,7 +6024,7 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
         centers = [np.mean(np.array(lim)) for lim in lims]
 
     args_number = len(inspect.getargspec(function).args)-1
-    
+    import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(10,7))
     #plt.subplots_adjust(bottom=0.25)
     plt.subplots_adjust(bottom=0.05+0.08+args_number*0.03)
@@ -6233,278 +6236,6 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
     plt.show()
     return
     
-def DS9PlotEMCCD_old(xpapoint):
-    from matplotlib.widgets import  Button# Slider, RadioButtons, TextBox 
-    from matplotlib.widgets import  CheckButtons #RadioButtons,
-    from dataphile.graphics.widgets import Slider
-    from astropy.io import fits
-    d = DS9n(xpapoint)    
-    #im=getdata(d)
-    #name = getfilename(d)
-#    im = d.get_pyfits()[0].data[1172:2145,0:2069]
-    if len(d.get('regions selected').split('\n'))>3:
-        verboseprint('Taking region')
-        im=getdata(xpapoint)
-    else:
-        verboseprint('Taking nominal center region')
-        im = d.get_pyfits()[0].data[1300:2000,1172:2145]#,:800]#
-    val, bins = np.histogram(im.flatten(),bins=np.linspace(2000,7000,500))
-    bins = (bins[1:]+bins[:-1])/2
-    val = np.array(val,dtype=float)
-    
-
-#    bins,val = tab['col0'][tab['col0']<10000],tab['col1'][tab['col0']<10000]
-#xdata,ydata =xdata[xdata<7000],np.log10(ydata[xdata<7000])
-    #val[~np.isfinite(np.log10(val))] = np.nan
-    #xdata,ydata = bins, np.log10(val)#[np.isfinite(np.log10(val))]
-    #val+=1
-    val[(val==0)&(bins>3000)]=1
-    xdata,ydata = bins[np.isfinite(np.log10(val))], np.log10(val)[np.isfinite(np.log10(val))]
-    n = np.log10(np.sum([10**yi for yi in ydata]))
-    #n=len(xdata)
-    lims = np.array([0,2])
-        
-    np_function = {a:getattr(np, a) for a in dir(np)}
-    
-    fig, ax = plt.subplots(figsize=(10,7))
-    plt.subplots_adjust(bottom=0.25)
-    x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), len(ydata))
-    #initial = 'a*min(ydata)+b*(max(ydata)-min(ydata))*exp(-(x-c*xdata[argmax(ydata)])**2/d)'   
-    
-      
-    dict_values={'a':1,'b':1,'c':1,'d':1,'x':x,'xdata':xdata,'ydata':ydata}
-#    EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=n)#-2
-#    EMCCD_noise = lambda x,biais,RN: EMCCD(x,biais,RN, EmGain=0,flux=0, bright_surf=n)#-2
-    EMCCD_new = lambda x,biais,RN, EmGain,flux: EMCCD(x,biais,RN, EmGain,flux, bright_surf=ydata)#-2
-    EMCCD_noise = lambda x,biais,RN: EMCCD(x,biais,RN, EmGain=0,flux=0, bright_surf=ydata)#-2
-    
-    datal,  = plt.plot(xdata,ydata, '-',c='black',label='Data')
-    y = EMCCD_new(x,bins[np.nanargmax(val)],107,600,0.1)
-    #l, = plt.plot(xdata, EMCCD_new(xdata,bins[np.nanargmax(val)],107,600,0.1), '.-', lw=1,label='EMCCD model')
-    l, = plt.plot(x, EMCCD_new(x,bins[np.nanargmax(val)],107,600,0.1), '-', lw=1,label='EMCCD model')
-    s, = plt.plot(np.ones(2)*bins[np.nanargmax(val)]+5.5*107/2.35, [l.get_ydata().min(),l.get_ydata().max()], lw=1,color='red',label='$5.5\sigma$ Threshold')#
-    noise, = plt.plot(x[x>bins[np.nanargmax(val)]+2*107/2.35], EMCCD_noise(x,bins[np.nanargmax(val)],107)[x>bins[np.nanargmax(val)]+2*107/2.35], lw=1,color='black',linestyle='dotted',label='Readout noise')
-    #plt.fill_between(np.linspace(3350+5.5*107/2.35,3350+10*107/2.35,len(x)), EMCCD_noise(x,3350,107)*0,EMCCD_noise(x,3350,107), label='Readout noise is PC mode')
-    ax.set_ylim((0.9*np.nanmin(ydata),1.1*np.nanmax(ydata)))
-    ax.set_ylabel('Log (Frequency of occurence)',fontsize=15)
-        
-    ax.margins(x=0)
-    #rax = plt.axes([0.04, 0.85, 0.15, 0.15], facecolor='None')
-    #raxx = plt.axes([0.93, 0.17, 0.15, 0.15], facecolor='None')
-    #data_box = plt.axes([0.8, 0.75, 0.15, 0.15], facecolor='None')
-    bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor='None')
-    #axbox = plt.axes([0.1,  0.025, 0.65, 0.04])
-    
-    
-    button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), 'Fit', color='white', hovercolor='0.975')
-    delete_button = Button(plt.axes([0.70, 0.025, 0.08, 0.04]), 'Save', color='white', hovercolor='0.975')
-    #replace_ax = plt.axes([0.77, 0.025, 0.1, 0.04])    
-
-    
-    for edge in 'left', 'right', 'top', 'bottom':
-        #rax.spines[edge].set_visible(False)
-        #raxx.spines[edge].set_visible(False)
-        #data_box.spines[edge].set_visible(False)
-        bounds_box.spines[edge].set_visible(False)
-        #replace_ax.spines[edge].set_visible(False)
-    #scale = CheckButtons(rax, ['log'])
-    #scalex = CheckButtons(raxx, ['log'])
-    #data_button = CheckButtons(data_box, ['Data'],[True])
-    bounds_button = CheckButtons(bounds_box, ['Bounds'],[False])
-    #replace_button = Button(replace_ax, ['Replace'],[False])
-    
-    def scalefunc(label):
-        #print(scale)
-        if (ax.get_yscale()=='linear') :#& ((dict_values['ydata']>1).any() | (dict_values['y']>1).any()):
-            ax.set_yscale('log')
-        elif ax.get_yscale()=='log':
-            ax.set_yscale('linear')
-        fig.canvas.draw_idle()
-    def scalefuncx(label):
-        #print(scale)
-        if (ax.get_xscale()=='linear') & (dict_values['x']>1).any():
-            ax.set_xscale('log')
-        elif ax.get_xscale()=='log':
-            ax.set_xscale('linear')        
-        fig.canvas.draw_idle()
-    
-    # def loadData(label):
-    #     #from astropy.table import Table
-    #     if data_button.get_status()[0]:
-    #         datal.set_marker('.')
-    #     else:
-    #         datal.set_marker(None)        
-    #     fig.canvas.draw_idle()
-    
-    
-            
-    
-    def submit(text):
-        x = dict_values['x'] 
-        a = dict_values['a'] 
-        b = dict_values['b'] 
-        c = dict_values['c'] 
-        d = dict_values['d'] 
-        ydata = eval(text,np_function,dict_values)
-        l.set_ydata(ydata)
-        ax.set_ylim(np.min(ydata), np.max(ydata))
-        plt.draw()
-        return text
-
-
-    
-    def update(val):
-        try:
-            a = b_a.value
-            b = b_b.value
-            c = b_c.value
-            d = b_d.value
-        except AttributeError:
-            a = b_a.val
-            b = b_b.val
-            c = b_c.val
-            d = b_d.val
-        x = dict_values['x'] 
-        l.set_ydata(EMCCD_new(x,a,b,c,d))
-        s.set_xdata(np.ones(2)*a+5.5*b/2.35)
-        noise.set_data(x[x>a+2*b/2.35],EMCCD_noise(x,a,b)[x>a+2*b/2.35])
-    
-    
-     
-        fig.canvas.draw_idle()
-        dict_values['a'] = a
-        dict_values['b'] = b
-        dict_values['c'] = c
-        dict_values['d'] = d
-        return 
-    
-        
-    #scale.on_clicked(scalefunc)
-    #scalex.on_clicked(scalefuncx)
-    #   data_button.on_clicked(loadData)
-    
-    b_a = Slider(figure=fig, location=[0.3, 0.17, 0.6, 0.03], label='Bias [ADU]',  bounds=(2200, 4000), init_value=bins[np.nanargmax(val)])#,valfmt="%1.2f")
-    b_b = Slider(figure=fig, location=[0.3, 0.14, 0.6, 0.03], label='ReadNoise [$e^-$]', bounds=(0, 150), init_value=107)#107)
-    b_c = Slider(figure=fig, location=[0.3, 0.11, 0.6, 0.03], label='EmGain [ADU/ADU]',  bounds=(200, 2000), init_value=600)
-    b_d = Slider(figure=fig, location=[0.3, 0.08, 0.6, 0.03], label='Flux [$e^-$]',  bounds=(0, 1.9  ), init_value=0.1)#10.9
-    
-    b_a.on_changed(update)
-    b_b.on_changed(update)
-    b_c.on_changed(update)
-    b_d.on_changed(update)
-    
-        
-    def reset(event):
-        b_a.reset()
-        b_b.reset()
-        b_c.reset()
-        b_d.reset()
-        
-    def fit(event):
-        from scipy.optimize import curve_fit
-    
-        def f(x, a, b, c, d):
-            return  EMCCD_new(x, a, b, c, d)
-    
-        #f = lambda x, a, b, c, d : eval(dict_values['function'],np_function,{'a':a,'b':b,'c':c,'d':d,'x':t})
-        x = dict_values['x'] 
-        a = dict_values['a'] 
-        b = dict_values['b'] 
-        c = dict_values['c'] 
-        d = dict_values['d'] 
-        #print(len(f(x,a,b,c,d)),len(x),len(y))
-        verboseprint('p0 = ',[a,b,c,d])
-        xmin, xmax = ax.get_xlim()
-    
-        #popt, pcov = curve_fit(f, x[(x>xmin) & (x<xmax)], y[(x>xmin) & (x<xmax)],p0=[a,b,c,d])
-        if bounds_button.get_status()[0]:
-            bounds = (lims.min(),lims.min(),lims.min(),lims.min()), (lims.max(),lims.max(),lims.max(),lims.max())
-        else:
-            bounds = (-np.inf,-np.inf,-np.inf,-np.inf), (np.inf,np.inf,np.inf,np.inf)
-        verboseprint('bounds = ', bounds)
-    
-        popt, pcov = curve_fit(f, xdata, ydata,p0=[a,b,c,d],bounds=bounds)
-        #verboseprint('Fitting, f(x) = ',dict_values['function'])
-        verboseprint('p0 = ',[a,b,c,d])
-        verboseprint('Fit : ',popt)
-    
-        #a, b, c, d = popt
-        import matplotlib.ticker as mticker
-        fmt = mticker.FuncFormatter(lambda x,pos : "${}$".format(mticker.ScalarFormatter(useOffset=False, useMathText=True)._formatSciNotation('%1.2e' % np.round(x,1))))
-
-        plt.figtext(0.55,0.93,r'Fit: {} {} {} {}, std={}'.format(fmt(popt[0]),fmt(popt[1]),fmt(popt[2]),fmt(popt[3]),fmt(np.sum(np.diag(pcov))),bbox={'facecolor':'black', 'alpha':0,'color':'white', 'pad':10}))#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
-        
-        #ax.plot(t, f(t,*popt),label='%s'%(np.round(popt,2)),linestyle='dotted',linewidth=0.7);ax.legend()
-        l.set_ydata(f(x,*popt))
-        plt.draw()
-    
-        
-        b_a.widget.set_val(popt[0])
-        b_b.widget.set_val(popt[1])
-        b_c.widget.set_val(popt[2])
-        b_d.widget.set_val(popt[3])
-
-    button.on_clicked(fit)
-    def onclick(event):
-    
-        #print(ax.get_xlim())
-        xmin, xmax = ax.get_xlim()
-        x = np.linspace(xmin, xmax,n)
-        a = dict_values['a'] 
-        b = dict_values['b']
-        c = dict_values['c'] 
-        d = dict_values['d']
-        dict_values['x'] = x
-        #text = dict_values['function']
-        y = EMCCD_new(x,a,b,c,d)#eval(text,np_function,dict_values)
-        dict_values['y'] = y
-        l.set_xdata(x)
-        l.set_ydata(y)
-        ymax = 1.1 * np.nanmax(y) if np.nanmax(y)>0 else 0.9 * np.nanmax(y)
-        ymin = 0.9 * np.nanmin(y) if np.nanmin(y)>0 else 1.1 * np.nanmin(y)
-        ymax2 = 1.1 * np.nanmax(datal.get_ydata()) if np.nanmax(datal.get_ydata())>0 else 0.9 * np.nanmax(datal.get_ydata())
-        ymin2 = 0.9 * np.nanmin(datal.get_ydata()) if np.nanmin(datal.get_ydata())>0 else 1.1 * np.nanmin(datal.get_ydata())
-    #    if datal.get_marker() is not None:
-    #        ax.set_ylim((np.nanmin([ymin,ymin2]),np.nanmax([ymax,ymax2])))
-    #    else:
-    #        ax.set_ylim((ymin,ymax))
-        #print(dict_values['ydata'])
-
-        #xmin, xmax = ax.get_xaxis()
-        return 
-    #cid = fig.canvas.mpl_connect('draw_event', onclick)
-    name = getfilename(d)
-    header = fits.getheader(name)
-    #print(header)
-    try:
-        plt.figtext(0.55,0.5,'Gain: {} \nExp: {} \nTemp: {}\nDate: {}'.format(header['EMGAIN'],header['EXPTIME'],header['EMCCDBAC'],header['date']),bbox={'facecolor':'black', 'alpha':0,'color':'white', 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
-    except KeyError:
-        pass
-
-    def delete(event):
-        try:
-            a = b_a.value
-            b = b_b.value
-            c = b_c.value
-            d = b_d.value
-        except AttributeError:
-            a = b_a.val
-            b = b_b.val
-            c = b_c.val
-            d = b_d.val   
-        os.system('echo %s, %s, %s, %s, %s, %s, %s, %s >>/tmp/emccd_fitting.csv'%(header['EMGAIN'],header['EXPTIME'],header['EMCCDBAC'],header['date'],a,b,c,d,)) 
-        return     
-    delete_button.on_clicked(delete)
-
-
-
-    plt.draw()
-    ax.legend(loc='upper right',fontsize=15)
-    ax.set_title(name)
-    
-    plt.show()
-
-
 
 def CreateCatalog_new(files, ext=[0], config=my_conf):
     """Create header catalog from a list of fits file
@@ -7571,6 +7302,7 @@ class GeneralFit_Function(Demo):
         from dataphile.statistics.distributions import linear1D, polynomial1D, gaussian1D, voigt1D, sinusoid1D
         from dataphile.statistics.distributions import uniform
         from scipy.optimize import curve_fit
+        import matplotlib.pyplot as plt
         #from astropy import units
         super().__init__(polynomial1D, [100, -0.01, -1e-5], (0, 2400), linspace=True,
                          noise=0, samples=2400)
@@ -7823,6 +7555,7 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
 
     verboseprint('Using general fit new')
     gui = GeneralFit_new(x,y,nb_gaussians=int(nb_gaussians),nb_moffats=int(nb_moffats), background=int(bckgd),nb_voigt1D=int(nb_voigt1D),nb_sinusoid1D=int(nb_sinusoid), exp=exp, EMCCD_=EMCCD_,nb_blackbody=nb_blackbody,double_exp=double_exp, marker='.',linestyle='dotted',linewidth=1,double_schechter=double_schechter,schechter=schechter)
+    import matplotlib.pyplot as plt
     rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor='None')
     
     for edge in 'left', 'right', 'top', 'bottom':
@@ -8005,6 +7738,7 @@ def Function(xpapoint=None, config=my_conf,Plot='Linear',path=None, xrange=[-10,
 
     #print(x,real_function(x, *args))
     gui = GeneralFit_Function(x,y, function=real_function, ranges=ranges,marker='.',Plot=Plot,linestyle='dotted',linewidth=0,n=n,names=names)
+    import matplotlib.pyplot as plt
     rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor='None')
     for edge in 'left', 'right', 'top', 'bottom':
         rax.spines[edge].set_visible(False)
@@ -8846,7 +8580,7 @@ def CosmologyCalculator(xpapoint):
         redshifts = np.array([redshift],dtype=float)
     else:
         redshifts = np.array(redshift,dtype=float)
-
+    import matplotlib.pyplot as plt
     fig, (ax1,ax2,ax3) = plt.subplots(3, 3, figsize=(18,9.5),sharex=True)
     a = 0.08
     redshift_ = Slider(figure=fig, location=[0.1, 0.14-a, 0.8, 0.03], label='$z$',  bounds=(0,5), init_value=redshift)#,valfmt="%1.2f")
@@ -9140,7 +8874,7 @@ def CosmologyCalculator_old(xpapoint):
         redshifts = np.array([redshift],dtype=float)
     else:
         redshifts = np.array(redshift,dtype=float)
-
+    import matplotlib.pyplot as plt
     fig, (ax1,ax2,ax3) = plt.subplots(3, 3, figsize=(18,9.5),sharex=True)
     t = 'U4'
     l = ' - '
