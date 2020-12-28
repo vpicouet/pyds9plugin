@@ -154,22 +154,20 @@ def Log(v=None):
 
 logger = Log()
 
-#def yesno(d,question='',verbose=True):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
-def yesno(d,question='',verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.message.txt').read()))):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
+def yesno(d,question='',verbose=bool(int(os.popen('cat %s.message.txt'%(DS9_BackUp_path)).read()))):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
     if verbose:
         verboseprint(question)
         return bool(int(d.get("""analysis message yesno {%s}"""%(question))))
     else:
         return True
 
-def message(d,question='',verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.message.txt').read()))):#
+def message(d,question='',verbose=bool(int(os.popen('cat %s.message.txt'%(DS9_BackUp_path)).read()))):#
     if verbose:
         return bool(int(d.set('analysis message {%s}'%(question))))
     else:
         return True
 
-#def verboseprint(*args, logger = logger, verbose=bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True)))):
-def verboseprint(*args, logger = logger, verbose=bool(int(os.popen('cat /Users/Vincent/DS9QuickLookPlugIn/.verbose.txt').read()))):#False
+def verboseprint(*args, logger = logger, verbose=bool(int(os.popen('cat %s.verbose.txt'%(DS9_BackUp_path)).read()))):#False
     #did not manage to save log in .log but not display it....
     
     st = ' '.join([str(arg) for arg in args])
@@ -795,6 +793,8 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
 
     from astropy.table import Table, vstack
     from shutil import copyfile
+    d=DS9n(xpapoint)
+
     #import pandas as pd
     #cat, query, fields = sys.rgv[-3:]
     cat_path, number, fields, query = sys.argv[-4:]
@@ -802,6 +802,14 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
         number=1000
     cat_path = cat_path.rstrip()[::-1].rstrip()[::-1]
     fields = np.array(fields.split(','),dtype=str)
+    if os.path.isdir(cat_path):
+        files = glob.glob(os.path.join(cat_path,'*.csv'))
+        files.sort(key=lambda x: os.path.getmtime(x))
+        file = files[-1]
+        if yesno(d,'%s is a directory not a table. Do you wish to take the most recent csv table of this directory: %s?'%(cat_path, os.path.basename(file))):
+            cat_path = file
+        else:
+            sys.exit()
     try:
         cat = Table.read(cat_path )
     except Exception as e:
@@ -874,7 +882,6 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
 #        print(path)
 #        for f in files:
 #            print(f)
-    d=DS9n(xpapoint)
     message(d,'Images are saved as symbolik links there : %s'%(path_date))
     #d.set("""analysis message {Images are saved as symbolik links there : %s}"""%(path_date))
 
@@ -1436,7 +1443,11 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         verboseprint('Test: number of images = %s'%(len(images)))
         
     else:
-        Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        try:
+            Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
+        except Exception:
+            d.set("analysis message {Please create and select a region (Circle/Box) before runnning this analysis}");sys.exit() 
+
         data = d.get_pyfits()[0].data
         images = [data[Yinf:Ysup,Xinf:Xsup] - np.nanpercentile(data[Yinf:Ysup,Xinf:Xsup],30)]
     fluxes = []
@@ -2912,7 +2923,7 @@ def estimateBackground(data, center, radius=30, n=1.8):
 
 def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=False,angle=30, radius=40, ptype='linear', fit=True, center_type='barycentre', maxplot=0.013, minplot=-1e-5, radius_ext=12, platescale=None,fibersize = 100,SigmaMax=4, DS9backUp = DS9_BackUp_path, config=my_conf, name=''):
   """Function used to plot the radial profile and the encircled energy of a spot,
-  Latex is not necessary
+  Latex is not necessaryp
   """
 
   from scipy.optimize import curve_fit
@@ -2975,7 +2986,7 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
 #  d.append("plot title legend '%s , %0.1f - %0.1f' "%(os.path.basename(name),NewCenter[0],NewCenter[1]))
   d.append("plot title legend ''")
 
-  d.append("plot name 'Data: Flux = %i, FWHM_fit = %0.1f' "%(flux,abs(popt[1])))
+  d.append("plot name 'Data: Flux = %i, FWHM_fit = %0.1f' "%(d['Flux'],abs(popt[1])))
   d.append("plot line shape circle ")
   d.append("plot line dash yes ")
   d.append("plot line shape color black") 
@@ -3533,7 +3544,6 @@ def PlotArea3D(xpapoint,color=False):
         elif (len (data.shape)==2) & (~color):
             xx, yy = np.indices(data.shape)#np.meshgrid(x, y)
             set_plot_theme("document")
-            range_ = [np.nanpercentile(data,30),np.nanpercentile(data,99)]
             p = Plotter(notebook=False,window_size=size,line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D')
             if d.get('scale') =='log':
                 data = data#np.log10(data - np.nanmin(data))
@@ -3551,7 +3561,16 @@ def PlotArea3D(xpapoint,color=False):
             mesh.dimensions = [data.shape[1], data.shape[0], 1]
             mesh =  CreateMesh(data_points, value = None)
             mesh_c =  CreateMesh(data_points_c, value = None)
-            a = p.add_mesh(mesh,clim=range_, scalars=data.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+
+            range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
+            range_ = [np.nanmin(data),np.nanmax(data)]
+            range_ = [np.nanpercentile(data,30),np.nanpercentile(data,99)]
+            verboseprint(data.ravel())
+            verboseprint(data.ravel().min())
+            verboseprint(data.ravel().max())
+            verboseprint(range_)
+            scalars = data.flatten()
+            a = p.add_mesh(mesh,clim=range_, scalars=scalars,opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
             contours = mesh.contour()
             contours_c = mesh_c.contour()
             p.add_mesh(contours, color="white", line_width=5)
@@ -4069,10 +4088,15 @@ def fitswrite(fitsimage, filename, verbose=True, config=my_conf, header=None):
         if 'NAXIS3' in fitsimage.header:
             verboseprint('2D array: Removing NAXIS3 from header...')
             fitsimage.header.remove('NAXIS3')
+        if 'SKEW' in fitsimage.header:
+            fitsimage.header.remove('SKEW')
     elif hasattr(fitsimage[0], 'header'):
         if 'NAXIS3' in fitsimage[0].header:
             verboseprint('2D array: Removing NAXIS3 from header...',verbose=my_conf.verbose)
             fitsimage[0].header.remove('NAXIS3')        
+        if 'SKEW' in fitsimage[0].header:
+            fitsimage[0].header.remove('SKEW')        
+
     elif not os.path.exists(os.path.dirname(filename)):
         os.makedirs(os.path.dirname(filename))
     if not os.path.exists(os.path.dirname(filename)):
@@ -4285,16 +4309,23 @@ def globglob(file, xpapoint=None,sort=True, ds9_im = False):
         
     if sort:
         paths.sort()
-
     if (len(paths)==0) & (file=='-'):
+        verboseprint('No file specified, using loaded one.')
         d=DS9n(xpapoint);paths = [getfilename(d)]
 
     elif (len(paths)==0) & (file!='-'):
-        if ds9_im:
-            d=DS9n(xpapoint)
+        d=DS9n(xpapoint)
+        verboseprint(paths,file, d.get('file'))
+        verboseprint(len(paths)==0,file!='-', file.rstrip()[::-1].rstrip()[::-1] == d.get('file').rstrip()[::-1].rstrip()[::-1], file !=getfilename(d))
+        if (len(paths)==0) & (file!='-') & (file == d.get('file')) & (file !=getfilename(d))  :
+            verboseprint('Loaded image not on drive, saving it to run the analysis')
+            paths = [getfilename(d)]
+        elif ds9_im:
+            verboseprint('No file is matching the pathname pattern. Please verify your entry. Running the analysis on the DS9 loaded image.')
             d.set("analysis message {No file is matching the pathname pattern. Please verify your entry. Running the analysis on the DS9 loaded image.}")    
             paths = [getfilename(d)]
         else:
+            verboseprint('No image to work on...')            
             paths = []
     return paths
 
@@ -4993,7 +5024,7 @@ def ApplyQuery(cat=None, query=None, path=None, new_path=None,delete=False):
     
 
 
-def DS9Catalog2Region(xpapoint, name=None, x='xcentroid', y='ycentroid', ID=None,system='image',form='circle',size=10,wcs=False,query='-'):
+def DS9Catalog2Region(xpapoint, name=None, x='x', y='y', ID=None,system='image',form='circle',size=10,wcs=False,query='-'):
     """
     """
     from astropy.wcs import WCS
@@ -5733,10 +5764,10 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     # Table([bins3,vals3],names=[bins3[0],vals3[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/3.dat',format='ascii')
     # Table([bins4,vals4],names=[bins4[0],vals4[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/4.dat',format='ascii')
 
-    np.savetxt('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/1.dat',np.array([(bins1[1:]+bins1[:-1])/2,vals1]).T)
-    np.savetxt('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/2.dat',np.array([(bins2[1:]+bins2[:-1])/2,vals2]).T)
-    np.savetxt('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/3.dat',np.array([(bins3[1:]+bins3[:-1])/2,vals3]).T)
-    np.savetxt('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/4.dat',np.array([(bins4[1:]+bins4[:-1])/2,vals4]).T)
+    np.savetxt(DS9_BackUp_path + '/CSVs/1.dat',np.array([(bins1[1:]+bins1[:-1])/2,vals1]).T)
+    np.savetxt(DS9_BackUp_path + '/CSVs/2.dat',np.array([(bins2[1:]+bins2[:-1])/2,vals2]).T)
+    np.savetxt(DS9_BackUp_path + '/CSVs/3.dat',np.array([(bins3[1:]+bins3[:-1])/2,vals3]).T)
+    np.savetxt(DS9_BackUp_path + '/CSVs/4.dat',np.array([(bins4[1:]+bins4[:-1])/2,vals4]).T)
 
     # fig, ax = plt.subplots(2, 2)#, figsize=(12,7))
     # ax[0,0].hist(imagex[1:]-imagex[:-1],bins=bins1,histtype='step',label='Lines')
@@ -5761,20 +5792,20 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     d.append("plot axis x grid no ")  
     d.append("plot axis y grid no ")
     d.append("plot title y 'Lines' ")
-    d.append("plot load /Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/1.dat xy  ")
+    d.append("plot load %s/CSVs/1.dat xy  "%(DS9_BackUp_path))
     d.append("plot add graph ")
     d.append("plot axis x grid no")
     d.append("plot axis y grid no ")
-    d.append("plot load /Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/3.dat xy  ")
+    d.append("plot load %s/CSVs/3.dat xy  "%(DS9_BackUp_path))
     d.append("plot add graph ")
     d.append("plot title y 'delta chisqr' ")
-    d.append("plot load /Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/2.dat xy ")
+    d.append("plot load %s/CSVs/2.dat xy "%(DS9_BackUp_path))
     d.append("plot title y 'Columns' ")
     d.append("plot axis x grid no ")  
     d.append("plot axis y grid no ")
     d.append("plot title x 'Column/Line average difference' ")
     d.append("plot add graph ")
-    d.append("plot load /Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/4.dat xy ")
+    d.append("plot load %s/CSVs/4.dat xy "%(DS9_BackUp_path))
     d.append("plot title x 'Pixel value difference' ")
     d.append("plot axis x grid no ")  
     d.append("plot axis y grid no ")
@@ -6672,14 +6703,14 @@ def getfilename(ds9, config=my_conf, All=False, sort=True):
     """Get the filename of the loaded image in DS9
     """
     if not All:
-        backup_path = os.environ['HOME'] + '/DS9BackUp'
+        backup_path = os.environ['HOME'] + '/DS9QuickLookPlugIn'
         if not os.path.exists(os.path.dirname(backup_path)):
             os.makedirs(os.path.dirname(backup_path))
         filename = ds9.get('file')
         if filename == '':
             try:
                 fits_im = ds9.get_pyfits()[0]
-                filename = '/tmp/image.fits'
+                filename = backup_path + '/tmp/image.fits'
                 fitswrite(fits_im,filename)
             except TypeError:
                 return filename
@@ -6688,6 +6719,17 @@ def getfilename(ds9, config=my_conf, All=False, sort=True):
             filename = filename.split('[')[0]
         if len(filename)==0:
             new_filename = filename
+        elif os.path.isfile(filename) is False:
+            try:
+                fits_im = ds9.get_pyfits()[0]
+                filename = backup_path + '/tmp/image.fits'
+                #ds9.set('file ' + filename)
+                fitswrite(fits_im,filename)
+                #fits_im.writeto(filename,overwrite=True)
+                new_filename = filename
+            except TypeError:
+                return filename
+
         elif filename[0] == '.':
             new_filename = backup_path + '/BackUps' + filename[1:]
             verboseprint('Filename in the DS9 backup repository, changing path to %s'%(new_filename))
@@ -7754,89 +7796,6 @@ def Function(xpapoint=None, config=my_conf,Plot='Linear',path=None, xrange=[-10,
     return
 
 
-#gui = GeneralFit_Function(x,y, function=schechter_vincent2, ranges=['3e-3,6e-3', '-21.5,-18', '-1.4,-1.2'],marker='.',Plot='Linear',linestyle='dotted',linewidth=0,n=100)
-##gui = GeneralFit_Function(np.linspace(-21.5,-18,100),schechter_vincent2(np.linspace(-21.5,-18,100)), function=schechter_vincent2, ranges=['3e-3,6e-3', '-21.5,-18', '-1.4,-1.2'],marker='.',Plot='Linear',linestyle='dotted',linewidth=0,n=100)
-#for i, file in enumerate(glob.glob('/Volumes/Vincent/sextractorCatalogs/subcats/BC03_1/U/TotalMergedCatalog_9813_corr_ugrizyk_only_mag_zphot_col_021219_gal.e.u.limits_VMAX[0,2,5].dat.ini')):
-#    gui.gui.sliders[0].valfmt='%.2E'
-#    print(file)
-#    x,y,xx,yy = openLFdata(file)
-#    print(y)
-#    try:
-#        var = np.sum(gui.gui.active_model.uncertainties)
-#    except TypeError:
-#        var = np.nan
-#    gui.ax.plot(x,y,'o',label='%0.1f'%(var))
-#gui.gui.active_model.a1.value
-#gui.ax.legend()    
-#plt.show()
-
-
-#def Function_parametric(xpapoint, config=my_conf):
-#    """Fit background 1d with different features
-#    """
-#    import re 
-#    d = DS9n(xpapoint)
-#    y=0
-#    function1 = sys.argv[-5]
-#    function2 = sys.argv[-4]
-#    xmin, xmax = np.array(sys.argv[-3].split(','),dtype=float)
-#    Plot = sys.argv[-2]
-#    path = sys.argv[-1]
-#    
-#    ranges = re.findall('\[(.*?)\]',function1)
-#    
-#    def real_function1(x, *args, function_new='y = ' + re.sub("[\[].*?[\]]", "", function1)):#
-#        #x=np.arange(10)
-#        y=0
-#        #print(args)
-#        a0, a1, a2, a3, a4, a5, a6, a7 = np.zeros(8)
-#        #a0, a1 = args
-#        #print('a1, a2 = ', a1, a2)
-#        ldict = {'x':x,'y':y,
-#                 'sin':np.sin,'cos':np.cos,'exp':np.exp,'log':np.log,'pi':np.pi}#,'a0':a0,'a1':a1,'a2':a2,'a3':a3,'a4':a4,'a5':a5,'a6':a7}
-#        dict2 = {'a%i'%(i):val for i, val in enumerate(args)}
-#        dict_tot = {}#{k: ldict.get(k, 0) + dict2.get(k, 0) for k in set(ldict) | set(dict2)}
-#        for d in [ldict,dict2]:
-#            dict_tot.update(d)
-#        exec(function_new, globals(), dict_tot)
-#        y1 = dict_tot['y']
-#        #print(x,y)
-#        #return (y - np.nanmin(y)) /np.nanmax(y - np.nanmin(y))
-#        return y1
-#
-#    def real_function2(x, *args, function_new='y = ' + re.sub("[\[].*?[\]]", "", function2)):#
-#        #x=np.arange(10)
-#        y=0
-#        #print(args)
-#        a0, a1, a2, a3, a4, a5, a6, a7 = np.zeros(8)
-#        #a0, a1 = args
-#        #print('a1, a2 = ', a1, a2)
-#        ldict = {'x':x,'y':y,
-#                 'sin':np.sin,'cos':np.cos,'exp':np.exp,'log':np.log,'pi':np.pi}#,'a0':a0,'a1':a1,'a2':a2,'a3':a3,'a4':a4,'a5':a5,'a6':a7}
-#        dict2 = {'a%i'%(i):val for i, val in enumerate(args)}
-#        dict_tot = {}#{k: ldict.get(k, 0) + dict2.get(k, 0) for k in set(ldict) | set(dict2)}
-#        for d in [ldict,dict2]:
-#            dict_tot.update(d)
-#        exec(function_new, globals(), dict_tot)
-#        y2 = dict_tot['y']
-#        #print(x,y)
-#        #return (y - np.nanmin(y)) /np.nanmax(y - np.nanmin(y))
-#        return y2
-#
-#    args =  [np.mean(np.array(rangei.split(','),dtype=float)) for rangei in ranges]#np.ones(len(ranges))#*np.nan 
-#    if path!='-':
-#        cat = openTable(path)
-#        y1,y2 = cat[cat.colnames[0]], cat[cat.colnames[1]]
-#    else:
-#        y1 = real_function1(np.linspace(xmin, xmax,100), *args)
-#        y2 = real_function2(np.linspace(xmin, xmax,100), *args)
-#
-#    #print(x,real_function(x, *args))
-#    gui = GeneralFit_Function(y1,y2, function1=real_function1, function=real_function2, ranges=ranges,marker='.',Plot=Plot,linestyle='dotted',linewidth=1)
-#    gui.ax.set_title(function1 + ' , ' + function2)
-#    plt.show()
-#    return
-
 
 
 def get_depth_image(xpapoint):
@@ -7988,7 +7947,9 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     d = DS9n(xpapoint)
     filename = getfilename(d)
     if which('sex') is None:
-        d = DS9n(xpapoint);d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
+        d = DS9n(xpapoint);d.set('analysis message {Sextractor do not seem to be installed on your machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
+        pprint('On mac run on your terminal: >brew install brewsci/science/sextractor')
+        pprint('Else, visit: https://github.com/astromatic/sextractor')
     param_names =  ['CATALOG_NAME','CATALOG_TYPE','PARAMETERS_NAME','DETECT_TYPE','DETECT_MINAREA','DETECT_MAXAREA','THRESH_TYPE','DETECT_THRESH','ANALYSIS_THRESH','FILTER','FILTER_NAME','DEBLEND_NTHRESH','DEBLEND_MINCONT','CLEAN','CLEAN_PARAM','MASK_TYPE','WEIGHT_TYPE','RESCALE_WEIGHTS','WEIGHT_IMAGE','WEIGHT_GAIN','FLAG_IMAGE','FLAG_TYPE','PHOT_APERTURES','PHOT_AUTOPARAMS','PHOT_PETROPARAMS','PHOT_FLUXFRAC','SATUR_LEVEL','SATUR_KEY','MAG_ZEROPOINT','MAG_GAMMA','GAIN','PIXEL_SCALE','SEEING_FWHM','STARNNW_NAME','CHECKIMAGE_TYPE','BACK_TYPE','BACK_VALUE','BACK_SIZE','BACK_FILTERSIZE','BACKPHOTO_TYPE','BACKPHOTO_THICK','BACK_FILTTHRESH','MEMORY_OBJSTACK','MEMORY_PIXSTACK','MEMORY_BUFSIZE','NTHREADS']
 
     params = np.array(sys.argv[-len(param_names):], dtype='<U256')#str)
@@ -9038,6 +8999,41 @@ def WaitForN(xpapoint):
     return
 
 
+def download(url='https://people.lam.fr/picouet.vincent/pyds9plugin/m33_hi.fits', file='/tmp/test.fits'):
+    from tqdm import tqdm, tqdm_gui
+    import requests
+    import matplotlib.pyplot as plt
+
+    #url='https://people.lam.fr/picouet.vincent/pyds9plugin/m33_hi.fits'# Streaming, so we can iterate over the response.
+    try:
+        response = requests.get(url, stream=True)
+    except requests.exceptions.RequestException as e:  # This is the correct syntax
+        return False
+    else:
+        total_size_in_bytes= int(response.headers.get('content-length', 0))
+        block_size = 1024 #1 Kibibyte
+        progress_bar = tqdm(total=0.95*total_size_in_bytes, unit='iB', unit_scale=True)
+        with open(file, 'wb') as file:
+            for data in response.iter_content(block_size):
+                progress_bar.update(len(data))
+                file.write(data)
+        #progress_bar.close()
+        #tqdm_gui.close(progress_bar)
+        #progress_bar.display()    
+        #progress_bar.plt.close(progress_bar.fig)
+        # plt.show(block=False)
+
+        # plt.close('all')
+        # plt.close(progress_bar.fig)
+
+        if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
+            verboseprint("ERROR, something went wrong")
+            return False
+        else:
+            return True
+            
+        
+
 def next_step(xpapoint):
     """Goes to next function in the test suite
     """
@@ -9665,13 +9661,18 @@ rendering in order to the objects in the image. When it is done,
  %i/%i - Please create a reagion """%(i,n));i+=1# and use log scale.
 #* You can either rerun the function or HIT NEXT TO ACCESS THE NEXT FUNCTION.""")# and use log scale.
     reg = resource_filename('pyds9plugin', 'Images')
-    d.set('frame delete ; file ' + os.path.join(reg,'m33_hi.fits'))
-    WaitForN(xpapoint)
-    while  getregion(d,selected=True) is None:
-        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
+    if os.path.exists(os.path.join(reg,'m33_hi.fits')) is False:
+        a = download(url='https://people.lam.fr/picouet.vincent/pyds9plugin/m33_hi.fits', file=os.path.join(reg,'m33_hi.fits'))#do not close image!!
+    if a:
+        d.set('frame delete ; file ' + os.path.join(reg,'m33_hi.fits'))
         WaitForN(xpapoint)
-    d.set('analysis task "Plot Region In 3D"')
-    time.sleep(2)
+        while  getregion(d,selected=True) is None:
+            d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")    
+            WaitForN(xpapoint)
+        d.set('analysis task "Plot Region In 3D"')
+        time.sleep(2)
+    else:
+        message(d,'An error occured while dowloading the 3D image. Next time, make sure you have a good internet connection. Going to next function.')
   
     pprint("""Well done!
            
@@ -9831,32 +9832,6 @@ by launching it from the Analysis menu [always explicited under function's name]
     sys.exit()    
     return
 
-#
-#    
-#    d.set('frame delete all')
-#    d.set('frame new')
-#    d.set('file /Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/CESAM/Guidance/stack25055816_Trimm.fits')
-#    DS9setup2(xpapoint, color='cool')
-#    d.set("analysis message {Let us ty some real time simplistic guiding code in the case you need it for your observing nights. Select around ~3 stars by creating a circle regin around them and hit m.}")    
-#    WaitForN(xpapoint)
-#    sys.exit()
-#    d.set('analysis task 26')
-#    WaitForN(xpapoint)
-#    d.set("analysis message {You are now ready to use the DS9 Quick Look plugin by yourself.}")    
-#    sys.exit()
-#  
-##    conf_dir
-##    WaitForN(xpapoint)
-##    #####Cubes
-##    d.set('file /Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/CESAM/Test/_104002019_objcube.fits')
-##    DS9setup2(xpapoint, color='cool')
-##    d.set("analysis message {This package also allows you to work on data cube such as spatio-spectral 3D images. For instance here, we will extract the spectra at different location in order to compare them.}")    
-##    WaitForN(xpapoint)
-##    a = d.set('analysis task Guidance')    
-#    
-#    return
-
-
 
 def DS9PythonInterp(xpapoint):
     """Substract an image, for instance bias or dark image, to the image
@@ -9914,6 +9889,8 @@ def Quit(xpapoint):
 def Button(xpapoint):
     from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QLabel)
     from PyQt5.QtGui import QIcon, QPixmap
+    from PyQt5.QtCore import pyqtSlot # <--- add this line
+
     class Window(QWidget):
         def __init__(self):
             super(Window, self).__init__()
@@ -9930,6 +9907,7 @@ def Button(xpapoint):
             layout.addWidget(self.buttonNext)
             layout.addWidget(self.buttonQuit)
     
+        @pyqtSlot() # <--- add this line
         def handleButtonNext(self):
 #            if self.d.get('cmap')=='cool':
 #                self.d.set('cmap heat')
@@ -9937,6 +9915,8 @@ def Button(xpapoint):
 #                self.d.set('cmap heat')                
             self.d.set('nan grey')
             verboseprint('Button Clicked!')
+
+        @pyqtSlot() # <--- add this line
         def handleButtonQuit(self):
             from subprocess import Popen
             Popen(["ps -eaf|grep 'DS9Utils.*test' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "], shell=True,

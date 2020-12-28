@@ -11,11 +11,12 @@ requires = ['numpy >=1.8', #'PyQt5','Pillow',
             'matplotlib>=3.1.1',
             'astropy >=1.3',
             'pyds9',
-            'photutils',
+            'photutils',    
             'tqdm',
-            'pyvista', 
+            'pyvista==0.25.3', 
             'datetime',  
-            'pandas',       
+            'pandas', 
+            'PyQt5',                
             'dataphile']
 
 entry_points = {}
@@ -27,7 +28,7 @@ data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Images/stack?????
 
 MAJOR = '2'
 MINOR = '9'
-MICRO = '4dev3'
+MICRO = '4dev4'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
