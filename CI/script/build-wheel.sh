@@ -20,9 +20,11 @@ for PYBIN in /opt/python/*/bin; do
 done
 
 ls -ltrh dist/
-for folder in buil/*; do
-	echo "Checking what is in build"
-	ls build/$folder/*
-done
+ls -ltrh buil/
+
+# for folder in buil/*; do
+# 	echo "Checking what is in build"
+# 	ls build/$folder/*
+# done
 
 #python3 setup_cython.py bdist_wheel

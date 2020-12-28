@@ -20,11 +20,13 @@ for PYENV in /Users/grunner/venv/unsio*; do
     deactivate
 done
 
+ls -ltrh buil/
 
-for folder in buil/*; do
-	echo "Checking what is in build"
-	ls build/$folder/*
-done
+
+# for folder in buil/; do
+# 	echo "Checking what is in build"
+# 	ls $folder/*s
+# done
 
 
 #pip install cython --user
