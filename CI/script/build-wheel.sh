@@ -20,7 +20,7 @@ for PYBIN in /opt/python/*/bin; do
 done
 
 ls -ltrh dist/
-ls -ltrh buil/
+#ls -ltrh buil/
 
 # for folder in buil/*; do
 # 	echo "Checking what is in build"

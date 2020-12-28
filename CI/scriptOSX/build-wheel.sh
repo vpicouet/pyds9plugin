@@ -20,7 +20,7 @@ for PYENV in /Users/grunner/venv/unsio*; do
     deactivate
 done
 
-ls -ltrh buil/
+#ls -ltrh buil/
 
 
 # for folder in buil/; do
