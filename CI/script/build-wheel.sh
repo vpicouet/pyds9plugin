@@ -14,9 +14,15 @@ rm -f wheel/*pyds9plugin*manylinux*.whl
 
 for PYBIN in /opt/python/*/bin; do
 	echo "Compiling using pip version ${PYBIN}...."
+	rm -rf build
 	${PYBIN}/pip install cython 
 	${PYBIN}/python setup_cython.py bdist_wheel
-
 done
+
 ls -ltrh dist/
+for folder in buil/*; do
+	echo "Checking what is in build"
+	ls build/$folder/*
+done
+
 #python3 setup_cython.py bdist_wheel

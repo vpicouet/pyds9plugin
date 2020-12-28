@@ -13,11 +13,19 @@ for PYENV in /Users/grunner/venv/unsio*; do
     which pip
     source ${PYENV}/bin/activate
 	pip install cython 
+	rm -rf build
     python setup_cython.py bdist_wheel
     # pip install cython --user
     # pip wheel --no-deps ./ -w wheelhouse
     deactivate
 done
+
+
+for folder in buil/*; do
+	echo "Checking what is in build"
+	ls build/$folder/*
+done
+
 
 #pip install cython --user
 #python3 setup_cython.py bdist_wheel
