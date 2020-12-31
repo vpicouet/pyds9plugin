@@ -6,6 +6,8 @@
 #rm -f wheel/*pyds9plugin*manylinux*.whl wheel/*pyds9plugin*tar.gz wheelhouse/*pyds9plugin*manylinux*.whl
 rm -f wheel/*pyds9plugin*manylinux*.whl
 rm -f dist/*pyds9plugin*manylinux*.whl 
+echo "Deleting more things..."
+rm -f dist/*
 
 # build wheel
 # for PYBIN in /opt/python/*/bin/; do
