@@ -8,8 +8,8 @@
 rm -f wheel/*pyds9plugin*osx*.whl
 rm -f dist/*pyds9plugin*osx*.whl 
 
-for PYENV in /Users/grunner/venv/unsio38*; do
-#for PYENV in /Users/grunner/venv/unsio*; do
+#for PYENV in /Users/grunner/venv/unsio38*; do
+for PYENV in /Users/grunner/venv/unsio*; do
     echo "Activate ${PYENV}...."
     which python
     which pip
