@@ -22,6 +22,8 @@ for PYENV in /Users/grunner/venv/unsio*; do
     deactivate
 done
 
+ls -ltrh dist/
+
 #ls -ltrh buil/
 
 
