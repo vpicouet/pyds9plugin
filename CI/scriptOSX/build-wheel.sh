@@ -7,7 +7,7 @@
 
 rm -f dist/*yds9plugin*osx*.whl 
 
-for PYENV in /Users/grunner/venv/unsio*; do
+for PYENV in /Users/grunner/venv/unsio38*; do
     echo "Activate ${PYENV}...."
     which python
     which pip

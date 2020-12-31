@@ -12,7 +12,7 @@ rm -f wheel/*pyds9plugin*manylinux*.whl
 #     PATH=/opt/usr/bin/:${PYBIN}:${PATH}   pip wheel --no-deps ./ -w wheelhouse	
 # done
 
-for PYBIN in /opt/python/*/bin; do
+for PYBIN in /opt/python/*36*/bin; do
 	echo "Compiling using pip version ${PYBIN}...."
 	rm -rf build
 	${PYBIN}/pip install cython 
