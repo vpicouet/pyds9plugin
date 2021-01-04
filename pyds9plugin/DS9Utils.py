@@ -243,7 +243,7 @@ if len(sys.argv)>2:
 
 
 def ComputeFluctuation(xpapoint, fileOutName=None, ext=1, ext_seg=1, mag_zp=None, sub=None, aper_size=10, verbose=False, plot=False, seg=None, type='image', nomemmap=False,    ):
-    from .getDepth import throwAper, depth, plot_histo
+    #from .getDepth import throwAper, depth, plot_histo
     d = DS9n(xpapoint)
     fileInName = getfilename(d)
     #fitsfile = fits.open(fileInName)
@@ -7624,6 +7624,269 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
 
 
 
+    
+    
+def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*xdata[argmax(ydata)])**2/len(ydata)/d)'):  
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.widgets import  Button, RadioButtons, TextBox # Slider
+    from dataphile.graphics.widgets import Slider
+    from matplotlib.widgets import  CheckButtons #RadioButtons,
+    from astropy.table import Table
+#    tab = Table.read('/tmp/test.dat', format='ascii')
+#    x,y = tab['col1'], tab['col2']
+    n=len(xdata)
+    lims = np.array([0,2])
+        
+    np_function = {a:getattr(np, a) for a in dir(np)}
+
+    fig, ax = plt.subplots(figsize=(10,7))
+    plt.subplots_adjust(bottom=0.25)
+    x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), n)
+    #initial = 'a*min(ydata)+b*(max(ydata)-min(ydata))*exp(-(x-c*xdata[argmax(ydata)])**2/d)'   
+    
+  
+    dict_values={'function':initial,'a':1,'b':1,'c':1,'d':1,'x':x,'xdata':xdata,'ydata':ydata}
+
+    l, = plt.plot(x, eval(initial,np_function,dict_values), lw=2)
+        
+    datal,  = plt.plot(xdata,ydata, '.',c='black')
+    ax.margins(x=0)
+    rax = plt.axes([0.04, 0.85, 0.15, 0.15], facecolor='None')
+    raxx = plt.axes([0.93, 0.17, 0.15, 0.15], facecolor='None')
+    data_box = plt.axes([0.8, 0.75, 0.15, 0.15], facecolor='None')
+    bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor='None')
+    axbox = plt.axes([0.1,  0.025, 0.65, 0.04])
+    
+    
+    button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), 'Fit', color='white', hovercolor='0.975')
+    delete_button = Button(plt.axes([0.72, 0.025, 0.04, 0.04]), 'x', color='white', hovercolor='0.975')
+    #replace_ax = plt.axes([0.77, 0.025, 0.1, 0.04])    
+    
+    
+    for edge in 'left', 'right', 'top', 'bottom':
+        rax.spines[edge].set_visible(False)
+        raxx.spines[edge].set_visible(False)
+        data_box.spines[edge].set_visible(False)
+        bounds_box.spines[edge].set_visible(False)
+        #replace_ax.spines[edge].set_visible(False)
+    scale = CheckButtons(rax, ['log'])
+    scalex = CheckButtons(raxx, ['log'])
+    data_button = CheckButtons(data_box, ['Data'],[True])
+    bounds_button = CheckButtons(bounds_box, ['Bounds'],[False])
+    #replace_button = Button(replace_ax, ['Replace'],[False])
+    
+    def scalefunc(label):
+        #print(scale)
+        if (ax.get_yscale()=='linear') :#& ((dict_values['ydata']>1).any() | (dict_values['y']>1).any()):
+            ax.set_yscale('log')
+        elif ax.get_yscale()=='log':
+            ax.set_yscale('linear')
+        fig.canvas.draw_idle()
+    def scalefuncx(label):
+        #print(scale)
+        if (ax.get_xscale()=='linear') & (dict_values['x']>1).any():
+            ax.set_xscale('log')
+        elif ax.get_xscale()=='log':
+            ax.set_xscale('linear')        
+        fig.canvas.draw_idle()
+    
+    def loadData(label):
+        #from astropy.table import Table
+        if data_button.get_status()[0]:
+            datal.set_marker('.')
+        else:
+            datal.set_marker(None)        
+        fig.canvas.draw_idle()
+    
+
+            
+
+    def submit(text):
+        x = dict_values['x'] 
+        a = dict_values['a'] 
+        b = dict_values['b'] 
+        c = dict_values['c'] 
+        d = dict_values['d'] 
+        ydata = eval(text,np_function,dict_values)
+        l.set_ydata(ydata)
+        ax.set_ylim(np.min(ydata), np.max(ydata))
+        plt.draw()
+        return text
+    
+    def update(val):
+        try:
+            a = b_a.value
+            b = b_b.value
+            c = b_c.value
+            d = b_d.value
+        except AttributeError:
+            a = b_a.val
+            b = b_b.val
+            c = b_c.val
+            d = b_d.val
+        text = dict_values['function']
+        x = dict_values['x'] 
+        try:
+            l.set_ydata(eval(text,np_function,dict_values))
+        except Exception as e:
+            print(e)
+            l.set_ydata(eval(initial,np_function,dict_values))
+            
+        fig.canvas.draw_idle()
+        dict_values['a'] = a
+        dict_values['b'] = b
+        dict_values['c'] = c
+        dict_values['d'] = d
+        return 
+    
+        
+    scale.on_clicked(scalefunc)
+    scalex.on_clicked(scalefuncx)
+    data_button.on_clicked(loadData)
+    #bounds_button.on_clicked(Apply_bounds)
+    
+    #axfreq = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor='none')
+    #axamp = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor='none')
+
+    
+    
+    
+    
+    text_box = TextBox(axbox, 'f(t) = ', initial=initial,color='white', hovercolor='0.975')
+    text = text_box.on_submit(submit)
+    
+    #sfreq = Slider(axfreq, 'Freq', 0, 1, valinit=0.5)
+    #samp = Slider(axamp, 'Amp', 0, 1, valinit=0.5)
+    
+    b_a = Slider(figure=fig, location=[0.1, 0.17, 0.8, 0.03], label='a',  bounds=lims, init_value=np.mean(lims))#,valfmt="%1.2f")
+    b_b = Slider(figure=fig, location=[0.1, 0.14, 0.8, 0.03], label='b', bounds=lims, init_value=np.mean(lims))
+    b_c = Slider(figure=fig, location=[0.1, 0.11, 0.8, 0.03], label='c',  bounds=lims, init_value=np.mean(lims))
+    b_d = Slider(figure=fig, location=[0.1, 0.08, 0.8, 0.03], label='d',  bounds=lims, init_value=np.mean(lims))
+    
+    
+    b_a.on_changed(update)
+    b_b.on_changed(update)
+    b_c.on_changed(update)
+    b_d.on_changed(update)
+    
+    
+    def returnf(text):
+        dict_values['function'] = text
+    
+        x = dict_values['x'] 
+        a = dict_values['a'] 
+        b = dict_values['b'] 
+        c = dict_values['c'] 
+        d = dict_values['d'] 
+        y = eval(text,np_function,dict_values)
+        l.set_ydata(y)
+        ax.set_ylim(np.min(y), np.max(y))
+        plt.draw()
+    
+        return text
+    text = text_box.on_submit(returnf)
+    
+        
+        
+    def reset(event):
+        b_a.reset()
+        b_b.reset()
+        b_c.reset()
+        b_d.reset()
+        
+    def fit(event):
+        from scipy.optimize import curve_fit
+
+        def f(x, a, b, c, d):
+            y_fit=0
+            dict_tot = {}
+            for dd in [{'a':a,'b':b,'c':c,'d':d,'x':x,'y_fit':y_fit,'xdata':xdata,'ydata':ydata}, np_function]:
+                dict_tot.update(dd)
+            exec('y_fit = ' + dict_values['function'],globals(), dict_tot)
+            y_fit = dict_tot['y_fit']
+            return y_fit 
+        #f = lambda x, a, b, c, d : eval(dict_values['function'],np_function,{'a':a,'b':b,'c':c,'d':d,'x':t})
+        x = dict_values['x'] 
+        a = dict_values['a'] 
+        b = dict_values['b'] 
+        c = dict_values['c'] 
+        d = dict_values['d'] 
+        #print(len(f(x,a,b,c,d)),len(x),len(y))
+        verboseprint('p0 = ',[a,b,c,d])
+        xmin, xmax = ax.get_xlim()
+
+        #popt, pcov = curve_fit(f, x[(x>xmin) & (x<xmax)], y[(x>xmin) & (x<xmax)],p0=[a,b,c,d])
+        if bounds_button.get_status()[0]:
+            bounds = (lims.min(),lims.min(),lims.min(),lims.min()), (lims.max(),lims.max(),lims.max(),lims.max())
+        else:
+            bounds = (-np.inf,-np.inf,-np.inf,-np.inf), (np.inf,np.inf,np.inf,np.inf)
+        verboseprint('bounds = ', bounds)
+
+        popt, pcov = curve_fit(f, xdata, ydata,p0=[a,b,c,d],bounds=bounds)
+        verboseprint('Fitting, f(x) = ',dict_values['function'])
+        verboseprint('p0 = ',[a,b,c,d])
+        verboseprint('Fit : ',popt)
+
+        #a, b, c, d = popt
+        plt.figtext(0.55,0.93,'Fit: %s, std=%0.3f'%(np.around(popt,2),np.sum(np.diag(pcov))),bbox={'facecolor':'black', 'alpha':1,'color':'white', 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
+        
+        #ax.plot(t, f(t,*popt),label='%s'%(np.round(popt,2)),linestyle='dotted',linewidth=0.7);ax.legend()
+        l.set_ydata(f(x,*popt))
+        plt.draw()
+
+        
+        b_a.widget.set_val(popt[0])
+        b_b.widget.set_val(popt[1])
+        b_c.widget.set_val(popt[2])
+        b_d.widget.set_val(popt[3])
+        # ymax = 1.1 * np.nanmax(ydata) if np.nanmax(ydata)>0 else 0.9 * np.nanmax(ydata)
+        # ymin = 0.9 * np.nanmin(ydata) if np.nanmin(ydata)>0 else 1.1 * np.nanmin(ydata)
+        # ymax2 = 1.1 * np.nanmax(datal.get_ydata()) if np.nanmax(datal.get_ydata())>0 else 0.9 * np.nanmax(datal.get_ydata())
+        # ymin2 = 0.9 * np.nanmin(datal.get_ydata()) if np.nanmin(datal.get_ydata())>0 else 1.1 * np.nanmin(datal.get_ydata())
+        # if datal.get_marker() is not None:
+        #     ax.set_ylim((np.nanmin([ymin,ymin2]),np.nanmax([ymax,ymax2])))
+        # else:
+        #     ax.set_ylim((ymin,ymax))
+        # plt.draw()
+
+    def delete(event):
+        text_box.set_val("")
+        return 
+    button.on_clicked(fit)
+    delete_button.on_clicked(delete)
+    #button.on_clicked(reset)
+    
+    def onclick(event):
+    
+        #print(ax.get_xlim())
+        xmin, xmax = ax.get_xlim()
+        x = np.linspace(xmin, xmax,n)
+        a = dict_values['a'] 
+        b = dict_values['b']
+        c = dict_values['c'] 
+        d = dict_values['d']
+        dict_values['x'] = x
+        text = dict_values['function']
+        y = eval(text,np_function,dict_values)
+        dict_values['y'] = y
+        l.set_xdata(x)
+        l.set_ydata(y)
+        ymax = 1.1 * np.nanmax(y) if np.nanmax(y)>0 else 0.9 * np.nanmax(y)
+        ymin = 0.9 * np.nanmin(y) if np.nanmin(y)>0 else 1.1 * np.nanmin(y)
+        ymax2 = 1.1 * np.nanmax(datal.get_ydata()) if np.nanmax(datal.get_ydata())>0 else 0.9 * np.nanmax(datal.get_ydata())
+        ymin2 = 0.9 * np.nanmin(datal.get_ydata()) if np.nanmin(datal.get_ydata())>0 else 1.1 * np.nanmin(datal.get_ydata())
+        if datal.get_marker() is not None:
+            ax.set_ylim((np.nanmin([ymin,ymin2]),np.nanmax([ymax,ymax2])))
+        else:
+            ax.set_ylim((ymin,ymax))
+        #print(dict_values['ydata'])
+        plt.draw()
+        #xmin, xmax = ax.get_xaxis()
+        return 
+    cid = fig.canvas.mpl_connect('draw_event', onclick)
+    plt.show()
+    
 
 
 
@@ -7631,7 +7894,7 @@ def  ManualFitting(xpapoint=None,initial = 'a+b*max(ydata)*exp(-(x-c*xdata[argma
     """Fit background 1d with different features
     """
     from astropy.table import Table
-    from .slider import InteractivManualFitting
+    #from .slider import InteractivManualFitting
     d=DS9n(xpapoint)
     if d is not None:
         try: 
@@ -7796,12 +8059,302 @@ def Function(xpapoint=None, config=my_conf,Plot='Linear',path=None, xrange=[-10,
     return
 
 
+def main_coupon(fileInName, fileOutName, ext, ext_seg, mag_zp, sub, aper_size, verbose, plot, fileSegName, type, nomemmap, N_aper):
+
+    # Options
+    # N_aper    = 10000             # Number of random apertures to throw
+    #sigma     = [3.0, 5.0, 10.0]  # Signal-to-noise ratios (3)
+    sigma     = [5.0, 10.0]  # Signal-to-noise ratios
+
+    # open image and return data array + attributes
+    imageTmp, pix_scale, mag_zp = getData(fileInName, ext, mag_zp, sub, nomemmap)
+
+
+    # transform input image to data or variance image
+    if type == "image" or type == "var":
+        image = imageTmp
+    elif type == "weight":
+        image = 1.0/imageTmp
+    elif type == "rms":
+        image = imageTmp*imageTmp
+    else:
+        raise ValueError("image type \"{0}\" not recognized".format(type))
+
+    # open segmentation image and return seg array + attributes
+    seg = None
+    if fileSegName is not None:
+        seg, seg_pix_scale, seg_mag_zp = getData(fileSegName, ext_seg, mag_zp, sub, nomemmap)
+
+    # return flux array and standard deviation
+    flux, n_aper_used, result = throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub)
+
+    d, d_err, flux_std = depth(flux, mag_zp, sigma, type)
+
+    print_d     = "{0:3.2f}".format(d[0])
+    print_sigma = "{0:3.2f}".format(sigma[0])
+    for i in range(1, len(sigma)):
+        print_d     += " {0:3.2f}".format(d[i])
+        print_sigma += " {0:3.2f}".format(sigma[i])
+    title = '{0}:\n Depth in {1:3.2f}\" diam. apertures: {2:s} ({3:s} sigmas) +/- {4:3.2f}. flux_std = {5:3.2f}'.format(\
+        os.path.basename(fileInName), aper_size, print_d, print_sigma, d_err[0], flux_std)
+    #print(title)
+
+    # plot histogram
+    if plot:
+        plot_histo(flux, flux_std, aper_size, title)
+        plt.savefig(fileInName[:-5] + '_depth.png')
+        plt.show()
+#        plt.close()del 
+    return {'depth':d, 'depth_eroor':d_err, 'flux_std':flux_std, 'n_aper_used':n_aper_used}
+
+# ----------------------------------------------------- #
+# functions
+# ----------------------------------------------------- #
+
+def getData(fileInName, ext, mag_zp, sub, nomemmap):
+    """
+    Opena a fits files and return attributes
+    """
+
+    if nomemmap:
+        fileIn    = fits.open(fileInName, memmap=False)
+    else:
+        fileIn    = fits.open(fileInName, memmap=True)
+
+    image     = fileIn[ext].data
+
+
+    try:
+        w         = wcs.WCS(fileIn[ext].header)
+        pix_scale = wcs.utils.proj_plane_pixel_scales(w)[0]*3600.0
+    except:
+        # this is needed for ultraVista
+        # throw 'PV1_5 : Unrecognized coordinate transformation parameter'
+        warnings.warn( "Using CD1_1: {0}".format(abs(fileIn[ext].header['CD1_1'])), RuntimeWarning)
+        pix_scale = abs(fileIn[ext].header['CD1_1']) * 3600.0
+
+    if False:
+        #print(fileIn.info())
+        # print repr(fileIn[ext].header)
+        #print(fileIn[ext].header["EXTNAME"])
+        #print(pix_scale)
+        exit(-1)
+
+
+#    print image
+
+    #print fileIn[0].header['BSCALE'], fileIn[0].header['BZERO']
+
+
+    if mag_zp is None:
+        mag_zp = getMagZp(fileIn[ext].header)
+
+    if sub is not None:
+
+        if (sub[0] - 1 < 0) | (sub[1] - 1 > np.shape(image)[0] - 1 ):
+            raise ValueError("sub x-coordinates ({0}, {1}) exceed image limits ({2}, {3})".format(sub[0], sub[1], 1, np.shape(image)[0]))
+        if (sub[2] - 1 < 0) | (sub[3] - 1 > np.shape(image)[1] - 1 ):
+            raise ValueError("sub y-coordinates ({0}, {1}) exceed image limits ({2}, {3})".format(sub[2], sub[3], 1, np.shape(image)[1]))
+
+        # sub uses ds9 convention -> swap x and y to transform to
+        # proper python array
+        ylim = [sub[0]-1, sub[1]-1]
+        xlim = [sub[2]-1, sub[3]-1]
+
+    else:
+
+        xlim = [0, np.shape(image)[0]-1]
+        ylim = [0, np.shape(image)[1]-1]
+
+
+    if False:
+        fileOut = fits.PrimaryHDU(image[xlim[0]:xlim[1], ylim[0]:ylim[1]], header=fileIn[ext].header)
+        fileOut.writeto(fileInName+".sub", clobber=True)
+    # is this needed?
+    # del image
+
+    return image[xlim[0]:xlim[1], ylim[0]:ylim[1]], pix_scale, mag_zp
+
+
+def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
+    """
+    Takes an image + attributes and throw N_aper
+    apertures with random positions
+    """
+
+    """
+    best way to proceed is to feed with segmantation map from
+    sextractor and set all contiguous pixels above background as NaN
+    """
+
+    # compute the pixel standard deviation
+    pix_err  = 1.4826 * astats.median_absolute_deviation(image[np.isfinite(image)])
+    if sub_bkg:
+        image -= np.mean(image)
+
+#    if seg is None and type != "weight" and type != "var" and type !="rms":
+#        # if no segmentation map is given,
+#        # all pixels exceeding 5 times the background are replaced
+#        # with NaN value to exlude apertures with detections from random aperture sample
+#        image[image > 15.0 * pix_err] = np.nan
+
+#    x_ran = (np.shape(image)[0]-1.0 - 0.0) * np.random.random(N_aper) + 0.0
+#    y_ran = (np.shape(image)[1]-1.0 - 0.0) * np.random.random(N_aper) + 0.0
+
+    # aperture_photometry seems to use ds9 convention -> swap x and y to transform to
+    y_ran = (np.shape(image)[0]-1.0 - 0.0) * np.random.random(N_aper) + 0.0
+    x_ran = (np.shape(image)[1]-1.0 - 0.0) * np.random.random(N_aper) + 0.0
+
+    aperture  = CircularAperture(np.array([x_ran, y_ran]), r=aper_size/2)#aper_size/pix_scale/2.0)
+    var = [np.nanvar(ap.to_mask().multiply(image)[ap.to_mask().multiply(image)>0]) for ap in aperture]
+    median = [np.nanmedian(ap.to_mask().multiply(image)[ap.to_mask().multiply(image)>0]) for ap in aperture]
+    result    = aperture_photometry(image, aperture)#, error=pix_err)
+    flux      = result['aperture_sum']
+    result['Var'] = var
+    result['Median'] = median
+
+    if seg is not None:
+        eps       = 1.e-3
+        result    = aperture_photometry(seg, aperture)#, error=pix_err)
+        fluxSeg   = result['aperture_sum']
+
+        select = (fluxSeg < eps) & (np.isfinite(flux))
+    else:
+        select = np.isfinite(flux)
+
+    if verbose:
+        aper_volume = aper_size**2 * np.pi / (60.0*60.0)**2
+        N_aper_used = len(flux[select])
+        print("{0:d} / {1:d} apertures used. {2:3.4f} / {3:3.4f} (deg2) surface used".format(\
+            N_aper_used, N_aper, aper_volume*float(N_aper_used), \
+            np.shape(image)[0]*np.shape(image)[1]*pix_scale**2 /(60.0*60.0)**2))
+
+    del image
+    del seg
+
+    if False:
+        np.savetxt("apertures.txt", np.column_stack((x_ran[select], y_ran[select], flux[select])), header="x y flux")
+
+
+    return flux[select], N_aper_used, result
+
+
+def plot_histo(flux, flux_std, aperture, title):
+
+    # plot limits
+    #flux_min = -3.0*flux_std
+    #flux_max = 5.0*flux_std
+
+    flux_min = -10.0*flux_std
+    flux_max = 10.0*flux_std
+
+
+    # compute histogram
+    hist, hist_bins = np.histogram(flux, range=(flux_min, flux_max), bins=50, density=True)
+
+    # plot histogram
+    plt.fill_between(0.5*(hist_bins[1:]+hist_bins[:-1]), 0.0, hist, color='red', alpha=0.5)
+    plt.plot(0.5*(hist_bins[1:]+hist_bins[:-1]), hist, color='red', lw=2, label='Histogram (${0:3.2f}$\" diam. aper)'.format(aperture))
+    ylim = plt.ylim(0.0, )
+
+    # overplot gaussian centered at flux = 0.0 and scaled to flux distribution
+    x  = np.linspace(flux_min, flux_max, 120)
+    #x0 = hist_bins[np.argmax(hist)]
+    x0 = np.median(flux)
+    y  = 1.0/(flux_std*np.sqrt(2.0*np.pi)) * np.exp(-(x-x0)*(x-x0)/(2.0*flux_std*flux_std)) #/ (hist_bins[1] - hist_bins[0])#*max(hist)
+    y = y*hist.max()/y.max()
+    plt.plot(x, y, '-', linewidth=2, label='Gauss. (mad estimate)')
+    plt.plot([0.0, 0.0], [0.0, ylim[1]], ':', color='blue')
+
+    # Axis labels and title
+    plt.ylabel('n (flux)')
+    plt.xlabel('Flux (arbitrary unit)')
+    plt.legend(frameon=None, fancybox=None)
+    plt.title(title)
+
+    # show and save pdf
+
+
+
+def getMagZp(header):
+    """
+    Method to get zero point out of a fits header
+    """
+
+    # add flux or zero point key here
+    keysFluxZp = ['FLUXMAG0']
+    keysMagZp  = ['SEXMGZPT']
+
+    foundKey = False
+
+    # first try mag zero point keys
+    for key in keysMagZp:
+        try:
+            mag_zp = header[key]
+        except (KeyError):
+            pass
+        else:
+            foundKey = True
+
+    # then try flux zero point keys
+    if not foundKey:
+        for key in keysMagZp:
+            try:
+                mag_zp = 2.5*np.log10(header[key])
+            except (KeyError):
+                pass
+            else:
+                foundKey = True
+
+    # no keys found, add it to keysMagZp[] or set it in the options
+    if not foundKey:
+        raise KeyError("No flux or mag key found for zero point. Set --mag_zp MAG_ZEROPOINT")
+
+    return mag_zp
+
+def depth(flux, mag_zp, sigma, type):
+
+    flux_std = 1.4826*astats.median_absolute_deviation(flux)
+    #flux_std = astats.biweight_midvariance(flux)
+    #flux_std = np.std(flux)
+
+    N      = len(flux)
+    Nsigma = len(sigma)
+    Nboot  = 100
+
+    # resample flux
+    flux_r = np.zeros(N)
+    d_r    = np.zeros((Nboot, Nsigma))
+
+    for l in range(Nboot):
+        for i in range(N):
+            flux_r[i] = flux[np.random.randint(0, N-1)]
+
+        #flux_std_r = astats.biweight_midvariance(flux_r)
+        flux_std_r = 1.4826*astats.median_absolute_deviation(flux_r)
+
+        for j in range(Nsigma):
+            d_r[l, j] = -2.5*np.log10(sigma[j]*flux_std_r) + mag_zp
+
+    d     = np.zeros(Nsigma)
+    d_err = np.zeros(Nsigma)
+
+    if type == "weight" or type == "var" or type =="rms":
+        #flux_std = np.median(np.sqrt(flux))
+        flux_std = np.sqrt(np.median(flux))
+
+    for j in range(Nsigma):
+        d[j]     = -2.5*np.log10(sigma[j]*flux_std) + mag_zp
+        d_err[j] = np.std(d_r[:, j])
+
+    return d, d_err, flux_std
+
 
 
 def get_depth_image(xpapoint):
     """Get the depth of an astronomical image
     """
-    from .getDepth import main_coupon
+    #from .getDepth import main_coupon
     d = DS9n(xpapoint)
     filename = getfilename(d)
     mag_zp, aper_size, N_aper = sys.argv[-3-5:-5]
