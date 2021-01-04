@@ -7857,7 +7857,7 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*xdat
     delete_button.on_clicked(delete)
     #button.on_clicked(reset)
     
-    def onclick(event):
+    def onclick(event): 
     
         #print(ax.get_xlim())
         xmin, xmax = ax.get_xlim()
