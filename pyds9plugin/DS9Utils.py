@@ -8101,6 +8101,7 @@ def main_coupon(fileInName, fileOutName, ext, ext_seg, mag_zp, sub, aper_size, v
 
     # plot histogram
     if plot:
+        import matplotlib.pyplot as plt
         plot_histo(flux, flux_std, aper_size, title)
         plt.savefig(fileInName[:-5] + '_depth.png')
         plt.show()
@@ -8115,6 +8116,10 @@ def getData(fileInName, ext, mag_zp, sub, nomemmap):
     """
     Opena a fits files and return attributes
     """
+    import warnings
+    from astropy.io import fits
+    import astropy.wcs as wcs
+
 
     if nomemmap:
         fileIn    = fits.open(fileInName, memmap=False)
@@ -8188,6 +8193,10 @@ def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
     """
 
     # compute the pixel standard deviation
+    from photutils import CircularAperture
+    from photutils import aperture_photometry
+    import astropy.stats  as astats
+
     pix_err  = 1.4826 * astats.median_absolute_deviation(image[np.isfinite(image)])
     if sub_bkg:
         image -= np.mean(image)
@@ -8240,6 +8249,7 @@ def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
 
 
 def plot_histo(flux, flux_std, aperture, title):
+    import matplotlib.pyplot as plt
 
     # plot limits
     #flux_min = -3.0*flux_std
@@ -8313,6 +8323,7 @@ def getMagZp(header):
     return mag_zp
 
 def depth(flux, mag_zp, sigma, type):
+    import astropy.stats  as astats
 
     flux_std = 1.4826*astats.median_absolute_deviation(flux)
     #flux_std = astats.biweight_midvariance(flux)
