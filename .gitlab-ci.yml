@@ -14,8 +14,8 @@ stages:
 
 
 variables :
-  WHEEL       : 1
-  OSX         : 1
+  WHEEL       : 0
+  OSX         : 0
 #  TESTPYPI    : 0
 #  PYPI        : 0
 #  TESTPYPIOSX : 0
