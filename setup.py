@@ -23,7 +23,7 @@ entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils = pyds9plugin.DS9Utils:main']
 
 #data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Images/stack????????.fits","Images/stack.fits","Sextractor/*","dataphile/*","doc/ref/*/*","doc/ref/*"]}#,"doc/features_files/*","doc/img/*","doc/index_files/*"
-data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Images/stack????????.fits","Images/m33_hi.fits","Images/stack.fits","Sextractor/*","dataphile/*","doc/ref/examples/*","doc/ref/img/*","doc/ref/index_files/*","doc/ref/*.html"]}#,"doc/ref/*/*","doc/features_files/*","doc/img/*","doc/index_files/*"
+data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","filters/*","SEDs/*","config/*","Images/stack????????.fits","Images/m33_hi.fits","Images/stack.fits","Sextractor/*","dataphile/*","doc/ref/examples/*","doc/ref/img/*","doc/ref/index_files/*","doc/ref/*.html"]}#,"doc/ref/*/*","doc/features_files/*","doc/img/*","doc/index_files/*"
 
 
 MAJOR = '2'

@@ -3,7 +3,7 @@
 """
 Created on Wed Jul  4 10:35:13 2018
 
-@author: Vincent
+@author: V. Picouet
 """
 import resource
 import time
@@ -154,7 +154,7 @@ def Log(v=None):
 
 logger = Log()
 
-def yesno(d,question='',verbose=bool(int(os.popen('cat %s.message.txt'%(DS9_BackUp_path)).read()))):#=bool(np.loadtxt('/Users/Vincent/DS9QuickLookPlugIn/.verbose.txt'))):
+def yesno(d,question='',verbose=bool(int(os.popen('cat %s.message.txt'%(DS9_BackUp_path)).read()))):
     if verbose:
         verboseprint(question)
         return bool(int(d.get("""analysis message yesno {%s}"""%(question))))
@@ -295,6 +295,10 @@ def ComputeFluctuation(xpapoint, fileOutName=None, ext=1, ext_seg=1, mag_zp=None
 ################################
 
 
+
+
+#################################
+#import matplotlib.pyplot as plt
 # width = 23#root.winfo_screenmmwidth() / 25.4
 # height = 14#root.winfo_screenmmheight() / 25.4
 
@@ -309,8 +313,7 @@ def ComputeFluctuation(xpapoint, fileOutName=None, ext=1, ext_seg=1, mag_zp=None
 # plt.rcParams['axes.labelsize'] = 'x-large'
 # plt.rcParams['axes.titlesize'] = 'x-large'
 
-#################################
-#import matplotlib.pyplot as plt
+
 #from .DS9Utils_ok import *
 
 
@@ -463,7 +466,8 @@ def PlotSpectraFilters(xpapoint):
     m = 1e-4
     c=3e8
     beta_min, beta_max = 1268, 2580
-    pathf='/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/filt/'
+    pathf = resource_filename('pyds9plugin','filters') #'/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/filt/'
+    path_seds = resource_filename('pyds9plugin','SEDs') #'/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/filt/'
     colors = ['navy','midnightblue','darkblue','royalblue','mediumslateblue','deepskyblue','aquamarine','mediumaquamarine','limegreen','grey','yellow','gold','orange','darkorange','lightcoral','orangered','coral','tomato','salmon','darksalmon','red','maroon','saddlebrown','chocolate','darkred','black','black']
     sizes=[3690,3911,4851,6242,7716,8915,9801,10240,12562,16499,21570]
     sizes = [0.0234, 0.0795, 0.0456,0.0598,0.1194,0.1539,0.1476,0.0768,0.0797,0.0918,0.1714,0.2895,0.3058,5.3245, 35.6385, 74.9582, 77.7000,105.9688,199.8631]
@@ -479,7 +483,7 @@ def PlotSpectraFilters(xpapoint):
     ax1 = fig.add_subplot(gs[0])
     ax2 = fig.add_subplot(gs[1], sharex=ax1)
    
-    tab = Table.read('/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/sed/STAR/PICKLES/f6v.sed',format='ascii')
+    tab = Table.read(path_seds + '/PICKLES/f6v.sed',format='ascii')
     lam = m*tab['col1']
      
     spectrum = fnu(tab['col2'],tab['col1'])#tab['col2'] /  tab['col2'].max() / 1.1
@@ -541,15 +545,15 @@ def PlotSpectraFilters(xpapoint):
         
     def hzfunc(label):
         if label=='Dale':
-            filename=random.choice(glob.glob('/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/sed/GAL/DALE/*.sed'))
+            filename=random.choice(glob.glob(path_seds + '/DALE/*.sed'))
         if label=='COSMOS':
-            filename=random.choice(glob.glob('/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/sed/GAL/COSMOS_MODIF/*.sed'))
+            filename=random.choice(glob.glob(path_seds + '/COSMOS_MODIF/*.sed'))
         if label=='QSO':
-            filename = random.choice(glob.glob('/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/sed/QSO/SALVATO2015/*.sed'))
+            filename = random.choice(glob.glob(path_seds + '/SALVATO2015/*.sed'))
         if label=='Star':
-            filename = random.choice(glob.glob('/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/sed/STAR/PICKLES/*.sed'))
+            filename = random.choice(glob.glob(path_seds + '/PICKLES/*.sed'))
         if label=='COUPON':
-            filename = random.choice(glob.glob('/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/sed/GAL/COUPON2015/*.out'))
+            filename = random.choice(glob.glob(path_seds + '/COUPON2015/*.out'))
         tab = Table.read(filename,format='ascii')
         lam = m*tab['col1']
         spectrum = fnu(tab['col2'],tab['col1'])#tab['col2'] /  tab['col2'].max()/ 1.1
@@ -676,11 +680,9 @@ def PresentPlugIn():
                                                                                  
             Written by Vincent PICOUET <vincent.picouet@lam.fr>                  
             Copyright 2019                                                       
-            visit https://people.lam.fr/picouet.vincent                          
+            visit https://people.lam.fr/picouet.vincent/pyds9plugin              
                                                                                  
             DS9 Quick Look Plug-in comes with ABSOLUTELY NO WARRANTY             
-            You may redistribute copies of DS9 Quick Look Plug-in                
-            under the terms of the MIT License.                                  
                                                                                  
             To use it run:                                                       
             > ds9 &                                                              
@@ -1637,7 +1639,7 @@ def DS9guider(xpapoint):
 #    header = d.get_pyfits()[0].header
 #    if header['WCSAXES'] == 2:
 #        d.set("grid")
-#        d.set("scale mode 99.5")#vincent
+#        d.set("scale mode 99.5")
 #        try:# if urllib.request.urlopen("http://google.com",timeout=1):#Internet == True:
 #            d.set("dsssao")
 #        except:
@@ -2587,32 +2589,13 @@ def DS9throughfocus(xpapoint, Plot=True):
                      center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas, offsets=offsets)
 
     
-    # datas = Table.read('/Users/Vincent/Desktop/stack_cat.fits')['VIGNET']
-    # for data in datas[:100]:
-    #     plt.figure()
-    #     imshow(data);colorbar()
-    #     plt.show()
     from astropy.convolution import convolve, Gaussian2DKernel
     dat  = [(data-np.nanmin(data))/np.max(np.ptp(datas,axis=(1,2))) for data in datas]#/(data-np.nanmin(data)).ptp() 
     datc = [convolve(data, Gaussian2DKernel(x_stddev=1) )for data in dat]
     ptp = [data.ptp() for data in dat]
     a = Table([dat,datc,ptp],names=('VIGNET1','VIGNET2','AMPLITUDE'))
     PyvistaThoughfocus(a)
-    
-    # a = Table.read(sys.argv[-2])
-    # mask = (np.nanmin(a['VIGNET'],axis=(1,2))>-1e30)
-    # a = a[mask  ]
-    # a['VIGNET1'] =  [(data-np.nanmin(data))/(data-np.nanmin(data)).ptp() for data in a['VIGNET']]
-    # a['VIGNET2']  =   [convolve(data, Gaussian2DKernel(x_stddev=1) )for data in a['VIGNET1']]
 
-    # a['AMPLITUDE'] = [data.ptp() for data in a['VIGNET']]
-    # a.sort(sys.argv[-1])
-    # PyvistaThoughfocus(a)
-    
-    # datas = Table.read('/Users/Vincent/Desktop/stack_cat.fits')['VIGNET']
-    # datas_1 = [(data-np.nanmin(data))/(data-np.nanmin(data)).ptp() for data in datas[:] if (data>-1e30).all()]
-    # ptp = [data.ptp() for data in datas[:] if (data>-1e30).all()]    
-    # PyvistaThoughfocus(np.array(datas_1)[np.array(ptp).argsort()]  )# datas_1[argsort(ptp)]
 
 def PyvistaThoughfocus(datas):
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
@@ -2676,7 +2659,6 @@ def PyvistaThoughfocus(datas):
 
 def ExploreThroughfocus(xpapoint):
 #    a = Table.read('/Users/Vincent/Desktop/stack_cat.fits')
-#    a = Table.read('/Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/PresentationLAM/F3_OpenCluster_cat.fits')
     from astropy.convolution import convolve, Gaussian2DKernel
     a = Table.read(sys.argv[-2])
     mask = (np.nanmin(a['VIGNET'],axis=(1,2))>-1e30)
@@ -5660,7 +5642,7 @@ def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
     return
 
 
-def cropCLAUDS(path='/Users/Vincent/Documents/Work/sextractor/calexp/calexp-HSC-I-9813-2,4.fits',position=[0,0],size=[10,10], all_ext=False):#,area=[0,100,0,100]
+def cropCLAUDS(path,position=[0,0],size=[10,10], all_ext=False):#,area=[0,100,0,100]
     """Cropping/Trimming function that keeps WCS header information
     """
     from astropy.io import fits
@@ -5759,10 +5741,6 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     vals3, b_ = np.histogram(x,bins=bins3)
     vals4, b_ = np.histogram(y,bins=bins4)
 
-    # Table([bins1,vals1],names=[bins1[0],vals1[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/1.dat',format='ascii',comment='#')
-    # Table([bins2,vals2],names=[bins2[0],vals2[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/2.dat',format='ascii')
-    # Table([bins3,vals3],names=[bins3[0],vals3[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/3.dat',format='ascii')
-    # Table([bins4,vals4],names=[bins4[0],vals4[0]]).write('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/plots/4.dat',format='ascii')
 
     np.savetxt(DS9_BackUp_path + '/CSVs/1.dat',np.array([(bins1[1:]+bins1[:-1])/2,vals1]).T)
     np.savetxt(DS9_BackUp_path + '/CSVs/2.dat',np.array([(bins2[1:]+bins2[:-1])/2,vals2]).T)
@@ -9563,12 +9541,10 @@ def WaitForN(xpapoint):
     return
 
 
-def download(url='https://people.lam.fr/picouet.vincent/pyds9plugin/m33_hi.fits', file='/tmp/test.fits'):
+def download(url, file='/tmp/test.fits'):
     from tqdm import tqdm, tqdm_gui
     import requests
     import matplotlib.pyplot as plt
-
-    #url='https://people.lam.fr/picouet.vincent/pyds9plugin/m33_hi.fits'# Streaming, so we can iterate over the response.
     try:
         response = requests.get(url, stream=True)
     except requests.exceptions.RequestException as e:  # This is the correct syntax
