@@ -425,6 +425,17 @@ hmenu 3. Astronomical Softwares
 	menu
 	DS9Utils $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.) WCS $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   | $text  
 
+	MaxiMask
+	*
+	menu
+	DS9Utils $xpa_method MaxiMask  $param(MaxiMask);  $prob $size  $single $net  $F1  $F2  $F3  $F4  $F5  $F6  $F7  $F8  $F9  $F_10  $F_11   $F_12   $F_13   $F_14  $P1  $P2  $P3  $P4  $P5  $P6  $P7  $P8  $P9  $P_10  $P_11  $P_12  $P_13  $P_14  $T1   $T2  $T3   $T4   $T5  $T6  $T7  $T8  $T9  $T_10  $T_11  $T_12  $T_13  $T_14    | $text  
+
+	CreateContourRegions
+	*
+	menu
+	DS9Utils $xpa_method CreateContourRegions $param(CreateContourRegions);   $block $theshold  $erosion  $dilatation  | $text
+
+
 
 	hmenu SExtractor
 
@@ -614,6 +625,77 @@ DS9Utils $xpa_method ComputeFluctuation $param(ComputeFluctuation) $Number $Radi
 ###########################################################################################################################################
 ###########################################################################################################################################
 
+
+
+
+param MaxiMask
+tab {General}
+prob checkbox {PROBA THRESH} 0 {}
+size entry {BATCH SIZE} 8 {}
+single checkbox {SINGLE MASK} 0 {}
+net entry {NET PATH} 0 {}
+endtab
+
+tab {Flags}
+F1 checkbox {Cosmic Rays} 0 {}
+F2 checkbox {Hot Columns/Lines} 0 {}
+F3 checkbox {Dead Columns/Lines/Clusters} 0 {}
+F4 checkbox {Hot Pixels} 0 {}
+F5 checkbox {Dead Pixels} 0 {}
+F6 checkbox {Persistence} 0 {}
+F7 checkbox {TRaiLs} 1 {}
+F8 checkbox {FRinge patterns} 0 {}
+F9 checkbox {NEBulosities} 0 {}
+F_10 checkbox {SATurated pixels} 0 {}
+F_11 checkbox {diffraction SPikes} 0 {}
+F_12 checkbox {OVerscanned pixels} 0 {}
+F_13 checkbox {Bright BackGround pixel} 0 {}
+F_14 checkbox {Background} 0 {}
+endtab
+
+tab {Priors}
+P1  entry {Cosmic Rays} 0.0007 {}
+P2  entry {Hot Columns/Lines} 0.0008 {}
+P3  entry {Dead Columns/Lines/Clusters} 0.0080 {}
+P4  entry {Hot Pixels} 0.000001 {}
+P5  entry {Dead Pixels} 0.000001 {}
+P6  entry {Persistence} 0.00001 {}
+P7  entry {TRaiLs} 0.006 {}
+P8  entry {FRinge patterns} 0.01 {}
+P9  entry {NEBulosities} 0.01 {}
+P_10 entry {SATurated pixels} 0.0016 {}
+P_11 entry {diffraction SPikes} 0.013 {}
+P_12 entry {OVerscanned pixels} 0.005 {}
+P_13 entry {Bright BackGround pixel} 0.07 {}
+P_14 entry {Background} 0.90 {}
+endtab
+
+tab {Thresholds}
+T1  entry {Cosmic Rays} 0.51 {}
+T2  entry {Hot Columns/Lines} 0.52 {}
+T3  entry {Dead Columns/Lines/Clusters} 0.50 {}
+T4  entry {Hot Pixels} 0.23 {}
+T5  entry {Dead Pixels} 0.99 {}
+T6  entry {Persistence} 0.66 {}
+T7  entry {TRaiLs} 0.55 {}
+T8  entry {FRinge patterns} 0.62 {}
+T9  entry {NEBulosities} 0.45 {}
+T_10 entry {SATurated pixels} 0.78 {}
+T_11 entry {diffraction SPikes} 0.41 {}
+T_12 entry {OVerscanned pixels} 0.37 {}
+T_13 entry {Bright BackGround pixel} 0.49 {}
+T_14 entry {Background} 0.33 {}
+endtab
+
+
+endparam
+
+param CreateContourRegions
+block menu {Block} 1|2|4|8|16|32 {}
+theshold entry {Threshold} 0.1 {}
+erosion entry {Erosion} 0 {}
+dilatation entry {Dilatation} 50 {}
+endparam
 
 
 param EMCCD

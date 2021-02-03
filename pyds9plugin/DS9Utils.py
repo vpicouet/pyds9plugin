@@ -1,3 +1,5 @@
+
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -58,13 +60,6 @@ def verbose(xpapoint=None,verbose=None):
     
     return 
 
-if sys.stdin is not None:
-    #verboseprint('STDIN detected')
-    verbose(xpapoint=None,verbose=1)
-    #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 1)
-else:
-    verbose(xpapoint=None,verbose=0)
-    
 def DS9n(xpapoint=None, stop=False):
     targets = ds9_targets()
     if targets:
@@ -118,6 +113,14 @@ def CreateFolders(DS9_BackUp_path= os.environ['HOME'] + '/DS9QuickLookPlugIn/'):
 if len(sys.argv)==1:
     CreateFolders()
 
+#Needs to be after create folders 
+if sys.stdin is not None:
+    #verboseprint('STDIN detected')
+    verbose(xpapoint=None,verbose=1)
+    #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 1)
+else:
+    verbose(xpapoint=None,verbose=0)
+    
     
 def Log(v=None): 
     import logging
@@ -214,7 +217,6 @@ def License(limit_date=20210425,l0='whoareyou'):
 #    if ((today > limit_date) or str(license_)!=l0) & (today<limit_date+10000):
     if ((today > limit_date) & (str(license_)!=l0)) or (today>limit_date+10000):
         d=DS9n(sys.argv[1])
-       # d.set('analysis message {Your license is over. Please by a new one.}');sys.exit()  
         l = get(d, "This is a trial version. We hope you enjoyed pyds9plugin. Please buy a license at https://people.lam.fr/picouet.vincent/pyds9plugin/ or enter your license key here:", exit_=False) 
         if l==l0:
             np.save(path,l)
@@ -671,6 +673,8 @@ def PresentPlugIn():
     """Print presentation of the plug in.
     """
     from shutil import which
+    if which('DS9Utils') is None:
+        print('DS9Utils does not seem to be installed in your PATH. Please add it and re-run the command.')
     if os.path.isfile(resource_filename('pyds9plugin','DS9Utils')) is False:
         symlink_force(which('DS9Utils'), resource_filename('pyds9plugin','DS9Utils'))
 
@@ -908,8 +912,10 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
     #ajouter exp, sqrt, power low, gaussian, 
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
+    y = y[np.isfinite(y)]
     if x is None:
         x = np.arange(len(y))
+        
     x = np.array(x)
     y = np.array(y)
 
@@ -978,7 +984,9 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds,sigma=sigma)
         except RuntimeError as e:
             logger.warning(e)
-            return np.zeros(len(P0))
+            #return np.zeros(len(P0))
+            return {'popt': np.zeros(len(P0)), 'pcov':  np.zeros((len(P0),len(P0))), 'res': 0, 'y': y, 'x': x,'curve':[]}
+
         zp = law(xp,*popt)
         zz = law(x,*popt)
         name = 'Fit %s'%(np.round(np.array(popt, dtype=int),0))
@@ -2945,10 +2953,10 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
 
   if fiber == 0:
       flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
-      d = {"Flux":flux,"SizeSource":0,"Sigma":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+      d_ = {"Flux":flux,"SizeSource":0,"Sigma":popt[1],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       verboseprint("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
   else:
-      d = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+      d_ = {"Flux":0,"SizeSource":popt[1],"Sigma":popt[2],"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
       verboseprint("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
   csvwrite(np.vstack((rmean[:size], profile,ConvolveDiskGaus2D(rmean[:size], *popt))).T, DS9backUp + 'CSVs/%s_RadialProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
   csvwrite(np.vstack((rsurf, EE)).T, DS9backUp + 'CSVs/%s_EnergyProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
@@ -2968,7 +2976,7 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
 #  d.append("plot title legend '%s , %0.1f - %0.1f' "%(os.path.basename(name),NewCenter[0],NewCenter[1]))
   d.append("plot title legend ''")
 
-  d.append("plot name 'Data: Flux = %i, FWHM_fit = %0.1f' "%(d['Flux'],abs(popt[1])))
+  d.append("plot name 'Data: Flux = %i, FWHM_fit = %0.1f' "%(d_['Flux'],abs(popt[1])))
   d.append("plot line shape circle ")
   d.append("plot line dash yes ")
   d.append("plot line shape color black") 
@@ -3015,7 +3023,7 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
   # d.set('plot axis y auto no')
   # d.set('plot axis y min 0')
 
-  return d
+  return d_
 
 
 
@@ -4036,7 +4044,13 @@ def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False,o
     #IPython.embed()
     ds9 = ldict['ds9']
     verboseprint(ds9)
+    # print(ds9.astype(int) == ds9)
+    # print((ds9.astype(int) == ds9).all())
     fitsimage.data = ds9#ds9
+    if (ds9.astype(int) == ds9).all():
+        #ds9 = np.uint16(ds9)
+        fitsimage.data = np.int16(fitsimage.data)
+        fitsimage.header['BITPIX'] = 16
     if overwrite is False:
         name = filename[:-5] + '_modified.fits'
     else:
@@ -5044,7 +5058,10 @@ def DS9Catalog2Region(xpapoint, name=None, x='x', y='y', ID=None,system='image',
     
     if wcs:
         filename = getfilename(d)
-        a = fits.getheader(filename)
+        fitsfile = fits.open(filename)
+        ext = FitsExt(fitsfile)
+
+        a = fits.getheader(filename,ext=ext)
         wcs=WCS(a)
         corners = [#wcs.pixel_to_world(0,a['NAXIS2']), 
                    wcs.pixel_to_world(0,a['NAXIS1']), 
@@ -9571,8 +9588,9 @@ def download(url, file='/tmp/test.fits'):
             return False
         else:
             return True
-            
-        
+
+
+
 
 def next_step(xpapoint):
     """Goes to next function in the test suite
@@ -10415,7 +10433,10 @@ def DS9PythonInterp(xpapoint):
     # for filename in path:
     #     verboseprint(filename)
     #     result, name = ExecCommand(filename, xpapoint=xpapoint,path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_))) 
-    result, name = Parallelize(function=ExecCommand,parameters=[path2remove,exp,my_conf,xpapoint,bool(int(eval_)),overwrite],action_to_paralize=path ,number_of_thread=10)    
+    if len(path)==1:
+        result, name = ExecCommand(filename, xpapoint=xpapoint,path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_))) 
+    else:
+        result, name = Parallelize(function=ExecCommand,parameters=[path2remove,exp,my_conf,xpapoint,bool(int(eval_)),overwrite],action_to_paralize=path ,number_of_thread=10)    
                                         
     if len(path) < 2:
         d.set('frame new ; tile yes ; file ' + name)  
@@ -10470,6 +10491,329 @@ def Button(xpapoint):
     window.show()
     sys.exit(app.exec_())    
 
+def MaxiMask(xpapoint,path=None):
+    from astropy.io import fits
+    d=DS9n(xpapoint)
+    if path is None:
+        path = getfilename(d)
+    prob,size ,single,net ,F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7 ,F8 ,F9 ,F10,F11,F12,F13,F14,P1 ,P2 ,P3 ,P4 ,P5 ,P6 ,P7 ,P8 ,P9 ,P10,P11,P12,P13,P14,T1 ,T2 ,T3 ,T4 ,T5 ,T6 ,T7 ,T8 ,T9 ,T10,T11,T12,T13,T14 = np.array(sys.argv[3:],dtype=float)
+    verboseprint(sys.argv[3:])
+    os.chdir(os.path.dirname(path))#files_,
+    #iles = globglob(files_)
+    flags = """CR  %i
+HCL %i
+DCL %i
+HP  %i
+DP  %i
+P   %i
+STL %i
+FR  %i
+NEB %i
+SAT %i
+SP  %i
+OV  %i
+BBG %i
+BG  %i"""%(F1 ,F2 ,F3 ,F4 ,F5 ,F6 ,F7 ,F8 ,F9 ,F10,F11,F12,F13,F14)
+
+    priors = """CR  %0.7f
+HCL %0.7f
+DCL %0.7f
+HP  %0.7f
+DP  %0.7f
+P   %0.7f
+STL %0.7f
+FR  %0.7f
+NEB %0.7f
+SAT %0.7f
+SP  %0.7f
+OV  %0.7f
+BBG %0.7f
+BG  %0.7f"""%(P1 ,P2 ,P3 ,P4 ,P5 ,P6 ,P7 ,P8 ,P9 ,P10,P11,P12,P13,P14)
+
+    thresholds = """CR  %0.7f
+HCL %0.7f
+DCL %0.7f
+HP  %0.7f
+DP  %0.7f
+P   %0.7f
+STL %0.7f
+FR  %0.7f
+NEB %0.7f
+SAT %0.7f
+SP  %0.7f
+OV  %0.7f
+BBG %0.7f
+BG  %0.7f"""%(T1 ,T2 ,T3 ,T4 ,T5 ,T6 ,T7 ,T8 ,T9 ,T10,T11,T12,T13,T14)
+
+    os.system('echo "%s" > classes.flags'%(flags))
+    os.system('echo "%s" > classes.thresh'%(thresholds))
+    os.system('echo "%s" > classes.priors'%(priors))
+
+    command ="""/Users/Vincent/opt/anaconda3/bin/python3 /Users/Vincent/Github/DS9functions/pyds9plugin/MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""%(bool(int(single)), size, bool(int(prob)), path) 
+    print(command)
+    #a = 1#os.system(command)
+    #a = os.system(command)
+    #a = os.popen(command).read()
+    import subprocess
+    #a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
+    #a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
+    try:
+        a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
+    print(a)
+#    if a==0:
+    try:
+        try:
+            a = fits.open(path.replace('.fits','.masks.fits'))
+            b = fits.open(path)
+            a[0].header = b[0].header
+            a.writeto(path.replace('.fits','.masks.fits'),overwrite=True)
+        except Exception as e:
+            verboseprint(e)
+        d.set('frame new')
+        d.set('file %s'%(path.replace('.fits','.masks.fits')))
+#        d.set('multiframe %s'%(path.replace('.fits','.mask.fits')))
+    except Exception as e:
+        print(e)
+        #message(d, 'did not work...')
+        print('did not work...')
+    return
+
+
+
+
+def MaxiMask_cc(path=None,xpapoint=None):
+    from astropy.io import fits
+
+    if path is None:
+        path = getfilename(d)
+    command ="""/Users/Vincent/opt/anaconda3/bin/python3 /Users/Vincent/Downloads/Safari/MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""%(bool(int(True)), 8, bool(int(True)), path) 
+    print(command)
+    #a = 1#os.system(command)
+    #a = os.system(command)
+    #a = os.popen(command).read()
+    import subprocess
+    #a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
+    #a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
+    try:
+        a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
+    print(a)
+#    if a==0:
+    try:
+        try:
+            a = fits.open(path.replace('.fits','.masks.fits'))
+            b = fits.open(path)
+            a[0].header = b[0].header
+            a.writeto(path.replace('.fits','.masks.fits'),overwrite=True)
+        except Exception as e:
+            verboseprint(e)
+        d.set('frame new')
+        d.set('file %s'%(path.replace('.fits','.masks.fits')))
+#        d.set('multiframe %s'%(path.replace('.fits','.mask.fits')))
+    except Exception as e:
+        print(e)
+        #message(d, 'did not work...')
+        print('did not work...')
+    return
+
+def CreateContourRegions(xpapoint):
+    from astropy.io import fits
+    from scipy.ndimage import grey_dilation, grey_erosion, binary_erosion, binary_dilation
+    B, T, erosion, dilatation = np.array(sys.argv[-4:],dtype=float)
+    d=DS9n(xpapoint)
+    path = getfilename(d)
+    d=DS9(xpapoint)
+    d.set('wcs skyformat degrees ; regions system wcs ; regions sky fk5 ; regions skyformat degrees')
+    d.set('block to %s'%(B))
+    d.set('scale limits %s %s'%(T,T+1))
+    #d.set('regions /Users/Vincent/Documents/Work/Fields/DS9Regions/regVenice/%s.reg'%(name))
+    d.set('region select all')
+    #d.set('regions width 2')
+    d.set('regions color white')
+#    a = input('Do you wish to continue?')
+    a = 1#yesno(d,'Do you wish to continue?')
+    if a !='n':
+        im = d.get_pyfits()
+        ds9 = im[0].data
+        ds9[ds9<T]=0;ds9[ds9>T]=1
+        if erosion > 0: 
+            #ds9 = grey_erosion(ds9, size=(erosion,erosion))
+            ds9 = binary_erosion(ds9, iterations=1,structure=np.ones((int(1),int(erosion)))).astype(int)
+            ds9 = binary_erosion(ds9, iterations=1,structure=np.ones((int(erosion),int(1)))).astype(int)
+        #ds9 = grey_dilation(grey_erosion(ds9, size=(n,n)), size=(n,n))
+        #ds9 = grey_dilation(grey_erosion(ds9, size=(n,n)), size=(n,n))
+        if dilatation > 0: 
+            ds9 = grey_dilation(ds9, size=(dilatation,dilatation))
+        im[0].data = ds9
+        d.set('frame new')
+        d.set_pyfits(im)
+        d.set('block to 1')
+        d.set('contour levels 0.1')
+        d.set('contour yes')
+        d.set('contour convert')
+        d.set('regions system wcs')
+        d.set('regions sky fk5')
+        path = '/tmp/regions.reg'
+        d.set('regions save ' + path)
+        d.set('regions delete all')
+        path = SimplifyMask(path)
+        d.set('regions  ' + path)
+
+
+    
+def SimplifyMask(path):
+    new_path = path[:-4]+'_smaller.reg'
+    reg = open(path, 'r')
+    new_reg = open(new_path, 'w')
+    a=0
+    for i, line in enumerate(reg):
+        if 'polygon' not in line:
+           new_reg.write(line)
+
+        else:
+            points = line.split('polygon(')[1].split(')\n')[0].split(',')
+            number = len(points)
+            if number < 200:
+               new_reg.write(line)
+            else:
+                x,y = points[::2],points[1::2]
+                k=100#10
+                a+=1
+                while len(x)>=100:
+                    # del x[k-1::k]
+                    # del y[k-1::k]
+                    del x[::k]
+                    del y[::k]
+                    k-=1
+                    #print(i, k,len(x))
+                new_line = 'polygon('+','.join([str(np.round(float(xi),5))+','+str(np.round(float(yi),5)) for xi, yi in zip(x,y)])+')\n'
+                new_reg.write(new_line)
+    print('%i regions rescaled!'%(a))
+    return new_path
+
+def killLongProcess(xpapoint):
+    Popen(["ps -eaf|grep 'DS9Utils.*' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "], shell=True,
+             stdin=None, stdout=None, stderr=None, close_fds=True)
+    return
+
+
+
+def DivideCatalog(path, tmpFOlder='/tmp',id_ = 'ID',n=10):
+    import multiprocessing
+    def file_len(fname):
+        with open(fname) as f:
+            for i, l in enumerate(f):
+                pass
+        return i + 1
+    size_file = file_len(path)
+    lines_per_file = int(size_file/n)+1
+    smallfile = None
+    with open(path) as bigfile:
+        for lineno, line in enumerate(bigfile):
+            if lineno % lines_per_file == 0:
+                if smallfile:
+                    smallfile.close()
+                small_filename = os.path.join(tmpFOlder, os.path.basename(path).split('.')[0] + '_%010d.%s'%(lineno + lines_per_file,path.split('.')[-1]))
+                smallfile = open(small_filename, "w")
+            smallfile.write(line)
+        if smallfile:
+            smallfile.close()
+    return #len(cat),np.sum(lens)
+
+    
+
+def ReadBigAsciiTable(path, tmpFOlder='/tmp',n=10):
+    import glob
+    from astropy.table import vstack
+    from astropy.io import ascii
+    import os
+    DivideCatalog(path, tmpFOlder=tmpFOlder,id_ = 'ID',n=n)
+    a=[]
+    files = glob.glob(os.path.join(tmpFOlder, os.path.basename(path).split('.')[0]+'_??????????.'+ os.path.basename(path).split('.')[-1]  ))
+    files.sort()
+    with open(files[0]) as f:
+        first_line = f.readline()
+    f.close()
+    cols = list(filter(('').__ne__, first_line.split(' ')))
+    if ['\n'] in cols:
+        cols.remove('\n')
+    tab=ascii.read(files[0],fast_reader={'parallel': True, 'use_fast_converter': True})
+    print(tab.colnames,cols)
+    print(len(tab.colnames),len(cols))
+    
+    for pathi in files:
+        print(pathi)
+        tab=ascii.read(pathi,fast_reader={'parallel': True, 'use_fast_converter': True})
+        #print(tab.colnames,len(tab.colnames))
+        if len(tab.colnames)==len(cols):
+            tab.rename_columns(tab.colnames,cols)
+        a.append(tab)   
+        os.remove(pathi)
+    tables = vstack(a)
+    return tables
+
+
+
+def createRegContour(path,n=50,limit=100):
+
+
+    n=20;limit=100
+    path='/Users/Vincent/Documents/Work/DetectionImages/calexp-9813-coadd-small.masks_modified.fits'
+    from astropy.io import fits
+    from scipy.ndimage import grey_dilation, grey_erosion, binary_erosion, binary_dilation
+    from astropy.wcs import WCS
+    import matplotlib.pyplot as plt
+    from tqdm import tqdm 
+    #n=80
+    a = fits.open(path)
+    w = WCS(a[0].header)
+    ds9=a[0].data
+    #ds9 = binary_dilation(a[0].data, iterations=1,structure=np.ones((n,n))).astype(int)
+    plt.figure()
+    plt.imshow(ds9);
+    if n>1:
+        ds9 = grey_dilation(ds9,size=n).astype(int)
+    CS = plt.contour(ds9, levels=1)
+    #    ax.xaxis.set_minor_locator(locator)
+    #    CS = ax.contour(image, levels=threshold, colors='white', alpha=0.5)
+#    ax=plt.gca()
+#    CS = ax.contour(ds9, levels=1)
+#    plt.close()
+    sizex = np.array([cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ])
+    sizey = np.array([cs[:,1].max() - cs[:,1].min()     for cs in CS.allsegs[0] ])
+    size = np.array([ len(cs[:,1])   for cs in CS.allsegs[0] ])
+    #print(len(sizex))
+    #print(len(sizex[(sizex>n)|(sizey>n)]))
+    size_tot = np.sqrt(np.square(sizex) + np.square(sizey))
+    regions = np.array(CS.allsegs[0])[size_tot>500]
+#    regions = np.array(CS.allsegs[0])[size_tot>limit+n]
+#    for i, region in enumerate(regions):
+    if os.path.isfile('/tmp/regions.reg'):
+        os.remove('/tmp/regions.reg')
+    with open('/tmp/regions.reg', 'a') as file:
+        file.write("""# Region file format: DS9 version 4.1
+global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+fk5
+""")
+
+
+    for i, region in enumerate(tqdm(regions)):
+        region = regions[i]
+        if region.shape[0]>99:
+            regions[i] = region[::int( region.shape[0]/80)]
+        #print(len(regions[i]))
+        new_line = 'polygon('+','.join([str(np.round(a,5))+','+str(np.round(b,5)) for a,b in zip(w.pixel_to_world(region[:,0],region[:,1]).ra.value,w.pixel_to_world(region[:,0],region[:,1]).dec.value) ])+')\n'
+        with open('/tmp/regions.reg', 'a') as file:
+            file.write(new_line)
+    d=DS9n()
+    d.set('regions delete all')
+    d.set('regions /tmp/regions.reg')
+#        plt.text(region[:,0][0],region[:,1][0],str(i),c='white')
+ #   plt.show()
+    return
 
 #@fn_timer
 def main():
@@ -10516,7 +10860,7 @@ def main():
                                  'stack': DS9stack_new,'lock': DS9lock,'CreateHeaderCatalog':DS9CreateHeaderCatalog,'SubstractImage': DS9PythonInterp,
                                  'DS9Region2Catalog':DS9Region2Catalog, 'DS9MaskRegions':DS9MaskRegions,'CreateImageFromCatalogObject':CreateImageFromCatalogObject,
                                  'PlotArea3D':PlotArea3D, 'OriginalSettings': DS9originalSettings,'next_step':next_step,'BackgroundEstimationPhot': DS9BackgroundEstimationPhot,'verbose':verbose,
-                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting,'Quit':Quit,'Button':Button,'ThrowApertures':ThrowApertures}#,'NextButton':NextButton
+                                 'CreateWCS':BuildingWCS,'open':DS9open,'checkFile':checkFile,'ManualFitting':ManualFitting,'Quit':Quit,'Button':Button,'ThrowApertures':ThrowApertures,'CreateContourRegions':CreateContourRegions}#,'NextButton':NextButton
                        
         DictFunction_AIT =     {'centering':DS9center, 'radial_profile':DS9rp,
                                 'throughfocus':DS9throughfocus, 'ComputeFluctuation':ComputeFluctuation,
@@ -10530,7 +10874,7 @@ def main():
     
         DictFunction_SOFT =   {'DS9SWARP':DS9SWARP,'DS9PSFEX': DS9PSFEX,'RunSextractor':RunSextractor,'DS9saveColor':DS9saveColor,'AperturePhotometry':AperturePhotometry,
                                'ExtractSources':DS9ExtractSources,'CosmologyCalculator':CosmologyCalculator,'Convertissor': Convertissor,'WCS':DS9guider, 'DS9Resample':DS9Resample,
-                               'Function':Function, 'PlotSpectraFilters':PlotSpectraFilters,'RunSextractorPP':RunSextractorPP}#'Function_parametric':Function_parametric
+                               'Function':Function, 'PlotSpectraFilters':PlotSpectraFilters,'RunSextractorPP':RunSextractorPP,'MaxiMask':MaxiMask}#'Function_parametric':Function_parametric
      
        
         DictFunction = {}
