@@ -145,7 +145,7 @@ hmenu 1. Generic Functions
 
 
 
-		Replace Regions With NaNs
+		Replace Regions by value
 		*
 		menu
 		DS9Utils $xpa_method ReplaceWithNans  $param(Replace-region);  $number $overwrite   | $text  
@@ -184,10 +184,10 @@ hmenu 1. Generic Functions
 		menu
 		DS9Utils $xpa_method BackgroundFit1D  $param(Background-Fit-1D); x $background none $gaussians $moffats $voight 0 $other  | $text  
 
-#		Interactive Manual Fitting
-#		*
-#		menu
-#		DS9Utils $xpa_method ManualFitting | $text  
+		Interactive Manual Fitting
+		*
+		menu
+		DS9Utils $xpa_method ManualFitting | $text  
 
 		
 		Fit Gaussian 2D
@@ -720,7 +720,7 @@ endparam
 param open
 path open {Path of the image(s) to open}    {} #NORMAL
 clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
-type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|PRISM {} 
+type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|IMPORT-3D|PRISM {} 
 endparam
 
 
