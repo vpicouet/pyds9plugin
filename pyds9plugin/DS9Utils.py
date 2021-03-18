@@ -918,7 +918,7 @@ def create_repositories(path, field, values):
 
 
 
-def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.',ax=None,c='black',Type='normal',sigma=None,ls=':'):
+def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, title=None, xlabel=None, ylabel=None, P0=None, bounds=(-np.inf,np.inf), fmt='.',ax=None,c='black',Type='normal',sigma=None,ls=':',interactive=False):
     """ PlotFit1D(np.arange(100),np.arange(100)**2 + 1000*np.random.poisson(1,size=100),2)
     """
     #ajouter exp, sqrt, power low, gaussian, 
@@ -1008,6 +1008,24 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             P0 = None
         elif callable(deg):
             law = deg
+
+        if interactive:
+            print('Interactive Fit')
+            from IPython import get_ipython
+            get_ipython().run_line_magic('matplotlib','')
+            if len(P0)==1:
+                InteractivManualFitting(x,y,initial = '%s(x,a*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
+            if len(P0)==2:
+                print('Interactive Fit')
+                InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
+            if len(P0)==3:
+                InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f,c*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
+            if len(P0)==4:
+                InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f,c*%f,d*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
+            plt.show()
+            get_ipython().run_line_magic('matplotlib','inline')
+            return {'popt': np.zeros(len(P0)), 'pcov':  np.zeros((len(P0),len(P0))), 'res': 0, 'y': y, 'x': x,'curve':[]}
+
             
         try:
             popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds,sigma=sigma)
@@ -1017,14 +1035,25 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             print(law)
             print(type(law))
             print(e)
-            if input('Do you want to fit it manually? [y/n]') =='y':
-                from IPython import get_ipython
-                get_ipython().run_line_magic('matplotlib','')
-                InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f,c*%f,d*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
-                return {'popt': np.zeros(len(P0)), 'pcov':  np.zeros((len(P0),len(P0))), 'res': 0, 'y': y, 'x': x,'curve':[]}
-            else:
+            if interactive:
+                if input('Do you want to fit it manually? [y/n]') =='y':
+                    from IPython import get_ipython
+                    get_ipython().run_line_magic('matplotlib','')
+                    if len(P0)==1:
+                        InteractivManualFitting(x,y,initial = '%s(x,a*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
+                    if len(P0)==2:
+                        InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
+                    if len(P0)==3:
+                        InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f,c*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
+                    if len(P0)==4:
+                        InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f,c*%f,d*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
+
+
+                    get_ipython().run_line_magic('matplotlib','inline')
+                    return {'popt': np.zeros(len(P0)), 'pcov':  np.zeros((len(P0),len(P0))), 'res': 0, 'y': y, 'x': x,'curve':[]}
             #raise(e)
             #return np.zeros(len(P0))
+            else:
                 return {'popt': np.zeros(len(P0)), 'pcov':  np.zeros((len(P0),len(P0))), 'res': 0, 'y': y, 'x': x,'curve':[]}
         res=-99
         res = np.sum(np.square(y-deg(x,*popt)))
@@ -1066,9 +1095,9 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
                 l = ax.plot(xp,law(xp,*popt),ls=ls,c=c,label=name)
             #l = ax.plot(xp, zp,ls='dotted',c=c,label=name)
             ax1,ax2=ax,ax
-        return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x':x, 'curve':l}
+        return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x':x, 'curve':l,'sigma':sigma}
     else:
-        return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[]}
+        return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma}
 
 # PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=None,Plot=True,fmt= 'o')
 # PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=sfr_table_clauds_masked['col2'],Plot=True,fmt= 'o')
