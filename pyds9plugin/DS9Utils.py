@@ -7,7 +7,7 @@ Created on Wed Jul  4 10:35:13 2018
 
 @author: V. Picouet
 """
-import resource
+import resource#
 import time
 import glob
 import os
@@ -25,7 +25,7 @@ else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
 from functools import wraps
 DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
-
+#
 def readV(path):
     """Read a table and try ascii or CSV if an error is raised"""
     if os.path.isfile(path):
@@ -1060,6 +1060,7 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         zp = law(xp,*popt)
         zz = law(x,*popt)
         name = 'Fit %s, R=%0.2E'%(np.round(np.array(popt, dtype=int),0),Decimal(res))
+
         #plt.plot(xp, , '--', label='Fit: ')
     #print(ax1)
     #kubgkbn
@@ -1098,6 +1099,7 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x':x, 'curve':l,'sigma':sigma}
     else:
         return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma}
+    return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma}
 
 # PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=None,Plot=True,fmt= 'o')
 # PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=sfr_table_clauds_masked['col2'],Plot=True,fmt= 'o')
