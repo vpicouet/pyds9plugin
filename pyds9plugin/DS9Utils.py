@@ -24,7 +24,6 @@ else:
 from functools import wraps
 DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
 
-
 def readV(path):
     """Read a table and try ascii or CSV if an error is raised"""
     if os.path.isfile(path):
@@ -38,6 +37,11 @@ def readV(path):
     else:
         raise ValueError(path + ' is not a file.')
 Table.readV = staticmethod(readV)
+
+
+def DevFunction(xpapoint):
+    print('Important function')
+    return
 
 
 def verbose(xpapoint=None,verbose=None):
@@ -10394,26 +10398,6 @@ def main():
         else:
             a = DictFunction[function](xpapoint=xpapoint)
 
-                # pprint(sys.argv.join(' '))
-            # d = DS9n(xpapoint);d.set('analysis message {%s}'%(e));sys.exit()
-
-        # if (type(a) == list) and (type(a[0]) == dict):
-        #     for key in a[0].keys():
-        #         l=[]
-        #         for i in range(len(a)):
-        #             l.append(a[i][key])
-        #         verboseprint(key, l)
-        #         try:
-        #             l=np.array(l)
-        #             plt.figure()
-        #             plt.hist(l)
-        #             plt.title(key + '%i objets: M = %0.2f  -  Sigma = %0.3f'%(len(l), np.nanmean(l), np.nanstd(l)));plt.xlabel(key);plt.ylabel('Frequecy')
-        #             plt.savefig(DS9_BackUp_path +'Plots/%s_Outputs_%s.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
-        #             csvwrite(np.vstack((np.arange(len(l)), l)).T,DS9_BackUp_path +'CSVs/%s_Outputs_%s.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),key))
-        #         except TypeError as e:
-        #             logger.critical(e)
-
-        #             pass
         if function not in ['verbose','setup','next_step']:
             verboseprint('\n****************************************************')
 
