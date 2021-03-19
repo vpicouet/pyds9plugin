@@ -1,5 +1,3 @@
-
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -25,7 +23,8 @@ else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
 from functools import wraps
 DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
-#
+
+
 def readV(path):
     """Read a table and try ascii or CSV if an error is raised"""
     if os.path.isfile(path):
