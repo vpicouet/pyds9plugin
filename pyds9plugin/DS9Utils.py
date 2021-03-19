@@ -33,7 +33,8 @@ def readV(path):
         except Exception:
             try:
                 Table.read(path, format='ascii' )
-            except Exception:
+            except Exception as e:
+                verboseprint(e)
                 Table.read(path, format='csv' )
     else:
         raise ValueError(path + ' is not a file.')
