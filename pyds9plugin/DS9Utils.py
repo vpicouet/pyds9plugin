@@ -985,6 +985,7 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             data = scipy.odr.RealData(x, y)
             odr = scipy.odr.ODR(data, linear_model, beta0=[0., 1.])
             out = odr.run()
+            law = np.poly1d(out.beta)
             popt = np.poly1d(out.beta)
         zp = popt(xp)
         zz = popt(x)
@@ -1100,10 +1101,10 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
                 l = ax.plot(xp,law(xp,*popt),ls=ls,c=c,label=name)
             #l = ax.plot(xp, zp,ls='dotted',c=c,label=name)
             ax1,ax2=ax,ax
-        return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x':x, 'curve':l,'sigma':sigma,'y_fit':zz}
+        return {'popt':popt, 'pcov': pcov, 'res': res, 'axes': [ax1,ax2], 'y': y, 'x':x, 'curve':l,'sigma':sigma,'y_fit':zz,'function':law}
     else:
-        return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma,'y_fit':zz}
-    return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma,'y_fit':zz}
+        return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma,'y_fit':zz,'function':law}
+    return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma,'y_fit':zz,'function':law}
 
 # PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=None,Plot=True,fmt= 'o')
 # PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=sfr_table_clauds_masked['col2'],Plot=True,fmt= 'o')
