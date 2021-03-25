@@ -12,7 +12,7 @@ import os
 import sys
 import numpy as np
 import datetime
-from  pkg_resources  import resource_filename
+from pkg_resources import resource_filename
 from astropy.table import Table
 from pyds9 import DS9, ds9_targets
 try:
@@ -24,6 +24,7 @@ else:
 from functools import wraps
 DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn/'
 
+
 def readV(path):
     """Read a table and try ascii or CSV if an error is raised"""
     if os.path.isfile(path):
@@ -31,11 +32,13 @@ def readV(path):
             Table.read(path)
         except Exception:
             try:
-                Table.read(path, format='ascii' )
+                Table.read(path, format='ascii')
             except Exception:
-                Table.read(path, format='csv' )
+                Table.read(path, format='csv')
     else:
         raise ValueError(path + ' is not a file.')
+
+
 Table.readV = staticmethod(readV)
 
 
@@ -299,56 +302,6 @@ def ComputeFluctuation(xpapoint, fileOutName=None, ext=1, ext_seg=1, mag_zp=None
         plt.show()
 #        plt.close()del
     return {'depth':d, 'depth_eroor':d_err, 'flux_std':flux_std, 'n_aper_used':n_aper_used}
-
-
-
-
-################################
-
-
-
-
-#################################
-#import matplotlib.pyplot as plt
-# width = 23#root.winfo_screenmmwidth() / 25.4
-# height = 14#root.winfo_screenmmheight() / 25.4
-
-# #IPython_default = plt.rcParams.copy()
-# plt.rcParams['figure.figsize'] = (2*width/3, 3*height/5)
-# plt.rcParams['grid.linestyle'] = ':'
-# plt.rcParams['axes.grid'] = True
-# plt.rcParams['image.interpolation'] = None
-# #plt.rcParams['savefig.transparent'] = True
-# plt.rcParams['xtick.labelsize'] = 'x-large'
-# plt.rcParams['ytick.labelsize'] = 'x-large'
-# plt.rcParams['axes.labelsize'] = 'x-large'
-# plt.rcParams['axes.titlesize'] = 'x-large'
-
-
-#from .DS9Utils_ok import *
-
-
-
-#get_ipython().magic(u'matplotlib inline')
-#import tkinter as tk
-#root = tk.Tk()
-
-#os.environ["DS9Function"] = os.path.join(os.path.dirname(__file__),'doc/ref/index.html')
-#def SetDiplay():
-#    """Set the sparameters of the plots
-#    """
-
-
-
-
-#logger.critical('critical')
-#logger.error('error')
-#logger.warning('warning')
-#logger.info('info')
-#logger.debug('debug')
-
-
-
 
 
 
