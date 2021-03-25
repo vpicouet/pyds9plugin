@@ -3243,7 +3243,6 @@ def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False,o
     from scipy.ndimage import grey_dilation, grey_erosion, gaussian_filter, median_filter, sobel, binary_propagation, binary_opening, binary_closing, label
     from astropy.io import fits
     from astropy.convolution import  convolve #,Gaussian2DKernel
-    #type_ = 'exec'
     try:
         fitsimage = fits.open(filename)
         ext = FitsExt(fitsimage)
@@ -3264,16 +3263,12 @@ def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False,o
     verboseprint('Using exec!')
     verboseprint(ds9)
     ds9 = np.array(ds9,dtype=float)
-    #import IPython; IPython.embed()
     ldict={'ds9':ds9,'image':image,'convolve':convolve, "grey_dilation":grey_dilation, "grey_erosion":grey_erosion,
            'gaussian_filter':gaussian_filter, 'median_filter':median_filter, 'sobel':sobel,'binary_propagation':binary_propagation, 'binary_opening':binary_opening, 'binary_closing':binary_closing, 'label': label}
-    #exec("import IPython;IPython.embed()", globals(), ldict)#, locals(),locals())
     try:
         exec(exp, globals(), ldict)#, locals(),locals())
     except (SyntaxError, NameError) as e:
         d=DS9n(xpapoint)
-        #d.set("analysis message {Could not execute the command. Please make sure your pythonic expression is valid or refer to the help.}")     ;sys.exit()
-#        if  d.get('analysis message yesno {Could not execute the command. Do you wish to see examples of one line python commands?}')=='1':
         if  yesno(d,'Could not execute the command. Do you wish to see examples of one line python commands?'):
 
             pprint("""********************************************************************************
@@ -9748,20 +9743,6 @@ fk5
 def main():
     """Main function where the arguments are defined and the other functions called
     """
-#    _verbose_ = np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'))
-#    print(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))
-#    print(bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))))
-#    if sys.stdin is not None:
-#        print('STDIN detected')
-#        verbose(xpapoint=None,verbose=1)
-#        #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 1)
-#    else:
-#        verbose(xpapoint=None,verbose=0)
-#        #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 0)
-##           verboseprint(_verbose_)
-#    print(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))
-#    print(bool(int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy')))))
-
     if len(sys.argv)==1:
         CreateFolders(DS9_BackUp_path=os.environ['HOME'] + '/DS9QuickLookPlugIn/')
         PresentPlugIn()
@@ -9809,11 +9790,8 @@ def main():
         DictFunction = {}
         for d in (DictFunction_Generic, DictFunction_AIT, DictFunction_SOFT):#, DictFunction_Calc, DictFunction_SOFT, DictFunction_FB, DictFunction_Delete): #DictFunction_CLAUDS
             DictFunction.update(d)
-
-
         xpapoint = sys.argv[1]
         function = sys.argv[2]
-
         if function not in ['verbose','next_step']:#,'setup'
             verboseprint('\n****************************************************\nDS9Utils ' + ' '.join(sys.argv[1:])+'\n****************************************************')# %s %s '%(xpapoint, function) + ' '.join())
             verboseprint(sys.argv)
@@ -9822,10 +9800,6 @@ def main():
                 a = DictFunction[function](xpapoint=xpapoint)
             except Exception as e: #Exception #ValueError #SyntaxError
                 a=0
-                #verboseprint(e)
-
-                # print(e)
-                # print(2)
                 import traceback
                 pprint(traceback.format_exc())
                 pprint('To have more information about the error run this in the terminal:')
