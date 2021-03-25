@@ -2640,7 +2640,6 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
     d.append("plot load /tmp/4.dat xy ")
     d.append("plot line color red ")
     d.append("plot legend yes ")
-    #d.append("plot legend name ' ' ")
     d.append("plot legend position bottom ")
     d.append("plot title legend ''")
     d.append("plot name 'EE50 = %0.1fpix' "%(minb))
@@ -3298,16 +3297,10 @@ def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False,o
             * To do so, you can write their a regular expression matching the files on
             * which you want to sun the command! """)
             sys.exit()
-
-
-    #IPython.embed()
     ds9 = ldict['ds9']
     verboseprint(ds9)
-    # print(ds9.astype(int) == ds9)
-    # print((ds9.astype(int) == ds9).all())
     fitsimage.data = ds9#ds9
     if (ds9.astype(int) == ds9).all():
-        #ds9 = np.uint16(ds9)
         fitsimage.data = np.int16(fitsimage.data)
         fitsimage.header['BITPIX'] = 16
     if overwrite is False:
@@ -3358,7 +3351,6 @@ def fitswrite(fitsimage, filename, verbose=True, config=my_conf, header=None):
         verboseprint('%s not existing: creating folde...'%(os.path.dirname(filename)),verbose=my_conf.verbose)
         os.makedirs(os.path.dirname(filename))
     try:
-        #plt.plot(np.nanmean(fitsimage.data,axis=0));plt.show()
         fitsimage.writeto(filename, overwrite=True)
     except IOError:
         verboseprint('Can not write in this repository : ' + filename )
@@ -3403,7 +3395,6 @@ def Gaussian(x, amplitude, xo, sigma2, offset):
     """Defines a gaussian function with offset
     """
     xo = float(xo)
-    #A = amplitude/np.sqrt(2 * np.pi * sigma2)   #attention is not used anymore
     g = offset + amplitude * np.exp( - 0.5*(np.square(x-xo)/sigma2))
     return g.ravel()
 
@@ -3416,14 +3407,11 @@ class bcolors:
     BLACK_GREEN = '\x1b[0;30;42m'
     END = '\x1b[0m'
 
-
-
 def Convolve2d(xpapoint):
     """2D concolution with a gaussian, box or image
     """
     d = DS9n(xpapoint)
     from astropy.convolution import Gaussian2DKernel, convolve
-    #from scipy.signal import convolve as scipy_convolve
     from astropy.io import fits
     type_, path, size = sys.argv[-4:-1]
     try:
@@ -3444,7 +3432,6 @@ def Convolve2d(xpapoint):
     for file in paths:
         fitsfile = fits.open(file)
         i = np.argmax([im.size for im in fitsfile[:4]])
-        #fitsfile = fitsfile[i]
         lx, ly = kernel.shape
         verboseprint(lx, ly)
         if lx % 2 == 0:
@@ -3456,7 +3443,6 @@ def Convolve2d(xpapoint):
         data_conv = convolve(fitsfile[i].data,kernel[:lx,:ly])
 
         fitsfile[i].data = data_conv
-        #fitswrite(fitsfile,'/tmp/convolved_%s'%(os.path.basename(file)))
         fitsfile.writeto(file[:-5] + '_convolved.fits', overwrite=True)
     if len(paths)==1:
         d.set('frame new ; file ' + file[:-5] + '_convolved.fits')
@@ -3530,11 +3516,6 @@ def globglob(file, xpapoint=None,sort=True, ds9_im = False):
     except Exception as e:
         verboseprint(e)
         paths=[]
-#    try:
-#        paths = glob.glob(r'%s'%(file), recursive=True)
-#    except ValueError as e:
-#        print(e)
-#        paths=[]
     verboseprint(file, paths)
     if (len(paths)==0) & ('[' in file) and (']' in file):
         verboseprint('Go in loop')
@@ -3557,7 +3538,6 @@ def globglob(file, xpapoint=None,sort=True, ds9_im = False):
             verboseprint(ns)
             files = [a + '%0.{}d'.format(len(str(ns[-1])))%(i) + b for i in ns]
             files += [a + '%i'%(i) + b for i in ns]
-            #print(files)
             for path in np.unique(files):
                 if os.path.isfile(path):
                     paths.append(path)
@@ -3626,21 +3606,15 @@ def StackImagesPath(paths, Type=np.nanmean,clipping=3, dtype=float, fname='', st
     i = FitsExt(fitsfile)
     Xinf, Xsup, Yinf, Ysup = my_conf.physical_region
     stds = np.array([np.nanstd(fits.open(image)[i].data[Xinf:Xsup, Yinf:Ysup]) for image in paths])
-    # plt.figure()
-    # plt.hist(stds)
-    # plt.title( 'Stds - M = %0.2f  -  Sigma = %0.3f'%(np.nanmean(stds), np.nanstd(stds)));plt.xlabel('Stds');plt.ylabel('Frequecy')
-    # plt.savefig(DS9_BackUp_path +'Plots/%s_Outputs_%s.png'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),'stds'))
     index = stds < np.nanmean(stds) + clipping * np.nanstd(stds)
     paths = np.array(paths)
     if std is False:
-        #print(index)
         stds = np.ones(len(paths[index]))
     else:
         stds /= np.nansum(stds[index])
         verboseprint('std = ', stds)
     n=len(paths)
     paths.sort()
-    #name_images = [os.path.basename(path) for path in paths]
     lx,ly = fitsfile[i].data.shape
     stack = np.zeros((lx,ly),dtype=dtype)
     if std:
@@ -3710,7 +3684,6 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
     path = globglob(sys.argv[-1])
     path.sort()
     x = np.arange(len(path))
-    #print("\n".join(path))
     a = getregion(d)[0]
     radius = 15
     verboseprint('Sum pixel is used (another estimator may be prefarable)')
@@ -3745,7 +3718,6 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
         d = []
         d.append('plot line open')#d.append("plot axis x grid no ")
         d.append("plot axis y grid no ")
-        #d.append("plot title  'Through slit analysis\n%0.3f - %s - Max = %0.1f'"%(maxf,[int(a.xc),int(a.yc)],maxf))
         d.append("plot title y 'Flux' ")
         d.append("plot title x 'Image number - Maximum flux at: %0.1f' "%(maxf))
         d.append("plot legend position right ")
@@ -3756,7 +3728,6 @@ def DS9throughslit(xpapoint, DS9backUp = DS9_BackUp_path, config=my_conf):
         d.append("plot line shape circle ")
         d.append("plot line width 0 ")
         d.append("plot line shape color black") #d.append("plot legend yes ")
-
         d.append("plot font legend size 9 ")
         d.append("plot font labels size 13 ")
         ds9=DS9()
@@ -3784,7 +3755,6 @@ def DS9Plot(d=None,path='', title='', name='', xlabel='', ylabel='', type_='xy',
     d.set("plot title y {%s}"%(ylabel))
     if xlim is not None:
         d.set("plot axis x auto no")
-
     return d
 
 
@@ -3796,7 +3766,6 @@ def DS9Update(xpapoint,Plot=True, reg=True,style='--o',lw=0.5):
     import matplotlib.pyplot as plt
     import time
     d = DS9n(xpapoint)#DS9n(xpapoint)
-
     if reg:
         regions =  getregion(d,selected=True)
         CreateRegions(regions,savename='/tmp/region.reg', texts=np.arange(len(regions)))
@@ -3817,10 +3786,7 @@ def DS9Update(xpapoint,Plot=True, reg=True,style='--o',lw=0.5):
         #ax0.scatter(i, np.log10(d0['flux']),color=color,label=str(i))
         ax1.scatter(i, d0[i]['std'],color=color,label=str(i))#,linewidth=lw)
         ax2.scatter(i, 0,color=color,label=str(i))#,linewidth=lw)
-
-
     ax0.legend(loc='upper left')
-
     ax1.set_xlabel('Number of images')
     ax0.set_ylabel('Flux[region]')
     ax1.set_ylabel('std[region]')
@@ -3846,12 +3812,8 @@ def DS9Update(xpapoint,Plot=True, reg=True,style='--o',lw=0.5):
             regions[j] = regions[j]._replace(xc=Xinf + dn[j]['x'])
             regions[j] = regions[j]._replace(yc=Yinf + dn[j]['y'])
         CreateRegions(regions,savename='/tmp/region.reg', texts=np.arange(len(regions)))
-        #pan = d.get('pan')
         d.set('file ' + file)
-        #d.set('pan to %s image'%(pan))
         d.set('regions file /tmp/region.reg')
-        #y = np.random.random()
-
         plt.pause(0.00001)
         time.sleep(0.01)
     plt.show()
@@ -3878,8 +3840,6 @@ def Center_Flux_std(image,bck=0,method='Gaussian-Picouet'):
         yo,xo = np.where(image == image.max())#ndimage.measurements.center_of_mass(image)
         bounds = ([1e-1*np.nanmax(image), xo-10 , yo-10, 0.5,0.5,-1e5], [10*np.nanmax(image), xo+10 , yo+10, 10,10,1e5])#(-np.inf, np.inf)#
         Param = (np.nanmax(image),int(xo),int(yo),2,2,np.percentile(image,15))
-        #print ('bounds = ',bounds)
-        #print('\nParam = ', Param)
         try:
             popt,pcov = curve_fit(twoD_Gaussian,(x,y),image.flat,
                                   Param,bounds=bounds)
@@ -3942,7 +3902,6 @@ def Lims_from_region(region=None, coords=None,  config=my_conf,dtype=int):
                 xc, yc, h, w = float(region.xc), float(region.yc), float(region.h), float(region.w)
             if hasattr(region, 'r'):
                 xc, yc, h, w = float(region.xc), float(region.yc), float(2*region.r), float(2*region.r)
-
     #########To use with extreme precaution!!!
     #xc, yc = giveValue(xc), giveValue(yc)
     ##############
@@ -4079,13 +4038,10 @@ def DS9center(xpapoint,Plot=True):
             axes[1].plot(y,imagey, 'ro', label='Spectral direction')
             axes[0].plot(x, model(x, *poptx), color='b')#,label='Spatial direction')
             axes[1].plot(y, model(y, *popty), color='r')#,label='Spatial direction')
-            #plt.ylabel('Fitted profiles')
             axes[0].set_ylabel('Spatial direction');axes[1].set_ylabel('Spectral direction')
             axes[0].plot(x, Gaussian(x, imagex.max()-offsetx, x0x, sigma2x, offsetx), ':b',label='Deconvolved PSF') # Gaussian x, amplitude, xo, sigma_x, offset
-            #axes[0].plot(x, Gaussian(x, ampx, x0x, sigma2x, offsetx), ':b',label='Deconvolved PSF') # Gaussian x, amplitude, xo, sigma_x, offset
             x = np.linspace(-np.max([len(imagey),len(imagex)])/2,np.max([len(imagey),len(imagex)])/2,2000)
             xcc = x - x0x
-            #axes[0].plot(x, np.piecewise(x, [xc < -lx, (xc >=-lx) & (xc<=lx), xc>lx], [offsetx, ampx + offsetx, offsetx]), ':r', label='Slit size') # slit (UnitBox)
             axes[0].plot(x, np.piecewise(x, [xcc < -lx, (xcc >=-lx) & (xcc<=lx), xcc>lx], [offsetx, imagex.max() , offsetx]), ':r', label='Slit size') # slit (UnitBox)
             axes[0].plot([x0x, x0x], [imagex.min(), imagex.max()])
             axes[1].plot(y, Gaussian(y, imagey.max() - offsety, x0y, sigma2y, offsety), ':b',label='Deconvolved PSF') # Gaussian x, amplitude, xo, sigma_x, offset
@@ -4096,9 +4052,7 @@ def DS9center(xpapoint,Plot=True):
             plt.figtext(0.15,0.35,'Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f' % ( np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3]/2.) , 2*popty[1],2*np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])),bbox={'facecolor':'red', 'alpha':0.2, 'pad':10})
             if Plot:
                 plt.show()
-
         if hasattr(region, 'r'):
-
             method, bck = sys.argv[-2:]
             Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
             data = d.get_pyfits()[0].data
@@ -4206,7 +4160,7 @@ def DeleteMultiDimCol(table):
     return table
 
 
-def ApplyQuery(cat=None, query=None, path=None, new_path=None,delete=False):
+def ApplyQuery(cat=None, query=None, path=None, new_path=None, delete=False):
     """Apply panda easy to use SQL querys to astropy table
     """
     import astropy
@@ -4223,12 +4177,11 @@ def ApplyQuery(cat=None, query=None, path=None, new_path=None,delete=False):
         cat = Table.from_pandas(new_table)
     if new_path is not None:
         if '.fits' in os.path.basename(new_path):
-            cat.write(new_path,overwrite=True)
+            cat.write(new_path, overwrite=True)
         elif '.fits' in os.path.basename(new_path):
-            cat.write(new_path,overwrite=True,format='csv')
-        else :
-            cat.write(new_path,overwrite=True,format='ascii')
-
+            cat.write(new_path, overwrite=True, format='csv')
+        else:
+            cat.write(new_path, overwrite=True, format='ascii')
     return cat
 
 
@@ -4261,13 +4214,10 @@ def DS9Catalog2Region(xpapoint, name=None, x='x', y='y', ID=None,system='image',
 
         if sys.argv[5] != '-':
             ID = sys.argv[5]
-
     if query != '-':
         df = cat.to_pandas()
         new_table = df.query(query)
         cat = Table.from_pandas(new_table)
-
-
     if wcs:
         filename = getfilename(d)
         fitsfile = fits.open(filename)
@@ -4316,14 +4266,11 @@ def DS9Region2Catalog(xpapoint, name=None, new_name=None):
         d.set('regions ' + name)
     d.set('regions select all')
     regions = getregion(d, all=False, quick=False, selected=True)
-    #print(regions)
-    #filename = getfilename(d)
     if regions is None:
         message(d,'It seems that you did not create any region. Please create regions and re-run the analysis.'); sys.exit()
     if hasattr(regions[0], 'xc'):
         x, y, r1, r2 = np.array([r.xc for r in regions]), np.array([r.yc for r in regions]), np.array([r.r if hasattr(r, 'r') else r.w for r in regions]), np.array([r.r if hasattr(r, 'r') else r.h for r in regions ])
     else:
-        #x, y = np.array([r.xc for r in [regions]]), np.array([r.yc for r in [regions]])
         x, y, r1, r2 = np.array([r.xc for r in [regions]]), np.array([r.yc for r in [regions]]), np.array([r.r if hasattr(r, 'r') else r.w for r in [regions]]), np.array([r.r if hasattr(r, 'r') else r.h for r in [regions] ])
     cat = Table((x-1,y-1,r1,r2),names=('x','y','w','h'))
     verboseprint(cat)
@@ -4333,7 +4280,6 @@ def DS9Region2Catalog(xpapoint, name=None, new_name=None):
     for x,y in zip(cat['x'].astype(int),cat['y'].astype(int)):
         im = image[x-w:x+w,y-h:y+h]
         if im.size==4*w*h:
-            #print(im.shape)
             images.append(im)
         else:
             images.append(np.nan*np.zeros((2*w,2*h)))#*np.nan)
@@ -4346,7 +4292,6 @@ def DS9Region2Catalog(xpapoint, name=None, new_name=None):
     cat['median'] = np.nanmedian(images,axis=(1,2))
     cat['min'] = np.nanmin(images,axis=(1,2))
     cat['max'] = np.nanmax(images,axis=(1,2))
-
     if new_name is None:
         new_name = '/tmp/regions.csv'
     verboseprint(new_name)
@@ -4365,7 +4310,6 @@ def DS9MaskRegions(xpapoint, length = 20):
         verboseprint(e)
         top, bottom, left, right = 0, 0, 4, 0
     verboseprint('top, bottom, left, right = ',top, bottom, left, right)
-    #path = Charge_path_new(filename) if len(sys.argv) > 7 else [filename] #and verboseprint('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
     path = globglob(sys.argv[-1])
     cosmicRays = DS9Region2Catalog(xpapoint, new_name='/tmp/cat.csv')
     cosmicRays['front'] = 1
@@ -4412,11 +4356,6 @@ def MaskCosmicRays2(image, cosmics, top=0, bottom=0, left=4, right=0, cols=None,
     return image
 
 
-
-
-
-
-
 def symlink_force(target, link_name):
     """Create a symbolic link
     """
@@ -4430,15 +4369,10 @@ def symlink_force(target, link_name):
         else:
             raise e
 
-
-
 def even(f):
     """Return the even related number
     """
     return np.ceil(f / 2.) * 2
-
-
-
 
 def distance(x1,y1,x2,y2):
     """
@@ -4569,7 +4503,6 @@ def TwoD_autocorrelation(filename, save=True, area=None, plot_flag=True, DS9back
         corr = np.zeros(image.shape)
         for i in range(template.shape[1]):
             corr[:,i]  = signal.correlate(image[:,i], template[:,i], mode='same')# / 128
-    #np.savetxt(DS9backUp + 'Arrays/%s_Autocorr.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")), corr)
     fitsimage = fits.HDUList([fits.PrimaryHDU(corr)])[0]
     fitsimage.header['PATH'] = filename
     name = DS9_BackUp_path + 'Images/%s_%sAutocorr.fits'%(datetime.datetime.now().strftime("%y%m%d-%HH%M"),os.path.basename(filename)[:-5])
@@ -4594,10 +4527,6 @@ def ReturnPath(filename,number=None, All=False):
         path = glob.glob('%s%s%s'%(filen1,'?'*n,filen2))
         np.sort(path)
         return path
-
-
-
-
 
 
 def DS9ComputeEmGain(xpapoint, subtract=True, verbose=False, config=my_conf):
@@ -4638,8 +4567,6 @@ def DS9ComputeEmGain(xpapoint, subtract=True, verbose=False, config=my_conf):
         Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
         area = [Xinf, Xsup,Yinf, Ysup]
         verboseprint(Xinf, Xsup,Yinf, Ysup)
-
-
     if len(path)==1:
         plot_flag=True
     else:
@@ -4707,8 +4634,6 @@ def ComputeOSlevel1(image, OSR1=[20,-20,20,1053-20], OSR2=[20,-20,2133+20,-20], 
     return OScorrection
 
 
-
-
 def ComputeEmGain(filename, Path2substract=None, save=True, Plot=True, d=None, ax=None, radius=[40,40], subtract=False, area=None, DS9backUp = DS9_BackUp_path,verbose=True, config=my_conf, OSR1=[20,-20,0,400], OSR2=[20,-20,2200,2400]):
     """Compute EMgain with the variance intensity method
     """
@@ -4772,11 +4697,6 @@ def ComputeEmGain(filename, Path2substract=None, save=True, Plot=True, d=None, a
     #D = {'ax':ax, 'EMG_var_int_w_OS':emgain_phys, 'EMG_var_int_wo_OS':emgain_phys}
     return 1#D
 
-
-
-
-
-
 def CreateAreas(image, area=None, radius=100, offset=20, verbose=False, config=my_conf):
     """Create areas in the given image
     """
@@ -4791,7 +4711,6 @@ def CreateAreas(image, area=None, radius=100, offset=20, verbose=False, config=m
         if ly == 2069:
             xmin, xmax = my_conf.physical_region[:2]#1053, 2121#0,3000#1053, 2121
             ymin, ymax = 0,ly
-           # rangex = xmax - xmin
         else:
             xmin, xmax = 0, lx
             ymin, ymax = 0, ly
@@ -4809,12 +4728,9 @@ def PlotComputeEmGain(intensity, var, emgain, n, filename, len_area_det, ax=None
     """Compute emgain based on variance intensity diagram
     """
     import matplotlib; matplotlib.use('TkAgg')
-    #from dataphile.demos import auto_gui
     obj = GeneralFit_new(intensity,var,ax=ax,background=1,nb_gaussians=0,linestyle=None, marker='')
     obj.ax.set_ylabel('Variance [ADU] / %s'%(cst))
-
     return ax, emgain
-
 
 def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
     """Crop the image to have only the utility area
@@ -4833,17 +4749,14 @@ def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
     verboseprint(Yinf, Ysup,Xinf, Xsup)
     if (len(region[0])!=5) & (len(region[0])!=4):
         message(d,'Trimming only works on box regions. Create and select a box region an d re-run the analysis.');sys.exit()
-    #if get(d, 'Size = %s, continuing?[y/n]'%(np.array([region[0][3],region[0][2]],dtype=int)), exit_=True)=='y':
     else:
         for filename in path:
             verboseprint(filename)
             verboseprint('Using WCS information.')
-    #        result, name = cropCLAUDS(path=filename, area=area, all_ext=False)
             result, name = cropCLAUDS(path=filename, position=[region[0][0]-1,region[0][1]-1],size=np.array([region[0][3],region[0][2]],dtype=int), all_ext=False)
     print(name)
     if len(path) < 2:
         d.set('frame new ; tile yes ; file %s' %(name))
-        #d.set('file ' + name)
     return
 
 
@@ -4855,8 +4768,6 @@ def cropCLAUDS(path,position=[0,0],size=[10,10], all_ext=False):#,area=[0,100,0,
     from astropy.wcs import WCS
     from astropy.io.fits import ImageHDU
     a = fits.open(path)
-    #size = np.array([area[1]-area[0],area[3]-area[2]])
-    #position = (int((area[2]+area[3])/2)+1,int((area[1]+area[0])/2)+1)
     verboseprint(position)
     verboseprint(size)
     b=a.copy()
@@ -4868,7 +4779,6 @@ def cropCLAUDS(path,position=[0,0],size=[10,10], all_ext=False):#,area=[0,100,0,
                 a[i] = fits.PrimaryHDU(data=di.data, header=di.wcs.to_header())
             else:
                 a[i] = ImageHDU(data=di.data, header=di.wcs.to_header())
-                #https://gist.github.com/evertrol/db7c6c8e29896e68a7c4802f4ed6f99f
             a[i].header['CD1_1'] = b[i].header['CD1_1']
             a[i].header['CD2_2'] = b[i].header['CD2_2']
 
@@ -4920,13 +4830,10 @@ def DS9CLcorrelation(xpapoint, config=my_conf):
 def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, config=my_conf):
     """Performs a column to column or or line to line auto-correlation on a DS9 image
     """
-    # import matplotlib; matplotlib.use('TkAgg')
     from astropy.io import fits
     from astropy.table import Table
-    # from matplotlib import pyplot as plt
     fitsimage = fits.open(path)[0]
     image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
-    #image = image[area[0]:area[1],area[2]:area[3]]
     imagex = np.nanmean(image, axis=1)
     imagey = np.nanmean(image, axis=0)
     nbins=300
@@ -4938,7 +4845,6 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     y = y[np.isfinite(y)]
     verboseprint(x)
     verboseprint(y)
-
     bins3 = np.linspace(np.percentile(x,5),np.percentile(x,95),nbins)
     bins4 = np.linspace(np.percentile(y,5),np.percentile(y,95),nbins)
     vals1, b_ = np.histogram(imagex[1:]-imagex[:-1],bins=bins1)
@@ -4946,12 +4852,10 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     vals3, b_ = np.histogram(x,bins=bins3)
     vals4, b_ = np.histogram(y,bins=bins4)
 
-
     np.savetxt(DS9_BackUp_path + '/CSVs/1.dat',np.array([(bins1[1:]+bins1[:-1])/2,vals1]).T)
     np.savetxt(DS9_BackUp_path + '/CSVs/2.dat',np.array([(bins2[1:]+bins2[:-1])/2,vals2]).T)
     np.savetxt(DS9_BackUp_path + '/CSVs/3.dat',np.array([(bins3[1:]+bins3[:-1])/2,vals3]).T)
     np.savetxt(DS9_BackUp_path + '/CSVs/4.dat',np.array([(bins4[1:]+bins4[:-1])/2,vals4]).T)
-
 
     d=[]
     d.append('plot line open')
@@ -4978,7 +4882,6 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     d.append("plot layout grid")
     ds9=DS9()
     ds9.set(' ; '.join(d))
-
     return
 
 
@@ -4996,7 +4899,6 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
             info = False
     except IndexError:
         pass
-
     if xpapoint:
         if files is None:
             files =   globglob( sys.argv[3], ds9_im=False)
@@ -5006,23 +4908,16 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
                 path = get(d, "No file matching the regular expression. Please give a new pattern matching (*/?/[9-16], etc)", exit_=True)
                 files = globglob(path, ds9_im=False)
     fname = os.path.dirname(os.path.dirname(files[0]))
-
     ext = len(fits.open(files[0]))
     try:
         d=DS9n(xpapoint)
     except TypeError:
         d=DS9n(xpapoint)
     if ext != 1:
-        #extent = get(d, "Your image contains %i extensions, write the ones you want to use, eg 0,1,3  put all for all extensions or let it blank for primary header."%(ext), exit_=False)
-        #if  d.get('analysis message yesno {Your image contains %i extensions. Do you wish to analyze only the primary header?}'%(ext))=='1':
         if  yesno(d,'Your image contains %i extensions. Do you wish to analyze only the primary header?}'%(ext)):
             extentsions = [0]
         else:
             extentsions = np.arange(ext)
-        #     if extent == 'all':
-        #     extentsions = np.arange(ext)
-        # else:
-        #     extentsions = np.array(extent.split(','),dtype=int)
     else:
         extentsions = [0]
     verboseprint('Extensions to add: ', extentsions)
@@ -5032,35 +4927,12 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
     from datetime import datetime
 
     path_db =  os.environ['HOME'] + '/DS9QuickLookPlugIn/HeaderDataBase/HeaderCatalog_%s.csv'%(datetime.now().strftime("%y%m%d-%HH%Mm%Ss"))
-
-    #if len(t1s)>1:
     verboseprint(t1s)
     t1 = vstack(t1s)
     csvwrite(t1, path_db )
-#    if  d.get('analysis message yesno {Analysis completed and saved to %s! Do you want to load the file with PRISM?}'%(path_db))=='1':
     if yesno(d,question='Analysis completed and saved to %s! Do you want to load the file with PRISM?'%(path_db)):
         d.set('prism import csv ' + path_db)
-
-        # print(t1)
-        # print('Table saved : ', os.path.join(fname,'TotalMergedCatalog.csv') )
-    # if info:
-    #     t2s = [CreateCatalogInfo(t) for t in t1s]
-    #     if len(t2s)>1:
-    #         t2 = vstack(t2s)
-    #         name =  os.path.join(fname,'TotalMergedCatalog_info.csv')
-    #         csvwrite(t2,name)
-    # if name is None:
-    #     name = os.path.join(fname,'TotalMergedCatalog.csv')
-
     return
-    #         return t2
-    #     else:
-    #         return t2s[0]
-    # else:
-    #     if len(t1s)>1:
-    #         return t1
-    #     else:
-    #         return t1s[0]
 
 def GetColumns(path):
     """IMPORTANT get column names from fits table path quickly withotu opening it
@@ -9722,8 +9594,6 @@ def createRegContour(path,n=50,limit=100):
 global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
 fk5
 """)
-
-
     for i, region in enumerate(tqdm(regions)):
         region = regions[i]
         if region.shape[0]>99:
@@ -9735,8 +9605,6 @@ fk5
     d=DS9n()
     d.set('regions delete all')
     d.set('regions /tmp/regions.reg')
-#        plt.text(region[:,0][0],region[:,1][0],str(i),c='white')
- #   plt.show()
     return
 
 #@fn_timer
