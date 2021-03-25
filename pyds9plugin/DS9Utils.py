@@ -2383,8 +2383,6 @@ def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None,
     •Return the characteristics of the spot (see image: EE50, FWHM, source size. . . )  and plot the radial
     profile of the spot
     """
-    #import matplotlib; matplotlib.use('TkAgg')
-    #import matplotlib.pyplot as plt
     d = DS9n(xpapoint)#DS9n(xpapoint)
     if center_type is None:
         verboseprint(sys.argv[3])
@@ -2407,8 +2405,6 @@ def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None,
         DS9plot_rp_convolved(data=fitsfile.data,center = [np.int(a.xc),np.int(a.yc)],fibersize=fibersize, center_type=center_type,log=log, name = filename, radius=int(a.r), size=int(a.r))#int(a.r))
     except AttributeError:
         d.set("analysis message {Please define a circle region and select it. The radius of the region is used to define the radial profile.}");sys.exit()
-
-    #d.set('regions command "circle %0.3f %0.3f %0.3f # color=red"' % (spot['Center'][0]+1,spot['Center'][1]+1,40))
     return
 
 
@@ -2420,9 +2416,7 @@ def radial_profile_normalized(data, center, anisotrope=False, angle=30, radius=4
     from scipy import ndimage
     y, x = np.indices((data.shape))
     verboseprint(data)
-    #5#10
     verboseprint('center_type = ',center_type)
-    #image = data[np.max([int(center[1])-n1,0]):int(center[1])+n1,np.max([int(center[0])-n1,0]):int(center[0])+n1]
     n1 = np.nanmin([n1,int(center[1]),int(center[0])])
     image = data[int(center[1])-n1:int(center[1])+n1,int(center[0])-n1:int(center[0])+n1]
     if center_type.lower() == 'maximum':
@@ -2431,7 +2425,6 @@ def radial_profile_normalized(data, center, anisotrope=False, angle=30, radius=4
         verboseprint('image=',image)
         barycentre =  np.array([np.where(image == image.max())[0][0], np.where(image == image.max())[1][0]])#ndimage.measurements.center_of_mass(data[center[1]-n1:center[1]+n1,center[0]-n1:center[0]+n1])
     if center_type.lower() == 'barycentre':
-        #image = data[int(center[1])-n1:int(center[1])+n1,int(center[0])-n1:int(center[0])+n1]
         background = estimateBackground(data,center,radius,1.8 )
         new_image = image - background
         index = new_image > 0.5 * np.nanmax(new_image)#.max()
@@ -2440,7 +2433,6 @@ def radial_profile_normalized(data, center, anisotrope=False, angle=30, radius=4
     if center_type.lower() == 'user':
         barycentre = [n1,n1]
     else:
-        #image = data[int(center[1])-n1:int(center[1])+n1,int(center[0])-n1:int(center[0])+n1]
         verboseprint('Center type not understood, taking barycenter one')
         background = estimateBackground(data,center,radius,1.8 )
         new_image = image - background
@@ -2502,11 +2494,7 @@ def ConvolveDiskGaus2D(r, amp = 2 , RR = 4, sig = 4/2.35, offset=0):
     from scipy import special#, signal, misc
 
     integrand =  lambda eta,r_ :  special.iv(0,r_ * eta / np.square(sig)) * eta * np.exp(-np.square(eta)/(2*np.square(sig)))
-    #def integrand2 (eta, r_):
-     #   return special.iv(0,r_ * eta / np.square(sig)) * eta * np.exp(-np.square(eta)/(2*np.square(sig)))
     integ = [quad(integrand,0,RR,args=(r_,))[0] * np.exp(-np.square(r_)/(2*np.square(sig))) / (np.pi*np.square(RR*sig)) for r_ in r]
-    #integ = [np.exp(-np.square(r_)/(2*np.square(sig))) / (np.pi*np.square(RR*sig)) * np.nansum(integrand (np.linspace(0,RR,1000),r_))  for r_ in r]
-    #error = [quad(integrand,0,RR,args=(r_,))[1] * np.exp(-np.square(r_/(2*np.square(sig)))) / (np.pi*np.square(RR*sig)) for r_ in r]
     return offset + amp* np.array(integ)#, error
 
 def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end='-', liste='-', patht='-', config=my_conf):
@@ -2527,13 +2515,11 @@ def Charge_path_new(filename, entry_point = 3, entry=None, All=0, begin='-', end
         else:
             verboseprint('Taking function argument not sys.argv')
     verboseprint('All, begin, end, liste, path =', All, begin, end, liste, patht)
-    #verboseprint('glob = ',globglob(patht, recursive=True))
     if len(globglob(patht))>0:
         verboseprint('Folder given, going though all the repositories of %s'%(patht))
         path = globglob(patht)
     elif int(float(All)) == 1:
         verboseprint('Not numbers, taking all the .fits images from the current repository')
-        #path = globglob('%s%s%s'%(filen1,'?'*n,filen2))
         path = globglob(os.path.dirname(filename) + '/*.fits')
 
     elif (begin == '-') & (end == '-') & (liste == '-')  :
@@ -2625,10 +2611,6 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
         verboseprint("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(  popt[1],popt[2],minb,mina,platescale,NewCenter))
     csvwrite(np.vstack((rmean[:size], profile,ConvolveDiskGaus2D(rmean[:size], *popt))).T, DS9backUp +   'CSVs/%s_RadialProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
     csvwrite(np.vstack((rsurf, EE)).T, DS9backUp + 'CSVs/%s_EnergyProfile.csv'%(datetime.datetime.now().strftime("%y%m%d-%HH%M")) )
-
-    # #d.set("plot title 'Radial & encircled energy profiles' ")
-    # d=DS9()  plt.title('{} - {}'.format(os.path.basename(name),np.round(NewCenter,1)),y=1)
-
     d = []
     d.append('plot line open')
     d.append("plot axis x grid no ")
@@ -2638,7 +2620,6 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
     d.append("plot load /tmp/1.dat xyey")
     d.append("plot legend yes ")
     d.append("plot legend position top ")
-    #d.append("plot title legend '%s , %0.1f - %0.1f' "%(os.path.basename(name),NewCenter[0],NewCenter[1]))
     d.append("plot title legend ''")
     d.append("plot name 'Data: Flux = %i, FWHM_fit = %0.1f' "%(d_['Flux'],abs(popt[1])))
     d.append("plot line shape circle ")
@@ -2674,10 +2655,6 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
     d.append("plot layout STRIP ; plot layout STRIP scale 100")
     d.append("plot font legend size 9 ")
     d.append("plot font labels size 13 ")
-    # d.append("plot pagesetup size letter")
-    # d.append("plot pagesetup orient portrait")
-    #d.append("plot font numbers size 15 ")
-    #d.append("plot font legend size 12 ")
     ds9=DS9()
     ds9.set(' ; '.join(d))  #d.set("""""")
     return d_
@@ -2722,7 +2699,6 @@ def getImage(xpapoint):
         d.set("analysis message {Please create and select a region (Circle/Box) before runnning this analysis}");sys.exit()
 
     area = [Yinf, Ysup,Xinf, Xsup]
-    #fitsimage = fits.open(filename)[0]
     fitsimage = d.get_pyfits()[0]
     if len(fitsimage.shape)==2:
         image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
@@ -2747,7 +2723,6 @@ def set_axes_equal(ax):
     '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
     cubes as cubes, etc..  This is one possible solution to Matplotlib's
     ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
-
     Input
       ax: a matplotlib axis, e.g., as output from plt.gca().
     '''
@@ -2787,8 +2762,6 @@ def PlotArea3DColor(d):
     #import pyvista as pv
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
     from matplotlib import cm
-    #d = DS9n(xpapoint)
-    #data = getdata(xpapoint)
     size = [2000,700]
     color = cm.get_cmap('Greens_r', 128)
     d.set('rgb channel green')
@@ -2807,40 +2780,26 @@ def PlotArea3DColor(d):
     mesh_red = CreateMesh(data_red, value=value)
 
     p = Plotter(notebook=False,window_size=size,line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D',shape=(1,4))
- #   p.add_mesh(CreateMesh(data_blue), point_size=8.0, render_points_as_spheres=True, show_edges=True)
     p.add_mesh(CreateMesh(data_blue, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,cmap = cm.get_cmap('Blues_r', 128),show_scalar_bar=False)
     p.add_axes()
     p.subplot(0,1)
-#    p.add_mesh(CreateMesh(data_green), point_size=8.0, render_points_as_spheres=True, show_edges=True)
     p.add_mesh(CreateMesh(data_green, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,cmap = cm.get_cmap('Greens_r', 128),show_scalar_bar=False)
     p.add_axes()
     p.subplot(0,2)
     p.add_mesh(CreateMesh(data_red, value=value),opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,cmap = cm.get_cmap('Reds_r', 128),show_scalar_bar=False)
-
     p.link_views()
-    #p.show_bounds()
     p.add_axes()
-
-
     p.subplot(0,3)
     xx, yy = np.indices(data_blue.shape)#np.meshgrid(x, y)
-
-
     p.add_mesh(mesh_green, opacity=0.9,nan_opacity=0,use_transparency=False,flip_scalars=True,cmap = cm.get_cmap('Greens_r', 128),show_scalar_bar=False)
     zb = np.nanmax(CreateMesh(data_green, value=value).points[:,2])+((data_blue-np.nanmin(data_blue[np.isfinite(data_blue)]))*value)
-
     blue = p.add_mesh(mesh_blue, scalars=data_blue.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data2',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Blues_r', 128),show_scalar_bar=False)#_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-
     zr=- np.nanmax(mesh_green.points[:,2])+((data_red-np.nanmin(data_red[np.isfinite(data_red)]))*value)
-    # red_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1),  zr.reshape(-1)]).points
-    # red_mesh['test2'] = red_data.reshape(-1)
-    # red_mesh.dimensions = [red_data.shape[1], red_data.shape[0], 1]
     red = p.add_mesh(mesh_red, scalars=data_red.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data3',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Reds_r', 128),show_scalar_bar=False)#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-
+    return
 
 
     def callback2(value):
-        #p.update_coordinates(PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)]),mesh=mesh)
         if color:
             p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zb.reshape(-1)- value*(np.nanmax(mesh_green.points[:,2]))] ,mesh=mesh_blue)
             p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zr.reshape(-1)+ value*(np.nanmax(mesh_green.points[:,2]))] ,mesh=mesh_red)
@@ -2863,7 +2822,6 @@ def AnalyzeFWHMThroughField(xpapoint):
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
     fwhm, center, test = sys.argv[-3:]
     d = DS9n(xpapoint)
-    #region = getregion(d, quick=True)
     region = getregion(d,selected=True, message=True)#[0]
 
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
@@ -2906,7 +2864,6 @@ def AnalyzeFWHMThroughField(xpapoint):
     data_mesh.points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1), ((image-np.nanmin(image))).reshape(-1)]).points
     data_mesh['Intensity']= image.ravel()#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
     data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
-    #z = twoD_Gaussian2((x,y),*Param).reshape(x.shape)#.reshape(-1)
 
     points = np.c_[xx.reshape(-1), yy.reshape(-1), ((z-np.nanmin(z))).reshape(-1)]
     foo = PolyData(points)
@@ -2963,7 +2920,6 @@ def AnalyzeFWHMThroughField(xpapoint):
         return
     def opcacity(value):
         verboseprint(1)
-        #print(p1.GetProperty())
         p1.GetProperty().SetOpacity(value)
         verboseprint(2)
         p2.GetProperty().SetOpacity(1-value)
@@ -2978,7 +2934,6 @@ def AnalyzeFWHMThroughField(xpapoint):
     p.add_checkbox_button_widget(callback)#,position=(200,10))#,position='upper_left')
     p.add_text('Gaussian fit', name="mylabel",position=(70,10))#'lower_left')
     p.clear_box_widgets()
-    #p.add_axes()
     p.show()
     return
 
@@ -2988,23 +2943,19 @@ def AnalyzeFWHMThroughField(xpapoint):
 def PlotArea3D(xpapoint,color=False):
     """Plots the DS9 region selected in 3D
     """
-    #import pyvista as pv
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
     from matplotlib import cm
     from astropy.convolution import convolve, Gaussian2DKernel
 
     d = DS9n(xpapoint)
-    #data = getdata(xpapoint)
     filename = d.get('file')
     if ('.tif' in filename) | ('.tiff' in filename) | ('.png' in filename) | ('.jpeg' in filename) | ('.jpg' in filename):
         color=True
     if color:
         size = [int(0.8*1024), int(2.5*768)]
         d.set('rgb channel green')
-        #color = cm.get_cmap('Greens_r', 128)
     else:
         size =[2*1024, 2*768]
-        #color = None
     data = getdata(xpapoint,selected=True)#problem in test
     if type(data)!=list:
         if (len (data.shape)==2) & (color):
@@ -3022,7 +2973,6 @@ def PlotArea3D(xpapoint,color=False):
             log_data_points =  (np.log10(data_points - np.nanmin(data_points)+1) ) / np.nanmax(np.log10(data_points - np.nanmin(data_points)+1) )#-1
             data_points_c  =   convolve(data_points, Gaussian2DKernel(x_stddev=1) )
             log_data_points_c = convolve(log_data_points, Gaussian2DKernel(x_stddev=1) )
-
             points = PolyData(np.c_[xx.reshape(-1), yy.reshape(-1),1*data_points.reshape(-1)]).points
             mesh.points = points
             mesh['test'] = data.reshape(-1)
@@ -3051,10 +3001,8 @@ def PlotArea3D(xpapoint,color=False):
                 points = mesh.points
                 if d['log'] is False:
                     points[:, -1] =    d['data_points'].reshape(-1) * value   #((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
-                    #points[:, -1] =   ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
                 else:# d['data_points'].ravel() * value#
                     points[:, -1] =   d['data_points'].reshape(-1) * value   # value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
-                    #points[:, -1] =   value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
                 d['value'] = value
                 d['points'] = points
                 change_contour()
@@ -3064,10 +3012,7 @@ def PlotArea3D(xpapoint,color=False):
                 verboseprint(1)
                 if value is True:
                     verboseprint(2)
-                    #points[:, -1] =  d['points'][:, -1] #(np.nanmax(data) - np.nanmin(data)) *d['value']*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) )
-                    #points[:, -1] =  (np.nanmax(data) - np.nanmin(data)) *d['value']*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) )
                     verboseprint(2.5)
-                    #data = log_data_points #* d['value']
                     if d['smooth']:
                         data = log_data_points_c #* d['value']
                     else:
@@ -3133,9 +3078,7 @@ def PlotArea3D(xpapoint,color=False):
                     p.update_coordinates(np.nan*mesh.contour().points,mesh=contours)
                     p.update_coordinates(np.nan*mesh_c.contour().points,mesh=contours_c)
                 return
-            #p.add_slider_widget(callback, rng=[0,10*np.max([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data))  ])], value=value_, title='Stretching', color=None, pass_widget=False, event_type='always', style=None)
             p.add_slider_widget(callback, rng=[0,10*np.max([1, data.shape[0]])], value=data.shape[0], title='Stretching', color=None, pass_widget=False, event_type='always', style=None)
-            #p.enable_cell_picking(through=False)
             p.add_checkbox_button_widget(log_callback)#,position=(200,10))#,position='upper_left')
             p.add_checkbox_button_widget(Contour_callback,position=(10,80),value=True)#,position='upper_left')
             p.add_checkbox_button_widget(GIF_callback,position=(10,70+80))#,position='upper_left')
@@ -3144,7 +3087,6 @@ def PlotArea3D(xpapoint,color=False):
             a = p.add_text('Create a GIF', name="gif",position=(70,70+80))#'lower_left')
             p.add_checkbox_button_widget(SmoothCallback,position=(10,80+70+70),value=False)#,position='upper_left')
             p.add_text('Smooth', name="buttonSmooth",position=(70,80+70+70))#'lower_left')
-
             p.clear_box_widgets()
             p.add_axes()#interactive=True)
             p.show()
@@ -3173,38 +3115,28 @@ def CreateCube(d, data):
     """
     from pyvista import Plotter, set_plot_theme, wrap
     set_plot_theme("document")
-    #data = getdata(d)
 
     lx,ly,lz = data.shape
-    #data = data[::int(lx/ly),:,:]
     if d.get('scale')=='log':
         data = np.log10(np.array(data[:,:,:] - np.nanmin(data[np.isfinite(data)])+1,dtype=float))
     else:
         data = np.array(data[:,:,:],dtype=float)
-    #verboseprint(data)
     mask = np.ones(len(data.ravel()),dtype=bool)#
-    #mask=np.isfinite(data.ravel())#>np.nanpercentile(data,2)
-    #mask=(data.ravel()>np.nanpercentile(data,0.1)) & (data.ravel()<np.nanpercentile(data,99.9))
-
-    #print(np.sum(mask)/len(mask))
     xx, yy, zz = np.indices(data.shape)#np.me
     starting_mesh = wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],xx.ravel()[mask]]).T)
     verboseprint(data.ravel()[mask])
     starting_mesh['Intensity']= data.ravel()[mask]#np.array(data.ravel()[mask],dtype=float)#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
 
     def createMesh(DensityMin=0.5,DensityMax=0.5,StretchingFactor=0.5,PointSize=5):
-        #mask = (data.ravel()>DensityMin) & (data.ravel()<DensityMax)
         mask = (data.ravel()>np.nanpercentile(data[np.isfinite(data)],DensityMin)) & (data.ravel()<np.nanpercentile(data[np.isfinite(data)],DensityMax))
         mesh =  wrap(np.array([yy.ravel()[mask],zz.ravel()[mask],StretchingFactor*xx.ravel()[mask]-np.nanmean(StretchingFactor*xx.ravel()[mask])]).T)
         mesh['Intensity']= data.ravel()[mask]#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
-        #mesh['PointSize']= PointSize#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
         return mesh
     p = Plotter(notebook=False,window_size=[2*1024, 2*768], title='3D')
 
     class Change3dMesh():
         def __init__(self, mesh):
             self.output = mesh # Expected PyVista mesh type
-            # default parameters
             self.kwargs = {
                 'DensityMin': 0.5,
                 'DensityMax': 0.5,
@@ -3221,19 +3153,14 @@ def CreateCube(d, data):
                 self.output.overwrite(self.output )
                 return
             else:
-#                verboseprint(self.kwargs['DensityMin']);verboseprint(np.nanmin(result['Intensity']))
                 result = createMesh(**self.kwargs)
                 self.output.overwrite(result)
                 p.update_scalar_bar_range([result['Intensity'].min(),result['Intensity'].max()])
                 verboseprint(1)
-                #p.remove_actor('Data')
-
-                #p.add_mesh(result, show_edges=False,point_size=self.kwargs['PointSize'],opacity=0.1,nan_opacity=0,cmap='jet',clim=[np.nanmin(result['Intensity']),np.nanmax(result['Intensity'])],name='Data',use_transparency=True,ambient=0.5)#,smooth_shading=True)
                 return
 
 
     engine = Change3dMesh(starting_mesh)
-
     a = p.add_mesh(starting_mesh, show_edges=True,point_size=engine.kwargs['PointSize'] ,nan_opacity=0,cmap='jet',name='Data')
     mmax = 0.92
     m = p.add_slider_widget(
@@ -3266,11 +3193,8 @@ def CreateCube(d, data):
         pointa=(.35, mmax), pointb=(.64, mmax),
         event_type='always',
     )
-
     p.add_axes()
     p.show()
-
-
 
 
 def ThrowApertures(xpapoint):
