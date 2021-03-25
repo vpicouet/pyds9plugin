@@ -126,7 +126,7 @@ if sys.stdin is not None:
     verbose(xpapoint=None, verbose=1)
 else:
     verbose(xpapoint=None, verbose=0)
-
+verbose_ = bool(int(os.popen("cat %s.message.txt" % (DS9_BackUp_path)).read()))
 
 def Log(v=None):
     """Logger of all pyds9plugin activity on pyds9plugin_activity.log"""
@@ -151,7 +151,7 @@ def Log(v=None):
 logger = Log()
 
 
-def yesno(d, question="", verbose=bool(int(os.popen("cat %s.message.txt" % (DS9_BackUp_path)).read()))):
+def yesno(d, question="", verbose=verbose_):
     """Opens a native DS9 yes/no dialog box."""
     if verbose:
         verboseprint(question)
@@ -160,7 +160,7 @@ def yesno(d, question="", verbose=bool(int(os.popen("cat %s.message.txt" % (DS9_
         return True
 
 
-def message(d, question="", verbose=bool(int(os.popen("cat %s.message.txt" % (DS9_BackUp_path)).read()))):  #
+def message(d, question="", verbose=verbose_):  #
     """Opens a native DS9 message dialog box with a message."""
     if verbose:
         return bool(int(d.set("analysis message {%s}" % (question))))
@@ -168,7 +168,7 @@ def message(d, question="", verbose=bool(int(os.popen("cat %s.message.txt" % (DS
         return True
 
 
-def verboseprint(*args, logger=logger, verbose=bool(int(os.popen("cat %s.verbose.txt" % (DS9_BackUp_path)).read()))):  # False
+def verboseprint(*args, logger=logger, verbose=verbose_):  # False
     """Prints a message only if verbose is set to True (mostly if stdout is defined)"""
     # did not manage to save log in .log but not display it....
 
@@ -413,8 +413,8 @@ def PlotSpectraFilters(xpapoint):
     m = 1e-4
     c = 3e8
     beta_min, beta_max = 1268, 2580
-    pathf = resource_filename("pyds9plugin", "filters")  #'/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/filt/'
-    path_seds = resource_filename("pyds9plugin", "SEDs")  #'/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/filt/'
+    pathf = resource_filename("pyds9plugin", "filters") 
+    path_seds = resource_filename("pyds9plugin", "SEDs")
     colors = [
         "navy",
         "midnightblue",
@@ -632,10 +632,10 @@ def LoadDS9QuickLookPlugin():
         if len(glob.glob(os.path.join(os.environ["HOME"], ".ds9/*"))) > 0:
             for file in glob.glob(os.path.join(os.environ["HOME"], ".ds9", "*")):
                 if AnsDS9path not in open(file).read():
-                    var = "y"  # sinput("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n"%(os.path.basename(file)))
+# sinput("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n"%(os.path.basename(file)))
+                    var = "y"
                     if var.lower() != "n":
                         ReplaceStringInFile(path=file, string1="user4 {}", string2="user4 {%s}" % (AnsDS9path))
-
                         print(bcolors.BLACK_GREEN + """Plug-in added""" + bcolors.END)
         #                    else:
         #                        print(bcolors.BLACK_RED + 'To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n' + AnsDS9path + bcolors.END);sys.exit()
@@ -711,7 +711,8 @@ def PresentPlugIn():
 @fn_timer
 # @profile
 def DS9setup2(xpapoint, config=my_conf, color="cool"):
-    """This function aims at giving a quick and general visualisation of the image by applying specific thresholding
+    """This function aims at giving a quick and general visualisation 
+        of the image by applying specific thresholding
         and smoothing parameters. This allows to detect easily:
         •Different spot that the image contains
         •The background low frequency/medium variation
@@ -1116,7 +1117,8 @@ def BuildingWCS(xpapoint=None, filename=None, pix_coord=None, increment=None, pr
     w.wcs.cdelt = increment  # np.array([-0.066667, 0.066667])
     w.wcs.crval = coord_value  # [0, -90]
     print(projection)
-    w.wcs.ctype = [str(projection[0]), str(projection[1])]  # ["RA---AIR", "DEC--AIR"], ["RA---TAN", "DEC--TAN"]#
+    w.wcs.ctype = [str(projection[0]), str(projection[1])]  
+    # ["RA---AIR", "DEC--AIR"], ["RA---TAN", "DEC--TAN"]#
     # w.wcs.set_pv([(2, 1, 45.0)])
     # Three pixel coordinates of interest.
     # The pixel coordinates are pairs of [X, Y].
@@ -1781,7 +1783,7 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf, selected
     if all is False:
         regions = win.get(
             "regions selected"
-        )  #'# Region file format: DS9 version 4.1\nglobal color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1'#win.get("regions selected")
+        )  
         verboseprint(regions)
         verboseprint(len([row for row in regions.split("\n")]))
         if len([row for row in regions.split("\n")]) >= 3:
@@ -3216,11 +3218,9 @@ def PlotArea3D(xpapoint, color=False):
             def callback(value):
                 points = mesh.points
                 if d["log"] is False:
-                    points[:, -1] = d["data_points"].reshape(-1) * value  # ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
-                else:  # d['data_points'].ravel() * value#
-                    points[:, -1] = (
-                        d["data_points"].reshape(-1) * value
-                    )  # value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
+                    points[:, -1] = d["data_points"].reshape(-1) * value  
+                else:  #
+                    points[:, -1] = (d["data_points"].reshape(-1) * value)
                 d["value"] = value
                 d["points"] = points
                 change_contour()
@@ -3345,12 +3345,12 @@ def CreateCube(d, data):
     xx, yy, zz = np.indices(data.shape)  # np.me
     starting_mesh = wrap(np.array([yy.ravel()[mask], zz.ravel()[mask], xx.ravel()[mask]]).T)
     verboseprint(data.ravel()[mask])
-    starting_mesh["Intensity"] = data.ravel()[mask]  # np.array(data.ravel()[mask],dtype=float)#np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+    starting_mesh["Intensity"] = data.ravel()[mask]  
 
     def createMesh(DensityMin=0.5, DensityMax=0.5, StretchingFactor=0.5, PointSize=5):
         mask = (data.ravel() > np.nanpercentile(data[np.isfinite(data)], DensityMin)) & (data.ravel() < np.nanpercentile(data[np.isfinite(data)], DensityMax))
         mesh = wrap(np.array([yy.ravel()[mask], zz.ravel()[mask], StretchingFactor * xx.ravel()[mask] - np.nanmean(StretchingFactor * xx.ravel()[mask])]).T)
-        mesh["Intensity"] = data.ravel()[mask]  # np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
+        mesh["Intensity"] = data.ravel()[mask]  
         return mesh
 
     p = Plotter(notebook=False, window_size=[2 * 1024, 2 * 768], title="3D")
@@ -3431,9 +3431,7 @@ def ThrowApertures(xpapoint):
         except TypeError:
             r1 = r2 = radius
     if sys.argv[-1] == "Equidistributed":
-        areasd = CreateAreas(
-            image, area=area, radius=radius
-        )  #    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
+        areasd = CreateAreas(image, area=area, radius=radius) 
         areas = areasd
     else:
         print(area)
@@ -3935,8 +3933,8 @@ def DS9throughslit(xpapoint, DS9backUp=DS9_BackUp_path, config=my_conf):
     x = np.arange(len(path)) + 1
     verboseprint(x)
     verboseprint(fluxesn)
-
-    popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(), 3, 0])  # ,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):
+    # ,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):
+    popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(), 3, 0])  
     xl = np.linspace(x.min(), x.max(), 100)
     maxf = xl[np.where(Gaussian(xl, *popt) == np.nanmax(Gaussian(xl, *popt)))[0][0]]  # [0]
 
@@ -5708,14 +5706,12 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
         lx, ly = data.shape
         column = np.nanmean(data[Yinf:Ysup, Xinf:Xsup], axis=1)
         line = np.nanmean(data[Yinf:Ysup, Xinf:Xsup], axis=0)
-        t[i]["Col2ColDiff"] = np.nanmedian(line[::2]) - np.nanmedian(line[1::2])  # np.nanmedian(abs(line[1:] - line[:-1])) np.nanmedian(a[::2])
-        t[i]["Line2lineDiff"] = np.nanmedian(column[::2]) - np.nanmedian(column[1::2])  # np.nanmedian(abs(column[1:] - column[:-1]))
+        t[i]["Col2ColDiff"] = np.nanmedian(line[::2]) - np.nanmedian(line[1::2])  
+        t[i]["Line2lineDiff"] = np.nanmedian(column[::2]) - np.nanmedian(column[1::2]) 
         t[i]["TopImage"] = np.nanmean(column[:20])
         t[i]["BottomImage"] = np.nanmean(column[-20:])
         t[i]["SaturatedPixels"] = 100 * float(np.sum(data[Yinf:Ysup, Xinf:Xsup] > 2 ** 16 - 10)) / np.sum(data[Yinf:Ysup, Xinf:Xsup] > 0)
         t[i]["stdXY"] = np.nanstd(data[Yinf:Ysup, Xinf:Xsup])
-        # emgain = ComputeEmGain(file, None,True,False,None,None,[40,40],False,[1053,2133,500,2000])
-        # t[i]['Gtot_var_int_w_OS'],t[i]['Gtot_var_int_wo_OS'] = emgain['EMG_var_int_w_OS'], emgain['EMG_var_int_wo_OS']
         try:
             t[i]["stdX"] = np.nanstd(data[int(Yinf + (Ysup - Yinf) / 2), Xinf:Xsup])
             t[i]["stdY"] = np.nanstd(data[Yinf:Ysup, int(Xinf + (Xsup - Xinf) / 2)])
@@ -5724,8 +5720,6 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
             t[i]["stdY"] = np.nanstd(data[:, int(ly / 2)])
     new_cat = hstack((t1, t), join_type="inner")
     verboseprint(new_cat.colnames)
-    # t.remove_columns(['EXTEND','SIMPLE','NAXIS','COMMENT','NAXIS3','SHUTTER','VSS','BITPIX','BSCALE'])
-    # new_cat.write(os.path.dirname(path) + '/HeaderCatalog_info.csv', overwrite=True)
     csvwrite(new_cat, os.path.dirname(path) + "/HeaderCatalog_info.csv")
     verboseprint(new_cat)
     verboseprint(new_cat[my_conf.gain[0]].astype(float) > 0)
@@ -6484,7 +6478,9 @@ class GeneralFit_new(Demo):
         #            Models.append(Model(linear1D_centered,
         #                  Parameter(value=a, bounds=boundsa, label='scale'),
         #                  Parameter(value=b, bounds=boundsb, label='slope'),
-        #                  Parameter(value=(x.min()+x.max())/2,bounds=((x.min()+x.max())/2-1e-10,(x.min()+x.max())/2+1e-10), label='center'),#,uncertainty=1 # bounds=((x.min()+x.max())/2-1,(x.min()+x.max())/2+1)
+        #                  Parameter(value=(x.min()+x.max())/2,
+        #bounds=((x.min()+x.max())/2-1e-10,(x.min()+x.max())/2+1e-10), label='center'),
+        #,uncertainty=1 # bounds=((x.min()+x.max())/2-1,(x.min()+x.max())/2+1)
         #                  label='Background'))
         if self.background == 2:
             Models.append(
@@ -6543,9 +6539,12 @@ def EMCCD(x, biais=3300, RN=107, EmGain=600, flux=0.1, bright_surf=8.3, p_sCIC=0
     # print(ycounts[0],np.sum(ycounts[1:]))
     yscic = [np.exp(-x / np.power(EmGain, register / n_registers)) / np.power(EmGain, register / n_registers) for register in np.arange(n_registers)]
     yscic = np.sum(yscic, axis=0)
-    # plt.plot(np.sum(yscic,axis=0)/len(yscic));plt.plot(yscic[1]);plt.plot(yscic[-1]);n=500;plt.plot(np.exp(-x/np.power(EmGain, n/n_registers))/np.power(EmGain, n/n_registers))
+    # plt.plot(np.sum(yscic,axis=0)/len(yscic));plt.plot(yscic[1]);
+    # plt.plot(yscic[-1]);n=500;
+    #plt.plot(np.exp(-x/np.power(EmGain, n/n_registers))/np.power(EmGain, n/n_registers))
     if biais > x[0]:
-        ycounts[(x > biais)] = ycounts[: -np.sum(x <= biais)]  # PPPPPbbbbbbb    #ycounts[(x>biais) & (x<x[-1])] = ycounts[1:-np.sum(x<=biais)] #PPPPPbbbbbbb
+        ycounts[(x > biais)] = ycounts[: -np.sum(x <= biais)]  
+        # PPPPPbbbbbbb    #ycounts[(x>biais) & (x<x[-1])] = ycounts[1:-np.sum(x<=biais)] #PPPPPbbbbbbb
         ycounts[x < biais] = 0
     # plot(x,10*np.log10(10*yscic))
     #    yscic[x>biais] = yscic[:-np.sum(x<=biais)]
@@ -7506,7 +7505,6 @@ def get_depth_image(xpapoint):
         mag_zp = float(mag_zp)
     aper_size = float(aper_size)
     N_aper = int(N_aper)
-    # paths = Charge_path_new(filename) if len(sys.argv) > 3 else [filename] #and verboseprint('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
     for filename in [filename]:
         if mag_zp is None:
             if "HSC" in filename:
@@ -7721,7 +7719,6 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         verboseprint(command)
         answer = os.system(command)
         if answer != 0:
-            # d = DS9n(xpapoint);d.set('analysis message {SExtractor encountered an error. Please verify your image(s)/parameters and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
             pprint(
                 """ It seems that SExtractor encountered an error.\nPlease verify your image(s)/parameters. \nTo know more about the error run the following command in a terminal:\n%s""" % (command)
             )
