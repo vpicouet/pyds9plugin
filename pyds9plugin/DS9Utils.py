@@ -358,14 +358,6 @@ except (IOError or FileNotFoundError) as e:
 
 
 
-# def profile(function):
-#     @wraps(function)
-#     def testtest(*args, **kwargs):
-#         result = function(*args, **kwargs)
-#         return result
-#     return testtest
-
-
 
 def fn_timer(function):
     """Prints the time the function took to run"""
@@ -375,8 +367,6 @@ def fn_timer(function):
         result = function(*args, **kwargs)
         t1 = time.time()
         verboseprint ("Total time running %s: %s seconds" %(function.__name__, str(t1-t0)))
-#        logger.warning("Total time running %s: %s seconds" %(function.__name__, str(t1-t0)))
-#        logger.warning('Testing %s', 'foo')
         return result
     return function_timer
 
@@ -403,14 +393,6 @@ def display_arguments(function):
         verboseprint(function.__name__ + '(%s, %s)'%(args_,opt_args_) )
     return display_and_call
 
-#@fn_timer
-#@display_arguments
-#def FitsExt(fitsimage):
-#    """Returns the number of the first image in a fits object
-#    """
-#    ext = np.where(np.array([type(ext.data) == np.ndarray for ext in fitsimage])==True)[0][0]
-#    verboseprint('Taking extension: ',ext)
-#    return ext
 
 
 
