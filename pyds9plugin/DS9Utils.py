@@ -676,31 +676,6 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
         image_area = Lims_from_region(None,coords=region)
     Xinf, Xsup, Yinf, Ysup = image_area
     verboseprint(Xinf, Xsup, Yinf, Ysup)
-    # if (float(smooth)<1) & (float(smooth)!=0.0):
-    #     d.set("analysis message {Smoothing can not be inferior to 1, setting it to 0.}")
-    #     smooth = '0'
-    # if (smooth != '0') & (d.get('smooth radius')!=smooth):
-    #     verboseprint('Applying smoothing')
-    #     d.set("smooth yes")
-    #     #d.set("smooth function gaussian")
-    #     d.set("smooth radius %i"%(float(smooth)))
-    #     verboseprint('Smoothing applied')
-    # elif (smooth == '0'):
-    #     verboseprint('Putting smoothing to 0')
-    #     d.set("smooth radius %i"%(float(smooth)))
-    #     d.set("smooth no")
-    #     verboseprint('Smoothing set to 0')
-    # lx = int(d.get('fits width'))
-    # ly = int(d.get('fits height'))
-    # if lx*ly < 100**2:
-    #     try:
-    #         fitsimage = d.get_pyfits()[0].data#d.get_pyfits()[0].data#d.get_arr2np()
-    #     except TypeError:
-    #         d.set("analysis message {Display setup function needs to be run on a frame.}")
-    #         sys.exit()
-    #     if len(fitsimage.shape)>2:
-    #         fitsimage = fitsimage[int(d.get('slice'))-1]
-    # else:
     from astropy.io import fits
     try:
         fitsimage = fits.open(getfilename(d))
