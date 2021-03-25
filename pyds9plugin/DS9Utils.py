@@ -32,8 +32,7 @@ def readV(path):
         except Exception:
             try:
                 Table.read(path, format='ascii' )
-            except Exception as e:
-                verboseprint(e)
+            except Exception:
                 Table.read(path, format='csv' )
     else:
         raise ValueError(path + ' is not a file.')
@@ -979,14 +978,15 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         z, res, rank, singular, rcond = np.polyfit(x, y, deg, full=True)
         pcov = None
         popt = np.poly1d(z)
+        law = np.poly1d(z)
         if (deg==1) & (Type=='ortho'):
             import scipy
             linear_model = scipy.odr.Model(linear_func)
             data = scipy.odr.RealData(x, y)
             odr = scipy.odr.ODR(data, linear_model, beta0=[0., 1.])
             out = odr.run()
-            law = np.poly1d(out.beta)
             popt = np.poly1d(out.beta)
+            law = np.poly1d(out.beta)
         zp = popt(xp)
         zz = popt(x)
         degs = [' %0.2f * x^%i'%(a,i) for i,a in enumerate(popt.coef[::-1])]
