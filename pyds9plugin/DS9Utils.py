@@ -1277,17 +1277,11 @@ def getdata(xpapoint, Plot=False,selected=False):
                 import matplotlib.pyplot as plt
                 plt.imshow(data[giveValue(Yinf+0.5):giveValue(Ysup),giveValue(Xinf+0.5):giveValue(Xsup)])
                 plt.colorbar()
-
-
-
             data = data[np.max([giveValue(Yinf+0.5),0]):giveValue(Ysup),np.max([giveValue(Xinf+0.5),0]):giveValue(Xsup)]
             datas.append(data)
         if len(data.shape) == 3:
-            #verboseprint(Yinf,Ysup,Xinf,Xsup)
             data = data[:,np.max([giveValue(Yinf+0.5),0]):giveValue(Ysup),np.max([giveValue(Xinf+0.5),0]):giveValue(Xsup)]
             datas.append(data)
-#    if hasattr(region, 'r'):
-#        data[data>region.r] = np.nan
     if len(datas)>1:
         return datas
     else:
@@ -1299,14 +1293,10 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
     """
     from astropy.io import fits
     from scipy.optimize import curve_fit
-
-
-
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
     fwhm, center, test = '-',0,0#sys.argv[-3:]
     Plot = bool(int(sys.argv[-1]))
     d = DS9n(xpapoint)
-    #region = getregion(d, quick=True)
     region = getregion(d,selected=True, message=True)#[0]
     if bool(int(test)):
         Plot=False
@@ -1322,7 +1312,6 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         xinfs, yinfs = np.random.randint(1100,1900,size=n), np.random.randint(100,1900,size=n)
         images = [data[Yinf:Yinf+size,Xinf:Xinf+size] for Xinf, Yinf in zip(xinfs, yinfs)]
         verboseprint('Test: number of images = %s'%(len(images)))
-
     else:
         try:
             Xinf, Xsup, Yinf, Ysup = Lims_from_region(region)
@@ -1337,14 +1326,11 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
             kernel = Gaussian2DKernel(x_stddev=2,y_stddev=2)
             image = interpolate_replace_nans(image, kernel)#.astype('float16')
             verboseprint(np.isfinite(image).all())
-
         lx, ly = image.shape
         lx, ly = ly, lx
         x = np.linspace(0,lx-1,lx)
         y = np.linspace(0,ly-1,ly)
         x, y = np.meshgrid(x,y)
-
-
         if fwhm.split('-')[0] == '':
             if bool(int(center)):
                 Param = (np.nanmax(image),lx/2,ly/2,2,2,np.percentile(image,15))
@@ -1396,17 +1382,10 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         fit.points = foo.points
         fit['z'] = image.ravel()
         fit.dimensions = [image.shape[1], image.shape[0], 1]
-        #p.add_mesh(fit,clim=range_, scalars=z.ravel(),opacity=0.5,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-        #p1 = p.add_mesh(fit,clim=range_, scalars='z',opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-        #p2 = p.add_mesh(data_mesh,clim=range_, scalars='Intensity',opacity=1-0.7,nan_opacity=0,use_transparency=False,flip_scalars=True,stitle='Value')#y=True, opacity=0.3,,pickable=True)
         p1 = p.add_mesh(fit,scalars=z.flat,opacity=0.7,nan_opacity=0,use_transparency=False,name='3D plot, FLUX = %0.1f'%(fluxes[0]),flip_scalars=True,stitle='Value')#y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
         p2 = p.add_mesh(data_mesh, scalars=z.flatten() +image.flatten() ,opacity=1-0.7,nan_opacity=0,use_transparency=False,flip_scalars=True,stitle='Value')#y=True, opacity=0.3,,pickable=True)
-
         p.add_text("Gaussian fit: F = %0.0f, FWHMs = %0.1f, %0.1f, angle=%0.0fd"%(2*np.pi*popt[3]*popt[4]*popt[0],popt[3],popt[4],(180*popt[5]/np.pi)%180), name="mylabel",position=(70,10))#'lower_left')
-
-
         dict_={}
-        #p.add_mesh_clip_plane(fit, assign_to_axis='z',value=0.0,normal='x',opacity=0.5,nan_opacity=0, scalars='z',flip_scalars=True,stitle='Value',tubing=False, origin_translation=True, outline_translation=False, implicit=False)
         def callback(value):
             p1.GetProperty().SetOpacity(value)
             p2.GetProperty().SetOpacity(1-value)
@@ -1440,25 +1419,6 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
         p.clear_box_widgets()
         p.add_axes()
         p.show()
-        #plt.show()
-    # else:
-    #     L = np.array(fluxes)
-    #     median, mean, std = np.median(L), np.mean(L),np.std(L)
-    #     limit = median + 3 * std
-    #     mask = L >  limit
-    #     if len(xinfs[mask])>0:
-    #         create_DS9regions([xinfs[mask]+size/2],[yinfs[mask]+size/2], radius=[size,size], form = ['circle']*len(xinfs[mask]),save=True, savename='/tmp/centers',ID=[L[mask].astype(int)])
-    #         d.set('regions /tmp/centers.reg')
-    #     fig = plt.figure()
-    #     #plt.hist(fluxes, bins=np.linspace(min(fluxes),max(fluxes),100))
-    #     plt.hist(L[~mask],label='mean = %0.1f, std = %0.1f'%(mean, std), alpha=0.3,bins=50)
-    #     plt.hist(L[mask],label='Detections', alpha=0.3)#,bins=50)
-    #     plt.vlines(limit, 0, 10, label='5 sigma limit')
-    #     plt.ylabel('Frequency')
-    #     plt.xlabel('Flux estimator [log(ADU)]')
-    #     plt.legend()
-    #     plt.show()
-    #     return
     return
 
 
@@ -1474,20 +1434,6 @@ def DS9guider(xpapoint):
 
     d = DS9n(xpapoint)
     filename = getfilename(d)#d.get("file")
-#    header = fits.getheader(filename)#d.get_pyfits()[0].header
-#    if ('WCSAXES' in header) & 0==1:
-#        d.set("grid")
-#        d.set("scale mode 99.5")
-#        try:# if urllib.request.urlopen("http://google.com",timeout=1):#Internet == True:
-#            d.set("dsssao")
-#        except:
-#            pass
-#        d.set("lock scalelimits no")
-#        d.set("lock frame wcs")
-#        d.set("frame last")
-#        d.set("scale squared")
-#
-#    else:
     type_ = sys.argv[-14]
     verboseprint('Type = ', type_)
     if type_ == 'XY-catalog':
@@ -1513,20 +1459,6 @@ def DS9guider(xpapoint):
     fits.setval(filename, 'WCSDATE', value =datetime.datetime.now().strftime("%y%m%d-%HH%M") , comment = '')
     d.set("lock frame wcs")
     d.set("analysis message {Astrometry.net performed successfully! The WCS header has been saved in you image.}")
-
-
-#    filename = d.set("file {}".format(Newfilename))
-#    filename = getfilename(d)#d.get("file")
-#    header = d.get_pyfits()[0].header
-#    if header['WCSAXES'] == 2:
-#        d.set("grid")
-#        d.set("scale mode 99.5")
-#        try:# if urllib.request.urlopen("http://google.com",timeout=1):#Internet == True:
-#            d.set("dsssao")
-#        except:
-#            pass
-#        d.set("lock scalelimits no")
-
     return
 
 
@@ -1566,8 +1498,6 @@ def CreateWCS(PathExec, filename, Newfilename, params, type_='Image'):
     #params = ['-'] * len(options)
     parameters = ' '.join([option + str(param) for option,param in zip(options, params) if param!='-'])
     verboseprint(parameters)
-
-
     verboseprint(filename, Newfilename)
     verboseprint(os.path.dirname(filename) + "/--wait.fits")
     start = time.time()
@@ -1642,7 +1572,6 @@ def process_region(regions, win,quick=False, config=my_conf, message=True,dtype=
         except ValueError:
             if message:
                 d = win;d.set('analysis message {It seems that you did not create a region. Please create a region and rerun the analysis}');sys.exit()
-            #sys.exit()
         coords = [float(c) for c in info.split(')')[0].split(',')]
         if quick:
             verboseprint(regions)
