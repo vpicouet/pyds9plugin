@@ -10,7 +10,8 @@ import os, glob, sys
 from pyds9plugin.DS9Utils import *
 from shutil import copyfile, rmtree
 from  pkg_resources  import resource_filename
-        
+from IPython import get_ipython
+ipython = get_ipython()        
 
 DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn'
 test_folder = resource_filename('pyds9plugin', 'testing')
@@ -26,6 +27,10 @@ def main():
     os.system('echo 0 > %s'%(DS9_BackUp_path + '.verbose.txt'))
     print('\n    Setup    \n' )
     os.system('DS9Utils %s open  " %s/stack.fits" Slice  0 '%(name,files_folder))
+    ipython.magic("lprun -u 1e-1  -T /tmp/prun_open.py -s -r -f DS9open -f get DS9open('%s','%s/stack.fits')  "%(name,files_folder))
+    # ipython.magic("lprun -u 1e-1  -T /tmp/prun_get.py -s -r -f d.get  d.get('file')" )
+
+    sys.exit()
     os.system('DS9Utils %s  lock   image image 0  0 0    '%(name))
     os.system('DS9Utils %s  lock   wcs wcs 1  1 1    '%(name))
     os.system('DS9Utils %s  lock   none none 1  0 1    '%(name))
@@ -87,7 +92,9 @@ def main():
     
     print('\n    INSTRUMENTATION AIT     \n' )
     d.set('regions command "circle 50 50 50"');d.set('regions select all')
-    os.system('DS9Utils %s radial_profile Maximum 0 0  & '%(name))
+    # os.system('DS9Utils %s radial_profile Maximum 0 0  & '%(name))
+    ipython.magic("lprun -T /tmp/prun_radial_profile.py -s -r -f DS9rp -f DS9plot_rp_convolved -f radial_profile_normalized DS9rp(%s,center_type='Maximum',fibersize=0)  "%(xpapoint))
+
     d.set('regions command "circle 50 50 50"');d.set('regions select all')
     os.system('DS9Utils %s radial_profile 2D-Gaussian-fitting 10 0 &  '%(name))
 

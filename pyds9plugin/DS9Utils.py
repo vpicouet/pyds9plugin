@@ -122,11 +122,12 @@ def CreateFolders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/"):
 if len(sys.argv) == 1:
     CreateFolders()
 
+message_ = bool(int(os.popen("cat %s.message.txt" % (DS9_BackUp_path)).read()))
+verbose_ = bool(int(os.popen("cat %s.verbose.txt" % (DS9_BackUp_path)).read()))
 if sys.stdin is not None:
     verbose(xpapoint=None, verbose=1)
 else:
     verbose(xpapoint=None, verbose=0)
-verbose_ = bool(int(os.popen("cat %s.message.txt" % (DS9_BackUp_path)).read()))
 
 def Log(v=None):
     """Logger of all pyds9plugin activity on pyds9plugin_activity.log"""
@@ -151,7 +152,7 @@ def Log(v=None):
 logger = Log()
 
 
-def yesno(d, question="", verbose=verbose_):
+def yesno(d, question="", verbose=message_):
     """Opens a native DS9 yes/no dialog box."""
     if verbose:
         verboseprint(question)
@@ -160,7 +161,7 @@ def yesno(d, question="", verbose=verbose_):
         return True
 
 
-def message(d, question="", verbose=verbose_):  #
+def message(d, question="", verbose=message_):  #
     """Opens a native DS9 message dialog box with a message."""
     if verbose:
         return bool(int(d.set("analysis message {%s}" % (question))))
@@ -170,13 +171,8 @@ def message(d, question="", verbose=verbose_):  #
 
 def verboseprint(*args, logger=logger, verbose=verbose_):  # False
     """Prints a message only if verbose is set to True (mostly if stdout is defined)"""
-    # did not manage to save log in .log but not display it....
-
     st = " ".join([str(arg) for arg in args])
     logger.critical(st)
-    #    with open('/tmp/activity.log','a') as f:
-    #        f.write(str(*args))
-    # print(verbose)
     if bool(int(verbose)):
         from tqdm import tqdm
 
@@ -2501,7 +2497,6 @@ def PyvistaThoughfocus(a):
     p.show()
 
 
-# @profile
 def DS9rp(xpapoint, Plot=True, config=my_conf, center_type=None, fibersize=None, log=None):
     """How to use: Click on region and select Circle shape (default one). Then click precisely on what you think is
     the centre of the PSF. Select the region you created and press p or go in analysis menu: radial profile.
@@ -8562,6 +8557,8 @@ def DS9open(xpapoint, filename=None):
 
     if filename is None:
         filename, type_, clip = sys.argv[3:]
+    else:
+        clip, type_ = 0,'Slice'
     if clip == "1":
         img = ImageGrab.grabclipboard()
         if img is None:
