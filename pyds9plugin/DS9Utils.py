@@ -252,10 +252,32 @@ def ComputeFluctuation(
     result = results[np.isfinite(results["aperture_sum"])]
     fresult = results[~np.isfinite(results["aperture_sum"])]
 
-    create_DS9regions([np.array(fresult["xcenter"]) + offset[0]], [np.array(fresult["ycenter"]) + offset[1]], radius=np.ones(len(fresult)) * aper_size, form=["circle"] * len(fresult), save=True, ID=[np.array(fresult["aperture_sum"], dtype=int)], color=["Yellow"] * len(fresult), savename="/tmp/photometry", system="image", font=1)
+    create_DS9regions(
+        [np.array(fresult["xcenter"]) + offset[0]],
+        [np.array(fresult["ycenter"]) + offset[1]],
+        radius=np.ones(len(fresult)) * aper_size,
+        form=["circle"] * len(fresult),
+        save=True,
+        ID=[np.array(fresult["aperture_sum"], dtype=int)],
+        color=["Yellow"] * len(fresult),
+        savename="/tmp/photometry",
+        system="image",
+        font=1,
+    )
     d.set("regions tmp/photometry.reg")
 
-    create_DS9regions([np.array(result["xcenter"]) + offset[0]], [np.array(result["ycenter"]) + offset[1]], radius=np.ones(len(fresult)) * aper_size, form=["circle"] * len(result), save=True, ID=[np.array(result["aperture_sum"], dtype=int)], color=["green"] * len(result), savename="/tmp/photometry", system="image", font=1)
+    create_DS9regions(
+        [np.array(result["xcenter"]) + offset[0]],
+        [np.array(result["ycenter"]) + offset[1]],
+        radius=np.ones(len(fresult)) * aper_size,
+        form=["circle"] * len(result),
+        save=True,
+        ID=[np.array(result["aperture_sum"], dtype=int)],
+        color=["green"] * len(result),
+        savename="/tmp/photometry",
+        system="image",
+        font=1,
+    )
     d.set("regions tmp/photometry.reg")
 
     d, d_err, flux_std = depth(flux, mag_zp, sigma, type)
@@ -391,11 +413,63 @@ def PlotSpectraFilters(xpapoint):
     beta_min, beta_max = 1268, 2580
     pathf = resource_filename("pyds9plugin", "filters")  #'/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/filt/'
     path_seds = resource_filename("pyds9plugin", "SEDs")  #'/Users/Vincent/Nextcloud/LAM/Work/LePhare/lephare_200509/filt/'
-    colors = ["navy", "midnightblue", "darkblue", "royalblue", "mediumslateblue", "deepskyblue", "aquamarine", "mediumaquamarine", "limegreen", "grey", "yellow", "gold", "orange", "darkorange", "lightcoral", "orangered", "coral", "tomato", "salmon", "darksalmon", "red", "maroon", "saddlebrown", "chocolate", "darkred", "black", "black"]
+    colors = [
+        "navy",
+        "midnightblue",
+        "darkblue",
+        "royalblue",
+        "mediumslateblue",
+        "deepskyblue",
+        "aquamarine",
+        "mediumaquamarine",
+        "limegreen",
+        "grey",
+        "yellow",
+        "gold",
+        "orange",
+        "darkorange",
+        "lightcoral",
+        "orangered",
+        "coral",
+        "tomato",
+        "salmon",
+        "darksalmon",
+        "red",
+        "maroon",
+        "saddlebrown",
+        "chocolate",
+        "darkred",
+        "black",
+        "black",
+    ]
     sizes = [3690, 3911, 4851, 6242, 7716, 8915, 9801, 10240, 12562, 16499, 21570]
     sizes = [0.0234, 0.0795, 0.0456, 0.0598, 0.1194, 0.1539, 0.1476, 0.0768, 0.0797, 0.0918, 0.1714, 0.2895, 0.3058, 5.3245, 35.6385, 74.9582, 77.7000, 105.9688, 199.8631]
     # filts=['galex/FUV.pb','galex/NUV.pb','cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb','spitzer/mips_24.pb','herschel/PACS_100.pb','herschel/PACS_160.pb','herschel/SPIRE_PSW.pb','herschel/SPIRE_PMW.pb','herschel/SPIRE_PLW.pb']
-    filts = ["galex/FUV.pb", "galex/NUV.pb", "cfht/CLAUDS/u.pb", "cfht/CLAUDS/uS.pb", "hsc/gHSC.pb", "hsc/rHSC.pb", "hsc/iHSC.pb", "hsc/zHSC.pb", "hsc/yHSC.pb", "vista/Y.pb", "vista/J.pb", "vista/H.pb", "vista/K.pb", "spitzer/irac_1.pb", "spitzer/irac_2.pb", "spitzer/irac_3.pb", "spitzer/irac_4.pb", "spitzer/mips_24.pb", "herschel/PACS_100.pb", "herschel/PACS_160.pb", "herschel/SPIRE_PSW.pb", "herschel/SPIRE_PMW.pb", "herschel/SPIRE_PLW.pb"]
+    filts = [
+        "galex/FUV.pb",
+        "galex/NUV.pb",
+        "cfht/CLAUDS/u.pb",
+        "cfht/CLAUDS/uS.pb",
+        "hsc/gHSC.pb",
+        "hsc/rHSC.pb",
+        "hsc/iHSC.pb",
+        "hsc/zHSC.pb",
+        "hsc/yHSC.pb",
+        "vista/Y.pb",
+        "vista/J.pb",
+        "vista/H.pb",
+        "vista/K.pb",
+        "spitzer/irac_1.pb",
+        "spitzer/irac_2.pb",
+        "spitzer/irac_3.pb",
+        "spitzer/irac_4.pb",
+        "spitzer/mips_24.pb",
+        "herschel/PACS_100.pb",
+        "herschel/PACS_160.pb",
+        "herschel/SPIRE_PSW.pb",
+        "herschel/SPIRE_PMW.pb",
+        "herschel/SPIRE_PLW.pb",
+    ]
     fnu = lambda flambda, lam: (lam ** 2) / 3e8 * flambda / ((lam ** 2) / c * flambda).max() / 1.1
     fnu = lambda flambda, lam: flambda / flambda.max() / 1.1  # (lam **2) / c * flambda / ((lam **2) / 3e8 * flambda).max() / 1.1
     fig = plt.figure(figsize=(20, 9))
@@ -1359,7 +1433,15 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap="twilight_shifted"):  # jet
         xx, yy = np.indices(image.shape)
         set_plot_theme("document")
         # range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
-        p = Plotter(notebook=False, window_size=[2 * 1024, 2 * 768], line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title="3D plot, FLUX = %0.1f" % (fluxes[0]) + "amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id " % (popt[0], popt[3], popt[4], (180 * popt[5] / np.pi) % 180))
+        p = Plotter(
+            notebook=False,
+            window_size=[2 * 1024, 2 * 768],
+            line_smoothing=True,
+            point_smoothing=True,
+            polygon_smoothing=True,
+            splitting_position=None,
+            title="3D plot, FLUX = %0.1f" % (fluxes[0]) + "amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id " % (popt[0], popt[3], popt[4], (180 * popt[5] / np.pi) % 180),
+        )
         value = image
         z, image = image, z
         value = image.shape[0] / (image.max() - image.min())
@@ -2004,7 +2086,9 @@ def throughfocusWCS(center, files, x=None, fibersize=0, center_type="barycentre"
     name = "%s - %i - %i - %s - %0.3f" % (os.path.basename(filename), int(center_pix[0]), int(center_pix[1]), fitsfile.header["DATE"], mean)
     verboseprint(name)
     t = Table(names=("name", "number", "t", "x", "y", "Sigma", "EE50", "EE80", "Max pix", "Flux", "Var pix", "Best sigma", "Best EE50", "Best EE80", "Best Maxpix", "Best Varpix"), dtype=("S15", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4"))
-    t.add_row((os.path.basename(filename), os.path.basename(filename)[5:11], t2s(h=h, m=m, s=s, d=day), d["Center"][0], d["Center"][1], min(fwhm), min(EE50), min(EE80), min(maxpix), min(sumpix), max(varpix), ENC(bestx1, ENCa), ENC(bestx2, ENCa), ENC(bestx3, ENCa), ENC(bestx4, ENCa), ENC(bestx6, ENCa)))
+    t.add_row(
+        (os.path.basename(filename), os.path.basename(filename)[5:11], t2s(h=h, m=m, s=s, d=day), d["Center"][0], d["Center"][1], min(fwhm), min(EE50), min(EE80), min(maxpix), min(sumpix), max(varpix), ENC(bestx1, ENCa), ENC(bestx2, ENCa), ENC(bestx3, ENCa), ENC(bestx4, ENCa), ENC(bestx6, ENCa))
+    )
     np.savetxt("/tmp/fwhm.dat", np.array([x, fwhm]).T)
     np.savetxt("/tmp/EE50.dat", np.array([x, EE50]).T)
     np.savetxt("/tmp/EE80.dat", np.array([x, EE80]).T)
@@ -2510,7 +2594,9 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
         stddev /= profile.max()
         profile /= profile.max()
         popt_m, pcov_m = curve_fit(Moffat1D, rmean[:size], profile, p0=[profile.max(), 4, 2.5])
-        popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[np.nanmax(profile), fiber, 2, np.nanmin(profile)], bounds=([1e-3 * (profile.max() - profile.min()), 0.8 * fiber, 1, profile.min()], [1e3 * (profile.max() - profile.min()), 1.2 * fiber, SigmaMax, profile.max()]))  # [1,1,1,1,1] (x,a,b,sigma,lam,alpha):
+        popt, pcov = curve_fit(
+            ConvolveDiskGaus2D, rmean[:size], profile, p0=[np.nanmax(profile), fiber, 2, np.nanmin(profile)], bounds=([1e-3 * (profile.max() - profile.min()), 0.8 * fiber, 1, profile.min()], [1e3 * (profile.max() - profile.min()), 1.2 * fiber, SigmaMax, profile.max()])
+        )  # [1,1,1,1,1] (x,a,b,sigma,lam,alpha):
 
     EE_interp = interpolate.interp1d(rsurf[:size], EE[:size], kind="cubic")
     ninterp = 10
@@ -2719,9 +2805,13 @@ def PlotArea3DColor(d):
     xx, yy = np.indices(data_blue.shape)  # np.meshgrid(x, y)
     p.add_mesh(mesh_green, opacity=0.9, nan_opacity=0, use_transparency=False, flip_scalars=True, cmap=cm.get_cmap("Greens_r", 128), show_scalar_bar=False)
     zb = np.nanmax(CreateMesh(data_green, value=value).points[:, 2]) + ((data_blue - np.nanmin(data_blue[np.isfinite(data_blue)])) * value)
-    blue = p.add_mesh(mesh_blue, scalars=data_blue.ravel(), opacity=0.7, nan_opacity=0, use_transparency=False, name="Data2", flip_scalars=True, stitle="Value", cmap=cm.get_cmap("Blues_r", 128), show_scalar_bar=False)  # _transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+    blue = p.add_mesh(
+        mesh_blue, scalars=data_blue.ravel(), opacity=0.7, nan_opacity=0, use_transparency=False, name="Data2", flip_scalars=True, stitle="Value", cmap=cm.get_cmap("Blues_r", 128), show_scalar_bar=False
+    )  # _transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
     zr = -np.nanmax(mesh_green.points[:, 2]) + ((data_red - np.nanmin(data_red[np.isfinite(data_red)])) * value)
-    red = p.add_mesh(mesh_red, scalars=data_red.ravel(), opacity=0.7, nan_opacity=0, use_transparency=False, name="Data3", flip_scalars=True, stitle="Value", cmap=cm.get_cmap("Reds_r", 128), show_scalar_bar=False)  # ,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+    red = p.add_mesh(
+        mesh_red, scalars=data_red.ravel(), opacity=0.7, nan_opacity=0, use_transparency=False, name="Data3", flip_scalars=True, stitle="Value", cmap=cm.get_cmap("Reds_r", 128), show_scalar_bar=False
+    )  # ,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
     return blue, red
 
     def callback2(value):
@@ -2786,7 +2876,15 @@ def AnalyzeFWHMThroughField(xpapoint):
     xx, yy = np.indices(image.shape)
     set_plot_theme("document")
     # range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
-    p = Plotter(notebook=False, window_size=[1500, 1500], line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title="3D plot, FLUX = %0.1f" % (fluxes[0]) + "amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id " % (popt[0], popt[3], popt[4], (180 * popt[5] / np.pi) % 180))
+    p = Plotter(
+        notebook=False,
+        window_size=[1500, 1500],
+        line_smoothing=True,
+        point_smoothing=True,
+        polygon_smoothing=True,
+        splitting_position=None,
+        title="3D plot, FLUX = %0.1f" % (fluxes[0]) + "amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id " % (popt[0], popt[3], popt[4], (180 * popt[5] / np.pi) % 180),
+    )
 
     fit = StructuredGrid()
     data_mesh = StructuredGrid()
@@ -2800,7 +2898,9 @@ def AnalyzeFWHMThroughField(xpapoint):
     fit["z"] = z.ravel()
     fit.dimensions = [image.shape[1], image.shape[0], 1]
     p2 = p.add_mesh(data_mesh, opacity=1 - 0.7, nan_opacity=0, use_transparency=False, flip_scalars=True, stitle="Value", show_scalar_bar=False)  # y=True, opacity=0.3,,pickable=True)
-    p1 = p.add_mesh(fit, cmap="Greys_r", scalars=image.ravel() + z.ravel(), opacity=0.7, nan_opacity=0, use_transparency=False, name="3D plot, FLUX = %0.1f" % (fluxes[0]), flip_scalars=True, stitle="Value", show_scalar_bar=False)  ##y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+    p1 = p.add_mesh(
+        fit, cmap="Greys_r", scalars=image.ravel() + z.ravel(), opacity=0.7, nan_opacity=0, use_transparency=False, name="3D plot, FLUX = %0.1f" % (fluxes[0]), flip_scalars=True, stitle="Value", show_scalar_bar=False
+    )  ##y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
     global args
     args = popt
 
@@ -2932,7 +3032,9 @@ def PlotArea3D(xpapoint, color=False):
                 if d["log"] is False:
                     points[:, -1] = d["data_points"].reshape(-1) * value  # ((data-np.nanmin(data[np.isfinite(data)]))*value).reshape(-1)
                 else:  # d['data_points'].ravel() * value#
-                    points[:, -1] = d["data_points"].reshape(-1) * value  # value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
+                    points[:, -1] = (
+                        d["data_points"].reshape(-1) * value
+                    )  # value * data.shape[0]*(np.log10(data - np.nanmin(data)+1) ).ravel() / np.nanmax(np.log10(data - np.nanmin(data)+1) ).ravel()  / (data.shape[0]/(np.nanmax(data) - np.nanmin(data)))#(np.log10(data - np.nanmin(data)+1)*value).reshape(-1)
                 d["value"] = value
                 d["points"] = points
                 change_contour()
@@ -3182,7 +3284,20 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
     verboseprint("Using exec!")
     verboseprint(ds9)
     ds9 = np.array(ds9, dtype=float)
-    ldict = {"ds9": ds9, "image": image, "convolve": convolve, "grey_dilation": grey_dilation, "grey_erosion": grey_erosion, "gaussian_filter": gaussian_filter, "median_filter": median_filter, "sobel": sobel, "binary_propagation": binary_propagation, "binary_opening": binary_opening, "binary_closing": binary_closing, "label": label}
+    ldict = {
+        "ds9": ds9,
+        "image": image,
+        "convolve": convolve,
+        "grey_dilation": grey_dilation,
+        "grey_erosion": grey_erosion,
+        "gaussian_filter": gaussian_filter,
+        "median_filter": median_filter,
+        "sobel": sobel,
+        "binary_propagation": binary_propagation,
+        "binary_opening": binary_opening,
+        "binary_closing": binary_closing,
+        "label": label,
+    }
     try:
         exec(exp, globals(), ldict)  # , locals(),locals())
     except (SyntaxError, NameError) as e:
@@ -3984,8 +4099,18 @@ def DS9center(xpapoint, Plot=True):
             xcc = x - x0y
             axes[1].plot(x, np.piecewise(x, [xcc < -ly, (xcc >= -ly) & (xcc <= ly), xcc > ly], [offsety, imagey.max(), offsety]), ":r", label="Slit size")  # slit (UnitBox)
             axes[1].plot([x0y, x0y], [imagey.min(), imagey.max()])
-            plt.figtext(0.15, 0.75, "Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f" % (np.sqrt(poptx[3]), np.sqrt(np.diag(pcovx)[3] / 2.0), 2 * poptx[1], 2 * np.sqrt(np.diag(pcovx)[1]), x0x, np.sqrt(np.diag(pcovx)[2])), bbox={"facecolor": "blue", "alpha": 0.2, "pad": 10})
-            plt.figtext(0.15, 0.35, "Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f" % (np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3] / 2.0), 2 * popty[1], 2 * np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])), bbox={"facecolor": "red", "alpha": 0.2, "pad": 10})
+            plt.figtext(
+                0.15,
+                0.75,
+                "Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f" % (np.sqrt(poptx[3]), np.sqrt(np.diag(pcovx)[3] / 2.0), 2 * poptx[1], 2 * np.sqrt(np.diag(pcovx)[1]), x0x, np.sqrt(np.diag(pcovx)[2])),
+                bbox={"facecolor": "blue", "alpha": 0.2, "pad": 10},
+            )
+            plt.figtext(
+                0.15,
+                0.35,
+                "Sigma = %0.2f +/- %0.2f pix\nSlitdim = %0.2f +/- %0.2f pix\ncenter = %0.2f +/- %0.2f" % (np.sqrt(popty[3]), np.sqrt(np.diag(pcovy)[3] / 2.0), 2 * popty[1], 2 * np.sqrt(np.diag(pcovy)[1]), x0y, np.sqrt(np.diag(pcovy)[2])),
+                bbox={"facecolor": "red", "alpha": 0.2, "pad": 10},
+            )
             if Plot:
                 plt.show()
         if hasattr(region, "r"):
@@ -4036,7 +4161,12 @@ def DS9center(xpapoint, Plot=True):
                     plt.plot(image[:, int(xo)], "ro", label="Spatial direction")
                     plt.plot(fit[:, int(xo)], color="r")  # ,label='Spatial direction')
                     plt.ylabel("Fitted profiles")
-                    plt.figtext(0.66, 0.55, "Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f" % (np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3] / 2.0), lx / 2 - popt[1], np.sqrt(np.diag(pcov)[1]), ly / 2 - popt[2], np.sqrt(np.diag(pcov)[2])), bbox={"facecolor": "blue", "alpha": 0.2, "pad": 10})
+                    plt.figtext(
+                        0.66,
+                        0.55,
+                        "Sigma = %0.2f +/- %0.2f pix\nXcenter = %0.2f +/- %0.2f\nYcenter = %0.2f +/- %0.2f" % (np.sqrt(popt[3]), np.sqrt(np.diag(pcov)[3] / 2.0), lx / 2 - popt[1], np.sqrt(np.diag(pcov)[1]), ly / 2 - popt[2], np.sqrt(np.diag(pcov)[2])),
+                        bbox={"facecolor": "blue", "alpha": 0.2, "pad": 10},
+                    )
                     plt.legend()
                     plt.show()
             verboseprint("Region = ", region.xc, region.yc, region.r)
@@ -5030,7 +5160,9 @@ def DS9PlotEMCCD(xpapoint, path=None, smearing=1):
     EMCCD_new = lambda x, biais, RN, EmGain, flux: EMCCD(x, biais, RN, EmGain, flux, bright_surf=ydata)  # -2
 
     if smearing:
-        function = lambda x, Bias, RN, EmGain, flux, smearing, SmearExpDecrement, sCIC: np.log10(SimulateFIREBallemCCDHist(x=x, data=im, ConversionGain=0.53, EmGain=EmGain, Bias=Bias, RN=RN, p_pCIC=0, p_sCIC=0, Dark=0, Smearing=smearing, SmearExpDecrement=SmearExpDecrement, exposure=50, n_registers=604, flux=flux, sCIC=sCIC))
+        function = lambda x, Bias, RN, EmGain, flux, smearing, SmearExpDecrement, sCIC: np.log10(
+            SimulateFIREBallemCCDHist(x=x, data=im, ConversionGain=0.53, EmGain=EmGain, Bias=Bias, RN=RN, p_pCIC=0, p_sCIC=0, Dark=0, Smearing=smearing, SmearExpDecrement=SmearExpDecrement, exposure=50, n_registers=604, flux=flux, sCIC=sCIC)
+        )
         lims = [(2e3, 4.5e3), (0, 200), (100, 1500), (0.001, 1.5), (0, 3), (1e4, 9e4), (0, 1)]  # ,(0,1)]
         centers = [np.mean(np.array(lim)) for lim in lims]
     else:
@@ -5153,7 +5285,9 @@ def DS9PlotEMCCD(xpapoint, path=None, smearing=1):
     name = getfilename(d)
     header = fits.getheader(name)
     try:
-        plt.figtext(0.55, 0.5, "Gain: {} \nExp: {} \nTemp: {}\nDate: {}".format(header["EMGAIN"], header["EXPTIME"], header["EMCCDBAC"], header["date"]), bbox={"facecolor": "black", "alpha": 0, "color": "white", "pad": 10})  #    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
+        plt.figtext(
+            0.55, 0.5, "Gain: {} \nExp: {} \nTemp: {}\nDate: {}".format(header["EMGAIN"], header["EXPTIME"], header["EMCCDBAC"], header["date"]), bbox={"facecolor": "black", "alpha": 0, "color": "white", "pad": 10}
+        )  #    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
     except KeyError:
         pass
     plt.draw()
@@ -5255,7 +5389,38 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
 
     files = t1["PATH"]
     path = files[0]
-    fields = ["OverscannRight", "OverscannLeft", "Gtot_var_int_w_OS", "TopImage", "BottomImage", "MeanADUValue", "SaturatedPixels", "MeanFlux", "OS_SMEARING1", "OS_SMEARING2", "stdXY", "stdY", "stdX", "MeanADUValueTR", "MeanADUValueBR", "MeanADUValueBL", "MeanADUValueTL", "Gtot_var_int_wo_OS", "Smearing_coeff_phys", "GainFactorVarIntens", "GainFactorHist", "BrightSpotFlux", "Top2BottomDiff_OSL", "Top2BottomDiff_OSR", "Col2ColDiff", "Line2lineDiff", "Col2ColDiff_OSR", "Line2lineDiff_OSR", "ReadNoise", "emGainHist"]
+    fields = [
+        "OverscannRight",
+        "OverscannLeft",
+        "Gtot_var_int_w_OS",
+        "TopImage",
+        "BottomImage",
+        "MeanADUValue",
+        "SaturatedPixels",
+        "MeanFlux",
+        "OS_SMEARING1",
+        "OS_SMEARING2",
+        "stdXY",
+        "stdY",
+        "stdX",
+        "MeanADUValueTR",
+        "MeanADUValueBR",
+        "MeanADUValueBL",
+        "MeanADUValueTL",
+        "Gtot_var_int_wo_OS",
+        "Smearing_coeff_phys",
+        "GainFactorVarIntens",
+        "GainFactorHist",
+        "BrightSpotFlux",
+        "Top2BottomDiff_OSL",
+        "Top2BottomDiff_OSR",
+        "Col2ColDiff",
+        "Line2lineDiff",
+        "Col2ColDiff_OSR",
+        "Line2lineDiff_OSR",
+        "ReadNoise",
+        "emGainHist",
+    ]
     t = Table(names=fields, dtype=("float," * len(fields)).split(",")[:-1])  # ,dtype=('S10,'*30).split(',')[:-1])
 
     Xinf, Xsup, Yinf, Ysup = 1, -1, 1, -1
@@ -5852,12 +6017,38 @@ class GeneralFit_new(Demo):
         verboseprint(xs)
         amps, centers = ys[:nb_features] - np.median(y), xs[:nb_features]
         for i, amp, center in zip(range(self.nb_gaussians), amps, centers):
-            Models.append(Model(gaussian1D, Parameter(value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude"), Parameter(value=center, bounds=(np.nanmin(xdata_i) - 2 * 2.35 * 2, np.nanmax(xdata_i) + 2 * 2.35 * 2), label="Center"), Parameter(value=np.min([2, np.max(x) / 10]), bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2), label="Sigma"), label="Gaussian%i" % (i)))
+            Models.append(
+                Model(
+                    gaussian1D,
+                    Parameter(value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude"),
+                    Parameter(value=center, bounds=(np.nanmin(xdata_i) - 2 * 2.35 * 2, np.nanmax(xdata_i) + 2 * 2.35 * 2), label="Center"),
+                    Parameter(value=np.min([2, np.max(x) / 10]), bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2), label="Sigma"),
+                    label="Gaussian%i" % (i),
+                )
+            )
         for i, amp, center in zip(range(self.nb_moffats), amps, centers):
-            Models.append(Model(Moffat1D, Parameter(value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude"), Parameter(value=center, bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label="Alpha"), Parameter(value=np.min([2, np.max(x) / 10]), bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2), label="Width"), Parameter(value=center, bounds=(np.nanmin(xdata_i) - 2 * 2.35 * 2, np.nanmax(xdata_i) + 2 * 2.35 * 2), label="Center"), label="Moffat%i" % (i)))
+            Models.append(
+                Model(
+                    Moffat1D,
+                    Parameter(value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude"),
+                    Parameter(value=center, bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label="Alpha"),
+                    Parameter(value=np.min([2, np.max(x) / 10]), bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2), label="Width"),
+                    Parameter(value=center, bounds=(np.nanmin(xdata_i) - 2 * 2.35 * 2, np.nanmax(xdata_i) + 2 * 2.35 * 2), label="Center"),
+                    label="Moffat%i" % (i),
+                )
+            )
 
         for i, amp, center in zip(range(self.nb_voigt1D), amps, centers):
-            Models.append(Model(voigt1D, Parameter(value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude"), Parameter(value=center, bounds=(np.nanmin(xdata_i) - 2 * 2.35 * 2, np.nanmax(xdata_i) + 2 * 2.35 * 2), label="Center"), Parameter(value=np.min([2, np.max(x) / 10]), bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2), label="Sigma"), Parameter(value=np.min([2, np.max(x) / 10]), bounds=(0, np.nanmax(xdata_i)), label="Gamma"), label="Voigt%i" % (i)))
+            Models.append(
+                Model(
+                    voigt1D,
+                    Parameter(value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude"),
+                    Parameter(value=center, bounds=(np.nanmin(xdata_i) - 2 * 2.35 * 2, np.nanmax(xdata_i) + 2 * 2.35 * 2), label="Center"),
+                    Parameter(value=np.min([2, np.max(x) / 10]), bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2), label="Sigma"),
+                    Parameter(value=np.min([2, np.max(x) / 10]), bounds=(0, np.nanmax(xdata_i)), label="Gamma"),
+                    label="Voigt%i" % (i),
+                )
+            )
         for i in zip(range(self.nb_blackbody)):
             Models.append(
                 Model(
@@ -5868,14 +6059,31 @@ class GeneralFit_new(Demo):
                 )
             )
         for i in zip(range(self.nb_sinusoid1D)):
-            Models.append(Model(sinusoid1D, Parameter(value=np.nanmean(y), bounds=(0, 2 * np.nanmax(y)), label="Amplitude"), Parameter(value=1, bounds=(0.01, (np.nanmax(x) - np.nanmin(x)) / 10), label="Frequence"), Parameter(value=0, bounds=(0, (np.nanmax(x) - np.nanmis(x)) / 10), label="Phase"), label="Sinusoid%i" % (i)))
+            Models.append(
+                Model(
+                    sinusoid1D,
+                    Parameter(value=np.nanmean(y), bounds=(0, 2 * np.nanmax(y)), label="Amplitude"),
+                    Parameter(value=1, bounds=(0.01, (np.nanmax(x) - np.nanmin(x)) / 10), label="Frequence"),
+                    Parameter(value=0, bounds=(0, (np.nanmax(x) - np.nanmis(x)) / 10), label="Phase"),
+                    label="Sinusoid%i" % (i),
+                )
+            )
 
         if self.EMCCD:
             n = np.log10(np.sum([10 ** yi for yi in ydata_i]))
             print(n)
             EMCCD_new = lambda x, biais, RN, EmGain, flux: EMCCD(x, biais, RN, EmGain, flux, bright_surf=n)
 
-            Models.append(Model(EMCCD_new, Parameter(value=3350, bounds=(2500, 4000), label="Bias [ADU]"), Parameter(value=107, bounds=(0, 150), label="ReadNoise [$e^-$]"), Parameter(value=600, bounds=(200, 2000), label="EmGain [ADU/$e^-$]"), Parameter(value=0.1, bounds=(0, 10.9), label="Flux [$e^-$]"), label="EMCCD"))  # 50
+            Models.append(
+                Model(
+                    EMCCD_new,
+                    Parameter(value=3350, bounds=(2500, 4000), label="Bias [ADU]"),
+                    Parameter(value=107, bounds=(0, 150), label="ReadNoise [$e^-$]"),
+                    Parameter(value=600, bounds=(200, 2000), label="EmGain [ADU/$e^-$]"),
+                    Parameter(value=0.1, bounds=(0, 10.9), label="Flux [$e^-$]"),
+                    label="EMCCD",
+                )
+            )  # 50
             xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i))
             xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i) * 100)
         else:
@@ -5896,7 +6104,17 @@ class GeneralFit_new(Demo):
             except Exception as e:
                 verboseprint(e)
                 popt = [2e-3, -1.5, -19, 6e-3, -0.5]
-            Models.append(Model(double_schechter, Parameter(value=popt[0], bounds=(1e-5, 1e-2), label=r"$\phi_1$"), Parameter(value=popt[1], bounds=(-5, 0), label=r"$\alpha_1$"), Parameter(value=popt[2], bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label=r"$L^\star$"), Parameter(value=popt[3], bounds=(1e-5, 1e-2), label=r"$\phi_2$"), Parameter(value=popt[4], bounds=(-5, 0), label=r"$\alpha_2$"), label="Double Schechter function"))
+            Models.append(
+                Model(
+                    double_schechter,
+                    Parameter(value=popt[0], bounds=(1e-5, 1e-2), label=r"$\phi_1$"),
+                    Parameter(value=popt[1], bounds=(-5, 0), label=r"$\alpha_1$"),
+                    Parameter(value=popt[2], bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label=r"$L^\star$"),
+                    Parameter(value=popt[3], bounds=(1e-5, 1e-2), label=r"$\phi_2$"),
+                    Parameter(value=popt[4], bounds=(-5, 0), label=r"$\alpha_2$"),
+                    label="Double Schechter function",
+                )
+            )
         if self.exp:
             Models.append(Model(exponential1D, Parameter(value=0, bounds=(0, 1.5 * np.nanmax(ydata_i)), label="amplitude"), Parameter(value=100, bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label="Length"), label="Exponential decay"))
         if self.double_exp:
@@ -5907,7 +6125,16 @@ class GeneralFit_new(Demo):
             except (RuntimeError or TypeError) as e:
                 verboseprint(e)
                 popt = p0
-            Models.append(Model(double_exponential, Parameter(value=popt[0], bounds=(-abs(popt[0]), abs(popt[0])), label="Amplitude tot"), Parameter(value=popt[1], bounds=(0, len(y)), label="Length 1"), Parameter(value=popt[2], bounds=(-abs(popt[0]), abs(popt[0])), label="Amp2/Amp1"), Parameter(value=popt[2], bounds=(0, len(y)), label="Length 2"), label="Double Exponential"))
+            Models.append(
+                Model(
+                    double_exponential,
+                    Parameter(value=popt[0], bounds=(-abs(popt[0]), abs(popt[0])), label="Amplitude tot"),
+                    Parameter(value=popt[1], bounds=(0, len(y)), label="Length 1"),
+                    Parameter(value=popt[2], bounds=(-abs(popt[0]), abs(popt[0])), label="Amp2/Amp1"),
+                    Parameter(value=popt[2], bounds=(0, len(y)), label="Length 2"),
+                    label="Double Exponential",
+                )
+            )
         if self.background == 0:
             ymin_ = 1.1 * np.nanmin(y) if np.nanmin(y) < 0 else 0.9 * np.nanmin(y)
             ymax_ = 1.1 * np.nanmax(y) if np.nanmax(y) > 0 else 0.9 * np.nanmax(y)
@@ -6220,7 +6447,24 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
         double_exp = True
 
     verboseprint("Using general fit new")
-    gui = GeneralFit_new(x, y, nb_gaussians=int(nb_gaussians), nb_moffats=int(nb_moffats), background=int(bckgd), nb_voigt1D=int(nb_voigt1D), nb_sinusoid1D=int(nb_sinusoid), exp=exp, EMCCD_=EMCCD_, nb_blackbody=nb_blackbody, double_exp=double_exp, marker=".", linestyle="dotted", linewidth=1, double_schechter=double_schechter, schechter=schechter)
+    gui = GeneralFit_new(
+        x,
+        y,
+        nb_gaussians=int(nb_gaussians),
+        nb_moffats=int(nb_moffats),
+        background=int(bckgd),
+        nb_voigt1D=int(nb_voigt1D),
+        nb_sinusoid1D=int(nb_sinusoid),
+        exp=exp,
+        EMCCD_=EMCCD_,
+        nb_blackbody=nb_blackbody,
+        double_exp=double_exp,
+        marker=".",
+        linestyle="dotted",
+        linewidth=1,
+        double_schechter=double_schechter,
+        schechter=schechter,
+    )
     # import matplotlib.pyplot as plt
     rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor="None")
 
@@ -7002,7 +7246,54 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         d.set("analysis message {Sextractor do not seem to be installed on your machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}")
         pprint("On mac run on your terminal: >brew install brewsci/science/sextractor")
         pprint("Else, visit: https://github.com/astromatic/sextractor")
-    param_names = ["CATALOG_NAME", "CATALOG_TYPE", "PARAMETERS_NAME", "DETECT_TYPE", "DETECT_MINAREA", "DETECT_MAXAREA", "THRESH_TYPE", "DETECT_THRESH", "ANALYSIS_THRESH", "FILTER", "FILTER_NAME", "DEBLEND_NTHRESH", "DEBLEND_MINCONT", "CLEAN", "CLEAN_PARAM", "MASK_TYPE", "WEIGHT_TYPE", "RESCALE_WEIGHTS", "WEIGHT_IMAGE", "WEIGHT_GAIN", "FLAG_IMAGE", "FLAG_TYPE", "PHOT_APERTURES", "PHOT_AUTOPARAMS", "PHOT_PETROPARAMS", "PHOT_FLUXFRAC", "SATUR_LEVEL", "SATUR_KEY", "MAG_ZEROPOINT", "MAG_GAMMA", "GAIN", "PIXEL_SCALE", "SEEING_FWHM", "STARNNW_NAME", "CHECKIMAGE_TYPE", "BACK_TYPE", "BACK_VALUE", "BACK_SIZE", "BACK_FILTERSIZE", "BACKPHOTO_TYPE", "BACKPHOTO_THICK", "BACK_FILTTHRESH", "MEMORY_OBJSTACK", "MEMORY_PIXSTACK", "MEMORY_BUFSIZE", "NTHREADS"]
+    param_names = [
+        "CATALOG_NAME",
+        "CATALOG_TYPE",
+        "PARAMETERS_NAME",
+        "DETECT_TYPE",
+        "DETECT_MINAREA",
+        "DETECT_MAXAREA",
+        "THRESH_TYPE",
+        "DETECT_THRESH",
+        "ANALYSIS_THRESH",
+        "FILTER",
+        "FILTER_NAME",
+        "DEBLEND_NTHRESH",
+        "DEBLEND_MINCONT",
+        "CLEAN",
+        "CLEAN_PARAM",
+        "MASK_TYPE",
+        "WEIGHT_TYPE",
+        "RESCALE_WEIGHTS",
+        "WEIGHT_IMAGE",
+        "WEIGHT_GAIN",
+        "FLAG_IMAGE",
+        "FLAG_TYPE",
+        "PHOT_APERTURES",
+        "PHOT_AUTOPARAMS",
+        "PHOT_PETROPARAMS",
+        "PHOT_FLUXFRAC",
+        "SATUR_LEVEL",
+        "SATUR_KEY",
+        "MAG_ZEROPOINT",
+        "MAG_GAMMA",
+        "GAIN",
+        "PIXEL_SCALE",
+        "SEEING_FWHM",
+        "STARNNW_NAME",
+        "CHECKIMAGE_TYPE",
+        "BACK_TYPE",
+        "BACK_VALUE",
+        "BACK_SIZE",
+        "BACK_FILTERSIZE",
+        "BACKPHOTO_TYPE",
+        "BACKPHOTO_THICK",
+        "BACK_FILTTHRESH",
+        "MEMORY_OBJSTACK",
+        "MEMORY_PIXSTACK",
+        "MEMORY_BUFSIZE",
+        "NTHREADS",
+    ]
 
     params = np.array(sys.argv[-len(param_names) :], dtype="<U256")  # str)
     verboseprint(params)
@@ -7089,16 +7380,40 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
             verboseprint("Creating regions")
             if yesno(d, """%i sources detected! Do you want to load tthem as a catalog (<10Ksources), if not, it will be loaded as regions.""" % (len(cat3))):
                 try:
-                    d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse  ; catalog symbol Size "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog symbol angle "$THETA_IMAGE" ; mode catalog ' % (param_dict["CATALOG_NAME"]))  # ; catalog symbol condition  "$CLASS_STAR>0.5" ;  catalog symbol 2 color Orange ; catalog symbol width 2 ; catalog symbol width dash ; catalog symbol add;catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green; catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green
+                    d.set(
+                        'catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse  ; catalog symbol Size "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog symbol angle "$THETA_IMAGE" ; mode catalog '
+                        % (param_dict["CATALOG_NAME"])
+                    )  # ; catalog symbol condition  "$CLASS_STAR>0.5" ;  catalog symbol 2 color Orange ; catalog symbol width 2 ; catalog symbol width dash ; catalog symbol add;catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green; catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green
                 except ValueError as e:
                     verboseprint(e)
             else:
                 if (w.is_celestial) & (np.isfinite((cat3["ALPHA_J2000"] + cat3["DELTA_J2000"] + cat3["THETA_WORLD"] + cat3["B_WORLD"] + cat3["A_WORLD"]).data).all()):
                     verboseprint("Using WCS header for regions :", cat_path + ".reg")
-                    create_DS9regions([cat3["ALPHA_J2000"]], [cat3["DELTA_J2000"]], more=[cat3["A_WORLD"] * cat3["KRON_RADIUS"] / 2, cat3["B_WORLD"] * cat3["KRON_RADIUS"] / 2, -cat3["THETA_WORLD"]], form=["ellipse"] * len(cat3), save=True, ID=[np.around(cat3[ID], 1).astype(str)], color=["Yellow"] * len(cat3), savename=cat_path, system="fk5", font=10)  # ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+                    create_DS9regions(
+                        [cat3["ALPHA_J2000"]],
+                        [cat3["DELTA_J2000"]],
+                        more=[cat3["A_WORLD"] * cat3["KRON_RADIUS"] / 2, cat3["B_WORLD"] * cat3["KRON_RADIUS"] / 2, -cat3["THETA_WORLD"]],
+                        form=["ellipse"] * len(cat3),
+                        save=True,
+                        ID=[np.around(cat3[ID], 1).astype(str)],
+                        color=["Yellow"] * len(cat3),
+                        savename=cat_path,
+                        system="fk5",
+                        font=10,
+                    )  # ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
                 else:
                     verboseprint("No header found,using pixel coordinates for regions :", cat_path + ".reg")
-                    create_DS9regions([cat3["X_IMAGE"]], [cat3["Y_IMAGE"]], more=[cat3["A_IMAGE"] * cat3["KRON_RADIUS"] / 2, cat3["B_IMAGE"] * cat3["KRON_RADIUS"] / 2, cat3["THETA_IMAGE"]], form=["ellipse"] * len(cat3), save=True, ID=[np.around(cat3[ID], 1).astype(str)], color=[np.random.choice(colors)] * len(cat3), savename=cat_path, font=10)  # ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
+                    create_DS9regions(
+                        [cat3["X_IMAGE"]],
+                        [cat3["Y_IMAGE"]],
+                        more=[cat3["A_IMAGE"] * cat3["KRON_RADIUS"] / 2, cat3["B_IMAGE"] * cat3["KRON_RADIUS"] / 2, cat3["THETA_IMAGE"]],
+                        form=["ellipse"] * len(cat3),
+                        save=True,
+                        ID=[np.around(cat3[ID], 1).astype(str)],
+                        color=[np.random.choice(colors)] * len(cat3),
+                        savename=cat_path,
+                        font=10,
+                    )  # ,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
                 d.set("regions " + cat_path + ".reg")
     else:
         verboseprint("Can not find the output sextractor catalog...")
@@ -7113,7 +7428,21 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
     # from shutil import which
     d = DS9n(xpapoint)
     filename = getfilename(d)
-    param_names = ["output-catalog-filename", "output-catalog-format", "detect-minarea", "detection-threshold", "partition-threshold-count", "partition-min-contrast", "use-cleaning", "cleaning-minarea", "weight-image", "magnitude-zeropoint", "background-cell-size", "smoothing-box-size", "thread-count"]
+    param_names = [
+        "output-catalog-filename",
+        "output-catalog-format",
+        "detect-minarea",
+        "detection-threshold",
+        "partition-threshold-count",
+        "partition-min-contrast",
+        "use-cleaning",
+        "cleaning-minarea",
+        "weight-image",
+        "magnitude-zeropoint",
+        "background-cell-size",
+        "smoothing-box-size",
+        "thread-count",
+    ]
 
     params = np.array(sys.argv[4:6], dtype="<U256")  # str)
     verboseprint(params)
@@ -7172,7 +7501,32 @@ def DS9SWARP(xpapoint):
     """
     from shutil import which
 
-    param_names = ["IMAGEOUT_NAME", "WEIGHT_TYPE", "RESCALE_WEIGHTS", "WEIGHT_IMAGE", "COMBINE", "COMBINE_TYPE", "CLIP_AMPFRAC", "CLIP_SIGMA", "CELESTIAL_TYPE", "PROJECTION_TYPE", "PROJECTION_ERR", "CENTER_TYPE", "CENTER", "PIXELSCALE_TYPE", "PIXEL_SCALE", "IMAGE_SIZE", "RESAMPLE", "RESAMPLING_TYPE", "OVERSAMPLING", "INTERPOLATE", "SUBTRACT_BACK", "BACK_SIZE", "BACK_FILTERSIZE", "BACK_FILTTHRESH"]
+    param_names = [
+        "IMAGEOUT_NAME",
+        "WEIGHT_TYPE",
+        "RESCALE_WEIGHTS",
+        "WEIGHT_IMAGE",
+        "COMBINE",
+        "COMBINE_TYPE",
+        "CLIP_AMPFRAC",
+        "CLIP_SIGMA",
+        "CELESTIAL_TYPE",
+        "PROJECTION_TYPE",
+        "PROJECTION_ERR",
+        "CENTER_TYPE",
+        "CENTER",
+        "PIXELSCALE_TYPE",
+        "PIXEL_SCALE",
+        "IMAGE_SIZE",
+        "RESAMPLE",
+        "RESAMPLING_TYPE",
+        "OVERSAMPLING",
+        "INTERPOLATE",
+        "SUBTRACT_BACK",
+        "BACK_SIZE",
+        "BACK_FILTERSIZE",
+        "BACK_FILTTHRESH",
+    ]
     params = sys.argv[-len(param_names) :]
 
     param_dict = {}
@@ -7270,7 +7624,38 @@ def DS9PSFEX(xpapoint):
     from astropy.io import fits
 
     params = sys.argv[-31:-1]
-    param_names = ["ENTRY_PATH", "BASIS_TYPE", "BASIS_NUMBER", "PSF_SAMPLING", "PSF_ACCURACY", "PSF_SIZE", "CENTER_KEYS", "PHOTFLUX_KEY", "PHOTFLUXERR_KEY", "PSFVAR_KEYS", "PSFVAR_GROUPS", "PSFVAR_DEGREES", "SAMPLE_AUTOSELECT", "SAMPLEVAR_TYPE", "SAMPLE_FWHMRANGE", "SAMPLE_VARIABILITY", "SAMPLE_MINSN", "SAMPLE_MAXELLIP", "CHECKPLOT_DEV", "CHECKPLOT_TYPE", "CHECKPLOT_NAME", "CHECKIMAGE_TYPE", "CHECKIMAGE_NAME", "PSF_DIR", "HOMOBASIS_TYPE", "HOMOPSF_PARAMS", "VERBOSE_TYPE", "WRITE_XML", "XML_NAME", "NTHREADS"]
+    param_names = [
+        "ENTRY_PATH",
+        "BASIS_TYPE",
+        "BASIS_NUMBER",
+        "PSF_SAMPLING",
+        "PSF_ACCURACY",
+        "PSF_SIZE",
+        "CENTER_KEYS",
+        "PHOTFLUX_KEY",
+        "PHOTFLUXERR_KEY",
+        "PSFVAR_KEYS",
+        "PSFVAR_GROUPS",
+        "PSFVAR_DEGREES",
+        "SAMPLE_AUTOSELECT",
+        "SAMPLEVAR_TYPE",
+        "SAMPLE_FWHMRANGE",
+        "SAMPLE_VARIABILITY",
+        "SAMPLE_MINSN",
+        "SAMPLE_MAXELLIP",
+        "CHECKPLOT_DEV",
+        "CHECKPLOT_TYPE",
+        "CHECKPLOT_NAME",
+        "CHECKIMAGE_TYPE",
+        "CHECKIMAGE_NAME",
+        "PSF_DIR",
+        "HOMOBASIS_TYPE",
+        "HOMOPSF_PARAMS",
+        "VERBOSE_TYPE",
+        "WRITE_XML",
+        "XML_NAME",
+        "NTHREADS",
+    ]
     param_dict = {}
     for key, val in zip(param_names, params):
         param_dict[key] = val
@@ -7600,7 +7985,20 @@ def CosmologyCalculator(xpapoint):
         ps = [p, p10, p11, p12, p20, p21, p21_, p22, p30, p31, p32, p32_]
         a_ = [a10, a10_, a11, a12, a20, a21, a21_, a22, a30, a31, a32, a32_]
         av_ = [a10v, a10v_, a11v, a12v, a20v, a21v, a21v_, a22v, a30v, a31v, a32v, a32v_]
-        im_ = [(cosmo.angular_diameter_distance(redshift) / 1000).value, (cosmo.comoving_distance(redshift) / 1000).value, (cosmo.luminosity_distance(redshift) / 1000).value, (cosmo.critical_density(redshift) / 1e-29).value, (cosmo.comoving_volume(redshift) / 1e9).value, (cosmo.lookback_time(redshift)).value, (cosmo.age(redshift)).value, (cosmo.distmod(redshift)).value, cosmo.efunc(redshift), cosmo.scale_factor(redshift), 1 / (cosmo.arcsec_per_kpc_proper(redshift)).value, 1 / (cosmo.arcsec_per_kpc_comoving(redshift)).value]
+        im_ = [
+            (cosmo.angular_diameter_distance(redshift) / 1000).value,
+            (cosmo.comoving_distance(redshift) / 1000).value,
+            (cosmo.luminosity_distance(redshift) / 1000).value,
+            (cosmo.critical_density(redshift) / 1e-29).value,
+            (cosmo.comoving_volume(redshift) / 1e9).value,
+            (cosmo.lookback_time(redshift)).value,
+            (cosmo.age(redshift)).value,
+            (cosmo.distmod(redshift)).value,
+            cosmo.efunc(redshift),
+            cosmo.scale_factor(redshift),
+            1 / (cosmo.arcsec_per_kpc_proper(redshift)).value,
+            1 / (cosmo.arcsec_per_kpc_comoving(redshift)).value,
+        ]
         legends = ["Angular diameter distance = %s", "Comoving distance = %s", "Luminosity distance = %s", "Critical density = %s", "Comoving volume = %s", "Lookback time = %s", "age = %s", "Dist mod (mu) = %s", "efunc = %s", "Scale factor = %s", "Proper = %s", "Comoving = %s"]
         for i, (a, b, c, legendi, psi) in enumerate(zip(a_, av_, im_, legends, ps)):
             a[0].set_xdata(redshift * np.ones(2))
@@ -9092,9 +9490,42 @@ def main():
             "CreateContourRegions": CreateContourRegions,
         }  # ,'NextButton':NextButton
 
-        DictFunction_AIT = {"centering": DS9center, "radial_profile": DS9rp, "throughfocus": DS9throughfocus, "ComputeFluctuation": ComputeFluctuation, "throughfocus_visualisation": DS9visualisation_throughfocus, "throughslit": DS9throughslit, "ExploreThroughfocus": ExploreThroughfocus, "ReplaceWithNans": ReplaceWithNans, "InterpolateNaNs": DS9InterpolateNaNs, "Trimming": DS9Trimming, "ColumnLineCorrelation": DS9CLcorrelation, "ComputeEmGain": DS9ComputeEmGain, "DS9_2D_FFT": DS9_2D_FFT, "2D_autocorrelation": DS9_2D_autocorrelation, "get_depth_image": get_depth_image, "DS9PlotEMCCD": DS9PlotEMCCD, "AnalyzeFWHMThroughField": AnalyzeFWHMThroughField}
+        DictFunction_AIT = {
+            "centering": DS9center,
+            "radial_profile": DS9rp,
+            "throughfocus": DS9throughfocus,
+            "ComputeFluctuation": ComputeFluctuation,
+            "throughfocus_visualisation": DS9visualisation_throughfocus,
+            "throughslit": DS9throughslit,
+            "ExploreThroughfocus": ExploreThroughfocus,
+            "ReplaceWithNans": ReplaceWithNans,
+            "InterpolateNaNs": DS9InterpolateNaNs,
+            "Trimming": DS9Trimming,
+            "ColumnLineCorrelation": DS9CLcorrelation,
+            "ComputeEmGain": DS9ComputeEmGain,
+            "DS9_2D_FFT": DS9_2D_FFT,
+            "2D_autocorrelation": DS9_2D_autocorrelation,
+            "get_depth_image": get_depth_image,
+            "DS9PlotEMCCD": DS9PlotEMCCD,
+            "AnalyzeFWHMThroughField": AnalyzeFWHMThroughField,
+        }
 
-        DictFunction_SOFT = {"DS9SWARP": DS9SWARP, "DS9PSFEX": DS9PSFEX, "RunSextractor": RunSextractor, "DS9saveColor": DS9saveColor, "AperturePhotometry": AperturePhotometry, "ExtractSources": DS9ExtractSources, "CosmologyCalculator": CosmologyCalculator, "Convertissor": Convertissor, "WCS": DS9guider, "DS9Resample": DS9Resample, "Function": Function, "PlotSpectraFilters": PlotSpectraFilters, "RunSextractorPP": RunSextractorPP, "MaxiMask": MaxiMask}  #'Function_parametric':Function_parametric
+        DictFunction_SOFT = {
+            "DS9SWARP": DS9SWARP,
+            "DS9PSFEX": DS9PSFEX,
+            "RunSextractor": RunSextractor,
+            "DS9saveColor": DS9saveColor,
+            "AperturePhotometry": AperturePhotometry,
+            "ExtractSources": DS9ExtractSources,
+            "CosmologyCalculator": CosmologyCalculator,
+            "Convertissor": Convertissor,
+            "WCS": DS9guider,
+            "DS9Resample": DS9Resample,
+            "Function": Function,
+            "PlotSpectraFilters": PlotSpectraFilters,
+            "RunSextractorPP": RunSextractorPP,
+            "MaxiMask": MaxiMask,
+        }  #'Function_parametric':Function_parametric
 
         DictFunction = {}
         for d in (DictFunction_Generic, DictFunction_AIT, DictFunction_SOFT):  # , DictFunction_Calc, DictFunction_SOFT, DictFunction_FB, DictFunction_Delete): #DictFunction_CLAUDS
