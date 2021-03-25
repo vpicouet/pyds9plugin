@@ -838,8 +838,6 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
                 ax.plot(x, y, fmt,label='Data',c=c)
             else:
                 ax.errorbar(x, y, fmt=fmt,yerr=sigma, label='Data',c=c)
-
-            #ax1.plot(x, np.ones(len(x))*np.nanmean(y[index]) + std, linestyle='dotted',label='Standard deviation')
     xp = np.linspace(x.min(),x.max(), 1000)
     def linear_func(p, x):
        m, c = p
@@ -860,8 +858,6 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         zp = popt(xp)
         zz = popt(x)
         degs = [' %0.2f * x^%i'%(a,i) for i,a in enumerate(popt.coef[::-1])]
-#        name = 'Fit: ' + '+'.join(popt.coef.astype(int).astype(str))
-        #print(res)
         name = 'Fit: ' + '+'.join(degs) +  ', R=%0.2E'%(Decimal(res[0]))
     else:
         from scipy.optimize import curve_fit
@@ -900,8 +896,6 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             plt.show()
             get_ipython().run_line_magic('matplotlib','inline')
             return {'popt': np.zeros(len(P0)), 'pcov':  np.zeros((len(P0),len(P0))), 'res': 0, 'y': y, 'x': x,'curve':[]}
-
-
         try:
             popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds,sigma=sigma)
         except RuntimeError as e:
@@ -922,12 +916,8 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
                         InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f,c*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
                     if len(P0)==4:
                         InteractivManualFitting(x,y,initial = '%s(x,a*%f,b*%f,c*%f,d*%f)'%(law.__name__,*P0,),dict_={law.__name__:law})
-
-
                     get_ipython().run_line_magic('matplotlib','inline')
                     return {'popt': np.zeros(len(P0)), 'pcov':  np.zeros((len(P0),len(P0))), 'res': 0, 'y': y, 'x': x,'curve':[]}
-            #raise(e)
-            #return np.zeros(len(P0))
             else:
                 return {'popt': np.zeros(len(P0)), 'pcov':  np.zeros((len(P0),len(P0))), 'res': 0, 'y': y, 'x': x,'curve':[]}
         res=-99
@@ -975,10 +965,6 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
     else:
         return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma,'y_fit':zz,'function':law}
     return {'popt':popt, 'pcov': pcov, 'res': res, 'y': y, 'x': x,'curve':[],'sigma':sigma,'y_fit':zz,'function':law}
-
-# PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=None,Plot=True,fmt= 'o')
-# PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=sfr_table_clauds_masked['col2'],Plot=True,fmt= 'o')
-# PlotFit1D(sfr_table_clauds_masked['col0'],sfr_table_clauds_masked['col1'],ax=None,deg=SchechterSFR2_14_convolved,P0=[1e-3,6,-1.4], sigma=sfr_table_clauds_masked['col2'],Plot=True,fmt= 'o')
 
 def CreateRegions(regions,savename='/tmp/region.reg', texts='               '):
     """Create DS9 regions files from imported python region from DS9
@@ -1060,7 +1046,6 @@ def BuildingWCS(xpapoint=None,filename=None,pix_coord=None,increment=None,projec
     # have 0-based (Numpy-like) coordinates.
     world = w.wcs_pix2world(pixcrd, 0)
     print(world)
-
     # Convert the same coordinates back to pixel coordinates.
     pixcrd2 = w.wcs_world2pix(world, 0)
     print(pixcrd2)
@@ -1068,7 +1053,6 @@ def BuildingWCS(xpapoint=None,filename=None,pix_coord=None,increment=None,projec
     # These should be the same as the original pixel coordinates, modulo
     # some floating-point error.
     assert np.max(np.abs(pixcrd - pixcrd2)) < 1e-6
-
     # The example below illustrates the use of "origin" to convert between
     # 0- and 1- based coordinates when executing the forward and backward
     # WCS transform.
@@ -1080,7 +1064,6 @@ def BuildingWCS(xpapoint=None,filename=None,pix_coord=None,increment=None,projec
 
     # Now, write out the WCS object as a FITS header
     header = w.to_header()
-
     # header is an astropy.io.fits.Header object.  We can use it to create a new
     # PrimaryHDU and write it to a file.
 #    hdu = fits.PrimaryHDU(header=header)
@@ -1161,17 +1144,6 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
             r, r1 = radius#, radius
         except ValueError:
             r = radius
-#    if len(r)!=len(xim):
-#        r = [r]*len(xim)
-#    elif len(radius):
-#        r , r1 = np.ones(len(xim)) * radius[0], np.ones(len(xim)) * radius[1]#radius
-#
-#    try:
-#        r,r1 = radius
-#    except ValueError:
-#        r = radius
-    #r = radius
-    #print(range(len(xim)))
     for i in range(len(xim)):
         #print(form[i])
         if form[i] == 'box':
@@ -1186,15 +1158,6 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
             #print('Circle')
             rest = '{:.4f})'.format(r[i])#[i]
             rest += ' # color={}'.format(color[i])
-#        elif form[i] == 'bpanda':
-#            #print('Bpanda')
-#            rest = '0,360,4,0.1,0.1,{:.2f},{:.2f},1,0)'.format(r, 2*r)
-#            rest += ' # color={}'.format(color[i])
-#        elif form[i] == 'annulus':
-#            #print('Annulus')
-#            rtab = np.linspace(0, r, 10)
-#            rest = '{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f})'.format(*list(rtab))
-#            rest += ' # color={}'.format(color[i])
         try:
             for j, (x, y) in enumerate(np.nditer([xim[i], yim[i]])):
 
@@ -1229,45 +1192,16 @@ def create_DS9regions_3(xim, yim, r1=None,r2=None, more=None, save=True, savenam
     """%(font,system)
 
     for i in range(len(xim)):
-        #print(form[i])
         if form[i] == 'box':
-            #print('Box')
             rest = '{:.4f},{:.4f})'.format(r1[i], r2[i])#r[i], r1[i]
             rest += ' # color={}'.format(color[i])
         elif form[i] =='circle':
-            #print('circle')
-            #print('Circle')
             rest = '{:.4f})'.format(r1[i])#[i]
             rest += ' # color={}'.format(color[i])
-#        elif form[i] == 'bpanda':
-#            #print('Bpanda')
-#            rest = '0,360,4,0.1,0.1,{:.2f},{:.2f},1,0)'.format(r, 2*r)
-#            rest += ' # color={}'.format(color[i])
-#        elif form[i] == 'annulus':
-#            #print('Annulus')
-#            rtab = np.linspace(0, r, 10)
-#            rest = '{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f})'.format(*list(rtab))
-#            rest += ' # color={}'.format(color[i])
         regions += '{}({:.6f},{:.6f},'.format(form[i], xim[i]+0, yim[i]+0) + rest
         if ID is not None:
             regions += ' text={{{}}}'.format(ID[i])
         regions +=  '\n'
-#        try:
-#            for j, (x, y) in enumerate(np.nditer([xim[i], yim[i]])):
-#
-#                if form[0] == 'ellipse':
-#                    rest = '{:.6f},{:.6f},{:.6f})'.format(more[0][j],more[1][j],more[2][j])
-#                    rest += ' # color={}'.format(color[j])
-#                    #print(color[j])
-#                regions += '{}({:.6f},{:.6f},'.format(form[i], x+0, y+0) + rest
-#                if ID is not None:
-#                    regions += ' text={{{}}}'.format(ID[i][j])
-#                    #print(ID[i][j])
-#                regions +=  '\n'
-#        except ValueError as e:
-#            logger.warning(e)
-#            pass
-
     if save:
         with open(savename+'.reg', "w") as text_file:
             text_file.write(regions)
@@ -1285,7 +1219,6 @@ def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test
         """%(system)
     if system == 'fk5':
         DS9_offset=[0,0]
-    #print ('form = ' + form )
     if form != 'ellipse':
         if (type(radius) == int) or (type(radius) == float) :
             r1, r2 = radius, radius
@@ -1306,24 +1239,15 @@ def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test
             if form == '# text':
                 rest = ') color=%s text={%s}'%(color,text[i])          #regions += """\ncircle({},{},{})""".format(posx, posy, radius)
             regions +="""\n%s(%.5f,%.5f"""%(form,x+DS9_offset[0],y+DS9_offset[1]) + rest
-
-
-
     if form == 'ellipse':
         for i in range(len(more[0])):
             rest = ',%.2f,%.2f,%.2f) # color=%s'%(more[0][i],more[1][i],more[2][i],color)
             regions += """\n%s(%.2f,%.2f"""%(form,xim[i]+1,yim[i]+1) + rest
-#    try:
-#        r = pyregion.parse(regions)
-#    except ValueError or SyntaxError:
-#        return regions
-#    print regions
+
     if save:
         verboseprint('Saving region file',verbose=my_conf.verbose)
         with open(savename+'.reg', "w") as text_file:
             text_file.write("{}".format(regions))
-#        r.write(savename+'.reg')
-#        np.savetxt(savename+'.reg',regions)
         verboseprint(('Region file saved at: ' +  savename + '.reg'))
         return
 
