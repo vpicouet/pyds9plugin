@@ -700,14 +700,10 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
 def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/', config=my_conf):
     """Create a subset of images considering a selection and ordering rules
     """
-
-
     from astropy.table import Table, vstack
     from shutil import copyfile
     d=DS9n(xpapoint)
 
-    #import pandas as pd
-    #cat, query, fields = sys.rgv[-3:]
     cat_path, number, fields, query = sys.argv[-4:]
     if number == 'all':
         number=1000
@@ -725,7 +721,6 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
         cat = Table.read(cat_path )
     except Exception as e:
         cat = Table.read(cat_path,format='csv' )
-
         print(e)
         logger.warning(e)
     cat = DeleteMultiDimCol(cat)
@@ -759,7 +754,6 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
         for value in np.unique(t2[field]):
             t3 = vstack((t3,t2[t2[field]==value][-int(number):]))
     t2=t3
-
     try:
         numbers = t2[list(fields)].as_array()
     except KeyError:
@@ -780,22 +774,8 @@ def DS9createSubset(xpapoint, cat=None, number=2,dpath=DS9_BackUp_path+'subsets/
 
     copyfile(cat_path, os.path.join(path_date,os.path.basename(cat_path)) )
     csvwrite(t2, os.path.join(path_date,'HeaderCatalogSubet.csv') )#[1;31mTypeError[0m[1;31m:[0m Cannot set fill value of string with array of dtype int64
-#    paths = [path_date]
-#    for path in paths:
-#        for i in range(len(fields)):
-#            values = values[i]#np.unique(t2[fields[i]])
-#            paths = create_repositories(path, fields[i], values)
-#
-#        for value in values:
-#            npath = os.path.join(path, field + '_' + value)
-#            os.makedirs(npath)
-#    for path, dirs, files in os.walk(new_path):
-#        print(path)
-#        for f in files:
-#            print(f)
     message(d,'Images are saved as symbolik links there : %s'%(path_date))
     #d.set("""analysis message {Images are saved as symbolik links there : %s}"""%(path_date))
-
     return t2
 
 def create_repositories(path, field, values):
