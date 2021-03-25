@@ -686,32 +686,12 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
     if region is None:
         verboseprint('No region defined, big image, taking the center.')
         image_area = [int(lx/2),int(lx/2)+50,int(ly/2),int(ly/2)+50]
-
-        #image_area = [int(ly/2),int(ly/2)+50,int(lx/2),int(lx/2)+50]
-        #image = parse_data(d.get("data image %i %i %i  %i no"%(int(lx/2),int(lx/2)+50,int(ly/2),int(ly/2)+50)))[-1]
     image = fitsimage[Yinf: Ysup,Xinf: Xsup]
-    # d.set("cmap %s"%(color))
-    # d.set("scale %s"%(scale))
-    # try:
-    #     image_ok = image[np.isfinite(image)]
-    #     d.set("scale limits %0.3f %0.3f "%(np.nanpercentile(image_ok,cuts[0]),np.nanpercentile(image_ok,cuts[1])))
-    # except ValueError:
-    #     pass
     try:
         image_ok = image[np.isfinite(image)]
         d.set("cmap %s ; scale %s ; scale limits %0.3f %0.3f "%(color , scale, np.nanpercentile(image_ok,cuts[0]),np.nanpercentile(image_ok,cuts[1])))
     except ValueError:
         d.set("cmap %s ; scale %s "%(color , scale))
-
-    # if grid=='1':
-    #     d.set("grid yes")
-    # elif grid=='0':
-    #     d.set("grid no")
-    # if invert=='1':
-    #     d.set("cmap invert yes")
-    # elif d.get("cmap invert")=='yes':#invert=='0':
-    #     d.set("cmap invert no")
-    #verboseprint("-%0.2f s-" % (time.time() - st));st=time.time()
     return
 
 
