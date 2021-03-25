@@ -4948,8 +4948,6 @@ def GetColumns(path):
         cols = first_line.split()
     return cols
 
-
-
 def Parallelize(function=lambda x:print(x),action_to_paralize=[],parameters=[], number_of_thread=10):
     """Use multi-processing to run the function on all the entries
     """
@@ -4968,7 +4966,6 @@ def Parallelize(function=lambda x:print(x),action_to_paralize=[],parameters=[], 
             p.start()
         for job in jobs:
             job.join()
-#    return
     if len(action_to_paralize)>0:
         try:
             return return_dict['output']
@@ -5018,11 +5015,6 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
     lims = np.array([0,2])
 
     np_function = {a:getattr(np, a) for a in dir(np)}
-
-    #EMCCD_noise = lambda x,biais,RN: EMCCD(x,biais,RN, EmGain=0,flux=0, bright_surf=ydata)#-2
-
-
-
 
     def SimulateFIREBallemCCDHist(x,data, ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, Dark, Smearing, SmearExpDecrement, exposure,  n_registers,flux, sCIC=0):
         """Silumate EMCCD histogram
@@ -5151,13 +5143,9 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
     sliders=sliders[::-1]
     for slider in sliders:
         slider.on_changed(update)
-
-
     def reset(event):
         for slider in sliders:
             slider.reset()
-
-
     def fit(event):
         from pyds9fb.DS9FB import calc_emccdParameters
         from scipy.optimize import curve_fit
@@ -5174,7 +5162,6 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
         vals.append(popt)
         vals.append(0)
         vals.append(50000)
-
         n=6
         try:
             for slid in sliders[n:]:
@@ -5187,12 +5174,8 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
 
         for slid, vali in zip(sliders,vals):
             slid.widget.set_val(vali)
-
-
     button.on_clicked(fit)
     def onclick(event):
-
-        #print(ax.get_xlim())
         xmin, xmax = ax.get_xlim()
         x = np.linspace(xmin, xmax,n)
         a = dict_values['a']
@@ -5200,23 +5183,17 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
         c = dict_values['c']
         d = dict_values['d']
         dict_values['x'] = x
-        #text = dict_values['function']
         y = EMCCD_new(x,a,b,c,d)#eval(text,np_function,dict_values)
         dict_values['y'] = y
         l.set_xdata(x)
         l.set_ydata(y)
-
         return
-    #cid = fig.canvas.mpl_connect('draw_event', onclick)
     name = getfilename(d)
     header = fits.getheader(name)
-    #print(header)
     try:
         plt.figtext(0.55,0.5,'Gain: {} \nExp: {} \nTemp: {}\nDate: {}'.format(header['EMGAIN'],header['EXPTIME'],header['EMCCDBAC'],header['date']),bbox={'facecolor':'black', 'alpha':0,'color':'white', 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
     except KeyError:
         pass
-
-
     plt.draw()
     ax.legend(loc='upper right',fontsize=15)
     ax.set_title(name)
@@ -5324,63 +5301,22 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
         fitsimage = fits.open(file)
         data = fitsimage[FitsExt(fitsimage)].data
         lx, ly = data.shape
-#        try:
-#            texp = fits.getheader(file)[my_conf.exptime[0]]
-#        except KeyError:
-#            texp = fits.getheader(file)[my_conf.exptime[1]]
         column = np.nanmean(data[Yinf:Ysup,Xinf:Xsup], axis=1)
         line = np.nanmean(data[Yinf:Ysup,Xinf:Xsup], axis=0)
-        #offset = 20
-        #OSR1 = [offset,-offset,offset,400]
-        #OSR2 = [offset,-offset,2200,2400]
-        #OSR = data[OSR2[0]:OSR2[1],OSR2[2]:OSR2[3]]
-        #OSL = data[OSR1[0]:OSR1[1],OSR1[2]:OSR1[3]]
         t[i]['Col2ColDiff'] =  np.nanmedian(line[::2]) - np.nanmedian(line[1::2])#np.nanmedian(abs(line[1:] - line[:-1])) np.nanmedian(a[::2])
-#        t[i]['Col2ColDiff_OSR'] =   np.nanmedian(np.nanmean(OSR,axis=0)[::2]) - np.nanmedian(np.nanmean(OSR,axis=0)[1::2])#np.nanmedian(abs(line[1:] - line[:-1]))
         t[i]['Line2lineDiff'] = np.nanmedian(column[::2]) - np.nanmedian(column[1::2])#np.nanmedian(abs(column[1:] - column[:-1]))
-#        t[i]['Line2lineDiff_OSR'] =np.nanmedian(np.nanmean(OSR,axis=1)[::2]) - np.nanmedian(np.nanmean(OSR,axis=1)[1::2]) #np.nanmedian(abs(column[1:] - column[:-1]))
-#        t[i]['OverscannRight'] = np.nanmean(OSR)
-#        t[i]['OverscannLeft'] = np.nanmean(OSL)
         t[i]['TopImage'] = np.nanmean(column[:20])
         t[i]['BottomImage'] = np.nanmean(column[-20:])
-#        t[i]['Top2BottomDiff_OSL'] = np.nanmean(OSL[:20,:]) - np.nanmean(OSL[-20:,:])
-#        t[i]['Top2BottomDiff_OSR'] = np.nanmean(OSR[:20,:]) - np.nanmean(OSR[-20:,:])
-#        t[i]['MeanFlux'] =  t[i]['MeanADUValue']/texp
-#        t[i]['MeanADUValueTR'] =  np.nanmean((data - ComputeOSlevel1(data))[1000:1950,1600:2100])
-#        t[i]['MeanADUValueBR'] =  np.nanmean((data - ComputeOSlevel1(data))[2:1000,1600:2100])
-#        t[i]['MeanADUValueBL'] =  np.nanmean((data - ComputeOSlevel1(data))[2:1000,1100:1600])
-#        t[i]['MeanADUValueTL'] =  np.nanmean((data - ComputeOSlevel1(data))[1000:1950,1100:1600])
         t[i]['SaturatedPixels'] = 100*float(np.sum(data[Yinf:Ysup,Xinf:Xsup]>2**16-10)) / np.sum(data[Yinf:Ysup,Xinf:Xsup]>0)
         t[i]['stdXY'] = np.nanstd(data[Yinf:Ysup,Xinf:Xsup])
-#        t[i]['BrightSpotFlux'] = (np.nanmean(data[1158-25:1158+25,2071-50:2071+50]) - np.nanmean(data[1158-25+50:1158+25+50,2071-50:2071+50]))/texp
         emgain = ComputeEmGain(file, None,True,False,None,None,[40,40],False,[1053,2133,500,2000])
-
         t[i]['Gtot_var_int_w_OS'],t[i]['Gtot_var_int_wo_OS'] = emgain['EMG_var_int_w_OS'], emgain['EMG_var_int_wo_OS']
-#The 4 are to be added
-#        t[i]['Smearing_coeff_phys'] = SmearingProfileAutocorr(file,None,DS9_BackUp_path,'',False,'x')['Exp_coeff']
-#        t[i]['GainFactorVarIntens'] = 1/Smearing2Noise(t[i]['Smearing_coeff_phys'])['Var_smear']
-#        t[i]['GainFactorHist'] =  1/Smearing2Noise(t[i]['Smearing_coeff_phys'])['Hist_smear']
-#        t[i]['MeanADUValue'] =  np.nanmean((data - ComputeOSlevel1(data))[Yinf:Ysup,Xinf:Xsup])
-#        t[i]['ReadNoise'] = ComputeReadNoise(path=None, fitsimage=fitsimage, Plot=False)['RON']
-#        t[i]['emGainHist'] = ComputeGainHistogram(path=[file], Plot=False)
         try:
             t[i]['stdX'] = np.nanstd(data[int(Yinf + (Ysup - Yinf)/2),Xinf:Xsup])
             t[i]['stdY'] = np.nanstd(data[Yinf:Ysup,int(Xinf + (Xsup - Xinf)/2)])
         except IndexError:
             t[i]['stdX'] = np.nanstd(data[int(lx/2),:])
             t[i]['stdY'] = np.nanstd(data[:,int(ly/2)])
-#        if write_header:
-#            for field in fields:
-#                try:
-#                    verboseprint( t[i][field])
-#                    fits.setval(file, field, value = t[i][field],overwrite=True)
-#                except ValueError as e:
-#                    verboseprint(e)
-#                    fits.setval(file, field, value = '%s'%(t[i][field]),overwrite=True)
-#                except KeyError as e:
-#                    verboseprint(e)
-#                    fits.setval(file, field, value = 'NaN',overwrite=True)
-#
     new_cat = hstack((t1,t),join_type='inner')
     verboseprint(new_cat.colnames)
     #t.remove_columns(['EXTEND','SIMPLE','NAXIS','COMMENT','NAXIS3','SHUTTER','VSS','BITPIX','BSCALE'])
@@ -5398,9 +5334,6 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
             file.write('\nNumber of images with EMGAIN error: %i'%(len(error_cat)))
             file.write('\nPath of the images: '+repr(error_cat))
             file.close()
-#            from tkinter import messagebox
-#            messagebox.showwarning( "Header error","At least one image here is not corresponding to its header")
-            d = DS9n();d.set('analysis message yesno {At least one image here is not corresponding to its header}')
         except:
             pass
     return new_cat
