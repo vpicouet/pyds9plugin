@@ -5334,6 +5334,7 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
             file.write('\nNumber of images with EMGAIN error: %i'%(len(error_cat)))
             file.write('\nPath of the images: '+repr(error_cat))
             file.close()
+            d = DS9n();d.set('analysis message yesno {At least one image here is not corresponding to its header}')
         except:
             pass
     return new_cat
@@ -5344,7 +5345,6 @@ def ReplaceWithNans(xpapoint):
     from numpy import inf, nan
     d = DS9n(xpapoint)#DS9n(xpapoint)
     filename = getfilename(d)#d.get("file")
-
     regions = getregion(d, selected=True)
     if  getregion(d,selected=True) is None:
         d.set("analysis message {It seems that you did not create or select the region. Please make sure to click on the region after creating it and re-run the analysis.}")
@@ -5383,7 +5383,6 @@ def ReplaceWithNans(xpapoint):
                 Yinf = int(np.floor(xc - w/2 -1))
                 Ysup = int(np.ceil(xc + w/2 -1))
                 mask = (x>Xinf) & (x<Xsup+1) & (y>Yinf) & (y<Ysup+1)
-#            image[Xinf:Xsup+1,Yinf:Ysup+2] = np.nan
             image[mask] = value#np.nan
     fitsimage.data = image
     if overwrite:
@@ -5391,7 +5390,6 @@ def ReplaceWithNans(xpapoint):
     else:
         filename = fitswrite(fitsimage,filename+'_modified.fits')
     d.set('file '+ filename)
-    #d.set('pan to %0.3f %0.3f physical' % (xc,yc))
     return
 
 def InterpolateNaNs(path, stddev=1):
@@ -5413,9 +5411,7 @@ def InterpolateNaNs(path, stddev=1):
         kernel = Gaussian2DKernel(x_stddev=stddev,y_stddev=stddev)
         result = interpolate_replace_nans(result, kernel)#.astype('float16')
         stddev += 1
-    #result -= offset
     image.data = result#.astype('uint32')
-    #image.data = result.astype('uint32')
     name = path[:-5] + '_NaNsFree.fits'
     fitswrite(image, name)
     return result, name
@@ -5426,7 +5422,6 @@ def DS9InterpolateNaNs(xpapoint):
     d = DS9n(xpapoint)
     filename = getfilename(d)
     path = globglob(sys.argv[-1])
-
     for filename in path:
         if os.path.isfile(filename) is False:
             filename = filename[:-5] + '.CRv.fits'#os.path.join(os.path.dirname(filename),os.path.basename(fielname))
@@ -5447,8 +5442,6 @@ def DS9ExtractSources(xpapoint):
     fwhm = np.array(fwhm.split(','),dtype=float)
     verboseprint('ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons = ', ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons)
     path = globglob(sys.argv[-1])
-
-
     for filename in path:
         verboseprint(filename)
         sources = ExtractSources(filename, fwhm=fwhm, threshold=threshold, theta=float(theta), ratio=float(ratio), n=int(ErosionDilatation), iters=int(iters), deleteDoublons=int(deleteDoublons))
@@ -5456,8 +5449,6 @@ def DS9ExtractSources(xpapoint):
             create_DS9regions2(sources['xcentroid'],sources['ycentroid'], radius=10, form = 'circle',save=True,color = 'yellow', savename='/tmp/centers')
             d.set('region delete all ; region {}'.format('/tmp/centers.reg'))
     csvwrite(sources, filename[:-5] + '.csv')
-
-
     return
 
 
@@ -5534,9 +5525,7 @@ def getfilename(ds9, config=my_conf, All=False, sort=True):
             try:
                 fits_im = ds9.get_pyfits()[0]
                 filename = backup_path + '/tmp/image.fits'
-                #ds9.set('file ' + filename)
                 fitswrite(fits_im,filename)
-                #fits_im.writeto(filename,overwrite=True)
                 new_filename = filename
             except TypeError:
                 return filename
@@ -5578,9 +5567,6 @@ def DS9FumberFrames(xpapoint):
         number += 1
     return number
 
-
-
-
 def AddHeaderField(xpapoint, field='', value='', comment='-'):
     """Add header fild to the loaded DS9 image
     """
@@ -5614,9 +5600,6 @@ def AddHeaderField(xpapoint, field='', value='', comment='-'):
     return
 
 
-
-
-
 def DS9BackgroundEstimationPhot(xpapoint, n=2, DS9backUp = DS9_BackUp_path, Plot=True):
     """Estimates background in DS9 frame
     """
@@ -5630,21 +5613,14 @@ def DS9BackgroundEstimationPhot(xpapoint, n=2, DS9backUp = DS9_BackUp_path, Plot
     sigma, percentile, snr, npixels, dilate = np.array([sigma, percentile, snr, npixels, dilate], dtype=int)
     box1, box2 = np.array(boxs.split(','), dtype=int)
     path = globglob(sys.argv[-1])
-
     jobs = []
     manager = Manager()
     return_dict = manager.dict()
-
     if len(path)>1:
         Plot=False
 
-
     for filename in path:
-#        fitsfile, name = BackgroundEstimationPhot(filename, n=2, DS9backUp = DS9_BackUp_path,
-#                                                  sigma=float(sigma), bckd=bckd, rms=rms, filters=(filter1, filter2), boxs=(box1, box2),
-#                                                  exclude_percentile=percentile, mask=mask, snr=snr, npixels=npixels, dilate_size=dilate, Plot=Plot)
         parent_conn, child_conn = Pipe()
-        #IPython.embed()
         p = Process(target=RunFunction, args=(BackgroundEstimationPhot,[filename,float(sigma), bckd, rms, (filter1, filter2), (box1, box2), n, DS9_BackUp_path,snr,npixels,dilate,percentile, mask, Plot],return_dict,))
         jobs.append(p)
         p.start()
@@ -5654,7 +5630,6 @@ def DS9BackgroundEstimationPhot(xpapoint, n=2, DS9backUp = DS9_BackUp_path, Plot
     name = return_dict['output']
 
     if len(path)<2:
-        #d.set("lock frame physical")
         d.set('frame new ; tile yes ; file ' + name)
     return name
 
@@ -5673,7 +5648,6 @@ def BackgroundEstimationPhot(filename,  sigma, bckd, rms, filters, boxs,n=2, DS9
                      'MMMBackground':MMMBackground, 'SExtractorBackground':SExtractorBackground, 'BiweightLocationBackground':BiweightLocationBackground}
     functions_rms = {'StdBackgroundRMS':StdBackgroundRMS,'MADStdBackgroundRMS':MADStdBackgroundRMS,'BiweightScaleBackgroundRMS':BiweightScaleBackgroundRMS}
     bkg=[]
-#    if mask:
     masks = [data]
 
     for i, mask_data in enumerate(masks):
@@ -5681,7 +5655,6 @@ def BackgroundEstimationPhot(filename,  sigma, bckd, rms, filters, boxs,n=2, DS9
             mask_source = make_source_mask(mask_data, nsigma=snr, npixels=npixels, dilate_size=dilate_size)
         else:
             mask_source = np.ones(mask_data.shape,dtype=bool)
-        #mean, median, std = sigma_clipped_stats(mask, sigma=sigma, mask=mask_data)#sigma_clip = SigmaClip(sigma=sigma)
         bkg_estimator = functions[bckd]()
         bkgrms_estimator = functions_rms[rms]()
         if len(masks)>1:
@@ -5694,13 +5667,10 @@ def BackgroundEstimationPhot(filename,  sigma, bckd, rms, filters, boxs,n=2, DS9
                                bkgrms_estimator=bkgrms_estimator,mask=mask_source))
         verboseprint('Mask %i, median = %0.2f'%(i,bkg[-1].background_median))
         verboseprint('Mask %i, rms = %0.2f'%(i,bkg[-1].background_rms_median))
-#        fitsfile.data[np.isfinite(mask)] = fitsfile.data[np.isfinite(mask)] - bkg[-1].background[np.isfinite(mask)]#.astype('uint16')
-#        fitsfile.data = fitsfile.data - bkg[-1].background
         if i==0:
             fitsfile.data = fitsfile.data - bkg[-1].background#.astype('uint16')
         else:
             fitsfile.data[np.isfinite(mask)] = fitsfile.data[np.isfinite(mask)] - bkg[-1].background[np.isfinite(mask)]#.astype('uint16')
-#        fitsfile.data = fitsfile.data - bkg[-1].background
         if len(masks)==2:
             masks[-1][np.isfinite(masks[-1])] = fitsfile.data[np.isfinite(masks[-1])]
     if len(masks)==2:
@@ -5730,7 +5700,6 @@ def CreateImageFromCatalogObject(xpapoint, nb = int(1e3), path=''):
     from photutils.datasets import make_100gaussians_image
 
     d = DS9n(xpapoint)
-    #if len(sys.argv)>3:
     path = sys.argv[-1]
     if (os.path.isfile(path)):
         verboseprint('Opening sextractor catalog')
@@ -5772,7 +5741,6 @@ def twoD_Gaussian(xy, amplitude, xo, yo, sigma_x, sigma_y, offset=0):
     x, y = xy
     xo = float(xo)
     yo = float(yo)
-    #A = amplitude/(2*np.pi*sigma_x*sigma_y)    #A to be there?
     g = offset + amplitude * np.exp( - 0.5*(((x-xo)/sigma_x)**2) - 0.5*(((y-yo)/sigma_y)**2))
     return g.ravel()
 
@@ -5858,15 +5826,11 @@ class GeneralFit_new(Demo):
             self.ax.plot(xdata_i, ydata_i, linestyle=linestyle, linewidth=linewidth)
         xinf,xsup = self.ax.get_xlim()
         yinf,ysup = self.ax.get_ylim()
-        # labels
         self.ax.set_ylabel('y', labelpad=15)
-        #self.ax.set_xlabel('x', labelpad=15)
         z = np.polyfit(x, y, deg=1)
         popt = np.poly1d(z)
         a = popt.coef[::-1][0]
         b = popt.coef[::-1][1]
-        #print('a,b = ',a,b)
-        #a += b*(x.min()+x.max())/2
         if self.background==2:
             c, b, a = np.poly1d(np.polyfit(x, y, deg=2))
             fb, fa, fc = 10, 10, 5
@@ -5874,7 +5838,6 @@ class GeneralFit_new(Demo):
                 boundsb=(b/fb-1, fb*b+1)
             else:
                 boundsb=(fb*b-1, b/fb+1)
-            #trouver les limites de a tel que ont puisse juste sortir du cadre avec un b fixe
             if a>0:
                 boundsa=(a/fa, fa*a)
             else:
@@ -5901,13 +5864,6 @@ class GeneralFit_new(Demo):
         if boundsb[1]<boundsb[0]:
             boundsb = boundsb[::-1]
         Models = []
-        #print('Coeefs = ', a,b,c)
-#            Models.append(Model(polynom2deg,
-#                  Parameter(value=a, bounds=boundsa, label='scale'),
-#                  Parameter(value=b, bounds=boundsb, label='slope'),
-#                  Parameter(value=0, bounds=boundsc, label='gradient'),
-#                  label='Background'))
-
         background = np.nanmean(ydata_i[(ydata_i<np.nanmean(ydata_i)+1*np.nanstd(ydata_i)) & (ydata_i>np.nanmean(ydata_i)-1*np.nanstd(ydata_i))])
         amp = np.nanmax(ydata_i) - background
         amp2 = np.nanmin(ydata_i) - background
@@ -5941,11 +5897,7 @@ class GeneralFit_new(Demo):
                   Parameter(value=center,bounds=(np.nanmin(xdata_i) - 2*2.35*2, np.nanmax(xdata_i)+2*2.35*2), label='Center'),
                   Parameter(value=np.min([2,np.max(x)/10]), bounds=(1e-5, (np.nanmax(x)-np.nanmin(x))/2), label='Sigma'),
                   Parameter(value=np.min([2,np.max(x)/10]),bounds=(0, np.nanmax(xdata_i)), label='Gamma'),
-#                  Parameter(value=2, bounds=(1e-5, (np.nanmax(x)-np.nanmin(x))/2), label='width'),
                   label='Voigt%i'%(i)))
-#        if self.nb_blackbody!=0:
-#            self.xdata = self.xdata * units.nanometer
-#            self.ydata = self.ydata #* units.T
         for i in zip(range(self.nb_blackbody)):
             Models.append(Model(blackbody_new,
                   Parameter(value=1e4,bounds=(1e3, 1e5), label='Temperature'),
@@ -5970,10 +5922,7 @@ class GeneralFit_new(Demo):
                   Parameter(value=107, bounds=(0, 150), label='ReadNoise [$e^-$]'),
                   Parameter(value=600, bounds=(200, 2000), label='EmGain [ADU/$e^-$]'),
                   Parameter(value=0.1,bounds=(0, 10.9  ), label='Flux [$e^-$]'),#50
-                  #Parameter(value=np.log10(np.sum([10**yi for yi in ydata_i])),bounds=(1, 9), label='Npix'),#*np.nansum(y)
                   label='EMCCD'))
-            #print()
-            #print(ydata_i)
             xsample = np.linspace(xdata_i.min(),xdata_i.max(),len(xdata_i))
             xsample = np.linspace(xdata_i.min(),xdata_i.max(),len(xdata_i)*100)
         else:
@@ -5986,15 +5935,10 @@ class GeneralFit_new(Demo):
             except Exception:
                 popt = [1e-3,(np.nanmin(xdata_i)+np.nanmax(xdata_i))/2,-1.4]
             Models.append(Model(Schechter,
-                  # Parameter(value=(1e-5+1e-2)/2, bounds=(1e-5,1e-2), label=r'$\phi$'),
-                  # Parameter(value=(np.nanmin(xdata_i)+np.nanmax(xdata_i))/2, bounds=(np.nanmin(xdata_i),np.nanmax(xdata_i)), label=r'$L^\star$'),
-                  # Parameter(value=-1.4,bounds=(-5,0), label=r'$\alpha$'),
                   Parameter(value=popt[0], bounds=(1e-5,1e-2), label=r'$\phi$'),
                   Parameter(value=popt[1], bounds=(np.nanmin(xdata_i),np.nanmax(xdata_i)), label=r'$L^\star$'),
                   Parameter(value=popt[2],bounds=(-5,0), label=r'$\alpha$'),
-
                   label='Schechter function'))
-
         if self.double_schechter:
             double_schechter = lambda x, phi, alpha, M, phi2, alpha2 : np.log10(10**Schechter(x,phi, M, alpha) + 10**Schechter(x,phi2, M, alpha2))#[::-1]
 
@@ -6010,19 +5954,15 @@ class GeneralFit_new(Demo):
                   Parameter(value=popt[2], bounds=(np.nanmin(xdata_i),np.nanmax(xdata_i)), label=r'$L^\star$'),
                   Parameter(value=popt[3], bounds=(1e-5,1e-2), label=r'$\phi_2$'),
                   Parameter(value=popt[4],bounds=(-5,0), label=r'$\alpha_2$'),
-
                   label='Double Schechter function'))
-
         if self.exp:
             Models.append(Model(exponential1D,
                   Parameter(value=0, bounds=(0, 1.5*np.nanmax(ydata_i)), label='amplitude'),
                   Parameter(value=100,bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)), label='Length'),
                   label='Exponential decay'))
-
         if self.double_exp:
             end=10000
             p0=[ydata_i.max()-ydata_i.min(),10,0.5,5]
-
             try:
                 popt, pcov = curve_fit(double_exponential, ydata_i[:end], ydata_i[:end], p0=p0)
             except (RuntimeError or TypeError) as  e:
@@ -6034,14 +5974,12 @@ class GeneralFit_new(Demo):
                   Parameter(value=popt[2],bounds=(-abs(popt[0]), abs(popt[0])), label='Amp2/Amp1'),
                   Parameter(value=popt[2],bounds=(0, len(y)), label='Length 2'),
                   label='Double Exponential'))
-
         if self.background==0:
             ymin_ = 1.1 * np.nanmin(y) if np.nanmin(y)<0 else 0.9 * np.nanmin(y)
             ymax_ = 1.1 * np.nanmax(y) if np.nanmax(y)>0 else 0.9 * np.nanmax(y)
             Models.append(Model(uniform,
                                 Parameter(value=np.nanmedian(y), bounds=(ymin_,ymax_), label='Offset'),
                                 label='Background'))
-
         if self.background==1:
             Models.append(Model(linear1D,
                   Parameter(value=a, bounds=boundsa, label='scale'),
@@ -6061,14 +5999,9 @@ class GeneralFit_new(Demo):
                   #Parameter(value=0, bounds=(-0.05,0.05), label='gradient'),
                   Parameter(value=0, bounds=(-5e-5,5e-5), label='gradient'),
                   label='Background'))
-
-
-
         model = CompositeModel(*Models, label='General fit')
-        #xsample = np.linspace(xdata_i.min(),xdata_i.max(),len(xdata_i)*100)
         curves = []
         for modeli in Models:
-            #a, = self.ax.plot(xsample, modeli(xsample), color='grey', label=None, linestyle='dotted')
             curves.append(a)
 
         model_curve, = self.ax.plot(xsample, model(xsample), color='steelblue', label='model')
@@ -6079,10 +6012,6 @@ class GeneralFit_new(Demo):
         verboseprint([model_curve]+curves)
         gui = AutoGUI(model, [model_curve], bbox=[0.20, 0.07, 0.75, 0.17],#+curves
                       slider_options={'color': 'steelblue'}, data=(xdata_i, ydata_i))#[model_curve]+curves
-#        for modeli in Models:
-#            AutoGUI(modeli, [model_curve], bbox=[0.20, 0.07, 0.75, 0.17],
-#                      slider_options={'color': 'steelblue'}, data=(xdata_i, ydata_i))
-
         verboseprint('model')
         self.model = Models
         verboseprint('gui')
@@ -6213,15 +6142,10 @@ class GeneralFit_Function(Demo):
             xmin, xmax = np.array(rangei.split(','), dtype=float)
             parameters.append(Parameter(value=(xmax+xmin)/2, bounds=(min(xmin,xmax), max(xmin,xmax)), label=names[i]))#'$\Phi$'))
         model = Model(self.function, *parameters, label='Function')
-        #print('salut', xsample, model(xsample))
-
         model_curve, = self.ax.plot(xsample, model(xsample), color='steelblue', label='model')
-        #model_curve, = self.ax.plot(xsample[(model(xdata_i)<ysup) & (model(xdata_i)>yinf)], model(xdata_i)[(model(xdata_i)<ysup) & (model(xdata_i)>yinf)], color='steelblue', label='model')
-
         self.ax.legend(loc='upper right')
         self.ax.set_xlim((xinf,xsup))
         self.ax.set_ylim((yinf,ysup))
-        #print(model_curve)
         try:
             gui = AutoGUI(model, [model_curve], bbox=[0.20, 0.07, 0.75, 0.17],
                           slider_options={'color': 'steelblue'}, data=(xdata_i, ydata_i))
@@ -6261,9 +6185,6 @@ def Schechter(x, Phi = 3.6e-3, M=19.8,alpha=-1.6):#P=[3.6e-3,-1.4,-19.8]):
     """ Schecter function for luminosity type function
     """
     import numpy as np
-    #Phi,alpha,M = P
-    #M, x = x, M
-    #return 0.4 * np.log(10) * Phi * 10 ** (0.4*(x-M)*(alpha+1)) * np.exp(-10 ** (0.4*(x-M))) #np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls))
     y = np.log10(0.4 * np.log(10) * Phi * 10 ** (0.4*(M-x)*(alpha+1)) *(np.e**(-pow(10,0.4*(M-x)))))
     return  y[::-1]#np.log10(ps*(10**(x-ls))**(a)*np.exp(-10**(x-ls))*np.log(10)*10**(x-ls)))
 
