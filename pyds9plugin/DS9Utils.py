@@ -797,8 +797,8 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
                 ax.errorbar(x, y, fmt=fmt,yerr=sigma, label='Data',c=c)
     xp = np.linspace(x.min(),x.max(), 1000)
     def linear_func(p, x):
-       m, c = p
-       return m*x + c
+        m, c = p
+        return m*x + c
     if type(deg)==int:
         z, res, rank, singular, rcond = np.polyfit(x, y, deg, full=True)
         pcov = None
@@ -1563,12 +1563,12 @@ def process_region(regions, win,quick=False, config=my_conf, message=True,dtype=
                 if len(coords) == 5:
                     ellipse = namedtuple('Ellipse',
                                          'data databox inside xc yc a b angle')
-                    return ellipse(arr[inside], arr, inside, xc, yc, a2, b2, angle)
+                    return ellipse(arr, arr, inside, xc, yc, a2, b2, angle)
 
                 inside &= ((X - Xc)/a1)**2 + ((Y - Yc)/b1)**2 >= 1
                 annulus = namedtuple('EllipticalAnnulus',
                                      'data databox inside xc yc a1 b1 a2 b2 angle')
-                processed_regions.append(annulus(arr[inside], arr, inside, xc, yc, a1, b1, a2, b2, angle))
+                processed_regions.append(annulus(arr, arr, inside, xc, yc, a1, b1, a2, b2, angle))
             else:
                 raise ValueError("Can't process region %s" % name)
     if len(processed_regions) == 1:
@@ -1597,11 +1597,11 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf,selected=
 
         #else:
         elif selected is False:
-                verboseprint('no region selected')
-                try:
-                    rows = win.get("regions all")
-                except TypeError:
-                    win.set('analysis message {It seems that you did not create a region. Please create a region and rerun the analysis}');sys.exit()
+            verboseprint('no region selected')
+            try:
+                rows = win.get("regions all")
+            except TypeError:
+                win.set('analysis message {It seems that you did not create a region. Please create a region and rerun the analysis}');sys.exit()
 
         else:
             return None
@@ -2055,33 +2055,32 @@ def throughfocusWCS(center, files,x=None,
 
 
 def AnalyzeSpot(data, center, size=40, n=1.5,radius=40, fit=True, center_type='barycentre', radius_ext=12, platescale=None,fibersize = 100,SigmaMax=4):
-  """Function used to plot the radial profile and the encircled energy of a spot,
-  Latex is not necessary
-  """
-  from scipy import interpolate
-
-  from scipy.optimize import curve_fit
-  rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, radius=radius, n=n, center_type=center_type)
-  profile = profile[:size]#(a[:n] - min(a[:n]) ) / np.nansum((a[:n] - min(a[:n]) ))
-  fiber = fibersize / (2*1.08*(1/0.083))
-  if fiber == 0:
-      gaus = lambda x, a, sigma: a**2 * np.exp(-np.square(x / sigma) / 2)
-      popt, pcov = curve_fit(gaus, rmean[:size], profile, p0=[1, 2])#,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):
-  else:
-      popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[1,fiber,2, np.nanmean(profile)],bounds=([0,0.95*fiber-1e-5,1,-1],[2,1.05*fiber+1e-5,SigmaMax,1]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):
-  EE_interp = interpolate.interp1d(rsurf[:size], EE[:size],kind='cubic')
-  ninterp = 10
-  xnew = np.linspace(rsurf[:size].min(),rsurf[:size].max(),ninterp*len(rsurf[:size]))
-  mina = min(xnew[EE_interp(xnew)[:ninterp*size]>79])
-  minb = min(xnew[EE_interp(xnew)[:ninterp*size]>49])
-  if fiber == 0:
-      flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
-      d = {"Flux":flux,"SizeSource":0,"Sigma":abs(popt[1]),"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
-      verboseprint("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
-  else:
-      d = {"Flux":0,"SizeSource":popt[1],"Sigma":abs(popt[2]),"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
-      verboseprint("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
-  return d
+    """Function used to plot the radial profile and the encircled energy of a spot,
+    Latex is not necessary
+    """
+    from scipy import interpolate
+    from scipy.optimize import curve_fit
+    rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, radius=radius, n=n, center_type=center_type)
+    profile = profile[:size]#(a[:n] - min(a[:n]) ) / np.nansum((a[:n] - min(a[:n]) ))
+    fiber = fibersize / (2*1.08*(1/0.083))
+    if fiber == 0:
+        gaus = lambda x, a, sigma: a**2 * np.exp(-np.square(x / sigma) / 2)
+        popt, pcov = curve_fit(gaus, rmean[:size], profile, p0=[1, 2])#,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):
+    else:
+        popt, pcov = curve_fit(ConvolveDiskGaus2D, rmean[:size], profile, p0=[1,fiber,2, np.nanmean(profile)],bounds=([0,0.95*fiber-1e-5,1,-1],[2,1.05*fiber+1e-5,SigmaMax,1]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):
+    EE_interp = interpolate.interp1d(rsurf[:size], EE[:size],kind='cubic')
+    ninterp = 10
+    xnew = np.linspace(rsurf[:size].min(),rsurf[:size].max(),ninterp*len(rsurf[:size]))
+    mina = min(xnew[EE_interp(xnew)[:ninterp*size]>79])
+    minb = min(xnew[EE_interp(xnew)[:ninterp*size]>49])
+    if fiber == 0:
+        flux = 2*np.pi*np.square(popt[1])*np.square(popt[0])
+        d = {"Flux":flux,"SizeSource":0,"Sigma":abs(popt[1]),"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+        verboseprint("Flux = {}\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(flux,0,popt[1],minb,mina,platescale,NewCenter))
+    else:
+        d = {"Flux":0,"SizeSource":popt[1],"Sigma":abs(popt[2]),"EE50":mina,"EE80":minb,"Platescale":platescale,"Center":NewCenter}
+        verboseprint("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1],popt[2],minb,mina,platescale,NewCenter))
+    return d
 
 def DS9throughfocus(xpapoint, Plot=True):
     """How to use: Open an image of the through focus which is close to the focus.  Click on region. Then click
@@ -2721,7 +2720,7 @@ def AnalyzeFWHMThroughField(xpapoint):
     fluxes = []
     image= images[0].shape[0] * (images[0] - np.nanmin(images[0]) )/ images[0].ptp()   #image.shape[0]/(image.max() - image.min())
     while np.isfinite(image).all() == False:
-        kernel = Gaussian2DKernel(stddev=2)
+        kernel = Gaussian2DKernel(x_stddev=2,y_stddev=2)
         image = interpolate_replace_nans(image, kernel)#.astype('float16')
         verboseprint(np.isfinite(image).all())
 
@@ -5205,8 +5204,8 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
         t[i]['BottomImage'] = np.nanmean(column[-20:])
         t[i]['SaturatedPixels'] = 100*float(np.sum(data[Yinf:Ysup,Xinf:Xsup]>2**16-10)) / np.sum(data[Yinf:Ysup,Xinf:Xsup]>0)
         t[i]['stdXY'] = np.nanstd(data[Yinf:Ysup,Xinf:Xsup])
-        emgain = ComputeEmGain(file, None,True,False,None,None,[40,40],False,[1053,2133,500,2000])
-        t[i]['Gtot_var_int_w_OS'],t[i]['Gtot_var_int_wo_OS'] = emgain['EMG_var_int_w_OS'], emgain['EMG_var_int_wo_OS']
+        # emgain = ComputeEmGain(file, None,True,False,None,None,[40,40],False,[1053,2133,500,2000])
+        # t[i]['Gtot_var_int_w_OS'],t[i]['Gtot_var_int_wo_OS'] = emgain['EMG_var_int_w_OS'], emgain['EMG_var_int_wo_OS']
         try:
             t[i]['stdX'] = np.nanstd(data[int(Yinf + (Ysup - Yinf)/2),Xinf:Xsup])
             t[i]['stdY'] = np.nanstd(data[Yinf:Ysup,int(Xinf + (Xsup - Xinf)/2)])
@@ -5378,7 +5377,7 @@ def ExtractSources(filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, sigma=3
     sizes = [sys.getsizeof(elem.data) for elem in fitsfile]#[1]
     data = fitsfile[np.argmax(sizes)].data
     data2 = ndimage.grey_dilation(ndimage.grey_erosion(data, size=(n,n)), size=(n,n))
-    mean, median, std = sigma_clipped_stats(data2, sigma=sigma, iters=iters)
+    mean, median, std = sigma_clipped_stats(data2, sigma=sigma, maxiters=iters)
     daofind = DAOStarFinder(fwhm=fwhm[0], threshold=threshold[0]*std,ratio = ratio, theta = theta)
     sources0 = daofind(data2 - median)
     verboseprint('fwhm = {}, T = {}, len = {}'.format(fwhm[0],threshold[0],len(sources0)))
@@ -8519,7 +8518,7 @@ def Button(xpapoint):
     window.show()
     sys.exit(app.exec_())
 
-def MaxiMask(xpapoint,path=None):
+def MaxiMask(xpapoint):#,path=None
     """ Runs MaxiMask processing tool on image
     """
     from astropy.io import fits
@@ -8775,7 +8774,7 @@ def ReadBigAsciiTable(path, tmpFOlder='/tmp',n=10):
 
 
 
-def createRegContour(path,n=50,limit=100):
+def createRegContour(path,n=50):
     """ Create contour on some ds9 image
     """
     n=20;#limit=100
