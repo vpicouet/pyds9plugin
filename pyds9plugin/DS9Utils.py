@@ -1634,7 +1634,6 @@ def process_region(regions, win,quick=False, config=my_conf, message=True,dtype=
 
 
 @fn_timer
-#@profile
 def getregion(win, debug=False, all=False, quick=False, config=my_conf,selected=False, message=True, system='Image',dtype=int):
     """ Read a region from a ds9 instance.
     Returns a tuple with the data in the region.
@@ -1769,17 +1768,11 @@ def throughfocus(center, files,datas=None, x=None,
         sumpix.append(d['Flux'])
         varpix.append(subimage.var())
     f = lambda x,a,b,c: a * (x-b)**2 + c#a * np.square(x) + b * x + c
-
-    # fig, axes = plt.subplots(2, 2,figsize=(10,6),sharex=True)#, figsize=(10,6)
     xtot = np.linspace(x.min(),x.max(),200)
-
     try:
         opt1,cov1 = curve_fit(f,x,fwhm)
-        # axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted',color = color)
         bestx1 = xtot[np.argmin(f(xtot,*opt1))]
-        # axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)],color = color,label='Square fit argmin: %0.2f'%(bestx1))
         np.savetxt('/tmp/fwhm_fit.dat',np.array([xtot,f(xtot,*opt1)]).T)
-
     except RuntimeError as e:
         logger.warning(e)
         opt1 = [np.nan,np.nan,np.nan]#[0,0,0]
@@ -1787,9 +1780,7 @@ def throughfocus(center, files,datas=None, x=None,
         pass
     try:
         opt2,cov2 = curve_fit(f,x,EE50)
-        # axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted',color = color)
         bestx2 = xtot[np.argmin(f(xtot,*opt2))]
-        # axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)],color = color,label='Square fit argmin: %0.2f'%(bestx2))
         np.savetxt('/tmp/EE50_fit.dat',np.array([xtot,f(xtot,*opt2)]).T)
     except RuntimeError as e:
         logger.warning(e)
@@ -1798,9 +1789,7 @@ def throughfocus(center, files,datas=None, x=None,
         pass
     try:
         opt3,cov3 = curve_fit(f,x,EE80)
-        # axes[1,1].plot(xtot,f(xtot,*opt3),linestyle='dotted',color = color)
         bestx3 = xtot[np.argmin(f(xtot,*opt3))]
-        # axes[1,1].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)],color = color,label='Square fit argmin: %0.2f'%(bestx3))
         np.savetxt('/tmp/EE80_fit.dat',np.array([xtot,f(xtot,*opt3)]).T)
     except RuntimeError as e:
         logger.warning(e)
@@ -1810,9 +1799,7 @@ def throughfocus(center, files,datas=None, x=None,
     try:
         maxpix /= np.nanmax(maxpix)
         opt4,cov4 = curve_fit(f,x,maxpix)
-        # axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted',color = color)
         bestx4 = xtot[np.argmax(f(xtot,*opt4))]
-        # axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)],color = color,label='Square fit argmin: %0.2f'%(bestx4))
         np.savetxt('/tmp/maxpix_fit.dat',np.array([xtot,f(xtot,*opt4)]).T)
     except RuntimeError as e:
         logger.warning(e)
@@ -1821,18 +1808,6 @@ def throughfocus(center, files,datas=None, x=None,
         pass
 
     bestx6, bestx6 = np.nan, np.nan
-    # import matplotlib.ticker as mtick
-    # axes[1,1].yaxis.set_label_position("right")
-    # axes[0,1].yaxis.set_label_position("right")
-    # axes[1,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
-    # axes[0,1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0e'))
-    # axes[1,1].yaxis.tick_right()
-    # axes[0,1].yaxis.tick_right()
-    # fig.tight_layout()
-
-    # name = '{} - {} - {}'.format(os.path.basename(filename),[int(center[0]),int(center[1])],fitsfile.header['DATE'])
-    # fig.suptitle(name, y=1)
-    # fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
     t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
     t.add_row((os.path.basename(filename),1,
                t2s(h=h,m=m,s=s,d=day), d['Center'][0],d['Center'][1],min(fwhm),
@@ -1846,34 +1821,6 @@ def throughfocus(center, files,datas=None, x=None,
     np.savetxt('/tmp/EE50.dat',np.array([x, EE50]).T)
     np.savetxt('/tmp/EE80.dat',np.array([x, EE80]).T)
     np.savetxt('/tmp/maxpix.dat',np.array([x, maxpix]).T)
-    #if Plot:
-        # axes[0,0].plot(x,fwhm, '--o',label=r'$\sigma$[pix]'+', min=%0.1f'%(min(f(xtot,*opt1))),color = color, linewidth=0.5)
-        # axes[0,0].legend()
-        # axes[1,0].plot(x,EE50, '--o',label=r'$EE_{50\%}[pix]$'+', min=%0.1f'%(min(f(xtot,*opt2))),color = color, linewidth=0.5)
-        # axes[1,0].legend()
-        # axes[1,1].plot(x,EE80, '--o',label=r'$EE_{50\%}[pix]$'+', min=%0.1f'%(min(f(xtot,*opt3))),color = color, linewidth=0.5)
-        # axes[1,1].legend()
-
-        # axes[0,1].plot(x,maxpix, '-o',label=r'$Max_{pix}$'+', max=%0.1f'%(max(f(xtot,*opt4))),color = color, linewidth=0.5)
-        # axes[0,1].legend()
-        # fig.text(0.5, 0.01,'Index of the images [first=0]', ha='center',fontsize=12)
-        # plt.show()
-
-
-
-        # fig, axes = plt.subplots(1, 11,sharey=True)#,figsize=(24,3))
-        # for i in range(len(images)):
-        #     axes[i].imshow(images[i])
-        #     axes[i].axis('equal')
-        #     try:
-        #         axes[i].set_xlabel('%s - %0.2f'%(os.path.basename(files[i].split('.')[0]),float(ENCa[i])))
-        #     except:
-        #         axes[i].set_xlabel(os.path.basename(files[i].split('.')[0]))
-        #         pass
-
-        # fig.suptitle(name,y=1)
-        # fig.tight_layout()
-        # fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center[0]) ,int(center[1]), fitsfile.header['DATE']))
     try:
         OldTable = Table.read(os.path.dirname(filename) + '/Throughfocus.csv')
     except IOError as e:
@@ -1887,7 +1834,6 @@ def throughfocus(center, files,datas=None, x=None,
 
     d = []
     d.append('plot line open')
-    #d.append("plot axis x grid no ")
     d.append("plot axis y grid no ")
     d.append("plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt1)),xtot[np.argmin(f(xtot,*opt1))]))
     d.append("plot title y 'FWHM' ")
@@ -1895,14 +1841,11 @@ def throughfocus(center, files,datas=None, x=None,
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
     d.append("plot line shape color black")
-    #d.append("plot legend yes ")
     d.append("plot legend position right ")
     d.append("plot load /tmp/fwhm_fit.dat xy")
     d.append("plot line dash yes ")
     d.append("plot title legend ''")
     d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
-
-
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append("plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "%(np.nanmax(f(xtot,*opt4)),xtot[np.argmax(f(xtot,*opt4))]))
@@ -1911,29 +1854,24 @@ def throughfocus(center, files,datas=None, x=None,
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
     d.append("plot line shape color black")
-    #d.append("plot legend yes ")
     d.append("plot legend position right ")
     d.append("plot load /tmp/maxpix_fit.dat xy")
     d.append("plot line dash yes ")
     d.append("plot title legend ''")
     d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
-
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append("plot title 'Fit: Best EE50 = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt2)),xtot[np.argmin(f(xtot,*opt2))]))
-
     d.append("plot load /tmp/EE50.dat xy")
     d.append("plot title y 'Radial profile' ")
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
     d.append("plot line shape color black")
-    #d.append("plot legend yes ")
     d.append("plot legend position right ")
     d.append("plot load /tmp/EE50_fit.dat xy")
     d.append("plot line dash yes ")
     d.append("plot title legend ''")
     d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
-
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append("plot title 'Fit: Best EE80 = %0.2f - Position = %0.2f' "%(np.nanmin(f(xtot,*opt3)),xtot[np.argmin(f(xtot,*opt3))]))
@@ -1942,17 +1880,14 @@ def throughfocus(center, files,datas=None, x=None,
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
     d.append("plot line shape color black")
-    #d.append("plot legend yes ")
     d.append("plot legend position right ")
     d.append("plot load /tmp/EE80_fit.dat xy")
     d.append("plot line dash yes ")
     d.append("plot title legend ''")
     d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' "%(1,1))
-
     d.append("plot layout GRID ; plot layout STRIP scale 100")
     d.append("plot font legend size 9 ")
     d.append("plot font labels size 13 ")
-
     ds9=DS9()
     ds9.set(' ; '.join(d))
 
@@ -2000,8 +1935,6 @@ def throughfocusWCS(center, files,x=None,
             if ENCa_center is not None:
                 verboseprint('Actuator given: Center = {} , PAS = {}'.format(ENCa_center,pas))
                 ENCa = np.linspace(ENCa_center-nombre*pas, ENCa_center+nombre*pas, 2*nombre+1)[::-1]
-#            else:
-#                ENCa = np.linspace(100,100, 2*nombre+1)[::-1]
         day,h, m, s = float(time[-11:-9]),float(time[-8:-6]), float(time[-5:-3]), float(time[-2:])
         sec.append(t2s(h=h,m=m,s=s,d=day))
         if WCS:
@@ -2016,9 +1949,6 @@ def throughfocusWCS(center, files,x=None,
             center_pix = center
         d = AnalyzeSpot(image,center=center_pix,fibersize=fibersize,
                         center_type=center_type, SigmaMax = SigmaMax)
-#        else:
-#            d = AnalyzeSpot(image,center=center,fibersize=fibersize,
-#                            center_type=center_type, SigmaMax = SigmaMax)
         background = 1*estimateBackground(image,center)
         n = 25
         subimage = (image-background)[int(center_pix[1]) - n:int(center_pix[1]) + n, int(center_pix[0]) - n:int(center_pix[0]) + n]
@@ -2046,22 +1976,11 @@ def throughfocusWCS(center, files,x=None,
             ENC = lambda x,a : 0
         else :
             ENC = lambda x,a : (ENCa[-1]-ENCa[0])/(len(ENCa)-1) * x + ENCa[0]
-
-
-    #x = np.array(ENCa)
-    # fig, axes = plt.subplots(4, 2,sharex=True)#,figsize=(24,3)
-
     try:
         opt1,cov1 = curve_fit(f,x,fwhm)
         # axes[0,0].plot(xtot,f(xtot,*opt1),linestyle='dotted')
         bestx1 = xtot[np.argmin(f(xtot,*opt1))]
         np.savetxt('/tmp/fwhm_fit.dat',np.array([xtot,f(xtot,*opt1)]).T)
-#        axes[0,0].plot(np.ones(2)*bestx1,[min(fwhm),max(fwhm)])
-#        if len(ENCa) > 0:
-#            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx1,ENC(bestx1,ENCa)))
-#        else:
-#            axes[0,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx1))
-
     except RuntimeError as e:
         logger.warning(e)
         opt1 = [np.nan,np.nan,np.nan]#[0,0,0]
@@ -2069,13 +1988,7 @@ def throughfocusWCS(center, files,x=None,
         pass
     try:
         opt2,cov2 = curve_fit(f,x,EE50)
-#        axes[1,0].plot(xtot,f(xtot,*opt2),linestyle='dotted')
         bestx2 = xtot[np.argmin(f(xtot,*opt2))]
-        # if len(ENCa) > 0:
-        #     axes[1,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx2,ENC(bestx2,ENCa)))
-        # else:
-        #     axes[1,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx2))
-        # axes[1,0].plot(np.ones(2)*bestx2,[min(EE50),max(EE50)])
         np.savetxt('/tmp/EE50_fit.dat',np.array([xtot,f(xtot,*opt2)]).T)
     except RuntimeError:
         opt2 = [np.nan,np.nan,np.nan]#[0,0,0]
@@ -2083,93 +1996,39 @@ def throughfocusWCS(center, files,x=None,
         pass
     try:
         opt3,cov3 = curve_fit(f,x,EE80)
-#        axes[2,0].plot(xtot,f(xtot,*opt3),linestyle='dotted')
         bestx3 = xtot[np.argmin(f(xtot,*opt3))]
         np.savetxt('/tmp/EE80_fit.dat',np.array([xtot,f(xtot,*opt3)]).T)
-        # if len(ENCa) > 0:
-        #     axes[2,0].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx3,ENC(bestx3,ENCa)))
-        # else:
-        #     axes[2,0].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx3))
-        # axes[2,0].plot(np.ones(2)*bestx3,[min(EE80),max(EE80)])
     except RuntimeError:
         opt3 = [np.nan,np.nan,np.nan]#[0,0,0]
         bestx3 = np.nan
         pass
     try:
         opt4,cov4 = curve_fit(f,x,maxpix)
-#        axes[0,1].plot(xtot,f(xtot,*opt4),linestyle='dotted')
         bestx4 = xtot[np.argmax(f(xtot,*opt4))]
         np.savetxt('/tmp/maxpix_fit.dat',np.array([xtot,f(xtot,*opt4)]).T)
-
- #       axes[0,1].plot(np.ones(2)*bestx4,[min(maxpix),max(maxpix)])
-    #     if len(ENCa) > 0:
-    #         axes[0,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx4,ENC(bestx4,ENCa)))
-    #     else:
-    #         axes[0,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx4))
     except RuntimeError:
-        #opt4 = [0,0,0]
         bestx4 = np.nan
         opt4 = [np.nan,np.nan,np.nan]#[0,0,0]
 
         pass
     try:
         opt5,cov5 = curve_fit(f,x,sumpix)
-#        axes[1,1].plot(xtot,f(xtot,*opt5),linestyle='dotted')
         bestx5 = xtot[np.argmax(f(xtot,*opt5))]
-        # if len(ENCa) > 0:
-        #     axes[1,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx5,ENC(bestx5,ENCa)))
-        # else:
-        #     axes[1,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx5))
-        # axes[1,1].plot(np.ones(2)*bestx5,[min(sumpix),max(sumpix)])
     except RuntimeError:
         opt5 = [0,0,0]
         bestx5 = np.nan
         pass
     try:
         opt6,cov6 = curve_fit(f,x,varpix)
-#        axes[2,1].plot(xtot,f(xtot,*opt6),linestyle='dotted')
         bestx6 = xtot[np.argmax(f(xtot,*opt6))]
-        # if len(ENCa) > 0:
-        #     axes[2,1].set_xlabel('Best index = %0.2f, Actuator = %0.2f' % (bestx6,ENC(bestx6,ENCa)))
-        # else:
-        #     axes[2,1].set_xlabel('Best index = %0.2f, Actuator = ?' % (bestx6))
-        # axes[2,1].plot(np.ones(2)*bestx6,[min(varpix),max(varpix)])
     except RuntimeError:
         opt6 = [0,0,0]
         bestx6 = np.nan
         pass
-    # axes[0,0].plot(x,fwhm, '-o')
-    # axes[0,0].set_ylabel('Sigma')
-
-    # axes[1,0].plot(x,EE50, '-o')
-    # axes[1,0].set_ylabel('EE50')
-
-    # axes[2,0].plot(x,EE80, '-o')
-    # axes[2,0].set_ylabel('EE80')
-
-    # axes[3,0].plot(x,xo, '-o')
-    # axes[3,0].set_ylabel('y center')
-
-    # axes[0,1].plot(x,maxpix, '-o')
-    # axes[0,1].set_ylabel('Max pix')
-
-    # axes[1,1].plot(x,sumpix, '-o')
-    # axes[1,1].set_ylabel('Flux')
-
-    # axes[2,1].plot(x,varpix, '-o')
-    # axes[2,1].set_ylabel('Var pix (d=50)')
-    # axes[3,1].plot(x,yo - np.array(yo).mean(), '-o')
-    # axes[3,1].plot(x,xo - np.array(xo).mean(), '-o')
-    # axes[3,1].set_ylabel('y center')
-
     mean = np.nanmean(np.array([ENC(bestx1,ENCa),ENC(bestx2,ENCa),
                ENC(bestx3,ENCa),ENC(bestx4,ENCa),
                ENC(bestx6,ENCa)]))
     name = '%s - %i - %i - %s - %0.3f'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
-
-#    fig.suptitle(name, y=0.99)
-#    fig.tight_layout()
-
     t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
     t.add_row((os.path.basename(filename),os.path.basename(filename)[5:11],
                t2s(h=h,m=m,s=s,d=day), d['Center'][0],d['Center'][1],min(fwhm),
@@ -2181,28 +2040,6 @@ def throughfocusWCS(center, files,x=None,
     np.savetxt('/tmp/EE50.dat',np.array([x, EE50]).T)
     np.savetxt('/tmp/EE80.dat',np.array([x, EE80]).T)
     np.savetxt('/tmp/maxpix.dat',np.array([x, maxpix]).T)
-    #name = '%s - %i - %i'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
-    # fig.savefig(os.path.dirname(filename) + '/Throughfocus-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
-    # if Plot:
-    #     plt.show()
-    #     fig, axes = plt.subplots(1, 11,figsize=(24,3),sharey=True)
-    #     for i in range(len(images)):
-    #         axes[i].imshow(images[i])
-    #         axes[i].axis('equal')
-    #         subname = os.path.basename(files[i])[6:11]
-    #         try:
-    #             axes[i].set_xlabel('%i - %0.2f'%(int(subname),float(ENCa[i])))
-    #             #axes[i].set_title(float(ENCa[i]))
-    #         except Exception as e:
-    #             logger.warning(e)
-    #             axes[i].set_xlabel(int(subname))
-    #             pass
-    #     fig.suptitle(name)
-    #     fig.subplots_adjust(top=0.88)
-    #     fig.tight_layout()
-    #     #plt.axis('equal')
-    #     fig.savefig(os.path.dirname(filename) + '/ThroughfocusImage-{}-{}-{}.png'.format( int(center_pix[0]) ,int(center_pix[1]), fitsfile.header['DATE']))
-        #fig.show()
     try:
         OldTable = Table.read(os.path.dirname(filename) + '/Throughfocus.csv')
     except IOError as e:
@@ -2210,7 +2047,6 @@ def throughfocusWCS(center, files,x=None,
         t.write(os.path.dirname(filename) + '/Throughfocus.csv')
     else:
         t = vstack((OldTable,t))
-        #print ('new',newTable)
         t.write(os.path.dirname(filename) + '/Throughfocus.csv',overwrite=True)
     d = []
     d.append('plot line open')#d.append("plot axis x grid no ")
@@ -2271,7 +2107,6 @@ def throughfocusWCS(center, files,x=None,
     ds9=DS9()
     ds9.set(' ; '.join(d))
     return images#fwhm, EE50, EE80
-#    return fwhm, EE50, EE80
 
 
 def AnalyzeSpot(data, center, size=40, n=1.5,radius=40, fit=True, center_type='barycentre', radius_ext=12, platescale=None,fibersize = 100,SigmaMax=4):
