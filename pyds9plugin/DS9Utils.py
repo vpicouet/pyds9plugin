@@ -58,17 +58,9 @@ def verbose(xpapoint=None,verbose=None):
         conf_dir = resource_filename('pyds9plugin', 'config')
     except:
         conf_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
-#    if v == 'QUIET':
-#        v = 0
-#    if v == 'DEBUG':
-#        v = 1
-    #np.save(os.path.join(conf_dir,'verbose'), int(v))
-    os.system('echo %s > %s'%(verbose, DS9_BackUp_path + '.verbose.txt'))
-
     if v is None:
         sys.exit()
-
-    return
+    return conf_dir
 
 def DS9n(xpapoint=None, stop=False):
     """Open a DS9 communication with DS9 software, if no session opens a new one
@@ -116,7 +108,6 @@ def CreateFolders(DS9_BackUp_path= os.environ['HOME'] + '/DS9QuickLookPlugIn/'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/subsets')
     if not os.path.exists(os.path.dirname(DS9_BackUp_path) + '/tmp'):
         os.makedirs(os.path.dirname(DS9_BackUp_path)+ '/tmp')
-    #np.savetxt(DS9_BackUp_path + '/.verbose.txt',[int(1)])
     if not os.path.exists(DS9_BackUp_path + '.verbose.txt'):
         os.system('echo 1 > %s'%(DS9_BackUp_path + '.verbose.txt'))
     if not os.path.exists(DS9_BackUp_path + '.message.txt'):
@@ -126,11 +117,8 @@ def CreateFolders(DS9_BackUp_path= os.environ['HOME'] + '/DS9QuickLookPlugIn/'):
 if len(sys.argv)==1:
     CreateFolders()
 
-#Needs to be after create folders
 if sys.stdin is not None:
-    #verboseprint('STDIN detected')
     verbose(xpapoint=None,verbose=1)
-    #np.save(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'), 1)
 else:
     verbose(xpapoint=None,verbose=0)
 
@@ -143,30 +131,15 @@ def Log(v=None):
     logger = logging.getLogger('pyds9plugin')
 
     if v is None:
-        #v = int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True))# on met le niveau du logger à DEBUG, comme ça il écrit tout
         v = 1#int(np.load(os.path.join(resource_filename('pyds9plugin', 'config'),'verbose.npy'),allow_pickle=True))# on met le niveau du logger à DEBUG, comme ça il écrit tout
     if v == 0:
         logger.setLevel(logging.ERROR)
-#    if v == 1:
-#        logger.setLevel(logging.WARNING)
     if v == 1:
         logger.setLevel(logging.DEBUG)# création d'un formateur qui va ajouter le temps, le niveau de chaque message quand on écrira un message dans le log
-    #formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
-    #formatter = logging.Formatter('%(message)s')# création d'un handler qui va rediriger une écriture du log verun fichier en mode 'append', avec 1 backup et une taille max de 1Mo
     file_handler = RotatingFileHandler(DS9_BackUp_path + 'pyds9plugin_activity.log', 'a', 1000000, 1)# on lui met le niveau sur DEBUG, on lui dit qu'il doit utiliser le formateur créé précédement et on ajoute ce handler au logger
-    #file_handler.setLevel(logging.DEBUG)
-    #file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-
-#    stream_handler = logging.StreamHandler(sys.stdout)
-#    stream_handler.setLevel(logger.getEffectiveLevel())
-#    logger.addHandler(stream_handler)
     logging.getLogger('matplotlib.font_manager').disabled = True
-    #logging.getLogger('pyds9plugin')
-
     return logger
-
-
 
 
 logger = Log()
@@ -233,7 +206,6 @@ def License(limit_date=20210425,l0='whoareyou'):
     if os.path.exists(path) is False:
         np.save(path,'00')
     license_ = np.load(path)
-#    if ((today > limit_date) or str(license_)!=l0) & (today<limit_date+10000):
     if ((today > limit_date) & (str(license_)!=l0)) or (today>limit_date+10000):
         d=DS9n(sys.argv[1])
         l = get(d, "This is a trial version. We hope you enjoyed pyds9plugin. Please buy a license at https://people.lam.fr/picouet.vincent/pyds9plugin/ or enter your license key here:", exit_=False)
@@ -247,25 +219,10 @@ def License(limit_date=20210425,l0='whoareyou'):
         return
 if len(sys.argv)>2:
     License()
-           #sys.stderr = sys.stdout
-#sys.stderr, sys.stdout = sys.stdout, sys.stderr
-
-# try:
-#     import matplotlib.pyplot as plt
-# except:
-#     import matplotlib
-#     matplotlib.use('Agg')
-#     import matplotlib.pyplot as plt
-
-
-
-
-
 
 
 def ComputeFluctuation(xpapoint, fileOutName=None, ext=1, ext_seg=1, mag_zp=None, sub=None, aper_size=10, verbose=False, plot=False, seg=None, type='image', nomemmap=False,    ):
     """Compute gain by fluctuation method"""
-    #from .getDepth import throwAper, depth, plot_histo
     d = DS9n(xpapoint)
     fileInName = getfilename(d)
 
@@ -423,8 +380,8 @@ def PlotSpectraFilters(xpapoint):
     sizes = [0.0234, 0.0795, 0.0456,0.0598,0.1194,0.1539,0.1476,0.0768,0.0797,0.0918,0.1714,0.2895,0.3058,5.3245, 35.6385, 74.9582, 77.7000,105.9688,199.8631]
     #filts=['galex/FUV.pb','galex/NUV.pb','cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb','spitzer/mips_24.pb','herschel/PACS_100.pb','herschel/PACS_160.pb','herschel/SPIRE_PSW.pb','herschel/SPIRE_PMW.pb','herschel/SPIRE_PLW.pb']
     filts=['galex/FUV.pb','galex/NUV.pb','cfht/CLAUDS/u.pb','cfht/CLAUDS/uS.pb','hsc/gHSC.pb','hsc/rHSC.pb','hsc/iHSC.pb','hsc/zHSC.pb','hsc/yHSC.pb','vista/Y.pb','vista/J.pb','vista/H.pb','vista/K.pb','spitzer/irac_1.pb', 'spitzer/irac_2.pb', 'spitzer/irac_3.pb', 'spitzer/irac_4.pb','spitzer/mips_24.pb','herschel/PACS_100.pb','herschel/PACS_160.pb','herschel/SPIRE_PSW.pb','herschel/SPIRE_PMW.pb','herschel/SPIRE_PLW.pb']
-    fnu = lambda flambda, lam : (lam **2) / 3e8 * flambda / ((lam **2) / 3e8 * flambda).max() / 1.1
-    fnu = lambda flambda, lam : flambda  /  flambda.max() / 1.1  #(lam **2) / 3e8 * flambda / ((lam **2) / 3e8 * flambda).max() / 1.1
+    fnu = lambda flambda, lam : (lam **2) / 3e8 * flambda / ((lam **2) / c * flambda).max() / 1.1
+    fnu = lambda flambda, lam : flambda  /  flambda.max() / 1.1  #(lam **2) / c * flambda / ((lam **2) / 3e8 * flambda).max() / 1.1
     fig = plt.figure(figsize=(20,9))
     wavelength = m*np.hstack((np.linspace(0,3e4,100), np.linspace(1e5,1e7,10000) ))#np.linspace(0,1e7,int(2e4))
     #wavelength = 10**np.linspace(1,7,int(1e4))
@@ -668,6 +625,7 @@ def DS9setup2(xpapoint, config=my_conf, color='cool'):
         scale, cuts, smooth, color, invert, grid = sys.argv[-6:]
     except ValueError:
         scale, cuts, smooth, color, invert, grid = "Log",  '50-99.99',  '5', 'cool', '0', '0'
+    verboseprint( "%s - %s - %s - %s - %s - %s"%(scale, cuts, smooth, color, invert, grid))
     cuts = np.array(cuts.split('-'),dtype=float)
     region = getregion(d, all=False, quick=True,selected=True)
     if region is None:
@@ -828,7 +786,6 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
             gs = gridspec.GridSpec(2, 1, height_ratios=(4,1))
             ax1 = fig.add_subplot(gs[0])
             ax2 = fig.add_subplot(gs[1], sharex=ax1)
-            #fig, (ax1, ax2) = plt.subplots(2, sharex=True,figsize=(10,6),height_ratios=[4,1])
             if sigma is None:
                 ax1.plot(x, y, fmt,label='Data',c=c)
             else:
@@ -867,9 +824,6 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
                 P0 = [np.nanmax(y)-np.nanmin(y),1,np.nanmin(y)]
         if deg=='2exp':
             law = lambda x, b1, b2, a1, a2, offset:  b1*np.exp(-x/a1) + b2*np.exp(-x/a2) +offset
-#            if P0 is None:
-#                P0 = [np.nanmax(y)-np.nanmin(y),1,np.nanmin(y)]
-
         elif deg=='gaus':
             law = lambda x, a, xo, sigma, offset: a**2 * np.exp(-np.square((x-xo) / sigma) / 2) + offset
             if P0 is None:
@@ -925,10 +879,6 @@ def PlotFit1D(x=None,y=[709, 1206, 1330],deg=1, Plot=True, sigma_clip=None, titl
         zp = law(xp,*popt)
         zz = law(x,*popt)
         name = 'Fit %s, R=%0.2E'%(np.round(np.array(popt, dtype=int),0),Decimal(res))
-
-        #plt.plot(xp, , '--', label='Fit: ')
-    #print(ax1)
-    #kubgkbn
     if Plot:
         if ax is None:
             if deg=='gaus':
@@ -1145,9 +1095,7 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
         except ValueError:
             r = radius
     for i in range(len(xim)):
-        #print(form[i])
         if form[i] == 'box':
-            #print('Box')
             try:
                 rest = '{:.4f},{:.4f})'.format(r, r1)#r[i], r1[i]
             except UnboundLocalError:
@@ -1155,7 +1103,6 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
 
             rest += ' # color={}'.format(color[i])
         elif form[i] =='circle':
-            #print('Circle')
             rest = '{:.4f})'.format(r[i])#[i]
             rest += ' # color={}'.format(color[i])
         try:
@@ -1349,6 +1296,7 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
                 Param = (np.nanmax(image),xo, yo, (stdmin+stdmax)/2, (stdmin+stdmax)/2,np.percentile(image,15))
                 bounds = ([-np.inf, xo-10 , yo-10, stdmin, stdmin,-np.inf], [np.inf, xo+10 , yo+10, stdmax, stdmax,np.inf])#(-np.inf, np.inf)#
         try:
+            verboseprint(bounds)
             popt,pcov = curve_fit(twoD_Gaussian2,(x,y),image.flat,Param)#,bounds=bounds)
         except RuntimeError as e:
             logger.warning(e)
@@ -1362,11 +1310,11 @@ def fitsgaussian2D(xpapoint, Plot=True, n=300, cmap = 'twilight_shifted'):#jet
     d.set('regions format ds9 ; regions system detector ; regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "' % ( Xinf + xn + 1 ,Yinf + yn + 1,2.35*popt[3],2.35*popt[4],180*popt[5]/np.pi ))
 
     if Plot:
-        from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme, wrap
+        from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme#, wrap
         z = twoD_Gaussian2((x,y),*popt).reshape(x.shape)
         xx, yy = np.indices(image.shape)
         set_plot_theme("document")
-        range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
+        #range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
         p = Plotter(notebook=False,window_size=[2*1024, 2*768],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D plot, FLUX = %0.1f'%(fluxes[0])+'amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],(180*popt[5]/np.pi)%180))
         value = image
         z, image = image, z
@@ -1718,10 +1666,7 @@ def throughfocus(center, files,datas=None, x=None,
     """
     from astropy.io import fits
     from astropy.table import Table, vstack
-    # import matplotlib; matplotlib.use('TkAgg')
-    # import matplotlib.pyplot as plt
     from scipy.optimize import curve_fit
-    color = 'black'
     fwhm = []
     EE50 = []
     EE80 = []
@@ -2011,13 +1956,12 @@ def throughfocusWCS(center, files,x=None,
         opt4 = [np.nan,np.nan,np.nan]#[0,0,0]
 
         pass
-    try:
-        opt5,cov5 = curve_fit(f,x,sumpix)
-        bestx5 = xtot[np.argmax(f(xtot,*opt5))]
-    except RuntimeError:
-        opt5 = [0,0,0]
-        bestx5 = np.nan
-        pass
+    # try:
+    #     opt5,cov5 = curve_fit(f,x,sumpix)
+    #     bestx5 = xtot[np.argmax(f(xtot,*opt5))]
+    # except RuntimeError:
+    #     opt5 = [0,0,0]
+    #     pass
     try:
         opt6,cov6 = curve_fit(f,x,varpix)
         bestx6 = xtot[np.argmax(f(xtot,*opt6))]
@@ -2029,6 +1973,7 @@ def throughfocusWCS(center, files,x=None,
                ENC(bestx3,ENCa),ENC(bestx4,ENCa),
                ENC(bestx6,ENCa)]))
     name = '%s - %i - %i - %s - %0.3f'%(os.path.basename(filename),int(center_pix[0]),int(center_pix[1]),fitsfile.header['DATE'],mean)
+    verboseprint(name)
     t = Table(names=('name','number', 't', 'x', 'y','Sigma', 'EE50','EE80', 'Max pix','Flux', 'Var pix','Best sigma','Best EE50','Best EE80','Best Maxpix','Best Varpix'), dtype=('S15', 'f4','f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4'))
     t.add_row((os.path.basename(filename),os.path.basename(filename)[5:11],
                t2s(h=h,m=m,s=s,d=day), d['Center'][0],d['Center'][1],min(fwhm),
@@ -2234,59 +2179,6 @@ def DS9throughfocus(xpapoint, Plot=True):
     PyvistaThoughfocus(a)
 
 
-def PyvistaThoughfocus(datas):
-    """Explore throughfocus using pyvista in 3d
-    """
-    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
-    from matplotlib import cm
-    set_plot_theme("document")
-    p = Plotter(notebook=False,window_size=[1500,1600],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='Throughfocus')
-    value = datas[0].shape[0]/np.max(np.ptp(datas,axis=(1,2)))
-    mesh = CreateMesh(datas[0], value=value)
-    p.add_mesh(mesh,opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True)#, cmap='jet')
-    p.add_text('Image: 0', name="mylabel")
-    labels=list(np.arange(len(datas))+1)
-    def update_text(text):
-        p.add_text(text, name="mylabel")
-
-    def throughfocus_callback(val):
-        points = mesh.points.copy()
-        data = datas[int(val)]
-        verboseprint(1)
-        points[:, -1] = value*(data-np.nanmin(data)).reshape(-1)
-        verboseprint(2)
-        p.update_coordinates(points, render=False)
-        verboseprint(3)
-        p.update_scalars(data.ravel(), render=False)
-        verboseprint(4)
-        return
-    def CreateGIF(val):
-        #p.show(auto_close=False)
-        points = mesh.points.copy()
-        p.open_gif("/tmp/throughfocus.gif")
-        p.add_text('Image: 0', name="mylabel")
-        n=1
-        images = datas+datas[::-1]
-        for i, (data, lab)  in enumerate(zip(images*n,(labels+labels[::-1])*n)):#+datas+datas+datas+datas+datas+datas:
-            #print(points[:, -1],points[:, -1].shape)
-            #print(value*(data-np.nanmin(data)).reshape(-1)  ,value*(data-np.nanmin(data)).reshape(-1))
-            points[:, -1] = value*(data-np.nanmin(data)).reshape(-1)
-            p.update_coordinates(points)#, render=False)
-            p.update_scalars(data.ravel())#, render=False)
-            update_text("Image: %i"%(lab))
-            p.write_frame()
-
-        return
-
-    p.add_slider_widget(throughfocus_callback, rng=[0,len(datas)], value=0, title='Frame', color=None, pass_widget=False, event_type='always', style=None)
-
-    p.add_checkbox_button_widget(CreateGIF)#,position=(200,10))#,position='upper_left')
-    p.add_text('Create GIF in /tmp/thoughfocus.gif', name="button",position=(70,10))#'lower_left')
-    p.show()
-
-
-    return
-
 
 def ExploreThroughfocus(xpapoint):
     """Create focus exploration based on sextractor
@@ -2306,9 +2198,9 @@ def ExploreThroughfocus(xpapoint):
 def PyvistaThoughfocus(a):
     """Explore throughfocus using pyvista in 3d
     """
-    n=60
-    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
-    from matplotlib import cm
+    # n=60
+    from pyvista import Plotter,  set_plot_theme#StructuredGrid, PolyData,
+    #from matplotlib import cm
     set_plot_theme("document")
     #verboseprint('Orient the view, then press "q" to close window and produce movie')
     p = Plotter(notebook=False,window_size=[1500,1600],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='Throughfocus')
@@ -2570,7 +2462,7 @@ def DS9plot_rp_convolved(data, center, size=40, n=1.5, log=False, anisotrope=Fal
     from scipy.optimize import curve_fit
     from scipy import interpolate
 
-    fontsize=10
+    #fontsize=10
     rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, anisotrope=anisotrope, angle=angle, radius=radius, n=n,   center_type=center_type, size=size)
     profile = profile[:size]#(a[:n] - min(a[:n]) ) / np.nansum((a[:n] - min(a[:n]) ))
     rmean_long = np.linspace(0,rmean[:size].max(),1000)
@@ -2745,7 +2637,7 @@ def set_axes_equal(ax):
 def CreateMesh(array, value = None):
     """
     """
-    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme, wrap
+    from pyvista import  StructuredGrid, PolyData #, set_plot_theme, wrap, Plotter,
     xx, yy = np.indices(array.shape)
     if value is None:
         value=array.shape[0]/(array.max() - array.min())
@@ -2759,7 +2651,7 @@ def PlotArea3DColor(d):
     """
     """
     #import pyvista as pv
-    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
+    from pyvista import Plotter,  set_plot_theme#StructuredGrid, PolyData,
     from matplotlib import cm
     size = [2000,700]
     color = cm.get_cmap('Greens_r', 128)
@@ -2795,7 +2687,7 @@ def PlotArea3DColor(d):
     blue = p.add_mesh(mesh_blue, scalars=data_blue.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data2',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Blues_r', 128),show_scalar_bar=False)#_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
     zr=- np.nanmax(mesh_green.points[:,2])+((data_red-np.nanmin(data_red[np.isfinite(data_red)]))*value)
     red = p.add_mesh(mesh_red, scalars=data_red.ravel(),opacity=0.7,nan_opacity=0,use_transparency=False,name='Data3',flip_scalars=True,stitle='Value',cmap = cm.get_cmap('Reds_r', 128),show_scalar_bar=False)#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
-    return
+    return blue, red
 
 
     def callback2(value):
@@ -2812,11 +2704,11 @@ def PlotArea3DColor(d):
 def AnalyzeFWHMThroughField(xpapoint):
     """
     """
-    from astropy.io import fits
+    # from astropy.io import fits
     from scipy.optimize import curve_fit
-    import matplotlib
-    import matplotlib.pyplot as plt
-    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme, wrap
+    # import matplotlib
+    # import matplotlib.pyplot as plt
+    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme#, wrap
 
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
     fwhm, center, test = sys.argv[-3:]
@@ -2855,7 +2747,7 @@ def AnalyzeFWHMThroughField(xpapoint):
     z = twoD_Gaussian2((x,y),*popt).reshape(x.shape)
     xx, yy = np.indices(image.shape)
     set_plot_theme("document")
-    range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
+    # range_ = [np.nanpercentile(data,0),np.nanpercentile(data,100)]
     p = Plotter(notebook=False,window_size=[1500,1500],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='3D plot, FLUX = %0.1f'%(fluxes[0])+'amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id '%(popt[0],popt[3],popt[4],(180*popt[5]/np.pi)%180))
 
     fit = StructuredGrid()
@@ -2943,7 +2835,7 @@ def PlotArea3D(xpapoint,color=False):
     """Plots the DS9 region selected in 3D
     """
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
-    from matplotlib import cm
+    # from matplotlib import cm
     from astropy.convolution import convolve, Gaussian2DKernel
 
     d = DS9n(xpapoint)
@@ -2966,7 +2858,7 @@ def PlotArea3D(xpapoint,color=False):
             if d.get('scale') =='log':
                 data = data#np.log10(data - np.nanmin(data))
             value = data.shape[0]/(np.nanmax(data) - np.nanmin(data))#np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
-            value_= data.shape[0]#value
+            # value_= data.shape[0]#value
             mesh = StructuredGrid()
             data_points =  ((data-np.nanmin(data[np.isfinite(data)])))/(np.nanmax(data) - np.nanmin(data))
             log_data_points =  (np.log10(data_points - np.nanmin(data_points)+1) ) / np.nanmax(np.log10(data_points - np.nanmin(data_points)+1) )#-1
@@ -2987,7 +2879,7 @@ def PlotArea3D(xpapoint,color=False):
             verboseprint(data.ravel().max())
             verboseprint(range_)
             scalars = data.flatten()
-            a = p.add_mesh(mesh,clim=range_, scalars=scalars,opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+            p.add_mesh(mesh,clim=range_, scalars=scalars,opacity=0.7,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value')#,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
             contours = mesh.contour()
             contours_c = mesh_c.contour()
             p.add_mesh(contours, color="white", line_width=5)
@@ -3081,9 +2973,9 @@ def PlotArea3D(xpapoint,color=False):
             p.add_checkbox_button_widget(log_callback)#,position=(200,10))#,position='upper_left')
             p.add_checkbox_button_widget(Contour_callback,position=(10,80),value=True)#,position='upper_left')
             p.add_checkbox_button_widget(GIF_callback,position=(10,70+80))#,position='upper_left')
-            b =p.add_text('Log scale', name="log",position=(70,10))#'lower_left')
-            a = p.add_text('Contour', name="contour",position=(70,80))#'lower_left')
-            a = p.add_text('Create a GIF', name="gif",position=(70,70+80))#'lower_left')
+            p.add_text('Log scale', name="log",position=(70,10))#'lower_left')
+            p.add_text('Contour', name="contour",position=(70,80))#'lower_left')
+            p.add_text('Create a GIF', name="gif",position=(70,70+80))#'lower_left')
             p.add_checkbox_button_widget(SmoothCallback,position=(10,80+70+70),value=False)#,position='upper_left')
             p.add_text('Smooth', name="buttonSmooth",position=(70,80+70+70))#'lower_left')
             p.clear_box_widgets()
@@ -3162,7 +3054,7 @@ def CreateCube(d, data):
     engine = Change3dMesh(starting_mesh)
     a = p.add_mesh(starting_mesh, show_edges=True,point_size=engine.kwargs['PointSize'] ,nan_opacity=0,cmap='jet',name='Data')
     mmax = 0.92
-    m = p.add_slider_widget(
+    p.add_slider_widget(
         callback=lambda value: engine('DensityMin', int(value)),
         rng = [0.0,99.9],
         value=90,
@@ -3267,6 +3159,7 @@ def ExecCommand(filename,  path2remove, exp, config,xpapoint=None, eval_=False,o
     try:
         exec(exp, globals(), ldict)#, locals(),locals())
     except (SyntaxError, NameError) as e:
+        verboseprint(e)
         d=DS9n(xpapoint)
         if  yesno(d,'Could not execute the command. Do you wish to see examples of one line python commands?'):
 
@@ -4745,7 +4638,7 @@ def DS9Trimming(xpapoint, config=my_conf, all_ext=False):
     verboseprint('system = ',system)
     region = getregion(d, quick=True,selected=True,system=system,dtype=float)
     Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region[0],dtype=float)
-    area = [Yinf, Ysup,Xinf, Xsup]
+    # area = [Yinf, Ysup,Xinf, Xsup]
     verboseprint(Yinf, Ysup,Xinf, Xsup)
     if (len(region[0])!=5) & (len(region[0])!=4):
         message(d,'Trimming only works on box regions. Create and select a box region an d re-run the analysis.');sys.exit()
@@ -4831,7 +4724,7 @@ def CLcorrelation(path, area=[0,-1,1053,2133], DS9backUp = DS9_BackUp_path, conf
     """Performs a column to column or or line to line auto-correlation on a DS9 image
     """
     from astropy.io import fits
-    from astropy.table import Table
+    # from astropy.table import Table
     fitsimage = fits.open(path)[0]
     image = fitsimage.data[area[0]:area[1],area[2]:area[3]]
     imagex = np.nanmean(image, axis=1)
@@ -4897,6 +4790,7 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
             info=True
         elif sys.argv[4] == '0':
             info = False
+        verboseprint(info)
     except IndexError:
         pass
     if xpapoint:
@@ -4908,6 +4802,7 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
                 path = get(d, "No file matching the regular expression. Please give a new pattern matching (*/?/[9-16], etc)", exit_=True)
                 files = globglob(path, ds9_im=False)
     fname = os.path.dirname(os.path.dirname(files[0]))
+    verboseprint(fname)
     ext = len(fits.open(files[0]))
     try:
         d=DS9n(xpapoint)
@@ -4921,7 +4816,7 @@ def DS9CreateHeaderCatalog(xpapoint, files=None, info=False, config=my_conf):
     else:
         extentsions = [0]
     verboseprint('Extensions to add: ', extentsions)
-    paths = np.unique([os.path.dirname(f) for f in files ])
+    # paths = np.unique([os.path.dirname(f) for f in files ])
     verboseprint(files)
     t1s = [CreateCatalog_new(files, ext=extentsions)]
     from datetime import datetime
@@ -4988,7 +4883,7 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
     from scipy.sparse import dia_matrix
     import inspect
     from matplotlib.widgets import  Button# Slider, RadioButtons, TextBox
-    from matplotlib.widgets import  CheckButtons #RadioButtons,
+    # from matplotlib.widgets import  CheckButtons #RadioButtons,
     from dataphile.graphics.widgets import Slider
     from astropy.io import fits
     if len(sys.argv)>1:
@@ -5014,7 +4909,7 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
     n = np.log10(np.sum([10**yi for yi in ydata]))
     lims = np.array([0,2])
 
-    np_function = {a:getattr(np, a) for a in dir(np)}
+    # np_function = {a:getattr(np, a) for a in dir(np)}
 
     def SimulateFIREBallemCCDHist(x,data, ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, Dark, Smearing, SmearExpDecrement, exposure,  n_registers,flux, sCIC=0):
         """Silumate EMCCD histogram
@@ -5094,6 +4989,7 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
     #centers=[3004, 107, 600, 0.1]
     #EMCCD_new(x,bins[np.nanargmax(val)],107,600,0.1)
     y = function(x,*centers)
+    verboseprint(y)
     datal,  = plt.plot(xdata,ydata, '-',c='black',label='Data')
     l, = plt.plot(x, function(x,*centers), '-', lw=1,label='EMCCD model')
     #s, = plt.plot(np.ones(2)*bins[np.nanargmax(val)]+5.5*107/2.35, [l.get_ydata().min(),l.get_ydata().max()], lw=1,color='red',label='$5.5\sigma$ Threshold')#
@@ -5107,13 +5003,13 @@ def DS9PlotEMCCD(xpapoint, path = None,smearing=1):
 
 
     button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), 'Fit', color='white', hovercolor='0.975')
-    delete_button = Button(plt.axes([0.70, 0.025, 0.08, 0.04]), 'Save', color='white', hovercolor='0.975')
+    # delete_button = Button(plt.axes([0.70, 0.025, 0.08, 0.04]), 'Save', color='white', hovercolor='0.975')
 
 
     for edge in 'left', 'right', 'top', 'bottom':
         bounds_box.spines[edge].set_visible(False)
 
-    bounds_button = CheckButtons(bounds_box, ['Bounds'],[False])
+    # bounds_button = CheckButtons(bounds_box, ['Bounds'],[False])
 
 
     def update(val):
@@ -5208,7 +5104,7 @@ def CreateCatalog_new(files, ext=[0], config=my_conf):
     from astropy.table import Column,  vstack#hstack,
     from datetime import datetime
     import warnings
-    from tqdm import  tqdm, tqdm_gui
+    from tqdm import   tqdm_gui#tqdm,
     warnings.simplefilter('ignore', UserWarning)
     files.sort()
     path = files[0]
@@ -5343,6 +5239,7 @@ def ReplaceWithNans(xpapoint):
     """Replace the pixels in the selected regions in DS9 by NaN values
     """
     from numpy import inf, nan
+    verboseprint(inf+nan)
     d = DS9n(xpapoint)#DS9n(xpapoint)
     filename = getfilename(d)#d.get("file")
     regions = getregion(d, selected=True)
@@ -6065,7 +5962,7 @@ def EMCCD(x,  biais=3300,RN=107, EmGain=600,flux=0.1, bright_surf=8.3,p_sCIC=0,S
     y_final  = np.log10(convolve(y[:],kernel)) #+ bright_surf
     y_final -= y_final.min()
     #offsets = np.arange(0,70,0.1)
-    offsets = np.arange(0,20,0.01)
+    # offsets = np.arange(0,20,0.01)
     return np.log10(convolve(y[:],kernel)) + np.log10(np.sum([10**bright_surf]))
 
 #    sums = [np.log10(np.sum(10**(y_final-offset)[y_final>offset])) for offset in offsets]
@@ -6081,10 +5978,10 @@ class GeneralFit_Function(Demo):
     """Multiple Gaussian Features over a Polynomial Background."""
     def __init__(self, x, y, function,  ranges, zdata_i=None, ax=None, Plot='Linear', linewidth=2, marker=None, linestyle='dotted',n=100, names=None):
         """Create synthetic dataset, plots, and AutoGUI."""
-        from dataphile.statistics.regression.modeling import Parameter, Model, CompositeModel, AutoGUI
-        from dataphile.statistics.distributions import linear1D, polynomial1D, gaussian1D, voigt1D, sinusoid1D
-        from dataphile.statistics.distributions import uniform
-        from scipy.optimize import curve_fit
+        from dataphile.statistics.regression.modeling import Parameter, Model,  AutoGUI
+        from dataphile.statistics.distributions import  polynomial1D#, linear1D,gaussian1D, voigt1D, sinusoid1D
+        # from dataphile.statistics.distributions import uniform
+        # from scipy.optimize import curve_fit
         import matplotlib.pyplot as plt
         #from astropy import units
         super().__init__(polynomial1D, [100, -0.01, -1e-5], (0, 2400), linspace=True,
@@ -6238,7 +6135,7 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
         d.set("analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}")  ;sys.exit()
 
     if d.get('plot') != '':
-        plots = d.get('plot').split(' ')
+        # plots = d.get('plot').split(' ')
         name = ''#plots[-1]
         d.set('plot %s save /tmp/test.dat'%(name))
         x_scale = d.get('plot %s axis x log'%(name))
@@ -6280,7 +6177,7 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
 
     verboseprint('Using general fit new')
     gui = GeneralFit_new(x,y,nb_gaussians=int(nb_gaussians),nb_moffats=int(nb_moffats), background=int(bckgd),nb_voigt1D=int(nb_voigt1D),nb_sinusoid1D=int(nb_sinusoid), exp=exp, EMCCD_=EMCCD_,nb_blackbody=nb_blackbody,double_exp=double_exp, marker='.',linestyle='dotted',linewidth=1,double_schechter=double_schechter,schechter=schechter)
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
     rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor='None')
 
     for edge in 'left', 'right', 'top', 'bottom':
@@ -6306,10 +6203,10 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
     """
     import numpy as np
     import matplotlib.pyplot as plt
-    from matplotlib.widgets import  Button, RadioButtons, TextBox # Slider
+    from matplotlib.widgets import  Button,  TextBox # Slider RadioButtons,
     from dataphile.graphics.widgets import Slider
     from matplotlib.widgets import  CheckButtons #RadioButtons,
-    from astropy.table import Table
+    # from astropy.table import Table
     n=len(xdata)
     lims = np.array([0,2])
 
@@ -6382,6 +6279,7 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
         b = dict_values['b']
         c = dict_values['c']
         d = dict_values['d']
+        verboseprint(x,a,b,c,d)
         #if ax.get_title()!=''
         ax.set_title('', color='red')
         try:
@@ -6405,7 +6303,7 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
             c = b_c.val
             d = b_d.val
         text = dict_values['function']
-        x = dict_values['x']
+        # x = dict_values['x']
         ax.set_title('', color='red')
         try:
             l.set_ydata(eval(text,np_function,dict_values))
@@ -6426,7 +6324,7 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
     data_button.on_clicked(loadData)
 
     text_box = TextBox(axbox, 'f(x) = ', initial=initial,color='white', hovercolor='0.975')
-    text = text_box.on_submit(submit)
+    text_box.on_submit(submit)
 
     b_a = Slider(figure=fig, location=[0.1, 0.17, 0.8, 0.03], label='a',  bounds=lims, init_value=np.mean(lims))#,valfmt="%1.2f")
     b_b = Slider(figure=fig, location=[0.1, 0.14, 0.8, 0.03], label='b', bounds=lims, init_value=np.mean(lims))
@@ -6448,13 +6346,14 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
         b = dict_values['b']
         c = dict_values['c']
         d = dict_values['d']
+        verboseprint(x,a,b,c,d)
         y = eval(text,np_function,dict_values)
         l.set_ydata(y)
         ax.set_ylim(np.min(y), np.max(y))
         plt.draw()
         print('y ==========' , y)
         return text
-    text = text_box.on_submit(returnf)
+    # text = text_box.on_submit(returnf)
 
 
 
@@ -6521,6 +6420,7 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
         b = dict_values['b']
         c = dict_values['c']
         d = dict_values['d']
+        verboseprint(x,a,b,c,d)
         dict_values['x'] = x
         text = dict_values['function']
         y = eval(text,np_function,dict_values)
@@ -6540,7 +6440,7 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
             ax.set_ylim((ymin,ymax))
         plt.draw()
         return
-    cid = fig.canvas.mpl_connect('draw_event', onclick)
+    fig.canvas.mpl_connect('draw_event', onclick)
     plt.show()
 
 
@@ -6558,10 +6458,9 @@ def  ManualFitting(xpapoint=None,initial = 'a+b*max(ydata)*exp(-(x-c*x[argmax(yd
             d.set("analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}")  ;sys.exit()
 
         if d.get('plot') != '':
-            plots = d.get('plot').split(' ')
+            # plots = d.get('plot').split(' ')
             name = ''#plots[0]
             verboseprint(name)
-
             d.set('plot %s save /tmp/test.dat'%(name))
             tab = Table.read('/tmp/test.dat', format='ascii')
             x, y = tab['col1'],tab['col2']
@@ -6617,7 +6516,7 @@ def Function(xpapoint=None, config=my_conf,Plot='Linear',path=None, xrange=[-10,
     """
     import re
     from matplotlib.widgets import RadioButtons
-    d = DS9n(xpapoint)
+    # d = DS9n(xpapoint)
     y=0
     if len(sys.argv)>3:
         function = sys.argv[-4]
@@ -6799,9 +6698,9 @@ def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
     # compute the pixel standard deviation
     from photutils import CircularAperture
     from photutils import aperture_photometry
-    import astropy.stats  as astats
+    # import astropy.stats  as astats
 
-    pix_err  = 1.4826 * astats.median_absolute_deviation(image[np.isfinite(image)])
+    # pix_err  = 1.4826 * astats.median_absolute_deviation(image[np.isfinite(image)])
     if sub_bkg:
         image -= np.mean(image)
 #    if seg is None and type != "weight" and type != "var" and type !="rms":
@@ -6986,8 +6885,7 @@ def get_depth_image(xpapoint):
 def PlotSpectraDataCube(xpapoint):
     """Plot a datacub in the other dimension a a given region
     """
-    from scipy import ndimage
-
+    # from scipy import ndimage
     d = DS9n(xpapoint)
     fits_im = d.get_pyfits()
     header = fits_im[0].header
@@ -7159,9 +7057,9 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
 def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
     """Run sextraxtor software
     """
-    import astropy
-    from astropy.wcs import WCS
-    from shutil import which
+    # import astropy
+    # from astropy.wcs import WCS
+    # from shutil import which
     d = DS9n(xpapoint)
     filename = getfilename(d)
     param_names =  [ 'output-catalog-filename','output-catalog-format','detect-minarea','detection-threshold','partition-threshold-count','partition-min-contrast','use-cleaning','cleaning-minarea','weight-image','magnitude-zeropoint','background-cell-size','smoothing-box-size','thread-count']
@@ -7169,7 +7067,7 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
     params = np.array(sys.argv[4:6], dtype='<U256')#str)
     verboseprint(params)
     DETECTION_IMAGE = sys.argv[4]
-    ID = sys.argv[3]
+    # ID = sys.argv[3]
     param_dict = {}
     for key, val in zip(param_names, params):
         param_dict[key] = val
@@ -7177,10 +7075,10 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
 
     param_dict['output-catalog-filename'] = filename[:-5] +'_cat.fits' if param_dict['output-catalog-filename']=='-' else param_dict['output-catalog-filename']
 
-    if DETECTION_IMAGE == '-':
-        cat_path = filename[:-5] #.fits'
-    else:
-        cat_path = params[0]
+    # if DETECTION_IMAGE == '-':
+    #     cat_path = filename[:-5] #.fits'
+    # else:
+    #     cat_path = params[0]
 
     for key, val in zip(param_names, params):
         verboseprint('%s : %s'%(key,param_dict[key]))
@@ -7205,7 +7103,7 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
     command = 'SourceXtractor++ --detection-image %s  --'%(filename)  + ' --'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[:]])
     verboseprint(command)
 
-    answer = os.system(command)
+    # answer = os.system(command)
     try:
         DS9Catalog2Region(xpapoint,name=param_dict['output-catalog-filename'] ,x='pixel_centroid_x',y='pixel_centroid_y',ID='-')
     except KeyError:
@@ -7509,6 +7407,8 @@ def CosmologyCalculator(xpapoint):
         from astropy.cosmology import default_cosmology
         cosmo = default_cosmology.get()
         cosmo1 = cosmo2 = cosmo
+        verboseprint(cosmo1)
+        verboseprint(cosmo2)
 
     info = {}
     info['luminosity_distance'] = cosmo.luminosity_distance(redshift)
@@ -7747,12 +7647,13 @@ def WaitForN(xpapoint):
 def download(url, file='/tmp/test.fits'):
     """
     """
-    from tqdm import tqdm, tqdm_gui
+    from tqdm import tqdm#, tqdm_gui
     import requests
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
     try:
         response = requests.get(url, stream=True)
     except requests.exceptions.RequestException as e:  # This is the correct syntax
+        verboseprint(e)
         return False
     else:
         total_size_in_bytes= int(response.headers.get('content-length', 0))
@@ -8709,7 +8610,7 @@ def MaxiMask_cc(path=None,xpapoint=None):
     """ Runs MaxiMask processing tool on image
     """
     from astropy.io import fits
-
+    d=DS9n(xpapoint)
     if path is None:
         path = getfilename(d)
     command ="""/Users/Vincent/opt/anaconda3/bin/python3 /Users/Vincent/Downloads/Safari/MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""%(bool(int(True)), 8, bool(int(True)), path)
@@ -8738,8 +8639,8 @@ def MaxiMask_cc(path=None,xpapoint=None):
 def CreateContourRegions(xpapoint):
     """ Creates regions based on contour
     """
-    from astropy.io import fits
-    from scipy.ndimage import grey_dilation, grey_erosion, binary_erosion, binary_dilation
+    # from astropy.io import fits
+    from scipy.ndimage import grey_dilation,  binary_erosion#, binary_dilation,grey_erosion,
     B, T, erosion, dilatation = np.array(sys.argv[-4:],dtype=float)
     d=DS9n(xpapoint)
     path = getfilename(d)
@@ -8807,7 +8708,8 @@ def SimplifyMask(path):
 def killLongProcess(xpapoint):
     """ Kill pyds9plugin processes during the tutorial
     """
-    Popen(["ps -eaf|grep 'DS9Utils.*' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "], shell=True,
+    import subprocess
+    subprocess.Popen(["ps -eaf|grep 'DS9Utils.*' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "], shell=True,
              stdin=None, stdout=None, stderr=None, close_fds=True)
     return
 
@@ -8816,7 +8718,7 @@ def killLongProcess(xpapoint):
 def DivideCatalog(path, tmpFOlder='/tmp',id_ = 'ID',n=10):
     """ Divide an ascii catalog to read it more rapidly
     """
-    import multiprocessing
+    # import multiprocessing
     def file_len(fname):
         with open(fname) as f:
             for i, l in enumerate(f):
@@ -8876,11 +8778,10 @@ def ReadBigAsciiTable(path, tmpFOlder='/tmp',n=10):
 def createRegContour(path,n=50,limit=100):
     """ Create contour on some ds9 image
     """
-
-    n=20;limit=100
+    n=20;#limit=100
     path='/Users/Vincent/Documents/Work/DetectionImages/calexp-9813-coadd-small.masks_modified.fits'
     from astropy.io import fits
-    from scipy.ndimage import grey_dilation, grey_erosion, binary_erosion, binary_dilation
+    from scipy.ndimage import grey_dilation#, grey_erosion, binary_erosion, binary_dilation
     from astropy.wcs import WCS
     import matplotlib.pyplot as plt
     from tqdm import tqdm
@@ -8895,7 +8796,8 @@ def createRegContour(path,n=50,limit=100):
     CS = plt.contour(ds9, levels=1)
     sizex = np.array([cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ])
     sizey = np.array([cs[:,1].max() - cs[:,1].min()     for cs in CS.allsegs[0] ])
-    size = np.array([ len(cs[:,1])   for cs in CS.allsegs[0] ])
+    # size = np.array([ len(cs[:,1])   for cs in CS.allsegs[0] ])
+    # verboseprint()
     size_tot = np.sqrt(np.square(sizex) + np.square(sizey))
     regions = np.array(CS.allsegs[0])[size_tot>500]
     if os.path.isfile('/tmp/regions.reg'):
@@ -8975,20 +8877,18 @@ def main():
             verboseprint(sys.argv)
         if sys.stdin is None:
             try:
-                a = DictFunction[function](xpapoint=xpapoint)
+                DictFunction[function](xpapoint=xpapoint)
             except Exception as e: #Exception #ValueError #SyntaxError
-                a=0
+                verboseprint(e)
                 import traceback
                 pprint(traceback.format_exc())
                 pprint('To have more information about the error run this in the terminal:')
                 pprint(' '.join(sys.argv))
         else:
-            a = DictFunction[function](xpapoint=xpapoint)
+            DictFunction[function](xpapoint=xpapoint)
 
         if function not in ['verbose','setup','next_step']:
             verboseprint('\n****************************************************')
-
-
     return
 
 
