@@ -2118,7 +2118,6 @@ def AnalyzeSpot(data, center, size=40, n=1.5,radius=40, fit=True, center_type='b
   from scipy.optimize import curve_fit
   rsurf, rmean, profile, EE, NewCenter, stddev = radial_profile_normalized(data, center, radius=radius, n=n, center_type=center_type)
   profile = profile[:size]#(a[:n] - min(a[:n]) ) / np.nansum((a[:n] - min(a[:n]) ))
-  #popt, pcov = curve_fit(ConvolveDiskGaus2D, np.linspace(0,size,size), profile, p0=[2,2,2])#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):  3.85
   fiber = fibersize / (2*1.08*(1/0.083))
   if fiber == 0:
       gaus = lambda x, a, sigma: a**2 * np.exp(-np.square(x / sigma) / 2)
@@ -2211,14 +2210,6 @@ def DS9throughfocus(xpapoint, Plot=True):
     else:
         Type = 'detector'
 
-    # if yesno(d,'Are the throughfocus images taken uniformely? If not you will be asked to provide the offset of each image. If yes we will only use the index of each image.') is False:
-    #     ENCa_center = get(d, 'Please provide the offset of each image. You need %s values separated by commas, eg: %s'%(len(path), ('%s'%(repr(np.round(np.linspace(0.1,0.9,len(path)),1)))).replace(' ','').replace('[','').replace(']','').replace('array(','').replace(')','')))
-    #     offsets = np.array([float(value) for value in ENCa_center.split(',')] )
-    #     if len(offsets) != len(path):
-    #         message(d,'You entered %i offsets but you have %i images. Please re-run the analysis and provide consistent number of offsets.'%(len(offsets), len(path))),sys.exit()
-    # else:
-    #     offsets  = np.arange(len(path))
-
     if WCS:
         from astropy import wcs
         w = wcs.WCS(image.header)
@@ -2227,7 +2218,6 @@ def DS9throughfocus(xpapoint, Plot=True):
         alpha, delta = float(center_wcs[0]), float(center_wcs[1])
         verboseprint('alpha, delta = ',alpha, delta)
 
-        #alpha, delta = float(alpha), float(delta)
         throughfocusWCS(center = [alpha,delta], files=path,x = x,fibersize=0,
                      center_type='user',SigmaMax=6, Plot=Plot, Type=Type,ENCa_center=ENCa_center, pas=pas,WCS=True,offsets=offsets)
 
@@ -2250,7 +2240,6 @@ def PyvistaThoughfocus(datas):
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
     from matplotlib import cm
     set_plot_theme("document")
-    #verboseprint('Orient the view, then press "q" to close window and produce movie')
     p = Plotter(notebook=False,window_size=[1500,1600],line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title='Throughfocus')
     value = datas[0].shape[0]/np.max(np.ptp(datas,axis=(1,2)))
     mesh = CreateMesh(datas[0], value=value)
@@ -2270,7 +2259,6 @@ def PyvistaThoughfocus(datas):
         verboseprint(3)
         p.update_scalars(data.ravel(), render=False)
         verboseprint(4)
-        #update_text("Image: %i"%(val))
         return
     def CreateGIF(val):
         #p.show(auto_close=False)
@@ -2288,15 +2276,9 @@ def PyvistaThoughfocus(datas):
             update_text("Image: %i"%(lab))
             p.write_frame()
 
-            #p.mesh.compute_normals(cell_normals=False, inplace=True)
-            # if i<len(datas+datas[::-1]):
-            # else :
-            #     time.sleep(0.05)
-            #     p.render()
         return
 
     p.add_slider_widget(throughfocus_callback, rng=[0,len(datas)], value=0, title='Frame', color=None, pass_widget=False, event_type='always', style=None)
-    #add_text_slider_widget(callback, data, value=None, pointa=(0.4, 0.9), pointb=(0.9, 0.9), color=None, event_type='end')
 
     p.add_checkbox_button_widget(CreateGIF)#,position=(200,10))#,position='upper_left')
     p.add_text('Create GIF in /tmp/thoughfocus.gif', name="button",position=(70,10))#'lower_left')
@@ -2309,7 +2291,6 @@ def PyvistaThoughfocus(datas):
 def ExploreThroughfocus(xpapoint):
     """Create focus exploration based on sextractor
     """
-#    a = Table.read('/Users/Vincent/Desktop/stack_cat.fits')
     from astropy.convolution import convolve, Gaussian2DKernel
     a = Table.read(sys.argv[-2])
     mask = (np.nanmin(a['VIGNET'],axis=(1,2))>-1e30)
@@ -2334,29 +2315,13 @@ def PyvistaThoughfocus(a):
     value = a['VIGNET1'][0].shape[0]
     mesh = CreateMesh(a['VIGNET1'][0], value=value)
     p.add_mesh(mesh,scalars=a['VIGNET1'][0],opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True)#, cmap='jet')
-    #p.add_text('Image: 0', name="mylabel")
-    # p.add_text('X, Y =  %0.1f, %0.1f'%(a['X_IMAGE'][0],a['Y_IMAGE'][0]), name="radec",position=(10,1500))
-    # p.add_text('FWHM_IMAGE =  %0.1f'%(a['FWHM_IMAGE'][0]), name="fwhm" , position=(10,1500-n))
-    # p.add_text('MAG_AUTO, ERR =  %0.1f, %0.1f'%(a['MAG_AUTO'][0], a['MAGERR_AUTO'][0]), name="mag" , position=(10,1500-2*n))
-    # p.add_text('CLASS_STAR =  %0.1f'%(a['CLASS_STAR'][0]), name="star" , position=(10,1500-3*n))
-    # p.add_text('THETA_IMAGE =  %0.1f'%(a['THETA_IMAGE'][0]), name="theta" , position=(10,1500-4*n))
-    # p.add_text('ELLIPTICITY =  %0.1f'%(a['ELLIPTICITY'][0]), name="e" , position=(10,1500-5*n))
-    # p.add_text('BACKGROUND =  %0.1f'%(a['BACKGROUND'][0]), name="background" , position=(10,1500-6*n))
     dict_={'smooth':'VIGNET1','number':0}
     #p.show()
     labels=list(np.arange(len(a))+1)
 
     def update_text(text):
-        #pass
         text=int(text)
         p.add_text("Image: %i"%(text), name="mylabel")
-        #p.add_text("X, Y =  %0.1f, %0.1f"%(a['X_IMAGE'][text],a['Y_IMAGE'][text]), name="radec",position=(10,1500))
-        #p.add_text('FWHM_IMAGE =  %0.1f'%(a['FWHM_IMAGE'][text]), name="fwhm",position=(10,1500-n))
-        #p.add_text('MAG_AUTO, ERR =  %0.1f, %0.1f'%(a['MAG_AUTO'][text], a['MAGERR_AUTO'][text]), name="mag" , position=(10,1500-2*n))
-        #p.add_text('CLASS_STAR =  %0.1f'%(a['CLASS_STAR'][text]), name="star" , position=(10,1500-3*n))
-        #p.add_text('THETA_IMAGE =  %0.1f'%(a['THETA_IMAGE'][text]), name="theta" , position=(10,1500-4*n))
-        #p.add_text('ELLIPTICITY =  %0.1f'%(a['ELLIPTICITY'][text]), name="e" , position=(10,1500-5*n))
-        #p.add_text('BACKGROUND =  %0.1f'%(a['BACKGROUND'][text]), name="background" , position=(10,1500-6*n))
 
     def throughfocus_callback(val):
         points = mesh.points.copy()
@@ -2366,14 +2331,11 @@ def PyvistaThoughfocus(a):
         scalar = a[dict_['smooth']][int(val)].ravel()
         p.update_scalars(scalar, render=False)
         p.update_scalar_bar_range([np.nanmin(scalar),np.nanmax(scalar)])
-        #p.add_mesh(CreateMesh(a['VIGNET1'][-10], value=value),scalars=a['VIGNET1'][-10],opacity=0.9,nan_opacity=0,use_transparency=False,name='Data',flip_scalars=True,stitle='Value',show_scalar_bar=True, cmap=plt.colormaps()[int(val)])
-        #update_text(int(val))
         dict_['number']=val
 
         return
     def CreateGIF(val):
 
-        #p.show(auto_close=False)
         points = mesh.points.copy()
         p.open_gif("/tmp/throughfocus.gif")
         p.add_text('Image: 0', name="mylabel")
@@ -2395,29 +2357,18 @@ def PyvistaThoughfocus(a):
 
         points = mesh.points.copy()
         data = a[name][int(dict_['number'])]
-        #print(1)
         points[:, -1] = value*(data-np.nanmin(data)).reshape(-1)
-        #print(2)
         p.update_coordinates(points, render=False)
-        #print(3)
         scalar = a[name][int(dict_['number'])].ravel()
         p.update_scalars(scalar, render=False)
-
-        #print(4)
         p.update_coordinates(points)#, render=False)
         p.update_scalars(data.ravel())#, render=False)
         dict_['smooth']=name
-        #print(5)
-
-
-    #p.add_slider_widget(throughfocus_callback, rng=[0,len(a)], value=0, title='Frame', color=None, pass_widget=False, event_type='always', style=None)
     p.add_text_slider_widget(throughfocus_callback, data=['%i'%(i) for i in np.arange(len(a))], value=0, event_type='always')
-    #p.add_slider_widget(throughfocus_callback, rng=[0,len(a)], value=0, title='Frame', color=None, pass_widget=False, event_type='end', style=None)
     p.add_checkbox_button_widget(CreateGIF)#,position=(200,10))#,position='upper_left')
     p.add_text('Create GIF in /tmp/thoughfocus.gif', name="button",position=(70,10))#'lower_left')
     p.add_checkbox_button_widget(SmoothCallback,position=(10,80),value=False)#,position='upper_left')
     p.add_text('Smooth', name="buttonSmooth",position=(70,80))#'lower_left')
-
     p.show()
 
 #@profile
