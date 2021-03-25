@@ -6202,7 +6202,6 @@ def polynom2deg(x: np.ndarray, intercept, slope, gradient) -> np.ndarray:
 
 def linear1D_centered(x: np.ndarray, intercept, slope, x0=0) -> np.ndarray:
     """A one dimensional line."""
-    #origine =  (slope * x0) + intercept
     return  slope * (x-x0) + intercept#origine
 
 
@@ -6273,7 +6272,6 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
     if np.nanmean(y[-10:])>np.nanmean(y[:10]):
        y = y[::-1]
 
-    #auto_gui.Background(x,y)
     if  background.lower() == 'exponential':
         exp=True
     if  background.lower() == 'doubleexponential':
@@ -6288,7 +6286,6 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
     for edge in 'left', 'right', 'top', 'bottom':
         rax.spines[edge].set_visible(False)
     scale = CheckButtons(rax, ['log'])
-#    scale = RadioButtons(rax, ('linear','log'), active=0)
     def scalefunc(label):
       if gui.ax.get_yscale()=='linear':
           gui.ax.set_yscale('log')
@@ -6297,18 +6294,11 @@ def BackgroundFit1D(xpapoint, config=my_conf, exp=False, double_exp=False, doubl
       gui.figure.canvas.draw_idle()
 
     scale.on_clicked(scalefunc)
-
-
     gui.ax.set_title(os.path.basename(getfilename(d)))
     verboseprint('plotting')
     plt.show()
     verboseprint('exiting')
     return
-
-
-
-
-
 
 
 def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[argmax(ydata)])**2/len(ydata)/d)',dict_={}):
@@ -6320,8 +6310,6 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
     from dataphile.graphics.widgets import Slider
     from matplotlib.widgets import  CheckButtons #RadioButtons,
     from astropy.table import Table
-#    tab = Table.read('/tmp/test.dat', format='ascii')
-#    x,y = tab['col1'], tab['col2']
     n=len(xdata)
     lims = np.array([0,2])
 
@@ -6331,9 +6319,6 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
     fig, ax = plt.subplots(figsize=(10,7))
     plt.subplots_adjust(bottom=0.25)
     x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), n)
-    #initial = 'a*min(ydata)+b*(max(ydata)-min(ydata))*exp(-(x-c*xdata[argmax(ydata)])**2/d)'
-
-
     dict_values={'function':initial,'a':1,'b':1,'c':1,'d':1,'x':x,'xdata':xdata,'ydata':ydata}
 
     l, = plt.plot(x, eval(initial,np_function,dict_values), lw=2)
@@ -6354,12 +6339,10 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
         raxx.spines[edge].set_visible(False)
         data_box.spines[edge].set_visible(False)
         bounds_box.spines[edge].set_visible(False)
-        #replace_ax.spines[edge].set_visible(False)
     scale = CheckButtons(rax, ['log'])
     scalex = CheckButtons(raxx, ['log'])
     data_button = CheckButtons(data_box, ['Data'],[True])
     bounds_button = CheckButtons(bounds_box, ['Bounds'],[False])
-    #replace_button = Button(replace_ax, ['Replace'],[False])
 
     def scalefunc(label):
         print(scale)
@@ -6386,7 +6369,6 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
         fig.canvas.draw_idle()
 
     def loadData(label):
-        #from astropy.table import Table
         if data_button.get_status()[0]:
             datal.set_marker('.')
         else:
@@ -6518,31 +6500,21 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
         verboseprint('Fitting, f(x) = ',dict_values['function'])
         verboseprint('p0 = ',[a,b,c,d])
         verboseprint('Fit : ',popt)
-
-        #a, b, c, d = popt
         plt.figtext(0.55,0.93,'Fit: %s, std=%0.3f'%(np.around(popt,2),np.sum(np.diag(pcov))),bbox={'facecolor':'black', 'alpha':1,'color':'white', 'pad':10})#    norm_gaus = np.pi*sigma    norm_exp = 2*np.pi * lam**2 * gamma(2/alpha)/alpha
-
-        #ax.plot(t, f(t,*popt),label='%s'%(np.round(popt,2)),linestyle='dotted',linewidth=0.7);ax.legend()
         l.set_ydata(f(x,*popt))
         plt.draw()
-
-
         b_a.widget.set_val(popt[0])
         b_b.widget.set_val(popt[1])
         b_c.widget.set_val(popt[2])
         b_d.widget.set_val(popt[3])
-
 
     def delete(event):
         text_box.set_val("")
         return
     button.on_clicked(fit)
     delete_button.on_clicked(delete)
-    #button.on_clicked(reset)
 
     def onclick(event):
-
-        #print(ax.get_xlim())
         xmin, xmax = ax.get_xlim()
         x = np.linspace(xmin, xmax,n)
         a = dict_values['a']
@@ -6566,9 +6538,7 @@ def InteractivManualFitting(xdata,ydata,initial = 'a+b*max(ydata)*exp(-(x-c*x[ar
                 pass
         else:
             ax.set_ylim((ymin,ymax))
-        #print(dict_values['ydata'])
         plt.draw()
-        #xmin, xmax = ax.get_xaxis()
         return
     cid = fig.canvas.mpl_connect('draw_event', onclick)
     plt.show()
@@ -6580,7 +6550,6 @@ def  ManualFitting(xpapoint=None,initial = 'a+b*max(ydata)*exp(-(x-c*x[argmax(yd
     """Fit background 1d with different features
     """
     from astropy.table import Table
-    #from .slider import InteractivManualFitting
     d=DS9n(xpapoint)
     if d is not None:
         try:
@@ -6594,8 +6563,6 @@ def  ManualFitting(xpapoint=None,initial = 'a+b*max(ydata)*exp(-(x-c*x[argmax(yd
             verboseprint(name)
 
             d.set('plot %s save /tmp/test.dat'%(name))
-            #x_scale = d.get('plot %s axis x log'%(name))
-            #y_scale = d.get('plot %s axis y log'%(name))
             tab = Table.read('/tmp/test.dat', format='ascii')
             x, y = tab['col1'],tab['col2']
             xmin = d.get('plot %s axis x min'%(name))
@@ -6608,14 +6575,6 @@ def  ManualFitting(xpapoint=None,initial = 'a+b*max(ydata)*exp(-(x-c*x[argmax(yd
             ymax = float(ymax) if ymax!= '' else np.inf
             mask = (x>xmin) & (x<xmax) & (y>ymin) & (y<ymax)
             x, y = x[mask], y[mask]
-    #        if EMCCD_:
-    #            y -= 1
-    #        if x_scale == 'yes':
-    #            verboseprint('X LOG')
-    #            x = np.log10(x)
-    #        if y_scale == 'yes':
-    #            verboseprint('Y LOG')
-    #            y = np.log10(y)
             index = (np.isfinite(y)) &  (np.isfinite(x))
             x, y = x[index], y[index]
 
@@ -6623,16 +6582,10 @@ def  ManualFitting(xpapoint=None,initial = 'a+b*max(ydata)*exp(-(x-c*x[argmax(yd
             x = np.linspace(0,10,1000)
             y = np.nan*x
             initial = 'a+b*exp(-(x-c)**2/d)'
-            #InteractivManualFitting(x,y, initial = initial)
-        #d.set("analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}")     ;sys.exit()
-
     if np.nanmean(y[-10:])>np.nanmean(y[:10]):
        y = y[::-1]
     verboseprint(y)
     InteractivManualFitting(x,y,initial = initial)
-
-
-    #plt.show()
     return
 
 
@@ -6684,26 +6637,16 @@ def Function(xpapoint=None, config=my_conf,Plot='Linear',path=None, xrange=[-10,
                 ranges.append(answer)
 
         def real_function(x, *args, function_new='y = ' + re.sub("[\[].*?[\]]", "", function)):#
-            #x=np.arange(10)
             y=0
-            #print(args)
             a0, a1, a2, a3, a4, a5, a6, a7 = np.zeros(8)
-            #a0, a1 = args
-            #print('a1, a2 = ', a1, a2)
             np_function = {a:getattr(np, a) for a in dir(np)}
             ldict = {'x':x,'y':y}#,
-    #                 'sin':np.sin,'cos':cos,'exp':np.exp,'log':np.log,'pi':np.pi,
-    #                 'sqrt':np.sqrt,'square':np.square,'abs':np.abs}#,'a0':a0,'a1':a1,'a2':a2,'a3':a3,'a4':a4,'a5':a5,'a6':a7}
             dict2 = {'a%i'%(i):val for i, val in enumerate(args)}
             dict_tot = {}#{k: ldict.get(k, 0) + dict2.get(k, 0) for k in set(ldict) | set(dict2)}
             for d in [ldict,dict2, np_function]:
                 dict_tot.update(d)
             exec(function_new, globals(), dict_tot)
             y = dict_tot['y']
-            #print(x,y)
-            #return (y - np.nanmin(y)) /np.nanmax(y - np.nanmin(y))
-            #print(x.shape)
-            #print(y[0][:-1].shape)
             if 'bins' in function_new:
                 return np.pad(y[0], (0, 1), 'constant')
             else:
@@ -6730,7 +6673,6 @@ def Function(xpapoint=None, config=my_conf,Plot='Linear',path=None, xrange=[-10,
             n=100
         y = real_function(x, *args)
 
-    #print(x,real_function(x, *args))
     gui = GeneralFit_Function(x,y, function=real_function, ranges=ranges,marker='.',Plot=Plot,linestyle='dotted',linewidth=0,n=n,names=names)
     import matplotlib.pyplot as plt
     rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor='None')
@@ -6742,7 +6684,6 @@ def Function(xpapoint=None, config=my_conf,Plot='Linear',path=None, xrange=[-10,
           gui.ax.set_ylim(ymin=0)
           gui.figure.canvas.draw_idle()
     scale.on_clicked(scalefunc)
-
     gui.ax.set_title(function)
     plt.show()
     return
@@ -6798,10 +6739,6 @@ def main_coupon(fileInName, fileOutName, ext, ext_seg, mag_zp, sub, aper_size, v
 #        plt.close()del
     return {'depth':d, 'depth_eroor':d_err, 'flux_std':flux_std, 'n_aper_used':n_aper_used}
 
-# ----------------------------------------------------- #
-# functions
-# ----------------------------------------------------- #
-
 def getData(fileInName, ext, mag_zp, sub, nomemmap):
     """
     Open a fits files and return attributes
@@ -6820,8 +6757,6 @@ def getData(fileInName, ext, mag_zp, sub, nomemmap):
         w         = wcs.WCS(fileIn[ext].header)
         pix_scale = wcs.utils.proj_plane_pixel_scales(w)[0]*3600.0
     except:
-        # this is needed for ultraVista
-        # throw 'PV1_5 : Unrecognized coordinate transformation parameter'
         warnings.warn( "Using CD1_1: {0}".format(abs(fileIn[ext].header['CD1_1'])), RuntimeWarning)
         pix_scale = abs(fileIn[ext].header['CD1_1']) * 3600.0
 
@@ -6837,7 +6772,6 @@ def getData(fileInName, ext, mag_zp, sub, nomemmap):
             raise ValueError("sub x-coordinates ({0}, {1}) exceed image limits ({2}, {3})".format(sub[0], sub[1], 1, np.shape(image)[0]))
         if (sub[2] - 1 < 0) | (sub[3] - 1 > np.shape(image)[1] - 1 ):
             raise ValueError("sub y-coordinates ({0}, {1}) exceed image limits ({2}, {3})".format(sub[2], sub[3], 1, np.shape(image)[1]))
-
         # sub uses ds9 convention -> swap x and y to transform to
         # proper python array
         ylim = [sub[0]-1, sub[1]-1]
@@ -6848,9 +6782,6 @@ def getData(fileInName, ext, mag_zp, sub, nomemmap):
     if False:
         fileOut = fits.PrimaryHDU(image[xlim[0]:xlim[1], ylim[0]:ylim[1]], header=fileIn[ext].header)
         fileOut.writeto(fileInName+".sub", clobber=True)
-    # is this needed?
-    # del image
-
     return image[xlim[0]:xlim[1], ylim[0]:ylim[1]], pix_scale, mag_zp
 
 
@@ -6873,7 +6804,6 @@ def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
     pix_err  = 1.4826 * astats.median_absolute_deviation(image[np.isfinite(image)])
     if sub_bkg:
         image -= np.mean(image)
-
 #    if seg is None and type != "weight" and type != "var" and type !="rms":
 #        # if no segmentation map is given,
 #        # all pixels exceeding 5 times the background are replaced
@@ -6882,7 +6812,6 @@ def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
 
 #    x_ran = (np.shape(image)[0]-1.0 - 0.0) * np.random.random(N_aper) + 0.0
 #    y_ran = (np.shape(image)[1]-1.0 - 0.0) * np.random.random(N_aper) + 0.0
-
     # aperture_photometry seems to use ds9 convention -> swap x and y to transform to
     y_ran = (np.shape(image)[0]-1.0 - 0.0) * np.random.random(N_aper) + 0.0
     x_ran = (np.shape(image)[1]-1.0 - 0.0) * np.random.random(N_aper) + 0.0
@@ -6910,14 +6839,8 @@ def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
         print("{0:d} / {1:d} apertures used. {2:3.4f} / {3:3.4f} (deg2) surface used".format(\
             N_aper_used, N_aper, aper_volume*float(N_aper_used), \
             np.shape(image)[0]*np.shape(image)[1]*pix_scale**2 /(60.0*60.0)**2))
-
-    del image
-    del seg
-
     if False:
         np.savetxt("apertures.txt", np.column_stack((x_ran[select], y_ran[select], flux[select])), header="x y flux")
-
-
     return flux[select], N_aper_used, result
 
 
@@ -6925,10 +6848,6 @@ def plot_histo(flux, flux_std, aperture, title):
     """ Plot histogram to check apetures
     """
     import matplotlib.pyplot as plt
-
-    # plot limits
-    #flux_min = -3.0*flux_std
-    #flux_max = 5.0*flux_std
 
     flux_min = -10.0*flux_std
     flux_max = 10.0*flux_std
@@ -7041,7 +6960,6 @@ def depth(flux, mag_zp, sigma, type):
 def get_depth_image(xpapoint):
     """Get the depth of an astronomical image
     """
-    #from .getDepth import main_coupon
     d = DS9n(xpapoint)
     filename = getfilename(d)
     mag_zp, aper_size, N_aper = sys.argv[-3-5:-5]
@@ -7068,13 +6986,9 @@ def get_depth_image(xpapoint):
 def PlotSpectraDataCube(xpapoint):
     """Plot a datacub in the other dimension a a given region
     """
-    #from astropy.io import fits
     from scipy import ndimage
 
     d = DS9n(xpapoint)
-    #filename = getfilename(d)
-    #fits_im = fits.open(filename.split('[')[0])
-    #header = fits_im[0].header
     fits_im = d.get_pyfits()
     header = fits_im[0].header
     x_ = np.arange(1,header['NAXIS3']+1)
@@ -7082,20 +6996,12 @@ def PlotSpectraDataCube(xpapoint):
         lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['CD3_3']
     except:
         lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['NAXIS3']
-
-    #x = np.linspace(header['CRVAL3'] - header['CRVAL3'] * header['CD3_3'], header['NAXIS3'])
     reg = getregion(d,selected=True)
     smoothl= int(sys.argv[-1])
-
-    #spectra = ndimage.gaussian_filter(fits_im[0].data, sigma=(smoothl,smoothx,smoothx), order=0)
-
-    #data = Table([lambda_],names=['Wave'])
     reg = getregion(d,selected=True)
     x, y = reg[0].xc, reg[0].yc
     spectra = fits_im[0].data[:,int(x),int(y)]
     spectra_ = np.convolve(spectra,np.ones(smoothl)/smoothl,mode='same')[smoothl:-smoothl]
-
-
     data = np.array([lambda_[smoothl:-smoothl],spectra_]).T
     np.savetxt('/tmp/ds9.dat',data)
     DS9Plot(d=d,path='/tmp/ds9.dat', title='3rdDimension', name='plot1', xlabel='x dim', ylabel='pix %i %i'%(x,y), type_='xy',New=True,shape='None')
@@ -7111,21 +7017,17 @@ def StackDataDubeSpectrally(xpapoint):
     filename = getfilename(d)
     fits_im = fits.open(filename.split('[')[0])
     header = fits_im[0].header
-    #x = np.linspace(header['CRVAL3'] - header['CRVAL3'] * header['CD3_3'], header['NAXIS3'])
     if ('Box' in d.get('region')) or ('Circle' in d.get('region')):
         reg = getregion(d)
         x, y, r = reg[0].xc, reg[0].yc, reg[0].r
         spectra = ndimage.gaussian_filter(fits_im[0].data, sigma=(0, smooth, smooth), order=0)[:,int(x-2*r):int(x+2*r),int(y-2*r):int(y+2*r)]
-        #x_sky, y_sky = np.random.randint(x -r ), np.random.randint(y-r)
     else:
         spectra = ndimage.gaussian_filter(fits_im[0].data, sigma=(0, smooth, smooth), order=0)[:,:,:]
-    #if sky_subtraction:
     try:
         x_ = np.arange(1,header['NAXIS3']+1)
         lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['NAXIS3']
     except KeyError:
         lambda_ = header['CRVAL3'] + (x_ -  header['CRPIX3']) * header['CD3_3']
-
     try:
         inf, sup = np.array(sys.argv[-2].split('-'),dtype=int)
     except ValueError:
@@ -7147,8 +7049,6 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     import astropy
     from astropy.wcs import WCS
     from shutil import which
-    #lknceiopwndmew
-    #pprint(1)
     d = DS9n(xpapoint)
     filename = getfilename(d)
     if which('sex') is None:
@@ -7165,8 +7065,6 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
     param_dict = {}
     for key, val in zip(param_names, params):
         param_dict[key] = val
-
-
     try:
         param_dir = resource_filename('pyds9plugin', 'Sextractor')
     except:
@@ -7186,9 +7084,6 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         param_dict['CATALOG_NAME']  = DETECTION_IMAGE [:-5]  + '_cat.fits'
 
         cat_path = os.path.join(os.path.dirname(filename),os.path.basename(filename).split('.')[0]) #.fits'
-    #     params[0] = filename[:-5]  + '_cat.fits'
-    # else:
-    #     cat_path = filename[:-5]#
     param_dict['CHECKIMAGE_NAME'] =   cat_path + '_check_%s.fits'%(param_dict['CHECKIMAGE_TYPE'])
 
     param_dict['PARAMETERS_NAME'] = os.path.join(param_dir,param_dict['PARAMETERS_NAME'])
@@ -7204,7 +7099,6 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
         DETECTION_IMAGE =  DETECTION_IMAGE + ','
     verboseprint('Image used for detection  = ' + str(DETECTION_IMAGE) )
     verboseprint('Image used for photometry  = '+ str(filename) )
-
     verboseprint("""
           ********************************************************************
                                      Parameters sextractor:
@@ -7226,8 +7120,6 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
 
     colors =  ['Orange']  #['White','Yellow','Orange']
     verboseprint(params[0])
-    #if os.path.isfile(params[0]):
-    #if os.path.isfile(params[0]):
     if os.path.isfile(param_dict['CATALOG_NAME']):
         verboseprint(param_dict['CATALOG_NAME'])
 
@@ -7246,31 +7138,9 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
             d.set('analysis message {No source detected, verify you parameters...}')
         else:
             verboseprint('Creating regions')
-            # if (w.is_celestial) & (np.isfinite((cat3['ALPHA_J2000']+cat3['DELTA_J2000']+cat3['THETA_WORLD']+cat3['B_WORLD']+cat3['A_WORLD']).data).all()):
-            #     verboseprint('Using WCS header for regions :', cat_path + '.reg')
-            #     create_DS9regions([cat3['ALPHA_J2000']],[cat3['DELTA_J2000']], more=[cat3['A_WORLD']*cat3['KRON_RADIUS']/2,cat3['B_WORLD']*cat3['KRON_RADIUS']/2,-cat3['THETA_WORLD']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)],color = ['Yellow']*len(cat3), savename=cat_path, system='fk5' , font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-            # else:
-            #     verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
-            #     create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
-            # verboseprint('Regions created')
-            # verboseprint('Setting regions')
-            # if  len(cat3)>1e4:
-            #    # if d.get('analysis message yesno {Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.}'%(len(cat3)))=='1':
-            #     if yesno(d,question='Important number of sources detected (%i). Do you want to load load the detected regions? It might slow down DS9.'%(len(cat3))):
-            #         d.set('regions ' + cat_path + '.reg')
-            # else:
-            #     d.set('regions ' + cat_path + '.reg')
-            # #if  d.get('analysis message yesno {%i sources detected! Do you want to load the sextractor catalog with PRISM?}'%(len(cat; mode catalog
-            # if  yesno(d,"""%i sources detected! Do you want to load the sextractor catalog with PRISM?"""%(len(cat3))):
-            #     #d.set('prism ' + param_dict['CATALOG_NAME']) # ; catalog FILTER "$NUMBER<10000"; regions system wcs   ; catalog MAXROWS 10
-            #     try:
-            #         d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse; catalog symbol Size "$A_IMAGE * $KRON_RADIUS" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS"; catalog symbol angle "$THETA_IMAGE" ; mode catalog'%(param_dict['CATALOG_NAME']))
-            #     except ValueError as e :
-            #         verboseprint(e)
             if  yesno(d,"""%i sources detected! Do you want to load tthem as a catalog (<10Ksources), if not, it will be loaded as regions."""%(len(cat3))):
                 try:
                     d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse  ; catalog symbol Size "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog symbol angle "$THETA_IMAGE" ; mode catalog '%(param_dict['CATALOG_NAME']))# ; catalog symbol condition  "$CLASS_STAR>0.5" ;  catalog symbol 2 color Orange ; catalog symbol width 2 ; catalog symbol width dash ; catalog symbol add;catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green; catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green
-                    #d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse; catalog symbol Size "$A_IMAGE * $KRON_RADIUS" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS"; catalog symbol angle "$THETA_IMAGE" ; mode catalog'%(param_dict['CATALOG_NAME']))
                 except ValueError as e :
                     verboseprint(e)
             else:
@@ -7281,15 +7151,9 @@ def RunSextractor(xpapoint, filename=None, detector=None, path=None):
                     verboseprint('No header found,using pixel coordinates for regions :', cat_path + '.reg')
                     create_DS9regions([cat3['X_IMAGE']],[cat3['Y_IMAGE']], more=[cat3['A_IMAGE']*cat3['KRON_RADIUS']/2,cat3['B_IMAGE']*cat3['KRON_RADIUS']/2,cat3['THETA_IMAGE']], form = ['ellipse']*len(cat3),save=True,ID=[np.around(cat3[ID],1).astype(str)], color = [np.random.choice(colors)]*len(cat3), savename=cat_path, font=10)#,ID=[np.array(cat3['MAG_AUTO'],dtype=int)])
                 d.set('regions ' + cat_path + '.reg')
-
-        #pprint(cat3)
     else:
         verboseprint('Can not find the output sextractor catalog...')
     return
-
-
-
-
 
 
 def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
@@ -7298,46 +7162,25 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
     import astropy
     from astropy.wcs import WCS
     from shutil import which
-    #pprint(1)
     d = DS9n(xpapoint)
     filename = getfilename(d)
-    # if which('SourceXtractor++') is None:
-    #     d = DS9n(xpapoint);d.set('analysis message {Sextractor do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     param_names =  [ 'output-catalog-filename','output-catalog-format','detect-minarea','detection-threshold','partition-threshold-count','partition-min-contrast','use-cleaning','cleaning-minarea','weight-image','magnitude-zeropoint','background-cell-size','smoothing-box-size','thread-count']
 
     params = np.array(sys.argv[4:6], dtype='<U256')#str)
     verboseprint(params)
     DETECTION_IMAGE = sys.argv[4]
     ID = sys.argv[3]
-
     param_dict = {}
     for key, val in zip(param_names, params):
         param_dict[key] = val
         verboseprint(param_dict[key], val)
 
     param_dict['output-catalog-filename'] = filename[:-5] +'_cat.fits' if param_dict['output-catalog-filename']=='-' else param_dict['output-catalog-filename']
-    # try:
-    #     param_dir = resource_filename('pyds9plugin', 'Sextractor')
-    # except:
-    #     param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Sextractor')
-
-    # verboseprint(filename,params[0],filename + '_sex.fits')
-
-    # param_dict['FILTER']='Y' if param_dict['FILTER']=='1' else 'N'
-    # param_dict['CLEAN']='Y' if param_dict['CLEAN']=='1' else 'N'
-    # param_dict['RESCALE_WEIGHTS']='Y' if param_dict['RESCALE_WEIGHTS']=='1' else 'N'
-    # param_dict['WEIGHT_GAIN']='Y' if param_dict['WEIGHT_GAIN']=='1' else 'N'
 
     if DETECTION_IMAGE == '-':
         cat_path = filename[:-5] #.fits'
     else:
         cat_path = params[0]
-    # param_dict['CHECKIMAGE_NAME'] =   cat_path + '_check_%s.fits'%(param_dict['CHECKIMAGE_TYPE'])
-
-
-    # param_dict['PARAMETERS_NAME'] = os.path.join(param_dir,param_dict['PARAMETERS_NAME'])
-    # param_dict['FILTER_NAME'] = os.path.join(param_dir,param_dict['FILTER_NAME'])
-    # param_dict['STARNNW_NAME'] = os.path.join(param_dir,param_dict['STARNNW_NAME'])
 
     for key, val in zip(param_names, params):
         verboseprint('%s : %s'%(key,param_dict[key]))
@@ -7367,9 +7210,6 @@ def RunSextractorPP(xpapoint, filename=None, detector=None, path=None):
         DS9Catalog2Region(xpapoint,name=param_dict['output-catalog-filename'] ,x='pixel_centroid_x',y='pixel_centroid_y',ID='-')
     except KeyError:
         DS9Catalog2Region(xpapoint,name=param_dict['output-catalog-filename'] ,x='col1',y='col2',ID='-')
-
-
-    #if  d.get('analysis message yesno {Analysis completed! Do you want to load the sextractor catalog with PRISM?}')=='1':
     if yesno(d,'Analysis completed! Do you want to load the sextractor catalog with PRISM?'):
         d.set('prism ' + param_dict['output-catalog-filename'])
 
@@ -7394,11 +7234,8 @@ def DS9SWARP(xpapoint):
     param_dict['RESCALE_WEIGHTS'] = 'Y' if param_dict['RESCALE_WEIGHTS']=='1' else 'N'
     param_dict['COMBINE'] = 'Y' if param_dict['COMBINE']=='1' else 'N'
     param_dict['INTERPOLATE'] = 'Y' if param_dict['INTERPOLATE']=='1' else 'N'
-
-
     for key, val in zip(param_names, params):
         verboseprint('%s : %s'%(key,param_dict[key]))
-
 
     d = DS9n(xpapoint)
     if sys.argv[3] == '-':
@@ -7406,14 +7243,8 @@ def DS9SWARP(xpapoint):
     if sys.argv[3] != '-':
         paths = globglob(sys.argv[3])
         verboseprint("globglob('%s') = %s"%(sys.argv[3],paths))
-
-
     verboseprint('Images to coadd: %s'%(paths))
-
-
     param_dict['IMAGEOUT_NAME'] = os.path.join(os.path.dirname(paths[0]),param_dict['IMAGEOUT_NAME'])
-
-
     if which('swarp') is None:
         d = DS9n(xpapoint);d.set('analysis message {SWARP do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
 
@@ -7514,15 +7345,8 @@ def DS9PSFEX(xpapoint):
             df = a_simple.to_pandas()
             mask = df.eval(query)
             b = a[np.array(mask)]
-            #zp = 27
-
-            #mask = (a['CLASS_STAR']>0.97) & (a['MAG_AUTO']>18-zp) & (a['MAG_AUTO']<24-zp) #& ((a['MU_MAX']-a['MAG_AUTO'])<-0.3)
-    #        threshold = FindCompactnessThreshold(a[mask])
             verboseprint('%0.1f %% of objets kept'%(len(b)/len(a)))
-            #mask = np.ones(len(a),dtype=bool)#(a['CLASS_STAR']>0.97) & (a['MAG_AUTO']>19) & (a['MAG_AUTO']<24) & ((a['MU_MAX']-a['MAG_AUTO'])<threshold+0.2) & ((a['MU_MAX']-a['MAG_AUTO'])>threshold-0.3)
-            #(a['MAG_AUTO']<24)&((a['MU_MAX']-a['MAG_AUTO'])<0.1)&((a['MU_MAX']-a['MAG_AUTO'])>-0.1)
             verboseprint('Number of objects : %i => %i'%(len(a),len(b)))
-
             name = path[:-5] + '_.fits'#os.path.join('/tmp',os.path.basename(path))
             hdu1[2].data = hdu1[2].data[mask]
             hdu1.writeto(name, overwrite=True)
@@ -7537,22 +7361,15 @@ def DS9PSFEX(xpapoint):
         param_dict['XML_NAME'] = os.path.dirname(paths[0]) + '/psfex.xml'
 
     if which('psfex') is None:
-#        from tkinter import messagebox
-#        messagebox.showwarning( title = 'PSFex error', message="""PSFex do not seem to be installedin you machine. If you know it is, please add the PSFex executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes.""")
         d = DS9n(xpapoint);d.set('analysis message {PSFex do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}');sys.exit()
     else:
         verboseprint(os.path.dirname(paths[0]))
-        #verboseprint(os.getcwd())
         os.chdir(os.path.dirname(paths[0]))
-        #verboseprint(os.getcwd())
         os.system("sleep 0.1")
-        #os.system("psfex -d > default.psfex")
         verboseprint("psfex %s -c default.psfex -%s -HOMOKERNEL_SUFFIX %s_homo.fits "%(' '.join(paths),  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[1:]]) , param_dict['HOMOPSF_PARAMS'].replace(',','-') ))
         answer = os.system("psfex %s -c default.psfex -%s -HOMOKERNEL_SUFFIX %s_homo.fits "%(' '.join(paths),  ' -'.join([key + ' ' + str(param_dict[key]) for key in list(param_dict.keys())[1:]]) , param_dict['HOMOPSF_PARAMS'].replace(',','-') ))
-        #os.system("rm default.psfex")
         if answer != 0:
             d = DS9n(xpapoint);d.set('analysis message {PSFex encountered an error. Please verify your input catalog (LDAC) and enter verbose mode (shift+V) for more precision about the error.}');sys.exit()
-
     if (xpapoint is not None) & (len(paths)==1):
         d.set('frame new ; file ' +paths[0][:-5] + '%s_homo.fits'%(param_dict['HOMOPSF_PARAMS'].replace(',','-')))
     return
@@ -7599,7 +7416,6 @@ def DS9saveColor(xpapoint, filename=None):
     d.set('frame last')
     if path1=='-':
         files = getfilename(d, All=True)
-        #print('ok : ',path1,path2,path3,len(files))
         if (path1=='-') & (path2=='-') & (path3=='-') & ((len(files)==3)|(len(files)==1)):
             try:
                 path1, path2, path3 = files
@@ -7607,7 +7423,6 @@ def DS9saveColor(xpapoint, filename=None):
                 path1 = files[0]
         else:
             path1 = files[0]
-
     if which('stiff') is None:
         d.set('analysis message {Stiff do not seem to be installed in you machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}')
     else:
@@ -7645,18 +7460,11 @@ def CleanSextractorCatalog(cat):
 
 
 
-
-
-
-
-
-
 def CosmologyCalculator(xpapoint):
     """Plot the different imnformation for a given cosmolovy and at  1 or 2 redshifts
     """
     from dataphile.graphics.widgets import Slider
     cosmology, redshift, H0, Omega_m, Ode0, uncertainty = 'LambdaCDM','0.7', 70, 0.30, 0.7, 'H0:1'#sys.argv[-3:]
-    #cosmology, redshift, H0, Omega_m, Ode0, uncertainty = sys.argv[-6:]
     redshift = np.array(redshift.split('-'),dtype=float)
     if cosmology == 'w0waCDM':
         from astropy.cosmology import w0waCDM as cosmol
@@ -7701,8 +7509,6 @@ def CosmologyCalculator(xpapoint):
         from astropy.cosmology import default_cosmology
         cosmo = default_cosmology.get()
         cosmo1 = cosmo2 = cosmo
-#    else:
-#        cosmo1, cosmo2 = cosmo, cosmo
 
     info = {}
     info['luminosity_distance'] = cosmo.luminosity_distance(redshift)
@@ -7714,12 +7520,9 @@ def CosmologyCalculator(xpapoint):
     info['angular_diameter_distance'] = cosmo.angular_diameter_distance(redshift)
     info['comoving_distance'] = cosmo.comoving_distance(redshift)
     info['comoving_volume'] = cosmo.comoving_volume(redshift)
-    #info['hubble_distance'] = cosmo.hubble_distance(redshift)
     info['lookback_distance'] = cosmo.lookback_distance(redshift)
     info['lookback_time'] = cosmo.lookback_time(redshift)
-    #info['nu_relative_density'] = cosmo.nu_relative_density(redshift)
     info['scale_factor'] = cosmo.scale_factor(redshift)
-    #info['w'] = cosmo.w(redshift)
     info['efunc'] = cosmo.efunc(redshift)
 
 
@@ -7741,21 +7544,17 @@ def CosmologyCalculator(xpapoint):
     t = 'U4'
     l = ' - '
     p = ax1[0].plot(zs,cosmo.angular_diameter_distance(zs)/1000,label="Angular diameter distance = %s"%(l.join(np.array(cosmo.angular_diameter_distance(redshifts).value/1000,dtype=t))))
-    #ax1[0].fill_between(zs,cosmo1.angular_diameter_distance(zs)/1000,cosmo2.angular_diameter_distance(zs)/1000,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax1[0].set_ylabel('Gpc')
     ax1[0].legend(loc='upper left')
     for redshift in redshifts:
         a10 = ax1[0].plot(redshift*np.ones(2), [0,(cosmo.angular_diameter_distance(redshift)/1000).value],linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
         a10v = ax1[0].plot([0,redshift],np.ones(2)*(cosmo.angular_diameter_distance(redshift)/1000).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        #a10p = ax1[0].plot(redshift,(cosmo.angular_diameter_distance(redshift)/1000).value,'o')#,label='%s: %0.1f'%(redshift,(cosmo.angular_diameter_distance(redshift)/1000).value))
     p10 = ax1[0].plot(zs,cosmo.comoving_distance(zs)/1000,label="Comoving distance = %s"%(l.join(np.array(cosmo.comoving_distance(redshifts).value/1000,dtype=t))))
-    #ax1[0].fill_between(zs,cosmo1.comoving_distance(zs)/1000,cosmo2.comoving_distance(zs)/1000,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     for redshift in redshifts:
         a10_ = ax1[0].plot(redshift*np.ones(2),[0,(cosmo.comoving_distance(redshift)/1000).value],linestyle='dotted', color=p10[0].get_color(), label='_nolegend_')
         a10v_ = ax1[0].plot([0,redshift],np.ones(2)*(cosmo.comoving_distance(redshift)/1000).value,linestyle='dotted', color=p10[0].get_color(), label='_nolegend_')
 
     p11 = ax1[1].plot(zs,cosmo.luminosity_distance(zs)/1000,label="Luminosity distance = %s"%(l.join(np.array(cosmo.luminosity_distance(redshifts).value/1000,dtype=t))))
-    #ax1[1].fill_between(zs,cosmo1.luminosity_distance(zs)/1000,cosmo2.luminosity_distance(zs)/1000,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax1[1].set_ylabel('Gpc')
     ax1[1].legend(loc='upper left')
     for redshift in redshifts:
@@ -7764,7 +7563,6 @@ def CosmologyCalculator(xpapoint):
 
 
     p12 = ax1[2].plot(zs,cosmo.critical_density(zs)/1e-29,label="Critical density = %s"%(l.join(np.array(cosmo.critical_density(redshifts).value/1e-29,dtype=t))))
-    #ax1[2].fill_between(zs,cosmo1.critical_density(zs)/1e-29,cosmo2.critical_density(zs)/1e-29,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax1[2].set_ylabel('10e-29 g/cm^3')
     ax1[2].legend(loc='upper left')
     for redshift in redshifts:
@@ -7773,7 +7571,6 @@ def CosmologyCalculator(xpapoint):
 
 
     p20 = ax2[0].plot(zs,cosmo.comoving_volume(zs)/1e9,label="Comoving volume = %s"%(l.join(np.array(cosmo.comoving_volume(redshifts).value/1e9,dtype=t))))
-    #ax2[0].fill_between(zs,cosmo1.comoving_volume(zs)/1e9,cosmo2.comoving_volume(zs)/1e9,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax2[0].set_ylabel('Gpc^3')
     ax2[0].legend(loc='upper left')
     for redshift in redshifts:
@@ -7781,13 +7578,11 @@ def CosmologyCalculator(xpapoint):
         a20v = ax2[0].plot([0,redshift],np.ones(2)*(cosmo.comoving_volume(redshift)/1e9).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
 
     p21 = ax2[1].plot(zs,cosmo.lookback_time(zs),label="Lookback time = %s"%(l.join(np.array(cosmo.lookback_time(redshifts).value,dtype=t))))
-    #ax2[1].fill_between(zs,cosmo1.lookback_time(zs),cosmo2.lookback_time(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     for redshift in redshifts:
         a21 = ax2[1].plot(redshift*np.ones(2),[0,(cosmo.lookback_time(redshift)).value],linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
         a21v = ax2[1].plot([0,redshift],np.ones(2)*(cosmo.lookback_time(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
 
     p21_ = ax2[1].plot(zs,cosmo.age(zs),label="age = %s"%(l.join(np.array(cosmo.age(redshifts).value,dtype=t))))
-    #ax2[1].fill_between(zs,cosmo1.age(zs),cosmo2.age(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax2[1].legend(loc='upper left')
     ax2[1].set_ylabel('Gyr')
     for redshift in redshifts:
@@ -7795,7 +7590,6 @@ def CosmologyCalculator(xpapoint):
         a21v_ = ax2[1].plot([0,redshift],np.ones(2)*(cosmo.age(redshift)).value,linestyle='dotted', color=p21_[0].get_color(), label='_nolegend_')
 
     p22 = ax2[2].plot(zs,cosmo.distmod(zs),label="Dist mod (mu) = %s"%(l.join(np.array(cosmo.distmod(redshifts).value,dtype=t))))
-    #ax2[2].fill_between(zs,cosmo1.distmod(zs),cosmo2.distmod(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax2[2].legend()   #ax2[2].set_ylim()[0]
     ax2[2].set_ylabel('mag')
     for redshift in redshifts:
@@ -7803,7 +7597,6 @@ def CosmologyCalculator(xpapoint):
         a22v = ax2[2].plot([0,redshift],np.ones(2)*(cosmo.distmod(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
 
     p30 = ax3[0].plot(zs,cosmo.efunc(zs),label="efunc = %s"%(l.join(np.array(cosmo.efunc(redshifts),dtype=t))))
-    #ax3[0].fill_between(zs,cosmo1.efunc(zs),cosmo2.efunc(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax3[0].set_ylabel('E(z)')
     ax3[0].legend(loc='upper left')
     for redshift in redshifts:
@@ -7811,7 +7604,6 @@ def CosmologyCalculator(xpapoint):
         a30v = ax3[0].plot([0,redshift],np.ones(2)*(cosmo.efunc(redshift)),linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
 
     p31 = ax3[1].plot(zs,cosmo.scale_factor(zs),label="Scale factor = %s"%(l.join(np.array(cosmo.scale_factor(redshifts),dtype=t))))
-    #ax3[1].fill_between(zs,cosmo1.scale_factor(zs),cosmo2.scale_factor(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax3[1].legend(loc='upper left')
     ax3[1].set_xlabel('Redshift')
     ax3[1].set_ylabel('a')
@@ -7820,12 +7612,10 @@ def CosmologyCalculator(xpapoint):
         a31v = ax3[1].plot([0,redshift],np.ones(2)*(cosmo.scale_factor(redshift)),linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
 
     p32 = ax3[2].plot(zs,1/cosmo.arcsec_per_kpc_proper(zs),label="Proper = %s"%(l.join(np.array(1/cosmo.arcsec_per_kpc_proper(redshifts).value,dtype=t))))
-    #ax3[2].fill_between(zs,cosmo1.arcsec_per_kpc_proper(zs),cosmo2.arcsec_per_kpc_proper(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     for redshift in redshifts:
         a32 = ax3[2].plot(redshift*np.ones(2),[0,1/(cosmo.arcsec_per_kpc_proper(redshift)).value],linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
         a32v = ax3[2].plot([0,redshift],np.ones(2)*1/(cosmo.arcsec_per_kpc_proper(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
     p32_ = ax3[2].plot(zs,1/cosmo.arcsec_per_kpc_comoving(zs),label="Comoving = %s"%(l.join(np.array(1/cosmo.arcsec_per_kpc_comoving(redshifts).value,dtype=t))))
-    #ax3[2].fill_between(zs,cosmo1.arcsec_per_kpc_comoving(zs),cosmo2.arcsec_per_kpc_comoving(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
     ax3[2].legend(loc='upper left')
     ax3[2].set_ylabel("'/kpc")
     for redshift in redshifts:
@@ -7882,15 +7672,11 @@ def CosmologyCalculator(xpapoint):
                    "Proper = %s",
                    "Comoving = %s"]
         for i, (a, b, c, legendi,psi) in enumerate(zip(a_,av_,im_,legends,ps)):
-            #print(i, a,b,c)
             a[0].set_xdata(redshift*np.ones(2))
             a[0].set_ydata([0,c])
             b[0].set_xdata([0,redshift])
             b[0].set_ydata(np.ones(2)*(c))
             psi[0].set_label(legendi%(np.around(c,2)))
-#        a10p[0].set_xdata(redshift)
-#        a10p[0].set_ydata(im_[0])
-        #a10p[0].set_label('%s: %0.1f'%(redshift,(cosmo.angular_diameter_distance(redshift)/1000).value))
         for ax in np.array([ax1,ax2,ax3]).ravel():
             ax.legend(loc='upper left')
         fig.canvas.draw_idle()
@@ -7905,196 +7691,6 @@ def CosmologyCalculator(xpapoint):
     plt.suptitle('%s : H0=%s, Om0=%0.3f, Ode0=%0.3f, Tcmb0=%s, Neff=%0.2f, Ob0=%s'%(cosmology,cosmo.H0, cosmo.Om0, cosmo.Ode0, cosmo.Tcmb0, cosmo.Neff, cosmo.Ob0),y=1)
     plt.tight_layout()
     fig.subplots_adjust(bottom=0.15)
-    plt.show()
-
-    for key in info.keys():
-        verboseprint('%s : %s'%(key,info[key]) )
-
-
-    return
-
-
-
-
-
-def CosmologyCalculator_old(xpapoint):
-    """Plot the different imnformation for a given cosmolovy and at  1 or 2 redshifts
-    """
-    cosmology, redshift, H0, Omega_m, Ode0, uncertainty = 'WMAP9','0.7-2', 70, 0.30, 0.7, 'H0:1'#sys.argv[-3:]
-    cosmology, redshift, H0, Omega_m, Ode0, uncertainty = sys.argv[-6:]
-    redshift = np.array(redshift.split('-'),dtype=float)
-    if cosmology == 'w0waCDM':
-        from astropy.cosmology import w0waCDM as cosmol
-    elif cosmology == 'w0wzCDM':
-        from astropy.cosmology import w0wzCDM as cosmol
-    elif cosmology == 'wpwaCDM':
-        from astropy.cosmology import wpwaCDM as cosmol
-    elif cosmology == 'LambdaCDM':
-        from astropy.cosmology import LambdaCDM as cosmol
-    elif cosmology == 'wCDM':
-        from astropy.cosmology import wCDM as cosmol
-
-    if cosmology == 'WMAP9':
-        from astropy.cosmology import WMAP9 as cosmo
-    elif cosmology == 'WMAP7':
-        from astropy.cosmology import WMAP7 as cosmo
-    elif cosmology == 'WMAP5':
-        from astropy.cosmology import WMAP5 as cosmo
-    elif cosmology == 'Planck13':
-        from astropy.cosmology import Planck13 as cosmo
-    elif cosmology == 'Planck15':
-        from astropy.cosmology import Planck15 as cosmo
-
-
-    elif (cosmology=='wCDM') or  (cosmology=='LambdaCDM'):
-        verboseprint('cosmology, redshift, H0, Omega_m, Ode0, uncertainty =', cosmology, redshift, H0, Omega_m, Ode0, uncertainty )
-        H0, Omega_m, Ode0 = np.array([ H0, Omega_m, Ode0], dtype=float)
-        param, uncertainty = uncertainty.split(':')
-        uncertainty = float(uncertainty)
-        cosmo = cosmol(H0=H0, Om0=Omega_m, Ode0=Ode0)
-        verboseprint('param, uncertainty = ',param, uncertainty)
-        if param.lower() == 'h0':
-            cosmo1 = cosmol(H0=H0*(1-0.01*uncertainty), Om0=Omega_m, Ode0=Ode0)
-            cosmo2 = cosmol(H0=H0*(1+0.01*uncertainty), Om0=Omega_m, Ode0=Ode0)
-        elif param.lower() == 'om0':
-            cosmo1 = cosmol(H0=H0, Om0=Omega_m*(1-0.01*uncertainty), Ode0=Ode0)
-            cosmo2 = cosmol(H0=H0, Om0=Omega_m*(1+0.01*uncertainty), Ode0=Ode0)
-        else:
-            cosmo1 = cosmol(H0=H0, Om0=Omega_m, Ode0=Ode0*(1-0.01*uncertainty))
-            cosmo2 = cosmol(H0=H0, Om0=Omega_m, Ode0=Ode0*(1+0.01*uncertainty))
-    elif cosmology == 'default_cosmology':
-        from astropy.cosmology import default_cosmology
-        cosmo = default_cosmology.get()
-        cosmo1 = cosmo2 = cosmo
-#    else:
-#        cosmo1, cosmo2 = cosmo, cosmo
-
-    info = {}
-    info['luminosity_distance'] = cosmo.luminosity_distance(redshift)
-    info['age'] = cosmo.age(redshift)
-    info['kpc_proper_per_arcsec'] = 1/cosmo.arcsec_per_kpc_proper(redshift)#.to(u.kpc/u.arcsec)
-    info['kpc_comoving_per_arcsec'] = 1/cosmo.arcsec_per_kpc_comoving(redshift)#.to(u.kpc/u.arcsec)
-    info['arcsec_per_proper_kpc'] = cosmo.arcsec_per_kpc_proper(redshift)#.to(u.kpc/u.arcsec)
-    info['arcsec_per_comoving_kpc'] = cosmo.arcsec_per_kpc_comoving(redshift)#.to(u.kpc/u.arcsec)
-    info['angular_diameter_distance'] = cosmo.angular_diameter_distance(redshift)
-    info['comoving_distance'] = cosmo.comoving_distance(redshift)
-    info['comoving_volume'] = cosmo.comoving_volume(redshift)
-    #info['hubble_distance'] = cosmo.hubble_distance(redshift)
-    info['lookback_distance'] = cosmo.lookback_distance(redshift)
-    info['lookback_time'] = cosmo.lookback_time(redshift)
-    #info['nu_relative_density'] = cosmo.nu_relative_density(redshift)
-    info['scale_factor'] = cosmo.scale_factor(redshift)
-    #info['w'] = cosmo.w(redshift)
-    info['efunc'] = cosmo.efunc(redshift)
-
-
-    zs = np.linspace(0,5,50)
-
-    if type(redshift) is float:
-        redshifts = np.array([redshift],dtype=float)
-    else:
-        redshifts = np.array(redshift,dtype=float)
-    import matplotlib.pyplot as plt
-    fig, (ax1,ax2,ax3) = plt.subplots(3, 3, figsize=(18,9.5),sharex=True)
-    t = 'U4'
-    l = ' - '
-    #p = ax1[0].plot(zs,cosmo.angular_diameter_distance(zs)/1000,label="Angular diameter distance = %0.3f"%(cosmo.angular_diameter_distance(redshift).value/1000))
-    p = ax1[0].plot(zs,cosmo.angular_diameter_distance(zs)/1000,label="Angular diameter distance = %s"%(l.join(np.array(cosmo.angular_diameter_distance(redshifts).value/1000,dtype=t))))
-    ax1[0].fill_between(zs,cosmo1.angular_diameter_distance(zs)/1000,cosmo2.angular_diameter_distance(zs)/1000,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax1[0].set_ylabel('Gpc')
-    ax1[0].legend()
-    for redshift in redshifts:
-        ax1[0].hlines((cosmo.angular_diameter_distance(redshift)/1000).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax1[0].vlines(redshift,0,(cosmo.angular_diameter_distance(redshift)/1000).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-    p = ax1[0].plot(zs,cosmo.comoving_distance(zs)/1000,label="Comoving distance = %s"%(l.join(np.array(cosmo.comoving_distance(redshifts).value/1000,dtype=t))))
-    ax1[0].fill_between(zs,cosmo1.comoving_distance(zs)/1000,cosmo2.comoving_distance(zs)/1000,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    for redshift in redshifts:
-        ax1[0].hlines((cosmo.comoving_distance(redshift)/1000).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax1[0].vlines(redshift,0,(cosmo.comoving_distance(redshift)/1000).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-
-    p = ax1[1].plot(zs,cosmo.luminosity_distance(zs)/1000,label="Luminosity distance = %s"%(l.join(np.array(cosmo.luminosity_distance(redshifts).value/1000,dtype=t))))
-    ax1[1].fill_between(zs,cosmo1.luminosity_distance(zs)/1000,cosmo2.luminosity_distance(zs)/1000,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax1[1].set_ylabel('Gpc')
-    ax1[1].legend()
-    for redshift in redshifts:
-        ax1[1].hlines((cosmo.luminosity_distance(redshift)/1000).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax1[1].vlines(redshift,0,(cosmo.luminosity_distance(redshift)/1000).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-
-    p = ax1[2].plot(zs,cosmo.critical_density(zs)/1e-29,label="Critical density = %s"%(l.join(np.array(cosmo.critical_density(redshifts).value/1e-29,dtype=t))))
-    ax1[2].fill_between(zs,cosmo1.critical_density(zs)/1e-29,cosmo2.critical_density(zs)/1e-29,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax1[2].set_ylabel('10e-29 g/cm^3')
-    ax1[2].legend()
-    for redshift in redshifts:
-        ax1[2].hlines((cosmo.critical_density(redshift)/1e-29).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax1[2].vlines(redshift,0,(cosmo.critical_density(redshift)/1e-29).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-
-    p = ax2[0].plot(zs,cosmo.comoving_volume(zs)/1e9,label="Comoving volume = %s"%(l.join(np.array(cosmo.comoving_volume(redshifts).value/1e9,dtype=t))))
-    ax2[0].fill_between(zs,cosmo1.comoving_volume(zs)/1e9,cosmo2.comoving_volume(zs)/1e9,alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax2[0].set_ylabel('Gpc^3')
-    ax2[0].legend()
-    for redshift in redshifts:
-        ax2[0].hlines((cosmo.comoving_volume(redshift)/1e9).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax2[0].vlines(redshift,0,(cosmo.comoving_volume(redshift)/1e9).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-    p = ax2[1].plot(zs,cosmo.lookback_time(zs),label="Lookback time = %s"%(l.join(np.array(cosmo.lookback_time(redshifts).value,dtype=t))))
-    ax2[1].fill_between(zs,cosmo1.lookback_time(zs),cosmo2.lookback_time(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    for redshift in redshifts:
-        ax2[1].hlines((cosmo.lookback_time(redshift)).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax2[1].vlines(redshift,0,(cosmo.lookback_time(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-    p = ax2[1].plot(zs,cosmo.age(zs),label="age = %s"%(l.join(np.array(cosmo.age(redshifts).value,dtype=t))))
-    ax2[1].fill_between(zs,cosmo1.age(zs),cosmo2.age(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax2[1].legend()
-    ax2[1].set_ylabel('Gyr')
-    for redshift in redshifts:
-        ax2[1].hlines((cosmo.age(redshift)).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax2[1].vlines(redshift,0,(cosmo.age(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-    p = ax2[2].plot(zs,cosmo.distmod(zs),label="Dist mod (mu) = %s"%(l.join(np.array(cosmo.distmod(redshifts).value,dtype=t))))
-    ax2[2].fill_between(zs,cosmo1.distmod(zs),cosmo2.distmod(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax2[2].legend()   #ax2[2].set_ylim()[0]
-    ax2[2].set_ylabel('mag')
-    for redshift in redshifts:
-        ax2[2].hlines((cosmo.distmod(redshift)).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax2[2].vlines(redshift,cosmo.distmod(zs)[1].value,(cosmo.distmod(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-    p = ax3[0].plot(zs,cosmo.efunc(zs),label="efunc = %s"%(l.join(np.array(cosmo.efunc(redshifts),dtype=t))))
-    ax3[0].fill_between(zs,cosmo1.efunc(zs),cosmo2.efunc(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax3[0].set_ylabel('E(z)')
-    ax3[0].legend()
-    for redshift in redshifts:
-        ax3[0].hlines((cosmo.efunc(redshift)),0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax3[0].vlines(redshift,1,(cosmo.efunc(redshift)),linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-    p = ax3[1].plot(zs,cosmo.scale_factor(zs),label="Scale factor = %s"%(l.join(np.array(cosmo.scale_factor(redshifts),dtype=t))))
-    ax3[1].fill_between(zs,cosmo1.scale_factor(zs),cosmo2.scale_factor(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax3[1].legend()
-    ax3[1].set_xlabel('Redshift')
-    ax3[1].set_ylabel('a')
-    for redshift in redshifts:
-        ax3[1].hlines((cosmo.scale_factor(redshift)),0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax3[1].vlines(redshift,0,(cosmo.scale_factor(redshift)),linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-    p = ax3[2].plot(zs,1/cosmo.arcsec_per_kpc_proper(zs),label="Proper = %s"%(l.join(np.array(1/cosmo.arcsec_per_kpc_proper(redshifts).value,dtype=t))))
-    ax3[2].fill_between(zs,cosmo1.arcsec_per_kpc_proper(zs),cosmo2.arcsec_per_kpc_proper(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    for redshift in redshifts:
-        ax3[2].hlines(1/(cosmo.arcsec_per_kpc_proper(redshift)).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax3[2].vlines(redshift,0,1/(cosmo.arcsec_per_kpc_proper(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-    p = ax3[2].plot(zs,1/cosmo.arcsec_per_kpc_comoving(zs),label="Comoving = %s"%(l.join(np.array(1/cosmo.arcsec_per_kpc_comoving(redshifts).value,dtype=t))))
-    ax3[2].fill_between(zs,cosmo1.arcsec_per_kpc_comoving(zs),cosmo2.arcsec_per_kpc_comoving(zs),alpha=0.2, color=p[0].get_color(), label='_nolegend_')
-    ax3[2].legend()
-    ax3[2].set_ylabel("'/kpc")
-    for redshift in redshifts:
-        ax3[2].hlines(1/(cosmo.arcsec_per_kpc_comoving(redshift)).value,0,redshift,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-        ax3[2].vlines(redshift,0,1/(cosmo.arcsec_per_kpc_comoving(redshift)).value,linestyle='dotted', color=p[0].get_color(), label='_nolegend_')
-
-    verboseprint('%s : H0=%s, Om0=%s, Ode0=%s, Tcmb0=%s, Neff=%s, Ob0=%s'%(cosmology,cosmo.H0, cosmo.Om0, cosmo.Ode0, cosmo.Tcmb0, cosmo.Neff, cosmo.Ob0))
-    plt.suptitle('%s : H0=%s, Om0=%0.3f, Ode0=%0.3f, Tcmb0=%s, Neff=%0.2f, Ob0=%s'%(cosmology,cosmo.H0, cosmo.Om0, cosmo.Ode0, cosmo.Tcmb0, cosmo.Neff, cosmo.Ob0),y=1)
-    plt.tight_layout()
     plt.show()
 
     for key in info.keys():
