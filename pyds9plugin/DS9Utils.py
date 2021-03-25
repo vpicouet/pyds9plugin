@@ -7695,19 +7695,13 @@ def CosmologyCalculator(xpapoint):
 
     for key in info.keys():
         verboseprint('%s : %s'%(key,info[key]) )
-
-
     return
-
-
 
 def Convertissor(xpapoint):
     """Converts an astropy unit in another one
     """
-    #from astropy.cosmology import FlatLambdaCDM
     import astropy.units as u
     from decimal import Decimal
-    #name = dir(u)
     unit_dict = u.__dict__#{'m':u.m,'cm':u.cm}
     val, unit1_, unit2_, redshift = sys.argv[-4:]
     try:
@@ -7721,10 +7715,7 @@ def Convertissor(xpapoint):
 
     verboseprint(unit1_,unit1,unit2_,unit2)
     verboseprint('%0.2E %s = %0.2E %s'%(Decimal(val), unit1, Decimal((val*unit1).to(unit2)),unit2))
-#    from tkinter import messagebox
-#    messagebox.showwarning( title = 'Convertissor', message='%0.2E %s = %0.2E %s'%(Decimal(val), unit1, Decimal((val*unit1).to(unit2)),unit2))
     d = DS9n(xpapoint);d.set('analysis message {%0.2E %s = %0.2E %s}'%(Decimal(val), unit1, Decimal((val*unit1).to(unit2)),unit2))
-
     return
 
 
@@ -7744,7 +7735,6 @@ def WaitForN(xpapoint):
     while True:
         try:
             d = DS9n(xpapoint,stop=True)
-            #pprint(d.get('nan'))
             while d.get('nan')!='grey':
                 time.sleep(0.1)
             d.set('nan black')
@@ -7777,10 +7767,8 @@ def download(url, file='/tmp/test.fits'):
         #progress_bar.display()
         #progress_bar.plt.close(progress_bar.fig)
         # plt.show(block=False)
-
         # plt.close('all')
         # plt.close(progress_bar.fig)
-
         if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
             verboseprint("ERROR, something went wrong")
             return False
@@ -7813,7 +7801,6 @@ def fitsconverter(fname,savefile='/tmp/test.fits'):
     return savefile
 
 
-#fif tiff
 def DS9open(xpapoint, filename=None):
     """As the OSX version of DS9 does not allow to enter the path of an image when we want to access some data
     I added this possibility. Then you only need to press o (open) so that DS9 opens a dialog box where you can
@@ -7824,9 +7811,6 @@ def DS9open(xpapoint, filename=None):
 
     if filename is None:
         filename, type_, clip = sys.argv[3:]
-#    if filename == '-':
-#        d=DS9n(xpapoint);d.set('analysis message {File not found, please verify your path.}')
-#        sys.exit()
     if clip=='1':
         img = ImageGrab.grabclipboard()
         if img is None:
@@ -7845,22 +7829,6 @@ def DS9open(xpapoint, filename=None):
         filenames = globglob(path, ds9_im = False)
     if path == '':
         sys.exit()
-
-#    if filename == '-':
-#        d=DS9n(xpapoint);d.set('analysis message {File not found, please verify your path.}')
-#        sys.exit()
-#    if (filename[-4:].lower() == '.jpg') or (filename[-4:].lower()  == 'jpeg'):
-#
-#        d.set('rgb')
-#        print(filename)
-#        d.set("jpeg {}".format(filename))#a = OpenFile(xpaname,filename = filename)
-#        return
-#
-#    elif (filename[-4:].lower() == '.png') :
-#        d.set('rgb')
-#        print(filename)
-#        d.set("png {}".format(filename))#a = OpenFile(xpaname,filename = filename)
-#        return
     for filename in filenames:
         if os.path.isfile(filename):
             filename = filename.replace(' ','\ ')
@@ -7873,9 +7841,7 @@ def DS9open(xpapoint, filename=None):
                 try:
                     if (filename[-4:].lower() == '.jpg') or (filename[-4:].lower()  == 'jpeg'):
                         d.set("jpeg {}".format(filename))
-#                        d.set("jpeg '%s'"%(filename))
                         print('here')
-                        #d.set('jpeg "%s"'%(filename))
                     elif (filename[-4:].lower() == '.png') :
                         d.set("png {}".format(filename))#
                     elif (filename[-5:].lower() == '.tiff')| (filename[-4:].lower() == '.tif') :
@@ -7890,8 +7856,6 @@ def DS9open(xpapoint, filename=None):
                     d.set('frame delete')
             elif type_ == 'Multi-Frames-As-Cube':
                 d.set("mecube new {}".format(filename))#a = OpenFile(xpaname,filename = filename)
-    #        if type_ == 'Multi-Extension-Cube':
-    #            d.set("3d open {}".format(filename))#a = OpenFile(xpaname,filename = filename)
             elif type_ == 'Multi-Frames':
                 d.set("multiframe {}".format(filename))#a = OpenFile(xpaname,filename = filename)
             elif type_ == 'CUBE':
@@ -7939,12 +7903,6 @@ def DS9open(xpapoint, filename=None):
 def pprint(string):
     """Force printing some string"""
     verboseprint(string,verbose='1')
-#    from tqdm import tqdm
-#    print(string)
-#    with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}",
-#              postfix=["", dict(value='')], file=sys.stdout) as t:
-#        for i in range(0):
-#            t.update()
     return
 
 def PhotometricAnalysisTutorial(xpapoint,i=0,n=1):
@@ -7983,7 +7941,6 @@ Centering - Aperture Photometry - SExtractor (if available)
         d.set("analysis message {It seems that you did not create or select the region before hitting [Next]. Please make sure to click on the region after creating it and hit n}")
         WaitForN(xpapoint)
     d.set('analysis task "Centering (C)"')
-    #d.set("analysis message {Well done! Now let us use some photometry tools!}")
 
 
     pprint("""* Well done!
@@ -8284,10 +8241,6 @@ def ImageProcessingTutorial(xpapoint,i=0,n=1):
     while d.get('plot') == '':
         d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")
         WaitForN(xpapoint)
-
-
-    #d.set('analysis task "Interactive 1D Fitting On Plot"')
-    #WaitForN(xpapoint)
     pprint("""********************************************************************************
                              Interactive Manual Fitting
     Generic functions -> Image Processing -> Interactive Manual Fitting
@@ -8306,10 +8259,6 @@ def ImageProcessingTutorial(xpapoint,i=0,n=1):
         d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")
         WaitForN(xpapoint)
     d.set('analysis task "Interactive Manual Fitting"')
-
-
-
-
     WaitForN(xpapoint)
 
     d.set("analysis message {Now let us use a basic python interpretor}")
@@ -8371,10 +8320,6 @@ def GenericToolsTutorial(xpapoint,i=0,n=1):
     """
     d=DS9n(xpapoint)
     d.set('nan black')
-    #import subprocess
-    #subprocess.Popen('python3 %s %s'%(resource_filename('pyds9plugin','Next.py'),xpapoint), shell=True)
-    #os.system("DS9Utils 1 NextButton")
-    #NextButton(xpapoint)
 
     pprint("""              *******************************************
               *          Generic Tools Tutorial         *
@@ -8388,9 +8333,7 @@ def GenericToolsTutorial(xpapoint,i=0,n=1):
 Please take some time to adjust the scale/threshold/color to improve the image
 rendering in order to the objects in the image. When it is done,
                                 [Next]""")
-    #pprint(1)
     WaitForN(xpapoint)
-    #pprint(2)
 
     d.set("""analysis message {Now let me show you a much easier and quicker way to change the display settings at once! This function will make you gain a lot of time. }""")
 
@@ -8416,12 +8359,6 @@ rendering in order to the objects in the image. When it is done,
     i+=1
 
     WaitForN(xpapoint)
-#    while  getregion(d,selected=True) is None:
-#        d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")
-#        WaitForN(xpapoint)
-
-
-    #d.set("analysis message {Now let us do some 3D plotting}")
     d.set('pan to 630 230 ; zoom to 1')
 
     pprint("""********************************************************************************
@@ -8481,12 +8418,6 @@ rendering in order to the objects in the image. When it is done,
     WaitForN(xpapoint)
     pprint("""%i/%i - Paste the path in the Regexp Path entry."""%(i,n));i+=1
     d.set('analysis task "Create Header Data Base"')
-    # path = get(d, "Path of the images to extract.  Use global pattern matching", exit_=False)#(*/?/[9-16], etc)
-    # files = globglob(path,ds9_im=False)[:100]
-    # while len(files)==0:
-    #     path = get(d, "No file matching the regular expression. Please give a new pattern matching (*/?/[9-16], etc)", exit_=True)
-    #     files = globglob(path,ds9_im=False)[:100]
-    # DS9CreateHeaderCatalog(xpapoint=None, files=files, info=False, config=my_conf)
     pprint("""* Great!
 %i/%i - You can open the above catalog & analyse it with TOPCAT.
          Please copy this path, you will need it!
@@ -8521,7 +8452,6 @@ rendering in order to the objects in the image. When it is done,
     pprint("""%i/%i - Go to %s and enjoy your well ordered files!
 %i/%i - You can copy paste these instructions somewhere if you want to keep it!
     """%(i,n,os.environ['HOME'] + '/DS9QuickLookPlugIn/Subsets',i+1,n));i+=2
-    #time.sleep(5)
 
 
 
@@ -8533,21 +8463,6 @@ def DS9tsuite(xpapoint):
     """Teste suite: run several fucntions in DS9
     """
     from subprocess import Popen
-#    from PyQt5.QtWidgets import QApplication
-#    verboseprint('test')
-#    widgets = [qWidegts('entry','Name'),
-#               qWidegts('entry', 'Surname'),
-#               qWidegts('checkbox','Male'),
-#               qWidegts('spinbox','Age'),
-#               qWidegts('slider','Number of friends'),
-#               qWidegts('menu','Country',items=['France','UK','USA'])]
-#
-#    app = QApplication(sys.argv)
-#    D = Dialog(widgets=widgets)
-#    verboseprint(D.getValues()    )
-#    sys.exit()
-
-
     Popen([' DS9Utils %s Button'%(xpapoint)], shell=True,
              stdin=None, stdout=None, stderr=None, close_fds=True)
 
@@ -8565,7 +8480,6 @@ def DS9tsuite(xpapoint):
         tutorial_number += '4'
     if tutorial=='5-All-In-One':
         tutorial_number = '1234'
-    #print(tutorial,tutorial_number)
     d.set('nan black')#sexagesimal#[Type Shift+V to  Enter VERBOSE mode. Only for debugging.]
     d.set("""analysis message {Test suite for beginners: This help will go through most of the must-know functions of this plug-in. Between each function some message will appear to explain you the purpose of these functions and give you some instructions.  }""")
     pprint("""********************************************************************************
@@ -8584,8 +8498,6 @@ by launching it from the Analysis menu [always explicited under function's name]
     WaitForN(xpapoint)
 
     d.set('frame new ; tile no ; file %s ; zoom to fit'%(os.path.join(resource_filename('pyds9plugin', 'Images'),'stack.fits') ))
-    #WaitForN(xpapoint)
-    #print('tutorial_number = ', tutorial_number)
     i=1
     if '1' in tutorial_number:
         GenericToolsTutorial(xpapoint,i=i,n=13)
@@ -8596,7 +8508,6 @@ by launching it from the Analysis menu [always explicited under function's name]
     if '4' in tutorial_number:
         ImageProcessingTutorial(xpapoint,i=i,n=15)
     if tutorial=='5-All-In-One':
-        #d.set("analysis message {You are now ready to use the DS9 Quick Look plugin by yourself.}")
         pprint("""
 ********************************************************************************
          You are now ready to use the DS9 Quick Look plugin by yourself.
@@ -8605,7 +8516,6 @@ by launching it from the Analysis menu [always explicited under function's name]
 ********************************************************************************\n"""%(resource_filename('pyds9plugin', 'QuickLookPlugIn.ds9.ans')))
 
     else:
-        #d.set("analysis message {Well done, You completed the %s tutorial! Let's try the next one when you have some time!}"%(tutorial))
         pprint("""
 ********************************************************************************
              Well done, You completed the %s tutorial!
@@ -8631,13 +8541,7 @@ def DS9PythonInterp(xpapoint):
 
     filename = getfilename(d)
     path2remove, exp, eval_ = sys.argv[3:6]
-    #ndimage.grey_dilation(ndimage.grey_erosion(data, size=(n,n)), size=(n,n))
-    #exp = sys.argv[4]
-    #a, b = sys.argv[4].split(',')
     verboseprint('Expression to be evaluated: ', exp)
-    #a, b = float(a), float(b)
-    #if len(sys.argv) > 5: path = Charge_path_new(filename, entry_point=5)
-   # path = Charge_path_new(filename) if len(sys.argv) > 5 else [filename] #and verboseprint('Multi image analysis argument not understood, taking only loaded image:%s, sys.argv= %s'%(filename, sys.argv[-5:]))
     path = globglob(sys.argv[-2],xpapoint)
     overwrite=bool(int(sys.argv[-1]))
 
@@ -8658,11 +8562,6 @@ def DS9PythonInterp(xpapoint):
                 fitswrite(fitsimage,'/tmp/image.fits')
             except TypeError:
                 pass
-
-
-    # for filename in path:
-    #     verboseprint(filename)
-    #     result, name = ExecCommand(filename, xpapoint=xpapoint,path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_)))
     if len(path)==1:
         result, name = ExecCommand(filename, xpapoint=xpapoint,path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_)))
     else:
@@ -8702,10 +8601,6 @@ def Button(xpapoint):
 
         @pyqtSlot() # <--- add this line
         def handleButtonNext(self):
-#            if self.d.get('cmap')=='cool':
-#                self.d.set('cmap heat')
-#            else:
-#                self.d.set('cmap heat')
             self.d.set('nan grey')
             verboseprint('Button Clicked!')
 
@@ -8785,18 +8680,12 @@ BG  %0.7f"""%(T1 ,T2 ,T3 ,T4 ,T5 ,T6 ,T7 ,T8 ,T9 ,T10,T11,T12,T13,T14)
 
     command ="""/Users/Vincent/opt/anaconda3/bin/python3 /Users/Vincent/Github/DS9functions/pyds9plugin/MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""%(bool(int(single)), size, bool(int(prob)), path)
     print(command)
-    #a = 1#os.system(command)
-    #a = os.system(command)
-    #a = os.popen(command).read()
     import subprocess
-    #a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
-    #a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
     try:
         a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
     print(a)
-#    if a==0:
     try:
         try:
             a = fits.open(path.replace('.fits','.masks.fits'))
@@ -8810,7 +8699,6 @@ BG  %0.7f"""%(T1 ,T2 ,T3 ,T4 ,T5 ,T6 ,T7 ,T8 ,T9 ,T10,T11,T12,T13,T14)
 #        d.set('multiframe %s'%(path.replace('.fits','.mask.fits')))
     except Exception as e:
         print(e)
-        #message(d, 'did not work...')
         print('did not work...')
     return
 
@@ -8826,18 +8714,12 @@ def MaxiMask_cc(path=None,xpapoint=None):
         path = getfilename(d)
     command ="""/Users/Vincent/opt/anaconda3/bin/python3 /Users/Vincent/Downloads/Safari/MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""%(bool(int(True)), 8, bool(int(True)), path)
     print(command)
-    #a = 1#os.system(command)
-    #a = os.system(command)
-    #a = os.popen(command).read()
     import subprocess
-    #a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
-    #a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
     try:
         a = subprocess.check_output(command, shell=True,stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
     print(a)
-#    if a==0:
     try:
         try:
             a = fits.open(path.replace('.fits','.masks.fits'))
@@ -8848,10 +8730,8 @@ def MaxiMask_cc(path=None,xpapoint=None):
             verboseprint(e)
         d.set('frame new')
         d.set('file %s'%(path.replace('.fits','.masks.fits')))
-#        d.set('multiframe %s'%(path.replace('.fits','.mask.fits')))
     except Exception as e:
         print(e)
-        #message(d, 'did not work...')
         print('did not work...')
     return
 
@@ -8867,22 +8747,16 @@ def CreateContourRegions(xpapoint):
     d.set('wcs skyformat degrees ; regions system wcs ; regions sky fk5 ; regions skyformat degrees')
     d.set('block to %s'%(B))
     d.set('scale limits %s %s'%(T,T+1))
-    #d.set('regions /Users/Vincent/Documents/Work/Fields/DS9Regions/regVenice/%s.reg'%(name))
     d.set('region select all')
-    #d.set('regions width 2')
     d.set('regions color white')
-#    a = input('Do you wish to continue?')
     a = 1#yesno(d,'Do you wish to continue?')
     if a !='n':
         im = d.get_pyfits()
         ds9 = im[0].data
         ds9[ds9<T]=0;ds9[ds9>T]=1
         if erosion > 0:
-            #ds9 = grey_erosion(ds9, size=(erosion,erosion))
             ds9 = binary_erosion(ds9, iterations=1,structure=np.ones((int(1),int(erosion)))).astype(int)
             ds9 = binary_erosion(ds9, iterations=1,structure=np.ones((int(erosion),int(1)))).astype(int)
-        #ds9 = grey_dilation(grey_erosion(ds9, size=(n,n)), size=(n,n))
-        #ds9 = grey_dilation(grey_erosion(ds9, size=(n,n)), size=(n,n))
         if dilatation > 0:
             ds9 = grey_dilation(ds9, size=(dilatation,dilatation))
         im[0].data = ds9
@@ -8922,12 +8796,9 @@ def SimplifyMask(path):
                 k=100#10
                 a+=1
                 while len(x)>=100:
-                    # del x[k-1::k]
-                    # del y[k-1::k]
                     del x[::k]
                     del y[::k]
                     k-=1
-                    #print(i, k,len(x))
                 new_line = 'polygon('+','.join([str(np.round(float(xi),5))+','+str(np.round(float(yi),5)) for xi, yi in zip(x,y)])+')\n'
                 new_reg.write(new_line)
     print('%i regions rescaled!'%(a))
@@ -9017,26 +8888,16 @@ def createRegContour(path,n=50,limit=100):
     a = fits.open(path)
     w = WCS(a[0].header)
     ds9=a[0].data
-    #ds9 = binary_dilation(a[0].data, iterations=1,structure=np.ones((n,n))).astype(int)
     plt.figure()
     plt.imshow(ds9);
     if n>1:
         ds9 = grey_dilation(ds9,size=n).astype(int)
     CS = plt.contour(ds9, levels=1)
-    #    ax.xaxis.set_minor_locator(locator)
-    #    CS = ax.contour(image, levels=threshold, colors='white', alpha=0.5)
-#    ax=plt.gca()
-#    CS = ax.contour(ds9, levels=1)
-#    plt.close()
     sizex = np.array([cs[:,0].max() - cs[:,0].min()     for cs in CS.allsegs[0] ])
     sizey = np.array([cs[:,1].max() - cs[:,1].min()     for cs in CS.allsegs[0] ])
     size = np.array([ len(cs[:,1])   for cs in CS.allsegs[0] ])
-    #print(len(sizex))
-    #print(len(sizex[(sizex>n)|(sizey>n)]))
     size_tot = np.sqrt(np.square(sizex) + np.square(sizey))
     regions = np.array(CS.allsegs[0])[size_tot>500]
-#    regions = np.array(CS.allsegs[0])[size_tot>limit+n]
-#    for i, region in enumerate(regions):
     if os.path.isfile('/tmp/regions.reg'):
         os.remove('/tmp/regions.reg')
     with open('/tmp/regions.reg', 'a') as file:
@@ -9048,7 +8909,6 @@ fk5
         region = regions[i]
         if region.shape[0]>99:
             regions[i] = region[::int( region.shape[0]/80)]
-        #print(len(regions[i]))
         new_line = 'polygon('+','.join([str(np.round(a,5))+','+str(np.round(b,5)) for a,b in zip(w.pixel_to_world(region[:,0],region[:,1]).ra.value,w.pixel_to_world(region[:,0],region[:,1]).dec.value) ])+')\n'
         with open('/tmp/regions.reg', 'a') as file:
             file.write(new_line)
