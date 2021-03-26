@@ -704,7 +704,7 @@ def PresentPlugIn():
     return
 
 
-@fn_timer
+#@fn_timer
 # @profile
 def DS9setup2(xpapoint, config=my_conf, color="cool"):
     """This function aims at giving a quick and general visualisation 
