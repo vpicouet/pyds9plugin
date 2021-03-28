@@ -24,7 +24,6 @@ if os.path.exists(files_folder) is False:
 def main():
     d=DS9()
     name = d.get('xpa').split('\t')[-1]
-    os.system('echo 0 > %s'%(DS9_BackUp_path + '.verbose.txt'))
     print('\n    Setup    \n' )
     os.system('DS9Utils %s open  " %s/stack.fits" Slice  0 '%(name,files_folder))
     ipython.magic("lprun -u 1e-1  -T /tmp/prun_open.py -s -r -f DS9open -f get DS9open('%s','%s/stack.fits')  "%(name,files_folder))
@@ -126,12 +125,15 @@ def main():
 
 if __name__ == '__main__':
     try:
+        os.system('echo 0 > %s'%(DS9_BackUp_path + '/.verbose.txt'))
+        os.system('echo 0 > %s'%(DS9_BackUp_path + '/.message.txt'))
         copyfile(im, test_folder + '/files/' + os.path.basename(im))
         a = main()
         [os.remove(file) for file in glob.glob(os.environ['HOME'] +  '/Github/DS9functions/pyds9plugin/testing/files/*')]
 
     finally:
-        os.system('echo 1 > %s'%(DS9_BackUp_path + '.verbose.txt'))
+        os.system('echo 1 > %s'%(DS9_BackUp_path + '/.verbose.txt'))
+        os.system('echo 1 > %s'%(DS9_BackUp_path + '/.message.txt'))
         
 
 # os.system('DS9Utils %s '%(name))

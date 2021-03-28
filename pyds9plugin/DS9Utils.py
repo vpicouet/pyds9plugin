@@ -114,8 +114,8 @@ def CreateFolders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/"):
         os.makedirs(os.path.dirname(DS9_BackUp_path) + "/tmp")
     if not os.path.exists(DS9_BackUp_path + ".verbose.txt"):
         os.system("echo 1 > %s" % (DS9_BackUp_path + ".verbose.txt"))
-    if not os.path.exists(DS9_BackUp_path + ".message.txt"):
-        os.system("echo 1 > %s" % (DS9_BackUp_path + ".message.txt"))
+    # if not os.path.exists(DS9_BackUp_path + ".message.txt"):
+    #     os.system("echo 1 > %s" % (DS9_BackUp_path + ".message.txt"))
     return DS9_BackUp_path
 
 
@@ -829,7 +829,8 @@ def DS9createSubset(xpapoint, cat=None, number=2, dpath=DS9_BackUp_path + "subse
         symlink_force(filename, new_path + "/%s" % (os.path.basename(filename)))
 
     copyfile(cat_path, os.path.join(path_date, os.path.basename(cat_path)))
-    csvwrite(t2, os.path.join(path_date, "HeaderCatalogSubet.csv"))  # [1;31mTypeError[0m[1;31m:[0m Cannot set fill value of string with array of dtype int64
+    csvwrite(t2, os.path.join(path_date, "HeaderCatalogSubet.csv"))  
+    # [1;31mTypeError[0m[1;31m:[0m Cannot set fill value of string with array of dtype int64
     message(d, "Images are saved as symbolik links there : %s" % (path_date))
     # d.set("""analysis message {Images are saved as symbolik links there : %s}"""%(path_date))
     return t2
@@ -1770,7 +1771,7 @@ def process_region(regions, win, quick=False, config=my_conf, message=True, dtyp
         return processed_regions
 
 
-@fn_timer
+#@fn_timer
 def getregion(win, debug=False, all=False, quick=False, config=my_conf, selected=False, message=True, system="Image", dtype=int):
     """ Read a region from a ds9 instance.
     Returns a tuple with the data in the region.
@@ -4441,7 +4442,6 @@ def ApplyQuery(cat=None, query=None, path=None, new_path=None, delete=False):
 def DS9Catalog2Region(xpapoint, name=None, x="x", y="y", ID=None, system="image", form="circle", size=10, wcs=False, query="-"):
     """Imports a catalog as regions id DS9
     """
-    from astropy.wcs import WCS
     import astropy
     from astropy.io import fits
     from astropy.table import Table
@@ -4469,6 +4469,7 @@ def DS9Catalog2Region(xpapoint, name=None, x="x", y="y", ID=None, system="image"
         new_table = df.query(query)
         cat = Table.from_pandas(new_table)
     if wcs:
+        from astropy.wcs import WCS
         filename = getfilename(d)
         fitsfile = fits.open(filename)
         ext = FitsExt(fitsfile)
