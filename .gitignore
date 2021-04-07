@@ -25,3 +25,5 @@ pyds9plugin/Images/HorseHead.fits
 pyds9plugin/Images/G_Trimm.fits
 
 pyds9plugin/doc/ref/old_only_ok/
+
+pyds9plugin/.remote-sync.json

@@ -409,7 +409,7 @@ def PlotSpectraFilters(xpapoint):
     m = 1e-4
     c = 3e8
     beta_min, beta_max = 1268, 2580
-    pathf = resource_filename("pyds9plugin", "filters") 
+    pathf = resource_filename("pyds9plugin", "filters")
     path_seds = resource_filename("pyds9plugin", "SEDs")
     colors = [
         "navy",
@@ -707,7 +707,7 @@ def PresentPlugIn():
 #@fn_timer
 # @profile
 def DS9setup2(xpapoint, config=my_conf, color="cool"):
-    """This function aims at giving a quick and general visualisation 
+    """This function aims at giving a quick and general visualisation
         of the image by applying specific thresholding
         and smoothing parameters. This allows to detect easily:
         •Different spot that the image contains
@@ -829,7 +829,7 @@ def DS9createSubset(xpapoint, cat=None, number=2, dpath=DS9_BackUp_path + "subse
         symlink_force(filename, new_path + "/%s" % (os.path.basename(filename)))
 
     copyfile(cat_path, os.path.join(path_date, os.path.basename(cat_path)))
-    csvwrite(t2, os.path.join(path_date, "HeaderCatalogSubet.csv"))  
+    csvwrite(t2, os.path.join(path_date, "HeaderCatalogSubet.csv"))
     # [1;31mTypeError[0m[1;31m:[0m Cannot set fill value of string with array of dtype int64
     message(d, "Images are saved as symbolik links there : %s" % (path_date))
     # d.set("""analysis message {Images are saved as symbolik links there : %s}"""%(path_date))
@@ -873,7 +873,7 @@ def PlotFit1D(
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
     from decimal import Decimal
-
+    x,y=np.array(x),np.array(y)
     if x is None:
         x = np.arange(len(y))
     if sigma is not None:
@@ -1114,7 +1114,7 @@ def BuildingWCS(xpapoint=None, filename=None, pix_coord=None, increment=None, pr
     w.wcs.cdelt = increment  # np.array([-0.066667, 0.066667])
     w.wcs.crval = coord_value  # [0, -90]
     print(projection)
-    w.wcs.ctype = [str(projection[0]), str(projection[1])]  
+    w.wcs.ctype = [str(projection[0]), str(projection[1])]
     # ["RA---AIR", "DEC--AIR"], ["RA---TAN", "DEC--TAN"]#
     # w.wcs.set_pv([(2, 1, 45.0)])
     # Three pixel coordinates of interest.
@@ -1780,7 +1780,7 @@ def getregion(win, debug=False, all=False, quick=False, config=my_conf, selected
     if all is False:
         regions = win.get(
             "regions selected"
-        )  
+        )
         verboseprint(regions)
         verboseprint(len([row for row in regions.split("\n")]))
         if len([row for row in regions.split("\n")]) >= 3:
@@ -3214,7 +3214,7 @@ def PlotArea3D(xpapoint, color=False):
             def callback(value):
                 points = mesh.points
                 if d["log"] is False:
-                    points[:, -1] = d["data_points"].reshape(-1) * value  
+                    points[:, -1] = d["data_points"].reshape(-1) * value
                 else:  #
                     points[:, -1] = (d["data_points"].reshape(-1) * value)
                 d["value"] = value
@@ -3341,12 +3341,12 @@ def CreateCube(d, data):
     xx, yy, zz = np.indices(data.shape)  # np.me
     starting_mesh = wrap(np.array([yy.ravel()[mask], zz.ravel()[mask], xx.ravel()[mask]]).T)
     verboseprint(data.ravel()[mask])
-    starting_mesh["Intensity"] = data.ravel()[mask]  
+    starting_mesh["Intensity"] = data.ravel()[mask]
 
     def createMesh(DensityMin=0.5, DensityMax=0.5, StretchingFactor=0.5, PointSize=5):
         mask = (data.ravel() > np.nanpercentile(data[np.isfinite(data)], DensityMin)) & (data.ravel() < np.nanpercentile(data[np.isfinite(data)], DensityMax))
         mesh = wrap(np.array([yy.ravel()[mask], zz.ravel()[mask], StretchingFactor * xx.ravel()[mask] - np.nanmean(StretchingFactor * xx.ravel()[mask])]).T)
-        mesh["Intensity"] = data.ravel()[mask]  
+        mesh["Intensity"] = data.ravel()[mask]
         return mesh
 
     p = Plotter(notebook=False, window_size=[2 * 1024, 2 * 768], title="3D")
@@ -3427,7 +3427,7 @@ def ThrowApertures(xpapoint):
         except TypeError:
             r1 = r2 = radius
     if sys.argv[-1] == "Equidistributed":
-        areasd = CreateAreas(image, area=area, radius=radius) 
+        areasd = CreateAreas(image, area=area, radius=radius)
         areas = areasd
     else:
         print(area)
@@ -3930,7 +3930,7 @@ def DS9throughslit(xpapoint, DS9backUp=DS9_BackUp_path, config=my_conf):
     verboseprint(x)
     verboseprint(fluxesn)
     # ,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):
-    popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(), 3, 0])  
+    popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(), 3, 0])
     xl = np.linspace(x.min(), x.max(), 100)
     maxf = xl[np.where(Gaussian(xl, *popt) == np.nanmax(Gaussian(xl, *popt)))[0][0]]  # [0]
 
@@ -5702,8 +5702,8 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
         lx, ly = data.shape
         column = np.nanmean(data[Yinf:Ysup, Xinf:Xsup], axis=1)
         line = np.nanmean(data[Yinf:Ysup, Xinf:Xsup], axis=0)
-        t[i]["Col2ColDiff"] = np.nanmedian(line[::2]) - np.nanmedian(line[1::2])  
-        t[i]["Line2lineDiff"] = np.nanmedian(column[::2]) - np.nanmedian(column[1::2]) 
+        t[i]["Col2ColDiff"] = np.nanmedian(line[::2]) - np.nanmedian(line[1::2])
+        t[i]["Line2lineDiff"] = np.nanmedian(column[::2]) - np.nanmedian(column[1::2])
         t[i]["TopImage"] = np.nanmean(column[:20])
         t[i]["BottomImage"] = np.nanmean(column[-20:])
         t[i]["SaturatedPixels"] = 100 * float(np.sum(data[Yinf:Ysup, Xinf:Xsup] > 2 ** 16 - 10)) / np.sum(data[Yinf:Ysup, Xinf:Xsup] > 0)
@@ -6539,7 +6539,7 @@ def EMCCD(x, biais=3300, RN=107, EmGain=600, flux=0.1, bright_surf=8.3, p_sCIC=0
     # plt.plot(yscic[-1]);n=500;
     #plt.plot(np.exp(-x/np.power(EmGain, n/n_registers))/np.power(EmGain, n/n_registers))
     if biais > x[0]:
-        ycounts[(x > biais)] = ycounts[: -np.sum(x <= biais)]  
+        ycounts[(x > biais)] = ycounts[: -np.sum(x <= biais)]
         # PPPPPbbbbbbb    #ycounts[(x>biais) & (x<x[-1])] = ycounts[1:-np.sum(x<=biais)] #PPPPPbbbbbbb
         ycounts[x < biais] = 0
     # plot(x,10*np.log10(10*yscic))
