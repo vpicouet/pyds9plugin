@@ -9506,103 +9506,107 @@ def MaxiMask(xpapoint, path=None):  #
     d = DS9n(xpapoint)
     if path is None:
         path = getfilename(d)
-    prob, size, single, net, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13, F14, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14 = np.array(sys.argv[3:], dtype=float)
-    verboseprint(sys.argv[3:])
-    os.chdir(os.path.dirname(path))  # files_,
-    # iles = globglob(files_)
-    flags = """CR  %i
-HCL %i
-DCL %i
-HP  %i
-DP  %i
-P   %i
-STL %i
-FR  %i
-NEB %i
-SAT %i
-SP  %i
-OV  %i
-BBG %i
-BG  %i""" % (
-        F1,
-        F2,
-        F3,
-        F4,
-        F5,
-        F6,
-        F7,
-        F8,
-        F9,
-        F10,
-        F11,
-        F12,
-        F13,
-        F14,
-    )
+    try:
+        prob, size, single, net, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13, F14, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14 = np.array(sys.argv[3:], dtype=float)
+        verboseprint(sys.argv[3:])
+        os.chdir(os.path.dirname(path))  # files_,
+        # iles = globglob(files_)
+        flags = """CR  %i
+    HCL %i
+    DCL %i
+    HP  %i
+    DP  %i
+    P   %i
+    STL %i
+    FR  %i
+    NEB %i
+    SAT %i
+    SP  %i
+    OV  %i
+    BBG %i
+    BG  %i""" % (
+            F1,
+            F2,
+            F3,
+            F4,
+            F5,
+            F6,
+            F7,
+            F8,
+            F9,
+            F10,
+            F11,
+            F12,
+            F13,
+            F14,
+        )
 
-    priors = """CR  %0.7f
-HCL %0.7f
-DCL %0.7f
-HP  %0.7f
-DP  %0.7f
-P   %0.7f
-STL %0.7f
-FR  %0.7f
-NEB %0.7f
-SAT %0.7f
-SP  %0.7f
-OV  %0.7f
-BBG %0.7f
-BG  %0.7f""" % (
-        P1,
-        P2,
-        P3,
-        P4,
-        P5,
-        P6,
-        P7,
-        P8,
-        P9,
-        P10,
-        P11,
-        P12,
-        P13,
-        P14,
-    )
+        priors = """CR  %0.7f
+    HCL %0.7f
+    DCL %0.7f
+    HP  %0.7f
+    DP  %0.7f
+    P   %0.7f
+    STL %0.7f
+    FR  %0.7f
+    NEB %0.7f
+    SAT %0.7f
+    SP  %0.7f
+    OV  %0.7f
+    BBG %0.7f
+    BG  %0.7f""" % (
+            P1,
+            P2,
+            P3,
+            P4,
+            P5,
+            P6,
+            P7,
+            P8,
+            P9,
+            P10,
+            P11,
+            P12,
+            P13,
+            P14,
+        )
 
-    thresholds = """CR  %0.7f
-HCL %0.7f
-DCL %0.7f
-HP  %0.7f
-DP  %0.7f
-P   %0.7f
-STL %0.7f
-FR  %0.7f
-NEB %0.7f
-SAT %0.7f
-SP  %0.7f
-OV  %0.7f
-BBG %0.7f
-BG  %0.7f""" % (
-        T1,
-        T2,
-        T3,
-        T4,
-        T5,
-        T6,
-        T7,
-        T8,
-        T9,
-        T10,
-        T11,
-        T12,
-        T13,
-        T14,
-    )
+        thresholds = """CR  %0.7f
+    HCL %0.7f
+    DCL %0.7f
+    HP  %0.7f
+    DP  %0.7f
+    P   %0.7f
+    STL %0.7f
+    FR  %0.7f
+    NEB %0.7f
+    SAT %0.7f
+    SP  %0.7f
+    OV  %0.7f
+    BBG %0.7f
+    BG  %0.7f""" % (
+            T1,
+            T2,
+            T3,
+            T4,
+            T5,
+            T6,
+            T7,
+            T8,
+            T9,
+            T10,
+            T11,
+            T12,
+            T13,
+            T14,
+        )
 
-    os.system('echo "%s" > classes.flags' % (flags))
-    os.system('echo "%s" > classes.thresh' % (thresholds))
-    os.system('echo "%s" > classes.priors' % (priors))
+        os.system('echo "%s" > classes.flags' % (flags))
+        os.system('echo "%s" > classes.thresh' % (thresholds))
+        os.system('echo "%s" > classes.priors' % (priors))
+
+    except ValueError:
+        prob, size, single, net = False, 8, False, 0
 
     command = (
         """/Users/Vincent/opt/anaconda3/bin/python3 /Users/Vincent/Github/DS9functions/pyds9plugin/MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
@@ -9637,14 +9641,14 @@ def MaxiMask_cc(path=None, xpapoint=None):
     """ Runs MaxiMask processing tool on image
     """
     from astropy.io import fits
-
+    from shutil import which
     d = DS9n(xpapoint)
     if path is None:
         path = getfilename(d)
-    command = """/Users/Vincent/opt/anaconda3/bin/python3 /Users/Vincent/Downloads/Safari/MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s""" % (
+    command = """%s ./MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s""" % (which('python3'),
         bool(int(True)),
         8,
-        bool(int(True)),
+        bool(int(False)),
         path,
     )
     print(command)
