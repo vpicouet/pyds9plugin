@@ -15,6 +15,7 @@ import datetime
 from pkg_resources import resource_filename
 from astropy.table import Table
 from pyds9 import DS9, ds9_targets
+import argparse
 
 try:
     import IPython.core.ultratb
@@ -703,12 +704,17 @@ def PresentPlugIn():
             Written by Vincent PICOUET <vincent.picouet@lam.fr>
             Copyright 2019
             visit https://people.lam.fr/picouet.vincent/pyds9plugin
+            for more information
 
             DS9 Quick Look Plug-in comes with ABSOLUTELY NO WARRANTY
 
             To use it run:
             > ds9 &
             and play with the analysis commands!
+            You can also access it via command line:
+            > DS9Utils xpapoint function [-h] [--optionals OPTIONALS]
+            xpapoint is the accespoint to DS9, eg. 7f000001:60370
+            Find bellow the list of the available functions
                                                                                  """
         + bcolors.END
     )
@@ -5758,16 +5764,38 @@ def rescale(img,  target_type):
     new_img = (a * img + b).astype(target_type)
     return new_img
 
-def DS9Convert(xpapoint=None,path=None):
+#@profile
+def DS9Convert(xpapoint=None,path=None,argv=[]):
     """Convert and scale file into other type
     """
+    parser = argparse.ArgumentParser(description='Convert pixels to different type.',
+    usage="DS9Utils xpapoint  function [-h] [--optional1 OPTIONAL1] [--optional2 OPTIONAL2]")
+    parser.add_argument('xpapoint', help="DS9 xpapoint")#,required=True)
+    parser.add_argument('function', help="Input fits image")#,required=True)
+    # parser.add_argument('-x', '--xpapoint',    default='None', type=str , help="DS9 xpapoint ")
+    # parser.add_argument('-f', '--function',    default='None', type=str, help="Input fits image")
+    parser.add_argument('-t', '--type',    default='8,uint8', type=str,   help='Conversion type of the image : 8,uint8|16,int16|32,int32|64,int64|-32,float32|-64,float64')
+    parser.add_argument('-r', '--rescale',    default=1, type=int,   help='Rescale or not the image')
+    parser.add_argument('-p', '--path',    default='-', type=str,   help='Possible regexp')
+    # parser.add_argument('-x', '--xpapoint',    default='None', type=str,   help='xpapoint')
+    # parser.add_argument('-f', '--function',    default='None', type=str,   help='Possible regexp')
+    if len(argv)==0:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args([xpapoint,'test']+argv)
+
+
+
     from astropy.io import fits
     d = DS9n(xpapoint)  # DS9n(xpapoint)
     #filename=getfilename(d)
     #fitsimage = fits.open(filename)#d.get_pyfits()  # fits.open(filename)[0]
-    rescale_ = bool(int(sys.argv[-3]))
-    type = sys.argv[-2]
-    path = sys.argv[-1]
+    # rescale_ = bool(int(sys.argv[-3]))
+    # type = sys.argv[-2]
+    # path = sys.argv[-1]
+    rescale_ = args.rescale
+    type = args.type
+    path = args.path
     filenames = globglob(path, ds9_im=True)
 
     python_type =type.split(',')[-1]
@@ -9524,6 +9552,8 @@ def DS9PythonInterp(xpapoint):
 
 
 def Quit(xpapoint):
+    """
+    """
     return
 
 
@@ -9959,16 +9989,100 @@ fk5
 
 
 # @fn_timer
+#@profile
 def main():
     """Main function where the arguments are defined and the other functions called
     """
+
+    DictFunction_Generic = {
+        "setup": DS9setup2,
+        "guidance": DS9Update,
+        "fitsgaussian2D": fitsgaussian2D,
+        "DS9createSubset": DS9createSubset,
+        "DS9Catalog2Region": DS9Catalog2Region,
+        "AddHeaderField": AddHeaderField,
+        "BackgroundFit1D": BackgroundFit1D,
+        "test": DS9tsuite,
+        "Convolve2d": Convolve2d,
+        "PlotSpectraDataCube": PlotSpectraDataCube,
+        "StackDataDubeSpectrally": StackDataDubeSpectrally,
+        "stack": DS9stack_new,
+        "lock": DS9lock,
+        "CreateHeaderCatalog": DS9CreateHeaderCatalog,
+        "SubstractImage": DS9PythonInterp,
+        "DS9Region2Catalog": DS9Region2Catalog,
+        "DS9MaskRegions": DS9MaskRegions,
+        "CreateImageFromCatalogObject": CreateImageFromCatalogObject,
+        "PlotArea3D": PlotArea3D,
+        "OriginalSettings": DS9originalSettings,
+        "next_step": next_step,
+        "BackgroundEstimationPhot": DS9BackgroundEstimationPhot,
+        "verbose": verbose,
+        "CreateWCS": BuildingWCS,
+        "open": DS9open,
+        "checkFile": checkFile,
+        "ManualFitting": ManualFitting,
+        "Quit": Quit,
+        "Button": Button,
+        "ThrowApertures": ThrowApertures,
+        "CreateContourRegions": CreateContourRegions,
+        "DS9Convert":DS9Convert
+    }  # ,'NextButton':NextButton
+
+    DictFunction_AIT = {
+        "centering": DS9center,
+        "radial_profile": DS9rp,
+        "throughfocus": DS9throughfocus,
+        "ComputeFluctuation": ComputeFluctuation,
+        "throughfocus_visualisation": DS9visualisation_throughfocus,
+        "throughslit": DS9throughslit,
+        "ExploreThroughfocus": ExploreThroughfocus,
+        "ReplaceWithNans": ReplaceWithNans,
+        "InterpolateNaNs": DS9InterpolateNaNs,
+        "Trimming": DS9Trimming,
+        "ColumnLineCorrelation": DS9CLcorrelation,
+        "ComputeEmGain": DS9ComputeEmGain,
+        "DS9_2D_FFT": DS9_2D_FFT,
+        "2D_autocorrelation": DS9_2D_autocorrelation,
+        "get_depth_image": get_depth_image,
+        "DS9PlotEMCCD": DS9PlotEMCCD,
+        "AnalyzeFWHMThroughField": AnalyzeFWHMThroughField,
+    }
+
+    DictFunction_SOFT = {
+        "DS9SWARP": DS9SWARP,
+        "DS9PSFEX": DS9PSFEX,
+        "RunSextractor": RunSextractor,
+        "DS9saveColor": DS9saveColor,
+        "AperturePhotometry": AperturePhotometry,
+        "ExtractSources": DS9ExtractSources,
+        "CosmologyCalculator": CosmologyCalculator,
+        "Convertissor": Convertissor,
+        "WCS": DS9guider,
+        "DS9Resample": DS9Resample,
+        "Function": Function,
+        "PlotSpectraFilters": PlotSpectraFilters,
+        "RunSextractorPP": RunSextractorPP,
+        "MaxiMask": MaxiMask,
+    }  #'Function_parametric':Function_parametric
+
+    DictFunction = {}
+    for d in (DictFunction_Generic, DictFunction_AIT, DictFunction_SOFT):  # , DictFunction_Calc, DictFunction_SOFT, DictFunction_FB, DictFunction_Delete): #DictFunction_CLAUDS
+        DictFunction.update(d)
+
+    DictFunction = dict( sorted(DictFunction.items(), key=lambda x: x[0].lower()) )
+
     if len(sys.argv) == 1:
         CreateFolders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/")
         PresentPlugIn()
+        for function in DictFunction:
+            print('\033[1m %s \033[0;0m :   %s'%(function,DictFunction[function].__doc__.split('\n')[0] ))
         # LoadDS9QuickLookPlugin()
     elif (len(sys.argv) == 2) & ((sys.argv[-1] == "help") | (sys.argv[-1] == "h")):
         CreateFolders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/")
         PresentPlugIn()
+        for function in DictFunction:
+            print('\033[1m %s \033[0;0m :   %s'%(function,DictFunction[function].__doc__.split('\n')[0] ))
         # print("which('DS9Utils') =", which('DS9Utils'))
         print("__file__ =", __file__)
         print("__package__ =", __package__)
@@ -9976,87 +10090,21 @@ def main():
         print("DS9 analysis file = ", resource_filename("pyds9plugin", "QuickLookPlugIn.ds9.ans"))
         print("Python main file = ", resource_filename("pyds9plugin", "DS9Utils.py"))
         LoadDS9QuickLookPlugin()
+
         sys.exit()
 
     else:
-
-        DictFunction_Generic = {
-            "setup": DS9setup2,
-            "guidance": DS9Update,
-            "fitsgaussian2D": fitsgaussian2D,
-            "DS9createSubset": DS9createSubset,
-            "DS9Catalog2Region": DS9Catalog2Region,
-            "AddHeaderField": AddHeaderField,
-            "BackgroundFit1D": BackgroundFit1D,
-            "test": DS9tsuite,
-            "Convolve2d": Convolve2d,
-            "PlotSpectraDataCube": PlotSpectraDataCube,
-            "StackDataDubeSpectrally": StackDataDubeSpectrally,
-            "stack": DS9stack_new,
-            "lock": DS9lock,
-            "CreateHeaderCatalog": DS9CreateHeaderCatalog,
-            "SubstractImage": DS9PythonInterp,
-            "DS9Region2Catalog": DS9Region2Catalog,
-            "DS9MaskRegions": DS9MaskRegions,
-            "CreateImageFromCatalogObject": CreateImageFromCatalogObject,
-            "PlotArea3D": PlotArea3D,
-            "OriginalSettings": DS9originalSettings,
-            "next_step": next_step,
-            "BackgroundEstimationPhot": DS9BackgroundEstimationPhot,
-            "verbose": verbose,
-            "CreateWCS": BuildingWCS,
-            "open": DS9open,
-            "checkFile": checkFile,
-            "ManualFitting": ManualFitting,
-            "Quit": Quit,
-            "Button": Button,
-            "ThrowApertures": ThrowApertures,
-            "CreateContourRegions": CreateContourRegions,
-            "DS9Convert":DS9Convert
-        }  # ,'NextButton':NextButton
-
-        DictFunction_AIT = {
-            "centering": DS9center,
-            "radial_profile": DS9rp,
-            "throughfocus": DS9throughfocus,
-            "ComputeFluctuation": ComputeFluctuation,
-            "throughfocus_visualisation": DS9visualisation_throughfocus,
-            "throughslit": DS9throughslit,
-            "ExploreThroughfocus": ExploreThroughfocus,
-            "ReplaceWithNans": ReplaceWithNans,
-            "InterpolateNaNs": DS9InterpolateNaNs,
-            "Trimming": DS9Trimming,
-            "ColumnLineCorrelation": DS9CLcorrelation,
-            "ComputeEmGain": DS9ComputeEmGain,
-            "DS9_2D_FFT": DS9_2D_FFT,
-            "2D_autocorrelation": DS9_2D_autocorrelation,
-            "get_depth_image": get_depth_image,
-            "DS9PlotEMCCD": DS9PlotEMCCD,
-            "AnalyzeFWHMThroughField": AnalyzeFWHMThroughField,
-        }
-
-        DictFunction_SOFT = {
-            "DS9SWARP": DS9SWARP,
-            "DS9PSFEX": DS9PSFEX,
-            "RunSextractor": RunSextractor,
-            "DS9saveColor": DS9saveColor,
-            "AperturePhotometry": AperturePhotometry,
-            "ExtractSources": DS9ExtractSources,
-            "CosmologyCalculator": CosmologyCalculator,
-            "Convertissor": Convertissor,
-            "WCS": DS9guider,
-            "DS9Resample": DS9Resample,
-            "Function": Function,
-            "PlotSpectraFilters": PlotSpectraFilters,
-            "RunSextractorPP": RunSextractorPP,
-            "MaxiMask": MaxiMask,
-        }  #'Function_parametric':Function_parametric
-
-        DictFunction = {}
-        for d in (DictFunction_Generic, DictFunction_AIT, DictFunction_SOFT):  # , DictFunction_Calc, DictFunction_SOFT, DictFunction_FB, DictFunction_Delete): #DictFunction_CLAUDS
-            DictFunction.update(d)
+        # import argparse
+        # parser = argparse.ArgumentParser()
+        # parser.add_argument('-x', '--xpapoint',    default='None', type=str , help="DS9 xpapoint ")
+        # parser.add_argument('-f', '--function',    default='None', type=str, help="Input fits image")
+        # args = parser.parse_args()
+        # xpapoint = args.xpapoint
+        # function = args.function
         xpapoint = sys.argv[1]
         function = sys.argv[2]
+
+
         if function not in ["verbose", "next_step"]:  # ,'setup'
             verboseprint(
                 "\n****************************************************\nDS9Utils " + " ".join(sys.argv[1:]) + "\n****************************************************"

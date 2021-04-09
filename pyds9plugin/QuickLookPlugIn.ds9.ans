@@ -267,7 +267,7 @@ hmenu 1. Generic Functions
 	Convert image
 	*
 	menu
-	DS9Utils $xpa_method DS9Convert  $param(Conversion); $scaling $type "$path" | $text
+	DS9Utils $xpa_method DS9Convert  $param(Conversion); -r $scaling -t $type -p "$path" | $text
 
 
 	Simulate Sky Image
@@ -472,7 +472,7 @@ hmenu 3. Astronomical Softwares
 	hmenu SWARP
 
 
-		SWARP - WCS Images #38
+		SWARP #38
 		*
 		menu
 		DS9Utils $xpa_method DS9SWARP  $param(SWARP); "$PATH" $IMAGEOUT_NAME $WEIGHT_TYPE $RESCALE_WEIGHTS $WEIGHT_IMAGE $COMBINEI $COMBINE_TYPE $CLIP_AMPFRAC $CLIP_SIGMA $CELESTIAL_TYPE $PROJECTION_TYPE $PROJECTION_ERR $CENTER_TYPE $CENTERI $PIXELSCALE_TYPE $PIXEL_SCALE $IMAGE_SIZE $RE-SAMPLING  $RESAMPLING_TYPE  $OVERSAMPLING  $INTERPOLATE $SUBTRACT_BACK  $BACK_SIZE $BACK_FILTERSIZE $BACK_FILTTHRESH     | $text
