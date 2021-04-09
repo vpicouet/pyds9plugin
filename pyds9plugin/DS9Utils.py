@@ -5735,7 +5735,67 @@ def CreateCatalogInfo(t1, verbose=False, config=my_conf, write_header=True):
             pass
     return new_cat
 
+def rescale(img,  target_type):
+    imin = np.nanmin(img)
+    imax = np.nanmax(img)
+    try:
+        target_type_min, target_type_max = np.iinfo(target_type).min, np.iinfo(target_type).max
+    except ValueError:
+        target_type_min, target_type_max = np.finfo(target_type).min, np.finfo(target_type).max
+    a = (target_type_max - target_type_min) / (imax - imin)
+    b = target_type_max - a * imax
+    new_img = (a * img + b).astype(target_type)
+    return new_img
 
+def DS9Convert(xpapoint=None,path=None):
+    """Convert and scale file into other type
+    """
+    from astropy.io import fits
+    d = DS9n(xpapoint)  # DS9n(xpapoint)
+    #filename=getfilename(d)
+    #fitsimage = fits.open(filename)#d.get_pyfits()  # fits.open(filename)[0]
+    rescale_ = bool(int(sys.argv[-3]))
+    type = sys.argv[-2]
+    path = sys.argv[-1]
+    filenames = globglob(path, ds9_im=True)
+
+    python_type =type.split(',')[-1]
+    for filename in filenames:
+        fitsimage = fits.open(filename)#
+        verboseprint( getattr(np, python_type))
+        if rescale_ :
+            data =  rescale(fitsimage[0].data,  getattr(np, python_type))
+            fitsimage[0].data = getattr(np, python_type)(data)
+        else:
+            fitsimage[0].data = getattr(np, python_type)(fitsimage[0].data)
+        if len(filenames)==1:
+            load=True
+        else:
+            load=False
+        SaveFitsImage(d,fitsimage,filename.replace('.fits','_%s.fits'%(python_type)),load=load)
+                # fitsimage[0].writeto(filename.replace('.fits','_%s.fits'%(python_type)))
+    # d.set('frame new')
+    # d.set('file %s'%(filename.replace('.fits','_%s.fits'%(python_type))))
+    return
+
+def SaveFitsImage(d,file,filename,load=False):
+    if os.path.exists(filename):
+        if yesno(d,'%s already exists. Do you want to replace it?'%(os.path.basename(filename))):
+            file[0].writeto(filename,overwrite=True)
+            if load:
+                d.set('frame new')
+                d.set('file %s'%(filename))
+        else:
+            if load:
+                d.set('frame new')
+                d.set_pyfits(file)
+    else:
+        file[0].writeto(filename)
+        if load:
+            d.set('frame new')
+            d.set('file %s'%(filename))
+
+    return
 def ReplaceWithNans(xpapoint):
     """Replace the pixels in the selected regions in DS9 by NaN values
     """
@@ -9498,13 +9558,14 @@ def Button(xpapoint):
     sys.exit(app.exec_())
 
 
-def MaxiMask(xpapoint, path=None):  #
+def MaxiMask(xpapoint=None, path=None):  #
     """ Runs MaxiMask processing tool on image
     """
     from astropy.io import fits
+    from shutil import which
 
-    d = DS9n(xpapoint)
     if path is None:
+        d = DS9n(xpapoint)
         path = getfilename(d)
     try:
         prob, size, single, net, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13, F14, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14 = np.array(sys.argv[3:], dtype=float)
@@ -9609,8 +9670,8 @@ def MaxiMask(xpapoint, path=None):  #
         prob, size, single, net = False, 8, False, 0
 
     command = (
-        """/Users/Vincent/opt/anaconda3/bin/python3 /Users/Vincent/Github/DS9functions/pyds9plugin/MaxiMask-1.1/maximask.py  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
-        % (bool(int(single)), size, bool(int(prob)), path)
+        """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
+        % ('/Users/Vincent/opt/anaconda3/bin/python',resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),bool(int(single)), size, bool(int(prob)), path)
     )
     print(command)
     import subprocess
@@ -9673,6 +9734,24 @@ def MaxiMask_cc(path=None, xpapoint=None):
         print(e)
         print("did not work...")
     return
+
+#!/bin/bash
+# import subprocess, os, glob
+# for file in glob.glob('/data/deepZ/HSC_CLAUDS/DetectionImages/*-?.fits')[:2]:
+#     if os.path.isfile(file.replace('fits','.mask.fits')) is False:
+#         a = subprocess.check_output('/net/CLUSTER/apps/miniconda3/bin/python3 /net/CLUSTER/VAULT/users/vpicouet/DS9functions/pyds9plugin/MaxiMask-1.1/maximask.py  -v --single_mask False --batch_size 8 --proba_thresh False --prior_modif  True %s'%(file), shell=True, stderr=subprocess.STDOUT)
+#     else:
+#         print('already done')
+# a = Table.read('/net/fs/deepZ/HSC_CLAUDS/DetectionTracts/Photometric_Catalogs/calexp-HSC-G-9813_cat.fits')
+# a=a['ALPHA_J2000','DELTA_J2000']
+# for band in ["MegaCam-u", "HSC-G", "HSC-R", "HSC-I", "HSC-Z", "HSC-Y", "MegaCam-uS"]:
+#     b = Table.read('/net/fs/deepZ/HSC_CLAUDS/DetectionTracts/Photometric_Catalogs/calexp-%s-9813_cat.fits'%(band))
+#     a['FLUX_RADIUS_%s'%(band)] = b['FLUX_RADIUS']
+# for band in  HSC-G HSC-R HSC-I HSC-Z HSC-Y VIRCAM-Y MegaCam-uS VIRCAM-H VIRCAM-J VIRCAM-Ks
+# do
+# sex /data/deepZ/HSC_CLAUDS/DetectionTracts/calexp-9813.fits,/data/deepZ/HSC_CLAUDS/tracts/calexp-$band-9813.fits -c  default.sex -MEMORY_OBJSTACK  6000  -MEMORY_PIXSTACK  600000   -MEMORY_BUFSIZE   2048 -WRITE_XML Y -XML_NAME /tmp/calexp-MegaCam-u-9813.fits.xml -CATALOG_NAME /data/deepZ/HSC_CLAUDS/DetectionTracts/Photometric_Catalogs/calexp-$band-9813_cat.fits -CATALOG_TYPE FITS_1.0 -PARAMETERS_NAME /home/vpicouet/.local/lib/python3.7/site-packages/pyds9plugin/Sextractor/sex.param -DETECT_TYPE CCD -DETECT_MINAREA 10 -THRESH_TYPE RELATIVE -DETECT_THRESH 0.8 -ANALYSIS_THRESH 2.0 -FILTER Y -FILTER_NAME /home/vpicouet/.local/lib/python3.7/site-packages/pyds9plugin/Sextractor/gauss_4.0_7x7.conv -DEBLEND_NTHRESH 64 -DEBLEND_MINCONT 1e-05 -CLEAN N -CLEAN_PARAM 1.0 -MASK_TYPE CORRECT -WEIGHT_TYPE NONE,NONE -WEIGHT_IMAGE NONE,NONE -PHOT_APERTURES 6,12,18 -PHOT_AUTOPARAMS 2.5,4.0 -PHOT_PETROPARAMS 2.0,4.0 -PHOT_FLUXFRAC 0.25,0.5,0.75 -MAG_ZEROPOINT 30 -PIXEL_SCALE 0 -SEEING_FWHM 0.8 -STARNNW_NAME /home/vpicouet/.local/lib/python3.7/site-packages/pyds9plugin/Sextractor/default.nnw -BACK_TYPE AUTO -BACK_SIZE 64 -BACK_FILTERSIZE 3 -BACKPHOTO_TYPE LOCAL -BACKPHOTO_THICK 24 -BACK_FILTTHRESH 0.0 -CHECKIMAGE_TYPE NONE -CHECKIMAGE_NAME check.fits
+# done
+
 
 
 def CreateContourRegions(xpapoint):
@@ -9922,6 +10001,7 @@ def main():
             "Button": Button,
             "ThrowApertures": ThrowApertures,
             "CreateContourRegions": CreateContourRegions,
+            "DS9Convert":DS9Convert
         }  # ,'NextButton':NextButton
 
         DictFunction_AIT = {
