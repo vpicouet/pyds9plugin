@@ -87,7 +87,7 @@ def DS9n(xpapoint=None, stop=False):
         xpapoints = []
     if ((xpapoint == 'None') | (xpapoint is None)) & (len(xpapoints) == 0):
         verboseprint("No DS9 target found")
-        return FakeDS9
+        return FakeDS9()
     elif len(xpapoints) != 0:
         verboseprint("%i targets found" % (len(xpapoints)))
         if xpapoint in xpapoints:
@@ -168,7 +168,11 @@ def yesno(d, question="", verbose=message_):
     """Opens a native DS9 yes/no dialog box."""
     if verbose:
         verboseprint(question)
-        return bool(int(d.get("""analysis message yesno {%s}""" % (question))))
+        if isinstance(d, FakeDS9):
+            return input('%s [y/n]'%(question))=='y'
+        else:
+            return bool(int(d.get("""analysis message yesno {%s}""" % (question))))
+
     else:
         return True
 
@@ -176,7 +180,10 @@ def yesno(d, question="", verbose=message_):
 def message(d, question="", verbose=message_):  #
     """Opens a native DS9 message dialog box with a message."""
     if verbose:
-        return bool(int(d.set("analysis message {%s}" % (question))))
+        if isinstance(d, FakeDS9):
+            return input('%s [y/n]'%(question))=='y'
+        else:
+            return bool(int(d.set("analysis message {%s}" % (question))))
     else:
         return True
 
@@ -5768,17 +5775,14 @@ def rescale(img,  target_type):
 def DS9Convert(xpapoint=None,path=None,argv=[]):
     """Convert and scale file into other type
     """
-    parser = argparse.ArgumentParser(description='Convert pixels to different type.',
-    usage="DS9Utils xpapoint  function [-h] [--optional1 OPTIONAL1] [--optional2 OPTIONAL2]")
+    parser = argparse.ArgumentParser(description=DS9Convert.__doc__,
+    usage="DS9Utils xpapoint  function [-h] [--optional1 OPTIONAL1] [--optional2 OPTIONAL2]",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('xpapoint', help="DS9 xpapoint")#,required=True)
     parser.add_argument('function', help="Input fits image")#,required=True)
-    # parser.add_argument('-x', '--xpapoint',    default='None', type=str , help="DS9 xpapoint ")
-    # parser.add_argument('-f', '--function',    default='None', type=str, help="Input fits image")
-    parser.add_argument('-t', '--type',    default='8,uint8', type=str,   help='Conversion type of the image : 8,uint8|16,int16|32,int32|64,int64|-32,float32|-64,float64')
-    parser.add_argument('-r', '--rescale',    default=1, type=int,   help='Rescale or not the image')
-    parser.add_argument('-p', '--path',    default='-', type=str,   help='Possible regexp')
-    # parser.add_argument('-x', '--xpapoint',    default='None', type=str,   help='xpapoint')
-    # parser.add_argument('-f', '--function',    default='None', type=str,   help='Possible regexp')
+    parser.add_argument('-t', '--type',    default='8,uint8', help='Conversion type of the image : 8,uint8|16,int16|32,int32|64,int64|-32,float32|-64,float64', metavar='')
+    parser.add_argument('-r', '--rescale',    default=1, help='Rescale or not the image', metavar='')
+    parser.add_argument('-p', '--path',    default='-', help='Possible regexp', metavar='')
     if len(argv)==0:
         args = parser.parse_args()
     else:
@@ -9518,7 +9522,7 @@ def DS9PythonInterp(xpapoint):
     """
     d = DS9n(xpapoint)
 
-    filename = getfilename(d)
+    #filename = getfilename(d)
     path2remove, exp, eval_ = sys.argv[3:6]
     verboseprint("Expression to be evaluated: ", exp)
     path = globglob(sys.argv[-2], xpapoint)
@@ -9542,7 +9546,7 @@ def DS9PythonInterp(xpapoint):
         except TypeError:
             pass
     if len(path) == 1:
-        result, name = ExecCommand(filename, xpapoint=xpapoint, path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_)))
+        result, name = ExecCommand(path[0], xpapoint=xpapoint, path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_)))
     else:
         result, name = Parallelize(function=ExecCommand, parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite], action_to_paralize=path, number_of_thread=10)
 
@@ -9775,6 +9779,22 @@ def MaxiMask_cc(path=None, xpapoint=None):
         print(e)
         print("did not work...")
     return
+
+# for path in glob.glob('calexp-9813-?-?.fits'):
+#     print(path)
+#     try:
+#         try:
+#             a = fits.open(path.replace(".fits", ".masks.fits"))
+#             b = fits.open(path)
+#             a[0].header = b[0].header
+#             a.writeto(path.replace(".fits", ".masks.fits"), overwrite=True)
+#         except Exception as e:
+#             print(e)
+#         # d.set("frame new")
+#         # d.set("file %s" % (path.replace(".fits", ".masks_uint8.fits")))
+#     except Exception as e:
+#         print(e)
+#         print("did not work...")
 
 #!/bin/bash
 # import subprocess, os, glob
