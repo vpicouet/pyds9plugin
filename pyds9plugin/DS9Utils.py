@@ -64,6 +64,16 @@ def verbose(xpapoint=None, verbose=None):
         sys.exit()
     return conf_dir
 
+class FakeDS9(object):
+    def __init__(self, **kwargs):
+        """For sharing a porfoilio
+        """
+        self.total = []
+
+    def get(self, value=''):
+        return True
+    def set(self, value=''):
+        return True
 
 def DS9n(xpapoint=None, stop=False):
     """Open a DS9 communication with DS9 software, if no session opens a new one
@@ -76,7 +86,7 @@ def DS9n(xpapoint=None, stop=False):
         xpapoints = []
     if ((xpapoint == 'None') | (xpapoint is None)) & (len(xpapoints) == 0):
         verboseprint("No DS9 target found")
-        return
+        return FakeDS9
     elif len(xpapoints) != 0:
         verboseprint("%i targets found" % (len(xpapoints)))
         if xpapoint in xpapoints:
