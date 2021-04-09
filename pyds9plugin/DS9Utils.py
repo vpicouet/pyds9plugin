@@ -74,7 +74,7 @@ def DS9n(xpapoint=None, stop=False):
         xpapoints = [target.split(" ")[-1] for target in targets]
     else:
         xpapoints = []
-    if (xpapoint is None) & (len(xpapoints) == 0):
+    if ((xpapoint == 'None') | (xpapoint is None)) & (len(xpapoints) == 0):
         verboseprint("No DS9 target found")
         return
     elif len(xpapoints) != 0:
@@ -91,10 +91,11 @@ def DS9n(xpapoint=None, stop=False):
     try:
         verboseprint("DS9(%s)" % (xpapoint))
         d = DS9(xpapoint)
+        return d
     except (FileNotFoundError, ValueError) as e:
         verboseprint(e)
         d = DS9()
-    return d
+
 
 
 def CreateFolders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/"):
