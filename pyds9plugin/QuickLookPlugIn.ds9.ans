@@ -177,7 +177,7 @@ hmenu 1. Generic Functions
 		*
 		menu
 #		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-		DS9Utils $xpa_method SubstractImage $param(Python-Command); $im_path "$exp" 0  "$path"  $overwrite | $text
+		DS9Utils $xpa_method SubstractImage $param(Python-Command); -r $im_path -e "$exp"  -o $overwrite | $text
 
 		Interactive 1D Fitting On Plot
 		*
@@ -1567,7 +1567,7 @@ param Python-Command
 exp entry {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image). See doc for exemples (convolution, adding noise, masking, trimming).}
 im_path entry {image} - {Path of a second image to use. Keep '-' if not used}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
-path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
+#path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 overwrite checkbox {Overwrite} 0 {Overwrite the modification on the original file. USE WITH CAUTION!}
 endparam
 
