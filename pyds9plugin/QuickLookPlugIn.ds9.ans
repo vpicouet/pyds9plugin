@@ -21,7 +21,7 @@ hmenu Quick Look Plugin
 	menu
 	#echo "$filename" | $text
 	#echo "$env(DS9Function)" | $text
-	DS9Utils test -x $xpa_method $param(Tutorials); $tutorials   | $text
+	DS9Utils test_suite -x $xpa_method $param(Tutorials); $tutorials   | $text
 endhmenu
 
 
@@ -49,16 +49,13 @@ hmenu 1. Generic Functions
 		Change Display Parameters (S) #7
 		*
 		menu
-		#DS9Utils setup -x $xpa_method  $param(Setup); "$scale"  $cut  0 $color $invert $grid | $text
-		DS9Utils setup -x $xpa_method  $param(Setup); "$scale"  $cut  0 $color 0 0 | $text
+		DS9Utils setup -x $xpa_method  $param(Setup); -s "$scale"  -l $cut  -c  $color | $text
 
 
 		Change Display Parameters (S) #7
 		*
 		bind S
-		#DS9Utils setup -x $xpa_method  $param(Setup); "$scale"  $cut  0 $color $invert $grid | $text
-		DS9Utils setup -x $xpa_method  $param(Setup); "$scale"  $cut  0 $color 0 0 | $text
-		#$data | DS9Utils -x $xpa_method setup | $text
+		DS9Utils setup -x $xpa_method  $param(Setup); -s "$scale"  -l $cut  -c  $color | $text
 
 #	    Test $data#
 #	    *.fits
@@ -78,23 +75,22 @@ hmenu 1. Generic Functions
 		Reset Display Parameters (B)
 		*
 		menu
-		DS9Utils OriginalSettings -x $xpa_method   | $text
+		DS9Utils original_settings -x $xpa_method   | $text
 
 		Reset Display Parameters Key
 		*
 		bind B
-		DS9Utils -x $xpa_method OriginalSettings   | $text
+		DS9Utils -x $xpa_method original_settings   | $text
 
 		Lock/Unlock Frames (L)
 		*
 		menu
-		DS9Utils lock -x $xpa_method   $param(Lock); $var1 $var3 $var2  $var4 $var5   | $text
-
+		DS9Utils lock -x $xpa_method   $param(Lock); -f $var1 -c $var3 -l $var2  -s $var4 -m $var5   | $text
 
 		Lock/Unlock Frames Key
 		*
 		bind L
-		DS9Utils lock -x $xpa_method  $param(Lock); $var1 $var3 $var2  $var4 $var5   | $text
+		DS9Utils lock -x $xpa_method   $param(Lock); -f $var1 -c $var3 -l $var2  -s $var4 -m $var5   | $text
 	endhmenu
 
 
@@ -102,24 +98,24 @@ hmenu 1. Generic Functions
 		Create Header Data Base
 		*
 		menu
-		DS9Utils CreateHeaderCatalog -x $xpa_method   $param(Click-Enter-For-Only-DS9-Image-); "$path"  0 - | $text
+		DS9Utils create_header_catalog -x $xpa_method   $param(Click-Enter-For-Only-DS9-Image-); -p "$path"   | $text
 
 
 		Filtering & organizing images
 		*
 		menu
-		DS9Utils DS9createSubset -x $xpa_method  $param(subset_); "$cat" "all" $Fields "$Mask" | $text
+		DS9Utils organize_files -x $xpa_method  $param(subset_); -p "$cat" -n "all" -a $Fields -s "$Mask" | $text
 
 
 		Add header Field
 		*
 		menu
-		DS9Utils AddHeaderField -x $xpa_method  $param(CreateHeader); $Field $Value $Comment "$path"  | $text
+		DS9Utils add_field_to_header -x $xpa_method  $param(CreateHeader); $Field $Value $Comment "$path"  | $text
 
 #		Create WCS
 #		*
 #		menu
-#		DS9Utils CreateWCS -x $xpa_method  $param(Create-WCS) $CRPIX $CDELT $CTYPE $CRVAL | $text
+#		DS9Utils build_wcs_header -x $xpa_method  $param(Create-WCS) $CRPIX $CDELT $CTYPE $CRVAL | $text
 
 
 
@@ -133,28 +129,28 @@ hmenu 1. Generic Functions
 		Import Regions From Catalog
 		*
 		menu
-		DS9Utils DS9Catalog2Region -x $xpa_method   $param(Catalog-to-region); "$path"  $fields $name $form $size $wcs "$Selection" | $text
+		DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); "$path"  $fields $name $form $size $wcs "$Selection" | $text
 
 
 
 		Export DS9 Regions To Catalog
 		*
 		menu
-		#DS9Utils DS9Region2Catalog -x $xpa_method   "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
-		DS9Utils DS9Region2Catalog -x $xpa_method   $param(Catalog-name); "$save"
+		#DS9Utils save_region_as_catalog -x $xpa_method   "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
+		DS9Utils save_region_as_catalog -x $xpa_method   $param(Catalog-name); "$save"
 
 
 
 		Replace Regions by value
 		*
 		menu
-		DS9Utils ReplaceWithNans -x $xpa_method   $param(Replace-region);  $number $overwrite   | $text
+		DS9Utils fill_regions -x $xpa_method   $param(Replace-region);  $number $overwrite   | $text
 
 
 		Throw Apertures
 		*
 		menu
-		DS9Utils ThrowApertures -x $xpa_method   $param(Throw-Apertures);  $number $size  $form $spacing | $text
+		DS9Utils throw_apertures -x $xpa_method   $param(Throw-Apertures);  $number $size  $form $spacing | $text
 
 
 		Plot aperture's values
@@ -174,12 +170,12 @@ hmenu 1. Generic Functions
 		*
 		menu
 #		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-		DS9Utils SubstractImage -x $xpa_method  $param(Python-Command); -r $im_path -e "$exp"  -o $overwrite | $text
+		DS9Utils python_command -x $xpa_method  $param(Python-Command); -r $im_path -e "$exp"  -o $overwrite | $text
 
 		Interactive 1D Fitting On Plot
 		*
 		menu
-		DS9Utils BackgroundFit1D -x $xpa_method   $param(Background-Fit-1D); x $background none $gaussians $moffats $voight 0 $other  | $text
+		DS9Utils fit_ds9_plot -x $xpa_method   $param(Background-Fit-1D); -b $background -g $gaussians -m $moffats -v $voight -o $other  | $text
 
 		Interactive Manual Fitting
 		*
@@ -190,14 +186,14 @@ hmenu 1. Generic Functions
 		Fit Gaussian 2D
 		*
 		menu
-		DS9Utils fitsgaussian2D -x $xpa_method  1   | $text
-		#DS9Utils fitsgaussian2D -x $xpa_method   - 0 0   | $text
+		DS9Utils fit_gaussian_2d -x $xpa_method  1   | $text
+		#DS9Utils fit_gaussian_2d -x $xpa_method   - 0 0   | $text
 
 		Fit Gaussian 2D
 		*
 		bind f
-		DS9Utils fitsgaussian2D -x $xpa_method   0   | $text
-		#DS9Utils fitsgaussian2D -x $xpa_method   - 0 0   | $text
+		DS9Utils fit_gaussian_2d -x $xpa_method   0   | $text
+		#DS9Utils fit_gaussian_2d -x $xpa_method   - 0 0   | $text
 
 
 #		2D Convolution
@@ -209,15 +205,15 @@ hmenu 1. Generic Functions
 		Interpolate NaNs
 		*
 		menu
-		#DS9Utils InterpolateNaNs -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
-		DS9Utils InterpolateNaNs -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
+		#DS9Utils interpolate_nans -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
+		DS9Utils interpolate_nans -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
 
 
 		Trimming
 		*
 		menu
-		#DS9Utils Trimming -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
-		DS9Utils Trimming -x $xpa_method  $param(Trimming);  Image  "$path"  | $text
+		#DS9Utils trim -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
+		DS9Utils trim -x $xpa_method  $param(Trimming);  Image  "$path"  | $text
 
 #		Plot 3rd Dimension From Region(s)
 #		*
@@ -236,17 +232,17 @@ hmenu 1. Generic Functions
 	Open Image (O)
 	*
 	menu
-	DS9Utils open -x $xpa_method  $param(open); "$path" $type  $clip | $text
+	DS9Utils open_file -x $xpa_method  $param(open); "$path" $type  $clip | $text
 
 	Open Image Key
 	*
 	bind O
-	DS9Utils open -x $xpa_method  $param(open); "$path" $type   $clip  | $text
+	DS9Utils open_file -x $xpa_method  $param(open); "$path" $type   $clip  | $text
 
 #	Stack Images (s)  #20#
 #	*
 #	menu
-#	DS9Utils stack -x $xpa_method  $param(Stacking); $Path $stack -  $output | $text
+#	DS9Utils stack_images -x $xpa_method  $param(Stacking); $Path $stack -  $output | $text
 
 #	Stack Images key
 #	*
@@ -257,13 +253,13 @@ hmenu 1. Generic Functions
 	Plot Region In 3D
 	*
 	menu
-	DS9Utils PlotArea3D -x $xpa_method  | $text
+	DS9Utils plot_3d -x $xpa_method  | $text
 
 
 	Convert image
 	*
 	menu
-	DS9Utils DS9Convert  -x $xpa_method $param(Conversion); -r $scaling -t $type -p "$path" | $text
+	DS9Utils convert_image  -x $xpa_method $param(Conversion); -r $scaling -t $type -p "$path" | $text
 
 
 	Simulate Sky Image
@@ -296,7 +292,7 @@ hmenu 2. Instrumentation - AIT
 		Explore Throughfocus PSFs #24
 		*
 		menu
-		DS9Utils ExploreThroughfocus -x $xpa_method  $param(SWARP-Path); "$Path" $sort | $text  #$steps
+		DS9Utils explore_throughfocus -x $xpa_method  $param(SWARP-Path); "$Path" $sort | $text  #$steps
 
 
 #		Throughfocus Image Key
@@ -307,12 +303,12 @@ hmenu 2. Instrumentation - AIT
 		Radial Profile (r)
 		*
 		menu
-		DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  $center $diam 0   | $text
+		DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $diam    | $text
 
 		Radial Profile Key
 		*
 		bind r
-		DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  $center $diam  0   | $text
+		DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $diam    | $text
 
 
 #		Visualisation Throughfocus
@@ -332,33 +328,33 @@ hmenu 2. Instrumentation - AIT
 		Compute Gain From Fluctuation #29
 		*
 		menu
-		DS9Utils ComputeEmGain -x $xpa_method  $param(EmGain); 0 - $box 0 0  "$path"   | $text
+		DS9Utils compute_gain -x $xpa_method  $param(EmGain); 0 - $box 0 0  "$path"   | $text
 
 
 
 		Autocorrelation
 		*
 		menu
-		DS9Utils 2D_autocorrelation -x $xpa_method  $param(autocorr); $type  "$path"   | $text
+		DS9Utils autocorrelation -x $xpa_method  $param(autocorr); $type  "$path"   | $text
 
 
 		2D Fast Fourrier Transform
 		*
 		menu
-		DS9Utils DS9_2D_FFT -x $xpa_method  $param(Images-to-analyze);  "$path"  | $text
+		DS9Utils FFT -x $xpa_method  $param(Images-to-analyze);  "$path"  | $text
 
 
 
 		Column Line Correlation
 		*
 		menu
-		DS9Utils ColumnLineCorrelation -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
+		DS9Utils column_line_correlation -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
 
 
 #		EMCCD histogram #29
 #		*
 #		menu
-#		DS9Utils DS9PlotEMCCD -x $xpa_method  $param(EMCCD);  $smearing | $text
+#		DS9Utils emccd_model -x $xpa_method  $param(EMCCD);  $smearing | $text
 
 
 	endhmenu
@@ -373,13 +369,13 @@ hmenu 2. Instrumentation - AIT
 	Centering (C)
 	*
 	menu
-	DS9Utils centering -x $xpa_method   $param(Centering); $method 0  | $text
+	DS9Utils center_region -x $xpa_method   $param(Centering); $method 0  | $text
 
 
 	Centering (C)
 	*
 	bind C
-	DS9Utils centering -x $xpa_method   $param(Centering); $method 0  | $text
+	DS9Utils center_region -x $xpa_method   $param(Centering); $method 0  | $text
 
 	Transit/Through-Slit Analysis
 	*
@@ -425,12 +421,12 @@ hmenu 3. Astronomical Softwares
 	Astrometric Calibration (astrometry.net)
 	*
 	menu
-	DS9Utils WCS -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   | $text
+	DS9Utils astrometry_net -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   | $text
 
 	MaxiMask
 	*
 	menu
-	DS9Utils MaxiMask -x $xpa_method   $param(MaxiMask);  $prob $size  $single $net  $F1  $F2  $F3  $F4  $F5  $F6  $F7  $F8  $F9  $F_10  $F_11   $F_12   $F_13   $F_14  $P1  $P2  $P3  $P4  $P5  $P6  $P7  $P8  $P9  $P_10  $P_11  $P_12  $P_13  $P_14  $T1   $T2  $T3   $T4   $T5  $T6  $T7  $T8  $T9  $T_10  $T_11  $T_12  $T_13  $T_14    | $text
+	DS9Utils maxi_mask -x $xpa_method   $param(MaxiMask);  $prob $size  $single $net  $F1  $F2  $F3  $F4  $F5  $F6  $F7  $F8  $F9  $F_10  $F_11   $F_12   $F_13   $F_14  $P1  $P2  $P3  $P4  $P5  $P6  $P7  $P8  $P9  $P_10  $P_11  $P_12  $P_13  $P_14  $T1   $T2  $T3   $T4   $T5  $T6  $T7  $T8  $T9  $T_10  $T_11  $T_12  $T_13  $T_14    | $text
 
 	CreateContourRegions
 	*
@@ -457,7 +453,7 @@ hmenu 3. Astronomical Softwares
 		SExtractor++ (Beta Version)
 		*
 		menu
-		DS9Utils RunSextractorPP -x $xpa_method  $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME | $text
+		DS9Utils sextractor_pp -x $xpa_method  $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME | $text
 
 
 	endhmenu
@@ -478,7 +474,7 @@ hmenu 3. Astronomical Softwares
 		Resample images #38
 		*
 		menu
-		DS9Utils DS9Resample -x $xpa_method   $param(Resample); "$PATH" $PIXEL_SCALE $IMAGE_SIZE $RESAMPLING_TYPE $RESAMPLE_SUFFIX   | $text
+		DS9Utils resample -x $xpa_method   $param(Resample); "$PATH" $PIXEL_SCALE $IMAGE_SIZE $RESAMPLING_TYPE $RESAMPLE_SUFFIX   | $text
 
 	endhmenu
 
@@ -488,18 +484,18 @@ hmenu 3. Astronomical Softwares
 		Extract Sources
 		*
 		menu
-		DS9Utils ExtractSources -x $xpa_method  $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons  "$path"  | $text
+		DS9Utils extract_sources -x $xpa_method  $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons  "$path"  | $text
 
 
 		Subtract Background
 		*
 		menu
-		DS9Utils BackgroundEstimationPhot -x $xpa_method  $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate "$path"  | $text
+		DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate "$path"  | $text
 
 		Aperture photometry
 		*
 		menu
-		DS9Utils AperturePhotometry -x $xpa_method   $param(Aperture-photometry); $aper $zpm   | $text
+		DS9Utils aperture_photometry -x $xpa_method   $param(Aperture-photometry); $aper $zpm   | $text
 
 
 
@@ -510,12 +506,12 @@ hmenu 3. Astronomical Softwares
 #		Cosmology Calculator
 #		*
 #		menu
-#		DS9Utils CosmologyCalculator -x $xpa_method  $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text
+#		DS9Utils cosmology_calculator -x $xpa_method  $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text
 
 		Cosmology Calculator
 		*
 		menu
-		DS9Utils CosmologyCalculator -x $xpa_method  LambdaCDM 1 70 0.2 0.7 -  | $text
+		DS9Utils cosmology_calculator -x $xpa_method  LambdaCDM 1 70 0.2 0.7 -  | $text
 
 
 
@@ -533,7 +529,7 @@ hmenu 3. Astronomical Softwares
 		Function displayor
 		*
 		menu
-		DS9Utils Function -x $xpa_method  $param(Function); "$formula" "$xrange" $plot "$path" | $text
+		DS9Utils interactive_plotter -x $xpa_method  $param(Function); "$formula" "$xrange" $plot "$path" | $text
 
 
 	endhmenu
@@ -603,7 +599,7 @@ DS9Utils -x $xpa_method verbose $param(verbose) $verbose | $text
 Fluxtucation
 *
 bind F
-DS9Utils -x $xpa_method ComputeFluctuation $param(ComputeFluctuation) $Number $Radius | $text
+DS9Utils -x $xpa_method compute_fluctuation $param(ComputeFluctuation) $Number $Radius | $text
 
 
 
@@ -775,6 +771,7 @@ sort menu {Sorting-type} MAG_AUTO|FWHM_IMAGE|THETA_IMAGE|ELLIPTICITY|X_IMAGE|Y_I
 endparam
 
 param Setup
+#var2 text {} {jbfibcuewcbuewuoycveuwqvxybqwxb ljbdeiwubxweiuxin libilduasbxiwbdeilbc \n kbec kljbiucyvewc ilbcyuvdw jvhucydvdsbc jlvaxbdsc \n vcuyxblcsw} {}
 scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization|zscale|minmax {Scale}
 cut entry {Scale Limits} 50-99.9 {Scale limits in percentile of the image (or defined region)}
 #smooth menu {Smooth} 0|1|2|3|4|5|6|7|8|9|10 {Smoothing boxcar radius in pixel}
