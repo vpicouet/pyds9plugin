@@ -21,7 +21,7 @@ hmenu Quick Look Plugin
 	menu
 	#echo "$filename" | $text
 	#echo "$env(DS9Function)" | $text
-	DS9Utils test_suite -x $xpa_method $param(Tutorials); $tutorials   | $text
+	DS9Utils test_suite -x $xpa_method $param(Tutorials); -t $tutorials   | $text
 endhmenu
 
 
@@ -110,7 +110,7 @@ hmenu 1. Generic Functions
 		Add header Field
 		*
 		menu
-		DS9Utils add_field_to_header -x $xpa_method  $param(CreateHeader); $Field $Value $Comment "$path"  | $text
+		DS9Utils add_field_to_header -x $xpa_method  $param(CreateHeader); -f $Field -v $Value -c $Comment   | $text
 
 #		Create WCS
 #		*
@@ -129,7 +129,7 @@ hmenu 1. Generic Functions
 		Import Regions From Catalog
 		*
 		menu
-		DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); "$path"  $fields $name $form $size $wcs "$Selection" | $text
+		DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); -p "$path"  -xy $fields -n $name -f $form -r $size -w $wcs -s "$Selection" | $text
 
 
 
@@ -137,20 +137,20 @@ hmenu 1. Generic Functions
 		*
 		menu
 		#DS9Utils save_region_as_catalog -x $xpa_method   "$filedialog(save)"  2>&1 | tee -a /tmp/DS9Utils.log
-		DS9Utils save_region_as_catalog -x $xpa_method   $param(Catalog-name); "$save"
+		DS9Utils save_region_as_catalog -x $xpa_method   $param(Catalog-name); -p "$save"
 
 
 
 		Replace Regions by value
 		*
 		menu
-		DS9Utils fill_regions -x $xpa_method   $param(Replace-region);  $number $overwrite   | $text
+		DS9Utils fill_regions -x $xpa_method   $param(Replace-region);  -v $number -o $overwrite   | $text
 
 
 		Throw Apertures
 		*
 		menu
-		DS9Utils throw_apertures -x $xpa_method   $param(Throw-Apertures);  $number $size  $form $spacing | $text
+		DS9Utils throw_apertures -x $xpa_method   $param(Throw-Apertures);  -n $number -s $size  -f $form -e $spacing | $text
 
 
 		Plot aperture's values
@@ -186,13 +186,13 @@ hmenu 1. Generic Functions
 		Fit Gaussian 2D
 		*
 		menu
-		DS9Utils fit_gaussian_2d -x $xpa_method  1   | $text
+		DS9Utils fit_gaussian_2d -x $xpa_method  -p 1   | $text
 		#DS9Utils fit_gaussian_2d -x $xpa_method   - 0 0   | $text
 
 		Fit Gaussian 2D
 		*
 		bind f
-		DS9Utils fit_gaussian_2d -x $xpa_method   0   | $text
+		DS9Utils fit_gaussian_2d -x $xpa_method   -p 0   | $text
 		#DS9Utils fit_gaussian_2d -x $xpa_method   - 0 0   | $text
 
 
@@ -206,14 +206,14 @@ hmenu 1. Generic Functions
 		*
 		menu
 		#DS9Utils interpolate_nans -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
-		DS9Utils interpolate_nans -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
+		DS9Utils interpolate_nans -x $xpa_method  | $text
 
 
 		Trimming
 		*
 		menu
 		#DS9Utils trim -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
-		DS9Utils trim -x $xpa_method  $param(Trimming);  Image  "$path"  | $text
+		DS9Utils trim -x $xpa_method  $param(Trimming);  -s Image  -p "$path"  | $text
 
 #		Plot 3rd Dimension From Region(s)
 #		*
@@ -232,12 +232,12 @@ hmenu 1. Generic Functions
 	Open Image (O)
 	*
 	menu
-	DS9Utils open_file -x $xpa_method  $param(open); "$path" $type  $clip | $text
+	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c $clip | $text
 
 	Open Image Key
 	*
 	bind O
-	DS9Utils open_file -x $xpa_method  $param(open); "$path" $type   $clip  | $text
+	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c $clip | $text
 
 #	Stack Images (s)  #20#
 #	*
@@ -265,8 +265,13 @@ hmenu 1. Generic Functions
 	Simulate Sky Image
 	*
 	menu
-	DS9Utils CreateImageFromCatalogObject -x $xpa_method  "$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"  | $text
+	DS9Utils CreateImageFromCatalogObject -x $xpa_method  -p "$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"  | $text
 
+
+	Get image depth
+	*
+	menu
+	DS9Utils  get_depth_image -x $xpa_method$param(Get-depth); -z $mag_zp -a $aper_size -n $N_aper  | $text
 
 endhmenu
 
@@ -287,12 +292,12 @@ hmenu 2. Instrumentation - AIT
 		Throughfocus  #24
 		*
 		menu
-		DS9Utils throughfocus -x $xpa_method  $param(Throughfocus); "$Path" $WCS - $sort $offsets  | $text  #$steps
+		DS9Utils throughfocus -x $xpa_method  $param(Throughfocus); -p "$Path" -w $WCS -s $sort -v $offsets  | $text  #$steps
 
 		Explore Throughfocus PSFs #24
 		*
 		menu
-		DS9Utils explore_throughfocus -x $xpa_method  $param(SWARP-Path); "$Path" $sort | $text  #$steps
+		DS9Utils explore_throughfocus -x $xpa_method  $param(SWARP-Path); -p "$Path" -s $sort | $text  #$steps
 
 
 #		Throughfocus Image Key
@@ -314,7 +319,7 @@ hmenu 2. Instrumentation - AIT
 #		Visualisation Throughfocus
 #		*
 #		menu
-#		DS9Utils throughfocus_visualisation -x $xpa_method  "$entry(RegExp paths of the images you want to display. Use global pattern matching.)"    | $text
+#		DS9Utils throughfocus_visualisation -x $xpa_method  -p "$entry(RegExp paths of the images you want to display. Use global pattern matching.)"    | $text
 
 
 	endhmenu
@@ -332,23 +337,24 @@ hmenu 2. Instrumentation - AIT
 
 
 
-		Autocorrelation
-		*
-		menu
-		DS9Utils autocorrelation -x $xpa_method  $param(autocorr); $type  "$path"   | $text
+#		Autocorrelation
+#		*
+#		menu
+#		DS9Utils autocorrelation -x $xpa_method  $param(autocorr); $type  "$path"   | $text
 
 
-		2D Fast Fourrier Transform
-		*
-		menu
-		DS9Utils FFT -x $xpa_method  $param(Images-to-analyze);  "$path"  | $text
+#		2D Fast Fourrier Transform
+#		*
+#		menu
+#		DS9Utils FFT -x $xpa_method  $param(Images-to-analyze);  "$path"  | $text
 
 
 
 		Column Line Correlation
 		*
 		menu
-		DS9Utils column_line_correlation -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
+#		DS9Utils column_line_correlation -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
+		DS9Utils column_line_correlation -x $xpa_method  | $text
 
 
 #		EMCCD histogram #29
@@ -369,13 +375,13 @@ hmenu 2. Instrumentation - AIT
 	Centering (C)
 	*
 	menu
-	DS9Utils center_region -x $xpa_method   $param(Centering); $method 0  | $text
+	DS9Utils center_region -x $xpa_method   $param(Centering); -m $method -b 0  | $text
 
 
 	Centering (C)
 	*
 	bind C
-	DS9Utils center_region -x $xpa_method   $param(Centering); $method 0  | $text
+	DS9Utils center_region -x $xpa_method   $param(Centering); -m $method -b 0  | $text
 
 	Transit/Through-Slit Analysis
 	*
@@ -490,12 +496,12 @@ hmenu 3. Astronomical Softwares
 		Subtract Background
 		*
 		menu
-		DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); $sigma $bckd $rms $filter $box $percentile $mask $snr $npixels $dilate "$path"  | $text
+		DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); -s $sigma -b $bckd -r $rms -f $filter -box $box -per $percentile -m $mask -snr $snr -n $npixels -d $dilate -p "$path"  | $text
 
 		Aperture photometry
 		*
 		menu
-		DS9Utils aperture_photometry -x $xpa_method   $param(Aperture-photometry); $aper $zpm   | $text
+		DS9Utils aperture_photometry -x $xpa_method   $param(Aperture-photometry); -a $aper -z $zpm   | $text
 
 
 
@@ -596,10 +602,10 @@ DS9Utils -x $xpa_method verbose $param(verbose) $verbose | $text
 
 
 
-Fluxtucation
+Fluctucation
 *
 bind F
-DS9Utils -x $xpa_method compute_fluctuation $param(ComputeFluctuation) $Number $Radius | $text
+DS9Utils -x $xpa_method compute_fluctuation $param(ComputeFluctuation) -n $Number -a $Radius | $text
 
 
 
@@ -1092,7 +1098,7 @@ param CreateHeader
 Field entry {Header} - {Header field to which add value}
 Value entry {Value} - {Value to add}
 Comment entry {Comment} - {Comment to add}
-path entry {RegExp Path} $filename {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+#path entry {RegExp Path} $filename {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 #path open {RegExp Path} {$env(HOME)} {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
@@ -1270,7 +1276,7 @@ param Catalog-to-region
 path open {Path} - {Path of the catalog}
 fields entry {x,y fields} - {Name of the x and y fields: ex = xcentroid,ycentroid}
 name entry {field name} - {field to put in region name: ex = magnitude, name, etc}
-form menu {form of the region} circle|box {fForm of the regions to display}
+form menu {form of the region} circle|box {Form of the regions to display}
 size entry {Regions size} 10 {Size in pixel or arcseconds}
 wcs checkbox {WCS} 0 {Check if the catalog fields are in degree-WCS, then radius must be in arc-second}
 Selection entry {[Selection]} - {selection of the region in th catalog: Use | for OR and \& for AND}
