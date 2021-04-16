@@ -858,7 +858,7 @@ def organize_files(xpapoint=None, cat=None, number=2, dpath=DS9_BackUp_path + "s
     import numpy as np
     parser = CreateParser(get_name_doc(),path=False)
     parser.add_argument('-p', '--path', help='Path of the header data base to filter/organize', type=str,metavar='')#metavar='',
-    parser.add_argument('-s', '--selection',    default='-', help='Selection to be applied.  Use \| for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) \| (EMGAIN>0)', type=str, choices=['image','none','wcs'],metavar='')#metavar='',
+    parser.add_argument('-s', '--selection',    default='-', help='Selection to be applied.  Use \| for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) \| (EMGAIN>0)', type=str,metavar='')#metavar='',
     parser.add_argument('-a', '--arange',    default='Directory', help='Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2', type=str,metavar='')#, choices=['image','none','wcs'])#metavar='',
     parser.add_argument('-n', '--number',    default='all', help='Number of same files to take', type=str,metavar='')#, choices=['image','none','wcs'])#metavar='',
     args = parser.parse_args_modif(argv)
@@ -964,7 +964,7 @@ def PlotFit1D(
     xlabel=None,
     ylabel=None,
     P0=None,
-    bounds=(-10, 10),
+    bounds=(-1e10, 1e10),
     fmt=".",
     ax=None,
     c="black",
@@ -1547,7 +1547,7 @@ def fit_gaussian_2d(xpapoint=None, Plot=True, n=300, cmap="twilight_shifted", ar
             sys.exit()
 
         data = d.get_pyfits()[0].data
-        images = [data[Yinf:Ysup, Xinf:Xsup] - np.nanpercentile(data[Yinf:Ysup, Xinf:Xsup], 30)]
+        images = [data[Yinf:Ysup, Xinf:Xsup] ]#- np.nanpercentile(data[Yinf:Ysup, Xinf:Xsup], 30)]
     fluxes = []
     for i, image in enumerate(images):
         while np.isfinite(image).all() == False:
@@ -1561,20 +1561,20 @@ def fit_gaussian_2d(xpapoint=None, Plot=True, n=300, cmap="twilight_shifted", ar
         x, y = np.meshgrid(x, y)
         if fwhm.split("-")[0] == "":
             if bool(int(center)):
-                Param = (np.nanmax(image), lx / 2, ly / 2, 2, 2, np.percentile(image, 15))
+                Param = (np.nanmax(image), lx / 2, ly / 2, 2, 2, 0, np.percentile(image, 15))
                 bounds = ([-np.inf, lx / 2 - 0.5, ly / 2 - 0.00001, 0.5, 0.5, -np.inf], [np.inf, lx / 2 + 0.00001, ly / 2 + 0.5, 10, 10, np.inf])  # (-np.inf, np.inf)#
             else:
                 xo, yo = np.where(image == np.nanmax(image))[1][0], np.where(image == np.nanmax(image))[0][0]
-                Param = (np.nanmax(image), int(xo), int(yo), 2, 2, np.percentile(image, 15))
+                Param = (np.nanmax(image), int(xo), int(yo), 2, 2, 0, np.percentile(image, 15))
                 bounds = ([-np.inf, xo - 10, yo - 10, 0.5, 0.5, -np.inf], [np.inf, xo + 10, yo + 10, 10, 10, np.inf])  # (-np.inf, np.inf)#
         else:
             stdmin, stdmax = np.array(fwhm.split("-"), dtype=float) / 2.35
             if bool(int(center)):
-                Param = (np.nanmax(image), lx / 2, ly / 2, (stdmin + stdmax) / 2, (stdmin + stdmax) / 2, np.percentile(image, 15))
+                Param = (np.nanmax(image), lx / 2, ly / 2, (stdmin + stdmax) / 2, (stdmin + stdmax) / 2, 0, np.percentile(image, 15))
                 bounds = ([-np.inf, lx / 2 - 0.5, ly / 2 - 0.00001, stdmin, stdmin, -np.inf], [np.inf, lx / 2 + 0.00001, ly / 2 + 0.5, stdmax, stdmax, np.inf])  # (-np.inf, np.inf)#
             else:
                 xo, yo = np.where(image == np.nanmax(image))[1][0], np.where(image == np.nanmax(image))[0][0]
-                Param = (np.nanmax(image), xo, yo, (stdmin + stdmax) / 2, (stdmin + stdmax) / 2, np.percentile(image, 15))
+                Param = (np.nanmax(image), xo, yo, (stdmin + stdmax) / 2, (stdmin + stdmax) / 2, 0, np.percentile(image, 15))
                 bounds = ([-np.inf, xo - 10, yo - 10, stdmin, stdmin, -np.inf], [np.inf, xo + 10, yo + 10, stdmax, stdmax, np.inf])  # (-np.inf, np.inf)#
         try:
             verboseprint(bounds)
@@ -1582,6 +1582,7 @@ def fit_gaussian_2d(xpapoint=None, Plot=True, n=300, cmap="twilight_shifted", ar
         except RuntimeError as e:
             logger.warning(e)
             popt = [0, 0, 0, 0, 0, 0]
+        verboseprint('popt = %s'%(popt))
         fluxes.append(2 * np.pi * popt[3] * popt[4] * popt[0])
     verboseprint(fluxes)
     xn, yn = popt[1], popt[2]
@@ -1618,14 +1619,13 @@ def fit_gaussian_2d(xpapoint=None, Plot=True, n=300, cmap="twilight_shifted", ar
         data_mesh["Intensity"] = image.ravel()  # np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
         data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
         #        verboseprint((value*data).reshape(-1))
-        points = np.c_[xx.reshape(-1), yy.reshape(-1), ((image - np.nanmin(image)) * value).reshape(-1)]
+        points = np.c_[xx.reshape(-1), yy.reshape(-1), ((image - np.nanmin(z)) * value).reshape(-1)]
+        # points = np.c_[xx.reshape(-1), yy.reshape(-1), (z * value).reshape(-1)]
         foo = PolyData(points)
         fit.points = foo.points
         fit["z"] = image.ravel()
         fit.dimensions = [image.shape[1], image.shape[0], 1]
-        p1 = p.add_mesh(
-            fit, scalars=z.flat, opacity=0.7, nan_opacity=0, use_transparency=False, name="3D plot, FLUX = %0.1f" % (fluxes[0]), flip_scalars=True, stitle="Value"
-        )  # y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        p1 = p.add_mesh(fit, opacity=0.7, nan_opacity=0, use_transparency=False, name="3D plot, FLUX = %0.1f" % (fluxes[0]), flip_scalars=True, stitle="Value", scalars=z.flatten() + image.flatten())  # y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
         p2 = p.add_mesh(
             data_mesh, scalars=z.flatten() + image.flatten(), opacity=1 - 0.7, nan_opacity=0, use_transparency=False, flip_scalars=True, stitle="Value"
         )  # y=True, opacity=0.3,,pickable=True)
@@ -1686,29 +1686,44 @@ def fit_gaussian_2d(xpapoint=None, Plot=True, n=300, cmap="twilight_shifted", ar
     return
 
 
-def astrometry_net(xpapoint, argv=[]):
+def astrometry_net(xpapoint=None, argv=[]):
     """Uses astrometry.net to image compute position on the sky and return header
     """
     from astropy.io import fits
     from astropy.wcs import wcs
-    parser = CreateParser(get_name_doc())
-    args = parser.parse_args_modif(argv)
+    parser = CreateParser(get_name_doc(),path=True)
+    parser.add_argument('--type', choices=('Image', 'XY-catalog'))
+    parser.add_argument('--scale-units',  help='Units for scale estimate')#choices=('arcsecperpix', 'arcminwidth', 'degwidth', 'focalmm'),
+    parser.add_argument('--scale-lower', type=str, help='Scale lower-bound')
+    parser.add_argument('--scale-upper', type=str, help='Scale upper-bound')
+    parser.add_argument('--scale-est',  type=str, help='Scale estimate')
+    parser.add_argument('--scale-err',  type=str, help='Scale estimate error (in PERCENT), eg "10" if you estimate can be off by 10')
+    parser.add_argument('--ra', type=str, help='RA center')
+    parser.add_argument('--dec', type=str, help='Dec center')
+    parser.add_argument('--radius',     type=str, help='Search radius around RA,Dec center')
+    parser.add_argument('--downsample',  type=str, help='Downsample image by this factor')
+    parser.add_argument('--tweak-order', type=str, help='SIP distortion order (default: 2)')
+    parser.add_argument('--crpix-center', default=None, help='Set reference point to center of image?')
+    parser.add_argument('--parity', choices=('0','1'), help='Parity (flip) of image',type=str)
+    parser.add_argument('--positional_error', dest='positional_error', type=str, help='How many pixels a star may be from where it should be.')
+    # # args = parser.parse_args(argv)#,required=True)
+    args = parser.parse_args_modif(argv,required=True)
 
-    d = DS9n(xpapoint)
+    d = DS9n(args.xpapoint)
     filename = getfilename(d)  # d.get("file")
-    type_ = sys.argv[-14]
+    type_ = args.type
     verboseprint("Type = ", type_)
     if type_ == "XY-catalog":
         name = "/tmp/centers_astrometry.fits"
         save_region_as_catalog(xpapoint, name=None, new_name=name)
         filename = name
-    params = sys.argv[-13:]
-    verboseprint("params = ", params)
+    #params = sys.argv[-13:]
+    # verboseprint("params = ", params)
     verboseprint("Nop header WCS - Applying lost in space algorithm: Internet needed!")
     verboseprint("Processing might take a few minutes ~5-10")
     PathExec = os.path.dirname(os.path.realpath(__file__)) + "/astrometry3.py"
     Newfilename = filename[:-5] + "_wcs.fits"
-    CreateWCS(PathExec, filename, Newfilename, params=params, type_=type_)
+    CreateWCS(PathExec, filename, Newfilename, params=args, type_=type_)
 
     wcs_header = wcs.WCS(fits.getheader(filename)).to_header()
     filename = getfilename(d)
@@ -1730,21 +1745,21 @@ def CreateWCS(PathExec, filename, Newfilename, params, type_="Image"):
     Processing might take a few minutes
     """
     options = [
-        " --scale-units   ",
-        #    ' --scale-type ',
-        " --scale-lower ",
-        "  --scale-upper ",
-        " --scale-est ",
-        " --scale-err ",
-        " --ra ",
-        " --dec ",
-        " --radius ",
-        " --downsample ",
-        " --tweak-order ",
-        #   ' --use_sextractor ',
-        " --crpix-center ",
-        " --parity ",
-        " --positional_error ",
+        "scale-units",
+        # ' --scale-type ',
+        "scale-lower",
+        "scale-upper",
+        "scale-est",
+        "scale-err",
+        "ra",
+        "dec",
+        "radius",
+        "downsample",
+        "crpix-center",
+        "parity",
+        "positional_error",
+        "tweak-order",
+        #' --use_sextractor ',
     ]
     if type_ == "XY-catalog":
         upload = "--upload-xy "
@@ -1760,7 +1775,15 @@ def CreateWCS(PathExec, filename, Newfilename, params, type_="Image"):
     verboseprint(type_)
     verboseprint(upload)
     # params = ['-'] * len(options)
-    parameters = " ".join([option + str(param) for option, param in zip(options, params) if param != "-"])
+    param_dict={}
+    # params.scale
+    for key in zip(options):
+        if getattr(params,key[0].replace('-','_'))!='-':
+            param_dict[key[0]] = getattr(params,key[0].replace('-','_'))
+            # verboseprint("%s : %s" % (key[0], getattr(params,key[0])))
+
+    #parameters = " ".join([option + str(param) for option, param in zip(options, params) if param != "-"])
+    parameters  = " --".join([key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]])
     verboseprint(parameters)
     verboseprint(filename, Newfilename)
     verboseprint(os.path.dirname(filename) + "/--wait.fits")
@@ -3335,7 +3358,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
         data = fits.open(filename[0])[0].data.T
     else:
         data = getdata(xpapoint, selected=True)  # problem in test
-    print(data,data.shape)
+    verboseprint(data,data.shape)
     if type(data) != list:
         if (len(data.shape) == 2) & (color):
             PlotArea3DColor(d)
@@ -4666,8 +4689,8 @@ def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, syst
     import numpy as np
     parser = CreateParser(get_name_doc(),path=False)
     parser.add_argument('-p', '--path', help='Path of the catalog to load', type=str,metavar='')#metavar='',
-    parser.add_argument('-xy', '--fiels', help='Name of the x and y fields: ex = xcentroid,ycentroid', type=str,metavar='')#metavar='',
-    parser.add_argument('-n', '--name', help='field to put in region name: ex = magnitude, name, etc', type=str,metavar='')#metavar='',
+    parser.add_argument('-xy', '--fields', help='Name of the x and y fields: ex = xcentroid,ycentroid', type=str,metavar='')#metavar='',
+    parser.add_argument('-n', '--name', default='-',help='field to put in region name: ex = magnitude, name, etc', type=str,metavar='')#metavar='',
     parser.add_argument('-f', '--form', help='orm of the regions to display', type=str,metavar='',choices=['circle','box'])#metavar='',
     parser.add_argument('-r', '--radius', help='Size in pixel or arcseconds', type=str,metavar='',default='10')#metavar='',
     parser.add_argument('-w', '--WCS', help='Check if the catalog fields are in degree-WCS, then radius must be in arc-second', type=str,metavar='', default='0')#metavar='',
@@ -4675,10 +4698,8 @@ def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, syst
 
     args = parser.parse_args_modif(argv)
 
-    if xpapoint is not None:
-        d = DS9n(xpapoint)
-    if name is None:
-        name = args.path
+    d = DS9n(args.xpapoint)
+    name = args.path
     try:
         cat = Table.read(name.rstrip()[::-1].rstrip()[::-1])
     except astropy.io.registry.IORegistryError:
@@ -4686,13 +4707,16 @@ def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, syst
     cat = DeleteMultiDimCol(cat)
     # if (len(sys.argv) > 3) & (sys.argv[1] == "import_table_as_region"):
     form = args.form
-    size = args.size
+    size = args.radius
     wcs = bool(int(args.WCS))
-    query = ars.selection
-    x, y = args.xy.replace(",", "-").split("-")
+    query = args.selection
+    if args.fields == '-':
+        x, y = cat.colnames[:2]
+    else:
+        x, y = args.fields.replace(",", "-").split("-")
 
-    if sys.argv[5] != "-":
-        ID = sys.argv[5]
+    if args.name != "-":
+        ID = args.name
     if query != "-":
         df = cat.to_pandas()
         new_table = df.query(query)
@@ -4738,8 +4762,8 @@ def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, syst
             system=system,
         )
 
-    if xpapoint is not None:
-        d.set("regions /tmp/centers.reg")
+    # if xpapoint is not None:
+    d.set("regions /tmp/centers.reg")
     return cat, "/tmp/centers.reg"
 
 
@@ -5306,10 +5330,11 @@ def trim(xpapoint=None, config=my_conf, all_ext=False, argv=[]):
     d = DS9n(xpapoint)
     filename = getfilename(d)
     system = args.system
-    if args.path == "-":
-        path = [globglob(args.path)]
-    else:
-        path = globglob(args.path)
+    path = globglob(args.path)
+    # if args.path == "-":
+    #     path = [globglob(args.path)]
+    # else:
+    #     path = globglob(args.path)
     verboseprint("system = ", system)
     verboseprint("path = ", path)
     region = getregion(d, quick=True, selected=True, system=system, dtype=float)
@@ -5350,8 +5375,8 @@ def cropCLAUDS(path, position=[0, 0], size=[10, 10], all_ext=False):  # ,area=[0
                 a[i] = fits.PrimaryHDU(data=di.data, header=di.wcs.to_header())
             else:
                 a[i] = ImageHDU(data=di.data, header=di.wcs.to_header())
-            a[i].header["CD1_1"] = b[i].header["CD1_1"]
-            a[i].header["CD2_2"] = b[i].header["CD2_2"]
+            # a[i].header["CD1_1"] = b[i].header["CD1_1"]
+            # a[i].header["CD2_2"] = b[i].header["CD2_2"]
 
         except (ValueError, IndexError) as e:
             verboseprint(i, e)
@@ -6099,7 +6124,7 @@ def SaveFitsImage(d,file,filename,load=False):
             d.set('file %s'%(filename))
 
     return
-def fill_regions(xpapoint, argv=[]):
+def fill_regions(xpapoint=None, argv=[]):
     """Replace the pixels in the selected regions in DS9 by NaN values [DS9 required]
     """
     import numpy as np
@@ -6110,7 +6135,7 @@ def fill_regions(xpapoint, argv=[]):
     args = parser.parse_args_modif(argv)
 
     verboseprint(inf + nan)
-    d = DS9n(xpapoint)  # DS9n(xpapoint)
+    d = DS9n(args.xpapoint)  # DS9n(xpapoint)
     filename = getfilename(d)  # d.get("file")
     regions = getregion(d, selected=True)
     if getregion(d, selected=True) is None:
@@ -6205,20 +6230,27 @@ def interpolate_nans(xpapoint, argv=[]):
     return
 
 
-def extract_sources(xpapoint, argv=[]):
+def extract_sources(xpapoint=None, argv=[]):
     """Extract sources from images(s)
     """
     import numpy as np
-    parser = CreateParser(get_name_doc())
-    args = parser.parse_args_modif(argv)
+    parser = CreateParser(get_name_doc(),path=True)
 
-    d = DS9n(xpapoint)
+    parser.add_argument('-e', '--erosion',    default='2', help='Percentile of the image to exclude in the background estimation', type=str,metavar='')
+    parser.add_argument('-t', '--threshold',    default='10', help='Percentile of the image to exclude in the background estimation', type=str,metavar='')
+    parser.add_argument('-f', '--fwhm',    default='8', help='The full-width half-maximum (FWHM) of the major axis of the Gaussian kernel in pixels. Enter eg. 8,10 to loop on FWHM', type=str,metavar='')
+    parser.add_argument('-a', '--angle',    default='0', help='The position angle (in degrees) of the major axis of the Gaussian kernel measured counter-clockwise from the positive x axis', type=str,metavar='')
+    parser.add_argument('-i', '--iteration',    default='5', help='The number of iterations to perform sigma clipping, or None to clip until convergence is achieved when calculating the statistics', type=str,metavar='')
+    parser.add_argument('-r', '--ratio',    default='5', help='The ratio of the minor to major axis standard deviations of the Gaussian kernel', type=str,metavar='')
+    parser.add_argument('-d', '--distance',    default='30', help='When entering several thresholds/FWHMs, the minimal distance between two sources in order to delete duplicates', type=str,metavar='')
+    args = parser.parse_args_modif(argv,required=True)
+    d = DS9n(args.xpapoint)
     filename = getfilename(d)
-    ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons = sys.argv[3 : 3 + 7]
+    ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons =     args.erosion, args.threshold, args.fwhm, args.angle, args.iteration, args.ratio, args.distance
     threshold = np.array(threshold.split(","), dtype=float)
     fwhm = np.array(fwhm.split(","), dtype=float)
     verboseprint("ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons = ", ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons)
-    path = globglob(sys.argv[-1])
+    path = globglob(args.path)
     for filename in path:
         verboseprint(filename)
         sources = ExtractSources(filename, fwhm=fwhm, threshold=threshold, theta=float(theta), ratio=float(ratio), n=int(ErosionDilatation), iters=int(iters), deleteDoublons=int(deleteDoublons))
@@ -6356,8 +6388,8 @@ def add_field_to_header(xpapoint=None, field="", value="", comment="-", argv=[])
     from astropy.io import fits
     parser = CreateParser(get_name_doc(),path=True)
     parser.add_argument('-f', '--field',    default='FIELD', help='Header field to add', type=str)
-    parser.add_argument('-v', '--value',    default='VALUE', help='Value to add', metavar='',type=str, choices=['0','1','2','3','4','5'])
-    parser.add_argument('-c', '--comment',    default='', help='Comment to add', metavar='',type=str, choices=['0','1','2','3','4','5'])
+    parser.add_argument('-v', '--value',    default='VALUE', help='Value to add', metavar='',type=str)
+    parser.add_argument('-c', '--comment',    default='', help='Comment to add', metavar='',type=str)
 
     args = parser.parse_args_modif(argv)
 
@@ -6583,7 +6615,7 @@ def twoD_Gaussian2(xy, amplitude, xo, yo, sigma_x, sigma_y, angle=0, offset=0):
     yo = float(yo)
     g = Gaussian2D(amplitude=amplitude, x_mean=xo, y_mean=yo, x_stddev=sigma_x, y_stddev=sigma_y, theta=angle)
     x, y = xy
-    return g(x, y).ravel()
+    return g(x, y).ravel() + offset
 
 
 def blackbody_new(x, T):
@@ -8029,15 +8061,73 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
     import numpy as np
     from astropy.table import Table
     parser = CreateParser(get_name_doc())
+
+    parser.add_argument('-d', '--DETECTION_IMAGE',    default='-', help='Image to use for detection of the sources. If - using DS9 image', type=str,metavar='',)#metavar='',
+    parser.add_argument('-CN', '--CATALOG_NAME',    default='-', help='Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits', type=str,metavar='',)#metavar='',
+    parser.add_argument('-CT', '--CATALOG_TYPE', help='Type of the output catalog', type=str,choices=['FITS_1.0','NONE','ASCII','ASCII_HEAD','ASCII_SKYCAT','ASCII_VOTABLE','FITS_LDAC'])
+    parser.add_argument('-PN', '--PARAMETERS_NAME',    default='sex.param', help='File name in ds9_package/Calibration/Sextractor/', type=str,metavar='',)#metavar='',
+    parser.add_argument('-DT', '--DETECT_TYPE', help='CCD (linear) or PHOTO (with gamma correction)', type=str,choices=['CCD','PHOTO'])
+    parser.add_argument('-DM', '--DETECT_MINAREA',    default='10', help='min number of pixels above threshold', type=str,metavar='',)#metavar='',
+
+    parser.add_argument('-Dm', '--DETECT_MAXAREA',    default='0', help='max number of pixels above threshold (0=unlimited)}', type=str,metavar='',)#metavar='',
+    parser.add_argument('-TT', '--THRESH_TYPE',default='RELATIVE', type=str,choices=['RELATIVE','ABSOLUTE'])
+    parser.add_argument('-dT', '--DETECT_THRESH',    default='0.8', help='Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE', type=str,metavar='',)#metavar='',
+    parser.add_argument('-AT', '--ANALYSIS_THRESH',    default='2.0',  type=str,metavar='',)#metavar='',
+
+    parser.add_argument('-F', '--FILTER', help='apply filter for detection', type=str,choices=['1','0'])
+    parser.add_argument('-FN', '--FILTER_NAME',    default='NONE',  type=str,metavar='',help='Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter')#metavar='',
+    parser.add_argument('-DN', '--DEBLEND_NTHRESH',    default='64', help='Number of deblending sub-thresholds', type=str,metavar='',)#metavar='',
+    parser.add_argument('-D', '--DEBLEND_MINCONT',    default='0.0003', help='Minimum contrast parameter for deblending', type=str,metavar='',)#metavar='',
+    parser.add_argument('-C', '--CLEAN', help='Clean spurious detections?', type=str,choices=['1','0'])
+    parser.add_argument('-CP', '--CLEAN_PARAM',    default='1.0', help='Cleaning efficiency', type=str,metavar='',)#metavar='',
+    parser.add_argument('-M', '--MASK_TYPE', help='type of detection MASKing', type=str,choices=['CORRECT','NONE','BLANK'])
+
+    parser.add_argument('-WT', '--WEIGHT_TYPE', type=str,choices=['NONE','NONE,MAP_VAR','MAP_VAR','MAP_VAR,MAP_VAR'],help='First one for detection image, second one for photometric image')
+    parser.add_argument('-RW', '--RESCALE_WEIGHTS', help='Rescale input weights/variances ', type=str,choices=['1','0'])
+    parser.add_argument('-WI', '--WEIGHT_IMAGE',    default='NONE', help='weight-map filename', type=str,metavar='',)#metavar='',
+    parser.add_argument('-WG', '--WEIGHT_GAIN', help='modulate gain (E/ADU) with weights?', type=str,choices=['1','0'])
+
+
+    parser.add_argument('-FI', '--FLAG_IMAGE',    default='NONE', help='filename for an input FLAG-image', type=str,metavar='',)#metavar='',
+    parser.add_argument('-FT', '--FLAG_TYPE',  type=str,choices=['OR','AND','MAX','MIN','MOST'],help='flag pixel combination')
+
+    parser.add_argument('-PA', '--PHOT_APERTURES',    default='6,12,18', help='MAG_APER aperture diameter(s) in pixels', type=str,metavar='',)#metavar='',
+    parser.add_argument('-P', '--PHOT_AUTOPARAMS',    default='2.5,4.0', help='MAG_AUTO parameters: <Kron_fact>,<min_radius>', type=str,metavar='',)#metavar='',
+    parser.add_argument('-PP', '--PHOT_PETROPARAMS',    default='2.0,4.0', help='MAG_PETRO parameters: <Petrosian_fact>', type=str,metavar='',)#metavar='',
+    parser.add_argument('-PF', '--PHOT_FLUXFRAC',    default='0.3,0.5,0.9', help='flux fraction[s] used for FLUX_RADIUS', type=str,metavar='',)#metavar='',
+
+    parser.add_argument('-SL', '--SATUR_LEVEL',    default='50000.0', help='level (in ADUs) at which arises saturation', type=str,metavar='',)#metavar='',
+    parser.add_argument('-SK', '--SATUR_KEY',    default='SATURATE', help='keyword for saturation level (in ADUs)', type=str,metavar='',)#metavar='',
+    parser.add_argument('-MZ', '--MAG_ZEROPOINT',    default='0.0', type=str,metavar='',)#metavar='',
+    parser.add_argument('-MG', '--MAG_GAMMA',    default='4.0', type=str,metavar='',help='gamma of emulsion (for photographic scans)')#metavar='',
+    parser.add_argument('-G', '--GAIN',    default='GAIN', type=str,metavar='',help='detector gain in e-/ADU')#metavar='',
+    parser.add_argument('-PS', '--PIXEL_SCALE',    default='0.0', help='size of pixel in arcsec (0=use FITS WCS info)', type=str)#metavar='',
+
+    parser.add_argument('-SF', '--SEEING_FWHM',    default='0.8', help='stellar FWHM in arcsec', type=str)#metavar='',
+    parser.add_argument('-SN', '--STARNNW_NAME',    default='default.nnw', help='File name in ds9_package/Calibration/Sextractor/', type=str)#metavar='',
+    parser.add_argument('-ct', '--CHECKIMAGE_TYPE', help='type of detection MASKing', type=str,choices=['NONE','BACKGROUND','BACKGROUND_RMSMINIBACKGROUND','MINIBACK_RMS','-BACKGROUND','FILTERED','OBJECTS','-OBJECTS','SEGMENTATION','APERTURES'])
+
+
+    # parser.add_argument('-SB', '--SUBTRACT_BACK',default='1', help='Subtraction sky background ?', type=str,choices=['1','0'])
+    parser.add_argument('-BT', '--BACK_TYPE',default='1',type=str,choices=['AUTO','MANUAL'])
+    parser.add_argument('-BV', '--BACK_VALUE',    default='0.0', help='Default background value in MANUAL mode', type=str,metavar='',)#metavar='',
+    parser.add_argument('-BS', '--BACK_SIZE',    default='64', help='Size in pixels of a background mesh.', type=str,metavar='',)#metavar='',
+    parser.add_argument('-BFS', '--BACK_FILTERSIZE',    default='3', help='Size in background meshes of the background-filtering mask.', type=str,metavar='',)#metavar='',
+    parser.add_argument('-BFT', '--BACK_FILTTHRESH',    default='0.0', help='Threshold above which the background map filter operates', type=str,metavar='',)#metavar='',
+    parser.add_argument('-BPT', '--BACKPHOTO_TYPE',default='1',type=str,choices=['LOCAL','GLOBAL'])
+
+    parser.add_argument('-bpt', '--BACKPHOTO_THICK',    default='24', help='thickness of the background LOCAL annulus', type=str,metavar='',)#metavar='',
+    parser.add_argument('-MO', '--MEMORY_OBJSTACK',    default='3000', help='number of objects in stack', type=str,metavar='',)#metavar='',
+    parser.add_argument('-MP', '--MEMORY_PIXSTACK',    default='300000', help='number of pixels in stack', type=str,metavar='',)#metavar='',
+    parser.add_argument('-MB', '--MEMORY_BUFSIZE',    default='1024', help='number of lines in buffer', type=str,metavar='',)#metavar='',
+    parser.add_argument('-N', '--NTHREADS',default='1',type=str,choices=['1','2','4','8','16','32'])
     args = parser.parse_args_modif(argv)
 
-    d = DS9n(xpapoint)
+    d = DS9n(args.xpapoint)
     filename = getfilename(d)
     if which("sex") is None:
-        d = DS9n(xpapoint)
-        d.set(
-            "analysis message {Sextractor do not seem to be installed on your machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}"
-        )
+        # d = DS9n(xpapoint)
+        d.set("analysis message {Sextractor do not seem to be installed on your machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}")
         verboseprint("On mac run on your terminal: >brew install brewsci/science/sextractor", verbose="1")
         verboseprint("Else, visit: https://github.com/astromatic/sextractor", verbose="1")
     param_names = [
@@ -8089,20 +8179,21 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
         "NTHREADS",
     ]
 
-    params = np.array(sys.argv[-len(param_names) :], dtype="<U256")  # str)
-    verboseprint(params)
-    DETECTION_IMAGE = sys.argv[4]
-    ID = sys.argv[3]
+    # params = np.array(sys.argv[-len(param_names) :], dtype="<U256")  # str)
+    # verboseprint(params)
+    DETECTION_IMAGE = args.DETECTION_IMAGE#sys.argv[4]
+    ID = 'NUMBER'#None#sys.argv[3]
 
     param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
+    for key in zip(param_names):
+        param_dict[key[0]] = getattr(args,key[0])
+        verboseprint(key[0],getattr(args,key[0]))
     try:
         param_dir = resource_filename("pyds9plugin", "Sextractor")
     except:
         param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Sextractor")
 
-    verboseprint(filename, params[0], filename + "_sex.fits")
+    # verboseprint(filename, params[0], filename + "_sex.fits")
 
     param_dict["FILTER"] = "Y" if param_dict["FILTER"] == "1" else "N"
     param_dict["CLEAN"] = "Y" if param_dict["CLEAN"] == "1" else "N"
@@ -8122,8 +8213,8 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
     param_dict["FILTER_NAME"] = os.path.join(param_dir, param_dict["FILTER_NAME"])
     param_dict["STARNNW_NAME"] = os.path.join(param_dir, param_dict["STARNNW_NAME"])
 
-    for key, val in zip(param_names, params):
-        verboseprint("%s : %s" % (key, param_dict[key]))
+    # for key, val in zip(param_names, params):
+    #     verboseprint("%s : %s" % (key, param_dict[key]))
 
     if DETECTION_IMAGE == "-":
         DETECTION_IMAGE = None
@@ -8137,7 +8228,7 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
                                      Parameters sextractor:
           ********************************************************************"""
     )
-    verboseprint("\n".join([name + " = " + str(value) for name, value in zip(param_names, params)]))
+    # verboseprint("\n".join([name + " = " + str(value) for name, value in zip(param_names, params)]))
     # os.system('sex -d > default.sex')
     if DETECTION_IMAGE is not None:
         command = (
@@ -8159,7 +8250,7 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
         answer = os.system(command)
 
     colors = ["Orange"]  # ['White','Yellow','Orange']
-    verboseprint(params[0])
+    # verboseprint(params[0])
     if os.path.isfile(param_dict["CATALOG_NAME"]):
         verboseprint(param_dict["CATALOG_NAME"])
 
@@ -8224,9 +8315,11 @@ def sextractor_pp(xpapoint=None, filename=None, detector=None, path=None, argv=[
     """Run sextraxtor ++ software (Beta version)
     """
     import numpy as np
-    parser = CreateParser(get_name_doc())
-    args = parser.parse_args_modif(argv)
-
+    parser = CreateParser(get_name_doc(),path=False)
+    parser.add_argument('-d', '--detection_image', type=str,metavar='')#metavar='',
+    parser.add_argument('-f', '--output-catalog-filename',  type=str,metavar='')#metavar='',
+    parser.add_argument('-F', '--output-catalog-format',   type=str,metavar='')#metavar='',
+    args = parser.parse_args_modif(argv,required=False)
     d = DS9n(xpapoint)
     filename = getfilename(d)
     param_names = [
@@ -8245,24 +8338,16 @@ def sextractor_pp(xpapoint=None, filename=None, detector=None, path=None, argv=[
         "thread-count",
     ]
 
-    params = np.array(sys.argv[4:6], dtype="<U256")  # str)
-    verboseprint(params)
-    DETECTION_IMAGE = sys.argv[4]
+    #params = np.array(sys.argv[4:6], dtype="<U256")  # str)
+    #verboseprint(params)
+    DETECTION_IMAGE = args.detection_image
     # ID = sys.argv[3]
     param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
-        verboseprint(param_dict[key], val)
+    for key in zip(param_names[:2]):
+        param_dict[key[0]] = getattr(args,key[0].replace('-','_'))
 
     param_dict["output-catalog-filename"] = filename[:-5] + "_cat.fits" if param_dict["output-catalog-filename"] == "-" else param_dict["output-catalog-filename"]
 
-    # if DETECTION_IMAGE == '-':
-    #     cat_path = filename[:-5] #.fits'
-    # else:
-    #     cat_path = params[0]
-
-    for key, val in zip(param_names, params):
-        verboseprint("%s : %s" % (key, param_dict[key]))
 
     if DETECTION_IMAGE == "-":
         DETECTION_IMAGE = None
@@ -8277,7 +8362,7 @@ def sextractor_pp(xpapoint=None, filename=None, detector=None, path=None, argv=[
                                      Parameters sextractor:
           ********************************************************************"""
     )
-    verboseprint("\n".join([name + " = " + str(value) for name, value in zip(param_names, params)]))
+    # verboseprint("\n".join([name + " = " + str(value) for name, value in zip(param_names, params)]))
     # os.system('sex -d > default.sex')
     for key in list(param_dict.keys()):
         if param_dict[key] == "-":
@@ -8288,24 +8373,57 @@ def sextractor_pp(xpapoint=None, filename=None, detector=None, path=None, argv=[
 
     # answer = os.system(command)
     try:
-        import_table_as_region(xpapoint, name=param_dict["output-catalog-filename"], x="pixel_centroid_x", y="pixel_centroid_y", ID="-")
+        import_table_as_region(xpapoint, argv="-p %s -xy pixel_centroid_x,pixel_centroid_y"%(filename).split())
     except KeyError:
-        import_table_as_region(xpapoint, name=param_dict["output-catalog-filename"], x="col1", y="col2", ID="-")
+        import_table_as_region(xpapoint, argv="-p %s -xy col1,col2"%(filename).split())
+        # import_table_as_region(xpapoint, name=param_dict["output-catalog-filename"], x="col1", y="col2", ID="-")
     if yesno(d, "Analysis completed! Do you want to load the sextractor catalog with PRISM?"):
         d.set("prism " + param_dict["output-catalog-filename"])
 
     return
 
 
-def DS9SWARP(xpapoint, argv=[]):
+def DS9SWARP(xpapoint=None, argv=[]):
     """Run swarp software from DS9
     """
     from shutil import which
     parser = CreateParser(get_name_doc())
+    parser.add_argument('-p', '--path',    default='', help='Path of the images you want to stack, use glob syntax with ? and *.', type=str,metavar='')
+    parser.add_argument('-i', '--IMAGEOUT_NAME', help='Name of the output image file', type=str,metavar='')
+    parser.add_argument('-w', '--WEIGHT_TYPE', type=str,metavar='',choices=['NONE','BACKGROUND','MAP_RMS','MAP_VARIANCE','MAP_WEIGHT'])
+    parser.add_argument('-rw', '--RESCALE_WEIGHTS', help='Rescale input weights/variances', type=str,choices=['1','0'])
+    parser.add_argument('-W', '--WEIGHT_IMAGE',default='-',  help='Name of the input weight image file', type=str,metavar='')
+    parser.add_argument('-c', '--COMBINE', help='Combine resampled images ', type=str,choices=['1','0'])
+    parser.add_argument('-ct', '--COMBINE_TYPE', help='Tells SWarp how to combine resampled images',type=str,choices=['MEDIAN','AVERAGE','MIN','MAX','WEIGHTED','CHI2','CHI-MEAN','SUM'])
+
+    parser.add_argument('-CA', '--CLIP_AMPFRAC',default='0.3',  help='Fraction of flux variation allowed with clipping', type=str,metavar='')
+    parser.add_argument('-CS', '--CLIP_SIGMA',default='4.0',  help='error multiple variation allowed with clipping', type=str,metavar='')
+
+    parser.add_argument('-CT', '--CELESTIAL_TYPE', default='NATIVE', help='Celestial coordinate system in output',type=str,choices=['NATIVE','PIXEL','EQUATORIAL','GALACTIC','ECLIPTIC'])
+    parser.add_argument('-PT', '--PROJECTION_TYPE', default='NATIVE', help='Projection system used in output, in standard WCS notation',type=str,choices=['TAN','AZP','STG','SIN','ARC','ZPN','ZEA','AIR','CYP','CEA','CAR','MER','COP','COE','COD','COO','BON','PCO','GLS','PAR','MOL','AIT','TSC','CSC','QSC'])
+    parser.add_argument('-PE', '--PROJECTION_ERR',default='0.001',  help='Maximum position error (in pixels) allowed for bicubic-spline interpolation of the astrometric reprojection. 0 turns off interpolation.', type=str,metavar='')
+
+    parser.add_argument('-C', '--CENTER',    default='0', help='Position of the center in CENTER TYPE MANUAL mode. Can be given in floating point notation, in hh:mm:ss or dd:mm:ss', type=str,metavar='',)
+    parser.add_argument('-C_T', '--CENTER_TYPE',    default='ALL', help='Tells SWarp how to center the output frame', type=str,choices=['ALL','MOST','MANUAL'])#metavar='',
+    parser.add_argument('-PST', '--PIXELSCALE_TYPE', default='MEDIAN', help='Tells SWarp how to adjust the output pixel size',type=str,choices=['MEDIAN','MIN','MAX','MANUAL','FIT'])
+    parser.add_argument('-PS', '--PIXEL_SCALE',    default='0.0', help='Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.', type=str)#metavar='',
+    parser.add_argument('-IS', '--IMAGE_SIZE',    default='0.0', help='Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic', type=str)#metavar='',
+
+    parser.add_argument('-R', '--RESAMPLE', help='Resample input images ?', type=str,choices=['1','0'])
+    parser.add_argument('-r', '--RESAMPLING_TYPE',    default='2', help='Image resampling method', type=str,choices=['LANCZOS3','NEAREST','BILINEAR','LANCZOS2','LANCZOS4'])#metavar='',
+    parser.add_argument('-o', '--OVERSAMPLING',    default='0', help='Amount of oversampling in each dimension. 0 means automatic.', type=str,metavar='',)#metavar='',
+    parser.add_argument('-I', '--INTERPOLATE', help='Interpolate bad input pixels ?', type=str,choices=['1','0'])
+
+
+    parser.add_argument('-SB', '--SUBTRACT_BACK', help='Subtraction sky background ?', type=str,choices=['1','0'])
+    parser.add_argument('-BS', '--BACK_SIZE',    default='128', help='Size in pixels of a background mesh.', type=str,metavar='',)#metavar='',
+    parser.add_argument('-BFS', '--BACK_FILTERSIZE',    default='3', help='Size in background meshes of the background-filtering mask.', type=str,metavar='',)#metavar='',
+    parser.add_argument('-BFT', '--BACK_FILTTHRESH',    default='0.0', help='Difference threshold (in ADUs) for the background-filtering', type=str,metavar='',)#metavar='',
+
     args = parser.parse_args_modif(argv)
 
-    param_names = [
-        "IMAGEOUT_NAME",
+
+    param_names = ["IMAGEOUT_NAME",
         "WEIGHT_TYPE",
         "RESCALE_WEIGHTS",
         "WEIGHT_IMAGE",
@@ -8328,28 +8446,28 @@ def DS9SWARP(xpapoint, argv=[]):
         "SUBTRACT_BACK",
         "BACK_SIZE",
         "BACK_FILTERSIZE",
-        "BACK_FILTTHRESH",
-    ]
-    params = sys.argv[-len(param_names) :]
+        "BACK_FILTTHRESH"]
+    #params = sys.argv[-len(param_names) :]
 
     param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
+    for key in zip(param_names):
+        param_dict[key[0]] = getattr(args,key[0])
+        verboseprint("%s : %s" % (key[0], getattr(args,key[0])))
 
     param_dict["SUBTRACT_BACK"] = "Y" if param_dict["SUBTRACT_BACK"] == "1" else "N"
     param_dict["RESAMPLE"] = "Y" if param_dict["RESAMPLE"] == "1" else "N"
     param_dict["RESCALE_WEIGHTS"] = "Y" if param_dict["RESCALE_WEIGHTS"] == "1" else "N"
     param_dict["COMBINE"] = "Y" if param_dict["COMBINE"] == "1" else "N"
     param_dict["INTERPOLATE"] = "Y" if param_dict["INTERPOLATE"] == "1" else "N"
-    for key, val in zip(param_names, params):
-        verboseprint("%s : %s" % (key, param_dict[key]))
+    # for key, val in zip(param_names, params):
+    #     verboseprint("%s : %s" % (key, param_dict[key]))
 
     d = DS9n(xpapoint)
-    if sys.argv[3] == "-":
+    if args.path == "-":
         paths = [getfilename(d, All=False)]
-    if sys.argv[3] != "-":
-        paths = globglob(sys.argv[3])
-        verboseprint("globglob('%s') = %s" % (sys.argv[3], paths))
+    if args.path != "-":
+        paths = globglob(args.path)
+        verboseprint("globglob('%s') = %s" % (args.path, paths))
     verboseprint("Images to coadd: %s" % (paths))
     param_dict["IMAGEOUT_NAME"] = os.path.join(os.path.dirname(paths[0]), param_dict["IMAGEOUT_NAME"])
     if which("swarp") is None:
@@ -8371,12 +8489,12 @@ def DS9SWARP(xpapoint, argv=[]):
     return
 
 
-def resample(xpapoint, argv=[]):
+def resample(xpapoint=None, argv=[]):
     """Run SWARP astromatic software
     """
     from shutil import which
     parser = CreateParser(get_name_doc(),path=True)
-    parser.add_argument('-p', '--PIXEL_SCALE',    default='0.0', help='Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.', type=str)#metavar='',
+    parser.add_argument('-P', '--PIXEL_SCALE',    default='0.0', help='Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.', type=str)#metavar='',
     parser.add_argument('-i', '--IMAGE_SIZE',    default='0.0', help='Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic', type=str)#metavar='',
     parser.add_argument('-r', '--RESAMPLING_TYPE',    default='2', help='Image resampling method', type=str,choices=['LANCZOS3','NEAREST','BILINEAR','LANCZOS2','LANCZOS4'])#metavar='',
     parser.add_argument('-s', '--RESAMPLE_SUFFIX',    default='.resamp.fits', help='filename extension for resampled images', type=str)#metavar='',
@@ -8401,11 +8519,11 @@ def resample(xpapoint, argv=[]):
         verboseprint("%s : %s" % (key, param_dict[key]))
 
     d = DS9n(xpapoint)
-    if sys.argv[3] == "-":
+    if args.path == "-":
         paths = [getfilename(d, All=False)]
-    if sys.argv[3] != "-":
-        paths = globglob(sys.argv[3])
-        verboseprint("globglob('%s') = %s" % (sys.argv[3], paths))
+    if args.path != "-":
+        paths = globglob(args.path)
+        verboseprint("globglob('%s') = %s" % (args.path, paths))
 
     verboseprint("Images to coadd: %s" % (paths))
 
@@ -8435,17 +8553,57 @@ def resample(xpapoint, argv=[]):
     return
 
 
-def DS9PSFEX(xpapoint, argv=[]):
+def DS9PSFEX(xpapoint=None, argv=[]):
     """Run PSFex astromatic software
     """
     # print(1)
     from astropy.table import Table
     from shutil import which
     from astropy.io import fits
-    parser = CreateParser(get_name_doc())
-    args = parser.parse_args_modif(argv)
+    parser = CreateParser(get_name_doc(),path=False)
+    parser.add_argument('-p', '--ENTRY_PATH', help='Linux path of the FITS_LDAC (!!!) entry catalogs. Can contain * and ?', type=str,metavar='')#metavar='',
+    parser.add_argument('-BT', '--BASIS_TYPE',    default='PIXEL_AUTO', type=str, choices=['PIXEL_AUTO','NONE','PIXEL','GAUSS-LAGUERRE','FILE'],metavar='')#metavar='',
 
-    params = sys.argv[-31:-1]
+    parser.add_argument('-BN', '--BASIS_NUMBER', default='20',help='Basis number or parameter', type=str,metavar='')#metavar='',
+    parser.add_argument('-PS', '--PSF_SAMPLING', default='1.0',help='Sampling step in pixel units (0.0 = auto)', type=str,metavar='')#metavar='',
+    parser.add_argument('-PA', '--PSF_ACCURACY', default='0.01',help='Accuracy to expect from PSF "pixel" values', type=str,metavar='')#metavar='',
+    parser.add_argument('-ps', '--PSF_SIZE', default='45,45',help='Image size of the PSF model', type=str,metavar='')#metavar='',
+
+    parser.add_argument('-CK', '--CENTER_KEYS', default='X_IMAGE,Y_IMAGE',help='Catalogue parameters for source pre-centering', type=str,metavar='')#metavar='',
+    parser.add_argument('-PK', '--PHOTFLUX_KEY', default='FLUX_APER(2)',help='Catalogue parameter for photometric norm.', type=str,metavar='')#metavar='',
+    parser.add_argument('-PEK', '--PHOTFLUXERR_KEY', default='FLUXERR_APER(2)',help='Catalogue parameter for photometric error.', type=str,metavar='')#metavar='',
+
+    parser.add_argument('-PSFK', '--PSFVAR_KEYS', default='X_IMAGE,Y_IMAGE',help='Catalogue or FITS (preceded by :) params', type=str,metavar='')#metavar='',
+    parser.add_argument('-PSFG', '--PSFVAR_GROUPS', default='1.1',help='Group tag for each context key', type=str,metavar='')#metavar='',
+    parser.add_argument('-PSFD', '--PSFVAR_DEGREES',    default='0', type=str, choices=['0','1','2','3','4'],metavar='',help='Polynom degree for each group')#metavar='',
+
+    parser.add_argument('-SA', '--SAMPLE_AUTOSELECT',    default='0', type=str, choices=['0','1','Y','N'],metavar='',help='Automatically select the FWHM?')#metavar='',
+    parser.add_argument('-ST', '--SAMPLEVAR_TYPE',    default='0', type=str, choices=['SEEING','NONE'],metavar='',help='File-to-file PSF variability}')#metavar='',
+
+    parser.add_argument('-SF', '--SAMPLE_FWHMRANGE', default='2.0,10.0',help='Allowed FWHM range', type=str,metavar='')#metavar='',
+    parser.add_argument('-SV', '--SAMPLE_VARIABILITY', default='0.2',help='Allowed FWHM variability (1.0 = 100)', type=str,metavar='')#metavar='',
+    parser.add_argument('-SM', '--SAMPLE_MINSN', default='20',help='Minimum S/N for a source to be used', type=str,metavar='')#metavar='',
+    parser.add_argument('-SMAX', '--SAMPLE_MAXELLIP', default='0.3',help='Maximum (A-B)/(A+B) for a source to be used', type=str,metavar='')#metavar='',
+
+
+    parser.add_argument('-CD', '--CHECKPLOT_DEV',    default='PNG', type=str, choices=['PNG','XWIN','TK','PS','PSC','XFIG','JPEG','AQT','PDF','SVG'],metavar='')#metavar='',
+    parser.add_argument('-CT', '--CHECKPLOT_TYPE',    default='PNG', type=str, choices=['NONE','FWHM','ELLIPTICITY','COUNTS','COUNT_FRACTION','CHI2','RESIDUALS'],metavar='')#metavar='',
+    parser.add_argument('-CN', '--CHECKPLOT_NAME', default='check-plot', type=str,metavar='')#metavar='',
+
+    parser.add_argument('-CIT', '--CHECKIMAGE_TYPE',    default='CHI', type=str, choices=['CHI','PROTOTYPES','SAMPLES','RESIDUALS','SNAPSHOTS','MOFFAT','-MOFFAT','-SYMMETRICAL'],metavar='')#metavar='',
+    parser.add_argument('-CIN', '--CHECKIMAGE_NAME', default='check.fits',help='Group tag for each context key', type=str,metavar='')#metavar='',
+    parser.add_argument('-PD', '--PSF_DIR', default='.',help='Where to write PSFs (empty=same as input)', type=str,metavar='')#metavar='',
+
+    parser.add_argument('-HT', '--HOMOBASIS_TYPE',    default='CHI', type=str, choices=['GAUSS-LAGUERRE','NONE'],metavar='',help='GAUSS_LAGUERRE or no homogeneisation is computed')#metavar='',
+    parser.add_argument('-HP', '--HOMOPSF_PARAMS', default='5.3,2.5',help='Moffat FWHM and B parameter of the idealized target PSF chosen for homogeneisation', type=str,metavar='')#metavar='',
+    parser.add_argument('-W', '--WRITE_XML',    default='Y', type=str, choices=['Y','N','1','0'],metavar='',help='GAUSS_LAGUERRE or no homogeneisation is computed')#metavar='',
+    parser.add_argument('-X', '--XML_NAME', default='psfex.xml',help='Filename for XML output', type=str,metavar='')#metavar='',
+    parser.add_argument('-N', '--NTHREADS', default='1',help='Number of simultaneous threads for the SMP version of PSFEx, 0 = automatic', type=str,metavar='')#metavar='',
+    parser.add_argument('-q', '--query', default='-',help='Selection of the objetcs in th catalog: Use | for OR and \& for AND', type=str,metavar='')#metavar='',
+    args = parser.parse_args_modif(argv)
+    args.WRITE_XML = 'Y' if args.WRITE_XML =='1' else 'N'
+    args.SAMPLE_AUTOSELECT = 'Y' if args.SAMPLE_AUTOSELECT =='1' else 'N'
+
     param_names = [
         "ENTRY_PATH",
         "BASIS_TYPE",
@@ -8473,17 +8631,17 @@ def DS9PSFEX(xpapoint, argv=[]):
         "PSF_DIR",
         "HOMOBASIS_TYPE",
         "HOMOPSF_PARAMS",
-        "VERBOSE_TYPE",
+        # "VERBOSE_TYPE",
         "WRITE_XML",
         "XML_NAME",
         "NTHREADS",
     ]
     param_dict = {}
-    for key, val in zip(param_names, params):
-        param_dict[key] = val
-        verboseprint("%s : %s" % (key, param_dict[key]))
+    for key in zip(param_names):
+        param_dict[key[0]] = getattr(args,key[0])
+        verboseprint("%s : %s" % (key, getattr(args,key[0])))
     # print(param_dict)
-    query = sys.argv[-1]
+    query = args.query
     d = DS9n(xpapoint)
     param_dict["ENTRY_PATH"] = globglob(param_dict["ENTRY_PATH"])
     new_list = []
@@ -8534,11 +8692,11 @@ def DS9PSFEX(xpapoint, argv=[]):
             % (" ".join(paths), " -".join([key + " " + str(param_dict[key]) for key in list(param_dict.keys())[1:]]), param_dict["HOMOPSF_PARAMS"].replace(",", "-"))
         )
         if answer != 0:
-            d = DS9n(xpapoint)
+            d = DS9n(args.xpapoint)
             d.set("analysis message {PSFex encountered an error. Please verify your input catalog (LDAC) and enter verbose mode (shift+V) for more precision about the error.}")
             sys.exit()
-    if (xpapoint is not None) & (len(paths) == 1):
-        d.set("frame new ; file " + paths[0][:-5] + "%s_homo.fits" % (param_dict["HOMOPSF_PARAMS"].replace(",", "-")))
+    # if (args.xpapoint is not None) & (len(paths) == 1):
+    d.set("frame new ; file " + paths[0][:-5] + "%s_homo.fits" % (param_dict["HOMOPSF_PARAMS"].replace(",", "-")))
     return
 
 
@@ -8568,12 +8726,31 @@ def exp(x, a, b, sigma, lam, alpha):
 def DS9saveColor(xpapoint=None, filename=None, argv=[]):
     """Run STIFF astromatic software
     """
-    parser = CreateParser(get_name_doc())
-    args = parser.parse_args_modif(argv)
+    parser = CreateParser(get_name_doc(),path=False)
+    parser.add_argument('-p1', '--path1',    help='Path of the red image eg. ~i (770nm) band', type=str,metavar='')
+    parser.add_argument('-p2', '--path2',    help='Path of the red image eg. ~r (620nm) band', type=str,metavar='')
+    parser.add_argument('-p3', '--path3',    help='Path of the red image eg. ~g (480nm) band', type=str,metavar='')
+    parser.add_argument('-o', '--OUTFILE_NAME',  default='stiff.tiff' , help='Output image file name', type=str, metavar='',)
+    parser.add_argument('-t', '--IMAGE_TYPE',  default='AUTO',   help='Output image format.', type=str, choices=['AUTO','TIFF','TIFF-pyramid'])#metavar='',
+    parser.add_argument('-b', '--BITS_PER_CHANNEL',  default='8',   help='BITS_PER_CHANNEL', type=str, choices=['8','16','-32'])#metavar='',
+    parser.add_argument('-B', '--BINNING',  default='1',   help='Pixel binning factor for both axes, or along each axis.', type=str, choices=['1','2'])#metavar='',
+    parser.add_argument('-s', '--SKY_TYPE',  default='AUTO',    help='Sky level determination in each input image.', type=str, choices=['AUTO','MANUAL'])#metavar='',
+    parser.add_argument('-S', '--SKY_LEVEL',  default='0.0',  help='User-specified sky level in SKY TYPE MANUAL mode.(1<n<m_ima)', type=str, choices=['AUTO','MANUAL'])#metavar='',
+    parser.add_argument('-mint', '--MIN_TYPE',  default='QUANTILE',  help='', type=str, choices=['GREYLEVEL','QUANTILE','MANUAL'])#metavar='',
+    parser.add_argument('-minl', '--MIN_LEVEL',  default='0.001',  help='', type=str,metavar='')#, choices=['AUTO','MANUAL'])#metavar='',
+    parser.add_argument('-maxt', '--MAX_TYPE',  default='QUANTILE',  help='', type=str, choices=['GREYLEVEL','QUANTILE','MANUAL'])#metavar='',
+    parser.add_argument('-maxl', '--MAX_LEVEL',  default='0.995',  help='', type=str,metavar='')#, choices=['AUTO','MANUAL'])#metavar='',
+    parser.add_argument('-g', '--GAMMA_TYPE',  default='POWER-LAW',  help='Gamma correction type.', type=str, choices=['POWER-LAW','SRGB','REC.709'])#metavar='',
+    parser.add_argument('-G', '--GAMMA',  default='2.2',  help='exponent of the display intensity transfer curve) for POWER-LAW GAMMA TYPEs.', type=str,metavar='')
+    parser.add_argument('-F', '--GAMMA_FAC',  default='1.0',  help='gamma correction factor for the luminance image component.', type=str,metavar='')
+    parser.add_argument('-c', '--COLOUR_SAT',  default='1.0',  help='Colour saturation factor.', type=str,metavar='')
+    args = parser.parse_args_modif(argv,required=False)
 
-    d = DS9n(xpapoint)
+
+
+    d = DS9n(args.xpapoint)
     from shutil import which
-    params = sys.argv[-17:]
+    #params = sys.argv[-17:]
     param_names = [
         "BINNING",
         "BITS_PER_CHANNEL",
@@ -8590,14 +8767,17 @@ def DS9saveColor(xpapoint=None, filename=None, argv=[]):
         "SKY_LEVEL",
         "SKY_TYPE",
     ]
-    path1, path2, path3, BINNING, BITS_PER_CHANNEL, COLOUR_SAT, GAMMA, GAMMA_FAC, GAMMA_TYPE, IMAGE_TYPE, MAX_LEVEL, MAX_TYPE, MIN_LEVEL, MIN_TYPE, OUTFILE_NAME, SKY_LEVEL, SKY_TYPE = params
+    path1, path2, path3 = args.path1, args.path2, args.path3
+    # BINNING, BITS_PER_CHANNEL, COLOUR_SAT, GAMMA = args.BINNING , args.BITS_PER_CHANNEL, args.COLOUR_SAT , args.GAMMA_
+    # GAMMA_FAC, GAMMA_TYPE, IMAGE_TYPE, MAX_LEVEL, MAX_TYPE =  args.GAMMA_FAC , args.GAMMA_TYPE, args.IMAGE_TYPE , args.MAX_LEVEL , args.MAX_TYPE
+    # MIN_LEVEL, MIN_TYPE, OUTFILE_NAME, SKY_LEVEL, SKY_TYPE = args.MIN_LEVEL , args.MIN_TYPE, args.OUTFILE_NAME , args.SKY_LEVEL , args.SKY_TYPE
 
     param_dict = {}
-    for key, val in zip(param_names, params[3:]):
-        param_dict[key] = val
+    for key in zip(param_names):
+        param_dict[key] = getattr(args,'key')
         verboseprint("%s : %s" % (key, param_dict[key]))
 
-    d = DS9n(xpapoint)
+    # d = DS9n(xpapoint)
     d.set("frame last")
     if path1 == "-":
         files = getfilename(d, All=True)
@@ -9932,140 +10112,111 @@ def maxi_mask(xpapoint=None, path=None, argv=[]):
     """
     from astropy.io import fits
     from shutil import which
-    parser = CreateParser(get_name_doc())
-    args = parser.parse_args_modif(argv)
+    import numpy as np
+    parser = CreateParser(get_name_doc(),path=True)
+    parser.add_argument('-t', '--proba_threshold',    default='0', help='Scale to apply', type=str, choices=['0','1'])#metavar='',
+    parser.add_argument('-b', '--batch_size',    default='8', help='Scale limit in percentile of the image', metavar='')
+    parser.add_argument('-m', '--mask',    default='0', help='Scale limit in percentile of the image', metavar='')
+    parser.add_argument('-n', '--net_path',    default='_mask', help='Scale limit in percentile of the image', metavar='')
+    parser.add_argument('-F', '--flags',    default='1-1-1-1-1-1-1-1-1-1-1-1-1-1', help='Scale limit in percentile of the image', metavar='')
+    parser.add_argument('-P', '--priors',    default='1-1-1-1-1-1-1-1-1-1-1-1-1-1', help='Scale limit in percentile of the image', metavar='')
+    parser.add_argument('-T', '--thresholds',    default='1-1-1-1-1-1-1-1-1-1-1-1-1-1', help='Scale limit in percentile of the image', metavar='')
+    args = parser.parse_args_modif(argv,required=True)
+    print(args.flags)
+    #sys.exit()
+    path = globglob(args.path)
+    d = DS9n(args.xpapoint)
+    #     path = getfilename(d)
+    # try:
+    prob, size, single, net = args.proba_threshold, int(args.batch_size), args.mask, args.net_path
+    os.chdir(os.path.dirname(path[0]))  # files_,
+    # iles = globglob(files_)
+    flags = """CR  %i
+HCL %i
+DCL %i
+HP  %i
+DP  %i
+P   %i
+STL %i
+FR  %i
+NEB %i
+SAT %i
+SP  %i
+OV  %i
+BBG %i
+BG  %i""" % (*np.array(args.flags.split('-'),dtype=float),)
 
-    if path is None:
-        d = DS9n(xpapoint)
-        path = getfilename(d)
-    try:
-        prob, size, single, net, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13, F14, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14 = np.array(sys.argv[3:], dtype=float)
-        verboseprint(sys.argv[3:])
-        os.chdir(os.path.dirname(path))  # files_,
-        # iles = globglob(files_)
-        flags = """CR  %i
-    HCL %i
-    DCL %i
-    HP  %i
-    DP  %i
-    P   %i
-    STL %i
-    FR  %i
-    NEB %i
-    SAT %i
-    SP  %i
-    OV  %i
-    BBG %i
-    BG  %i""" % (
-            F1,
-            F2,
-            F3,
-            F4,
-            F5,
-            F6,
-            F7,
-            F8,
-            F9,
-            F10,
-            F11,
-            F12,
-            F13,
-            F14,
-        )
+    priors = """CR  %0.7f
+HCL %0.7f
+DCL %0.7f
+HP  %0.7f
+DP  %0.7f
+P   %0.7f
+STL %0.7f
+FR  %0.7f
+NEB %0.7f
+SAT %0.7f
+SP  %0.7f
+OV  %0.7f
+BBG %0.7f
+BG  %0.7f""" % (*np.array(args.priors.split('-'),dtype=float),)
 
-        priors = """CR  %0.7f
-    HCL %0.7f
-    DCL %0.7f
-    HP  %0.7f
-    DP  %0.7f
-    P   %0.7f
-    STL %0.7f
-    FR  %0.7f
-    NEB %0.7f
-    SAT %0.7f
-    SP  %0.7f
-    OV  %0.7f
-    BBG %0.7f
-    BG  %0.7f""" % (
-            P1,
-            P2,
-            P3,
-            P4,
-            P5,
-            P6,
-            P7,
-            P8,
-            P9,
-            P10,
-            P11,
-            P12,
-            P13,
-            P14,
-        )
+    thresholds = """CR  %0.7f
+HCL %0.7f
+DCL %0.7f
+HP  %0.7f
+DP  %0.7f
+P   %0.7f
+STL %0.7f
+FR  %0.7f
+NEB %0.7f
+SAT %0.7f
+SP  %0.7f
+OV  %0.7f
+BBG %0.7f
+BG  %0.7f""" % (*np.array(args.thresholds.split('-'),dtype=float),)
 
-        thresholds = """CR  %0.7f
-    HCL %0.7f
-    DCL %0.7f
-    HP  %0.7f
-    DP  %0.7f
-    P   %0.7f
-    STL %0.7f
-    FR  %0.7f
-    NEB %0.7f
-    SAT %0.7f
-    SP  %0.7f
-    OV  %0.7f
-    BBG %0.7f
-    BG  %0.7f""" % (
-            T1,
-            T2,
-            T3,
-            T4,
-            T5,
-            T6,
-            T7,
-            T8,
-            T9,
-            T10,
-            T11,
-            T12,
-            T13,
-            T14,
-        )
+    verboseprint(flags)
+    verboseprint(priors)
+    verboseprint(thresholds)
+    os.system('echo "%s" > classes.flags' % (flags))
+    os.system('echo "%s" > classes.thresh' % (thresholds))
+    os.system('echo "%s" > classes.priors' % (priors))
 
-        os.system('echo "%s" > classes.flags' % (flags))
-        os.system('echo "%s" > classes.thresh' % (thresholds))
-        os.system('echo "%s" > classes.priors' % (priors))
+    # except ValueError:
+    #     prob, size, single, net = False, 8, False, 0
+    if len(path)==1:
+        command = ("""%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
+            % ('/Users/Vincent/opt/anaconda3/bin/python',resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),bool(int(single)), size, bool(int(prob)), path[0]))
+    else:
+        outfile = open("/tmp/files_maxi_mask.list", "w")
+        print >> outfile, "\n".join(str(i) for i in path)
+        outfile.close()
+        command = ("""%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
+            % ('/Users/Vincent/opt/anaconda3/bin/python',resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),bool(int(single)), size, bool(int(prob)), '/tmp/files_maxi_mask.list'))
 
-    except ValueError:
-        prob, size, single, net = False, 8, False, 0
-
-    command = (
-        """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
-        % ('/Users/Vincent/opt/anaconda3/bin/python',resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),bool(int(single)), size, bool(int(prob)), path)
-    )
     print(command)
     import subprocess
-
     try:
         a = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
-    print(a)
-    try:
+    for file in path:
+        print(a)
         try:
-            a = fits.open(path.replace(".fits", ".masks.fits"))
-            b = fits.open(path)
-            a[0].header = b[0].header
-            a.writeto(path.replace(".fits", ".masks.fits"), overwrite=True)
+            try:
+                a = fits.open(file.replace(".fits", ".masks.fits"))
+                b = fits.open(file)
+                a[0].header = b[0].header
+                a.writeto(file.replace(".fits", ".masks.fits"), overwrite=True)
+            except Exception as e:
+                verboseprint(e)
+            d.set("frame new")
+            d.set("file %s" % (file.replace(".fits", ".masks.fits")))
+        #        d.set('multiframe %s'%(path.replace('.fits','.mask.fits')))
         except Exception as e:
-            verboseprint(e)
-        d.set("frame new")
-        d.set("file %s" % (path.replace(".fits", ".masks.fits")))
-    #        d.set('multiframe %s'%(path.replace('.fits','.mask.fits')))
-    except Exception as e:
-        print(e)
-        print("did not work...")
+            print(e)
+            print("did not work...")
     return
 
 
@@ -10387,7 +10538,7 @@ def main():
         "radial_profile": radial_profile,#radial_profile
         "throughfocus": throughfocus,#throughfocus
         "compute_fluctuation": compute_fluctuation,#compute_fluctuation
-        "throughfocus_visualisation": throughfocus_visualisation,#throughfocus_visualisation
+        # "throughfocus_visualisation": throughfocus_visualisation,#throughfocus_visualisation
         "throughslit": throughslit,#
         "explore_throughfocus": explore_throughfocus,#explore_throughfocus
         "fill_regions": fill_regions,#fill_regions
@@ -10408,7 +10559,7 @@ def main():
         "RunSextractor": RunSextractor,#sextractor
         "DS9saveColor": DS9saveColor,#stiff
         "aperture_photometry": aperture_photometry,#aperture_photometry
-        "ExtractSources": extract_sources,#extract_sources
+        "extract_sources": extract_sources,#extract_sources
         "cosmology_calculator": cosmology_calculator,#cosmology_calculator
         "Convertissor": Convertissor,#convertissor
         "astrometry_net": astrometry_net,#astrometry_net

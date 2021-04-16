@@ -67,10 +67,10 @@ hmenu 1. Generic Functions
 #		menu
 #		$data | echo  | $text
 
-		Check #7
-		*
-		bind t
-		DS9Utils checkFile -x $xpa_method  | $text
+		#Check #7
+		#*
+		#bind t
+		#DS9Utils checkFile -x $xpa_method  | $text
 
 		Reset Display Parameters (B)
 		*
@@ -132,7 +132,6 @@ hmenu 1. Generic Functions
 		DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); -p "$path"  -xy $fields -n $name -f $form -r $size -w $wcs -s "$Selection" | $text
 
 
-
 		Export DS9 Regions To Catalog
 		*
 		menu
@@ -146,17 +145,6 @@ hmenu 1. Generic Functions
 		menu
 		DS9Utils fill_regions -x $xpa_method   $param(Replace-region);  -v $number -o $overwrite   | $text
 
-
-		Throw Apertures
-		*
-		menu
-		DS9Utils throw_apertures -x $xpa_method   $param(Throw-Apertures);  -n $number -s $size  -f $form -e $spacing | $text
-
-
-		Plot aperture's values
-		*
-		menu
-		DS9Utils AperturesParams -x $xpa_method   $param(Plot-Apertures);  "$path" $x $y  $select" | $text
 
 	endhmenu
 
@@ -180,7 +168,7 @@ hmenu 1. Generic Functions
 		Interactive Manual Fitting
 		*
 		menu
-		DS9Utils ManualFitting -x $xpa_method  | $text
+		DS9Utils manual_fitting -x $xpa_method  | $text
 
 
 		Fit Gaussian 2D
@@ -202,18 +190,13 @@ hmenu 1. Generic Functions
 #		DS9Utils Convolve2d -x $xpa_method  $param(Convolution); $type $pat_c $sizex  "$path"   | $text
 
 
-		Interpolate NaNs
-		*
-		menu
-		#DS9Utils interpolate_nans -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
-		DS9Utils interpolate_nans -x $xpa_method  | $text
-
 
 		Trimming
 		*
 		menu
 		#DS9Utils trim -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
-		DS9Utils trim -x $xpa_method  $param(Trimming);  -s Image  -p "$path"  | $text
+#		DS9Utils trim -x $xpa_method  $param(Trimming);  -s Image  -p "$path"  | $text
+		DS9Utils trim -x $xpa_method  | $text
 
 #		Plot 3rd Dimension From Region(s)
 #		*
@@ -265,13 +248,9 @@ hmenu 1. Generic Functions
 	Simulate Sky Image
 	*
 	menu
-	DS9Utils CreateImageFromCatalogObject -x $xpa_method  -p "$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"  | $text
+	DS9Utils CreateImageFromCatalogObject -x $xpa_method  -p '"$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"'  | $text
 
 
-	Get image depth
-	*
-	menu
-	DS9Utils  get_depth_image -x $xpa_method$param(Get-depth); -z $mag_zp -a $aper_size -n $N_aper  | $text
 
 endhmenu
 
@@ -328,12 +307,8 @@ hmenu 2. Instrumentation - AIT
 
 
 
-	hmenu Detector Characterization
+	#hmenu Detector Characterization
 
-		Compute Gain From Fluctuation #29
-		*
-		menu
-		DS9Utils compute_gain -x $xpa_method  $param(EmGain); 0 - $box 0 0  "$path"   | $text
 
 
 
@@ -350,11 +325,6 @@ hmenu 2. Instrumentation - AIT
 
 
 
-		Column Line Correlation
-		*
-		menu
-#		DS9Utils column_line_correlation -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
-		DS9Utils column_line_correlation -x $xpa_method  | $text
 
 
 #		EMCCD histogram #29
@@ -363,7 +333,15 @@ hmenu 2. Instrumentation - AIT
 #		DS9Utils emccd_model -x $xpa_method  $param(EMCCD);  $smearing | $text
 
 
-	endhmenu
+	#endhmenu
+
+
+
+	Column Line Correlation
+	*
+	menu
+#		DS9Utils column_line_correlation -x $xpa_method  $param(Images-to-analyze); "$path"   | $text
+	DS9Utils column_line_correlation -x $xpa_method  | $text
 
 
 #	Guidance
@@ -415,29 +393,24 @@ hmenu 3. Astronomical Softwares
 	STIFF - Color Images
 	*
 	menu
-	DS9Utils DS9saveColor -x $xpa_method   $param(STIFF-Color-image); $var1 $var2 $var3 $BINNING $BITS_PER_CHANNEL $COLOUR_SAT $GAMMA_ $GAMMAFAC $GAMMATYPE $IMAGE_TYPE $MAX_LEVEL $MAX_TYPE $MIN_LEVEL $MIN_TYPE $OUTFILE_NAME $SKY_LEVEL $SKY_TYPE    | $text
+	DS9Utils DS9saveColor -x $xpa_method   $param(STIFF-Color-image); -p1 $var1 -p2 $var2 -p3 $var3 -B $BINNING -b $BITS_PER_CHANNEL -c $COLOUR_SAT -G $GAMMA_ -F $GAMMAFAC -g $GAMMATYPE -t $IMAGE_TYPE -maxl $MAX_LEVEL -maxt $MAX_TYPE -minl $MIN_LEVEL -mint $MIN_TYPE -o $OUTFILE_NAME -S $SKY_LEVEL -s $SKY_TYPE    | $text
 
 
 	PSFex
 	*
 	menu
-	DS9Utils DS9PSFEX -x $xpa_method   $param(PSFex); $ENTRY_PATH   $BASIS_TYPE  $BASIS_NUMBER  $PSF_SAMPLING  $PSF_ACCURACY  $PSF_SIZE  $CENTER_KEYS  "'$PHOTFLUX_KEY'"  "'$PHOTFLUXERR_KEY'"   $PSFVAR_KEYS    $PSFVAR_GROUPS       $PSFVAR_DEGREES    	$SAMPLE_AUTOSELECT   $SAMPLEVAR_TYPE   $SAMPLE_FWHMRANGE   $SAMPLE_VARIABILITY   $SAMPLE_MINSN   $SAMPLE_MAXELLIP   $CHECKPLOT_DEV $CHECKPLOT_TYPE  $CHECKPLOT_NAME  	$CHECKIMAGE_TYPE   $CHECKIMAGE_NAME    $PSF_DIR 	   $HOMOBASIS_TYPE $HOMOPSF_PARAMS $VERBOSE_TYPE $WRITE_XML $XML_NAME $NTHREADS "$Selection"  | $text
+	DS9Utils DS9PSFEX -x $xpa_method   $param(PSFex); -p $ENTRY_PATH  -BT  $BASIS_TYPE -BN  $BASIS_NUMBER -PS  $PSF_SAMPLING -PA $PSF_ACCURACY -ps $PSF_SIZE -CK $CENTER_KEYS  -PK "'$PHOTFLUX_KEY'"  -PEK "'$PHOTFLUXERR_KEY'"  -PSFK $PSFVAR_KEYS   -PSFG $PSFVAR_GROUPS    -PSFD   $PSFVAR_DEGREES   -SA 	$SAMPLE_AUTOSELECT  -ST $SAMPLEVAR_TYPE  -SF $SAMPLE_FWHMRANGE  -SV  $SAMPLE_VARIABILITY  -SM $SAMPLE_MINSN  -SMAX $SAMPLE_MAXELLIP  -CD $CHECKPLOT_DEV -CT $CHECKPLOT_TYPE -CN  $CHECKPLOT_NAME  	-CIT $CHECKIMAGE_TYPE  -CIN  $CHECKIMAGE_NAME -PD   $PSF_DIR 	 -HT  $HOMOBASIS_TYPE -HP $HOMOPSF_PARAMS -W $WRITE_XML -X $XML_NAME -N $NTHREADS -q "$Selection"  | $text
 
 
 	Astrometric Calibration (astrometry.net)
 	*
 	menu
-	DS9Utils astrometry_net -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); $Image $scale_units $scale_lower $scale_upper $scale_est $scale_err $center_ra $center_dec $radius $downsample_factor $tweak_order $crpix_center $parity $positional_error   | $text
+	DS9Utils astrometry_net -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); --type $Image --scale-units $scale_units --scale-lower $scale_lower --scale-upper $scale_upper --scale-est $scale_est --scale-err $scale_err --ra  $center_ra --dec $center_dec --radius $radius  --downsample $downsample_factor --tweak-order $tweak_order --crpix-center $crpix_center --parity  $parity --positional_error $positional_error   | $text
 
 	MaxiMask
 	*
 	menu
-	DS9Utils maxi_mask -x $xpa_method   $param(MaxiMask);  $prob $size  $single $net  $F1  $F2  $F3  $F4  $F5  $F6  $F7  $F8  $F9  $F_10  $F_11   $F_12   $F_13   $F_14  $P1  $P2  $P3  $P4  $P5  $P6  $P7  $P8  $P9  $P_10  $P_11  $P_12  $P_13  $P_14  $T1   $T2  $T3   $T4   $T5  $T6  $T7  $T8  $T9  $T_10  $T_11  $T_12  $T_13  $T_14    | $text
-
-	CreateContourRegions
-	*
-	menu
-	DS9Utils CreateContourRegions -x $xpa_method  $param(CreateContourRegions);   $block $theshold  $erosion  $dilatation  | $text
+	DS9Utils maxi_mask -x $xpa_method   $param(MaxiMask);  -pt $prob -b $size -m $single -n $net  -f $F1-$F2-$F3-$F4-$F5-$F6-$F7-$F8-$F9-$F_10-$F_11-$F_12-$F_13-$F_14 -p $P1-$P2-$P3-$P4-$P5-$P6-$P7-$P8-$P9-$P_10-$P_11-$P_12-$P_13-$P_14  -t $T1-$T2-$T3-$T4-$T5-$T6-$T7-$T8-$T9-$T_10-$T_11-$T_12-$T_13-$T_14    | $text
 
 
 
@@ -446,20 +419,15 @@ hmenu 3. Astronomical Softwares
 		SExtractor #36
 		*
 		menu
-		#DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T  $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits    0  $REGION_NAME| $text
 
-		DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR-NEW);  $REGION_NAME $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE $PARAMETERS_NAME $DETECT_TYPE $DETECT_MINAREA $DETECT_MAXAREA $THRESH_TYPE $DETECT_THRESH $ANALYSIS_THRESH $FILTER $FILT_NAME $DEBLEND_NTHRESH $DEBLEND_MINCONT $CLEAN_T $CLEAN_PARAM $MASK_TYPE $WEIGHT_TYPE $RESCALE_WEIGHTS $WEIGHT_IMAGE $WEIGHT_GAIN $FLAG_IMAGE $FLAG_TYPE $PHOT_APERTURES $PHOT_AUTOPARAMS $PHOT_PETROPARAMS $PHOT_FLUXFRAC $SATUR_LEVEL $SATUR_KEY $MAG_ZEROPOINT $MAG_GAMMA $GAIN $PIXEL_SCALE $SEEING_FWHM $STARNNW_NAME $CHECKIMAGE_TYPE $BACK_TYPE $BACK_VALUE $BACK_SIZE $BACK_FILTERSIZE $BACKPHOTO_TYPE $BACKPHOTO_THICK $BACK_FILTTHRESH $MEMORY_OBJSTACK $MEMORY_PIXSTACK $MEMORY_BUFSIZE $NTHREADS | $text
+		DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR-NEW); -d $DETECTION_IMAGE -CN $CATALOG_NAME -CT $CATALOG_TYPE -PN $PARAMETERS_NAME -DT $DETECT_TYPE -DM $DETECT_MINAREA -Dm $DETECT_MAXAREA -TT $THRESH_TYPE -dT $DETECT_THRESH -AT $ANALYSIS_THRESH -F $FILTER -FN $FILT_NAME -DN $DEBLEND_NTHRESH -D $DEBLEND_MINCONT -C $CLEAN_T -CP $CLEAN_PARAM -M $MASK_TYPE -WT $WEIGHT_TYPE -RW $RESCALE_WEIGHTS -WI $WEIGHT_IMAGE -WG $WEIGHT_GAIN -FI $FLAG_IMAGE -FT $FLAG_TYPE -PA $PHOT_APERTURES -P $PHOT_AUTOPARAMS -PP $PHOT_PETROPARAMS -PF $PHOT_FLUXFRAC -SL $SATUR_LEVEL -SK $SATUR_KEY -MZ $MAG_ZEROPOINT -MG $MAG_GAMMA -G $GAIN -PS $PIXEL_SCALE -SF $SEEING_FWHM -SN $STARNNW_NAME -ct $CHECKIMAGE_TYPE -BT $BACK_TYPE -BV $BACK_VALUE -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BPT $BACKPHOTO_TYPE -bpt $BACKPHOTO_THICK -BFT $BACK_FILTTHRESH -MO $MEMORY_OBJSTACK -MP $MEMORY_PIXSTACK -MB $MEMORY_BUFSIZE -N $NTHREADS | $text
 
 
 		SExtractor (Basic parameters)
 		*
 		menu
-		DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR-BASICS); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME | $text
+		DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR-NEW); -d $DETECTION_IMAGE -CN $CATALOG_NAME -CT $CATALOG_TYPE -PN $PARAMETERS_NAME -DT $DETECT_TYPE -DM $DETECT_MINAREA -Dm $DETECT_MAXAREA -TT $THRESH_TYPE -dT $DETECT_THRESH -AT $ANALYSIS_THRESH -F $FILTER -FN $FILT_NAME -DN $DEBLEND_NTHRESH -D $DEBLEND_MINCONT -C $CLEAN_T -CP $CLEAN_PARAM -M $MASK_TYPE -WT $WEIGHT_TYPE -RW $RESCALE_WEIGHTS -WI $WEIGHT_IMAGE -WG $WEIGHT_GAIN -FI $FLAG_IMAGE -FT $FLAG_TYPE -PA $PHOT_APERTURES -P $PHOT_AUTOPARAMS -PP $PHOT_PETROPARAMS -PF $PHOT_FLUXFRAC -SL $SATUR_LEVEL -SK $SATUR_KEY -MZ $MAG_ZEROPOINT -MG $MAG_GAMMA -G $GAIN -PS $PIXEL_SCALE -SF $SEEING_FWHM -SN $STARNNW_NAME -ct $CHECKIMAGE_TYPE -BT $BACK_TYPE -BV $BACK_VALUE -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BPT $BACKPHOTO_TYPE -bpt $BACKPHOTO_THICK -BFT $BACK_FILTTHRESH -MO $MEMORY_OBJSTACK -MP $MEMORY_PIXSTACK -MB $MEMORY_BUFSIZE -N $NTHREADS | $text
 
-		SExtractor++ (Beta Version)
-		*
-		menu
-		DS9Utils sextractor_pp -x $xpa_method  $param(SEXTRACTOR); $DETECTION_IMAGE $CATALOG_NAME $CATALOG_TYPE  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME | $text
 
 
 	endhmenu
@@ -473,14 +441,14 @@ hmenu 3. Astronomical Softwares
 		SWARP #38
 		*
 		menu
-		DS9Utils DS9SWARP -x $xpa_method   $param(SWARP); "$PATH" $IMAGEOUT_NAME $WEIGHT_TYPE $RESCALE_WEIGHTS $WEIGHT_IMAGE $COMBINEI $COMBINE_TYPE $CLIP_AMPFRAC $CLIP_SIGMA $CELESTIAL_TYPE $PROJECTION_TYPE $PROJECTION_ERR $CENTER_TYPE $CENTERI $PIXELSCALE_TYPE $PIXEL_SCALE $IMAGE_SIZE $RE-SAMPLING  $RESAMPLING_TYPE  $OVERSAMPLING  $INTERPOLATE $SUBTRACT_BACK  $BACK_SIZE $BACK_FILTERSIZE $BACK_FILTTHRESH     | $text
+		DS9Utils DS9SWARP -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME -w $WEIGHT_TYPE -rw $RESCALE_WEIGHTS -W $WEIGHT_IMAGE -c $COMBINEI -ct $COMBINE_TYPE -CA $CLIP_AMPFRAC -CS $CLIP_SIGMA -CT $CELESTIAL_TYPE -PT $PROJECTION_TYPE -PE $PROJECTION_ERR -C_T $CENTER_TYPE -C $CENTERI -PST $PIXELSCALE_TYPE -PS $PIXEL_SCALE -IS $IMAGE_SIZE -R $RE-SAMPLING  -r $RESAMPLING_TYPE  -o $OVERSAMPLING  -I $INTERPOLATE -SB $SUBTRACT_BACK  -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BFT $BACK_FILTTHRESH     | $text
 
 
 
 		Resample images #38
 		*
 		menu
-		DS9Utils resample -x $xpa_method   $param(Resample); "$PATH" $PIXEL_SCALE $IMAGE_SIZE $RESAMPLING_TYPE $RESAMPLE_SUFFIX   | $text
+		DS9Utils resample -x $xpa_method   $param(Resample); -p "$PATH" -P $PIXEL_SCALE -i $IMAGE_SIZE -r $RESAMPLING_TYPE -s $RESAMPLE_SUFFIX   | $text
 
 	endhmenu
 
@@ -490,7 +458,7 @@ hmenu 3. Astronomical Softwares
 		Extract Sources
 		*
 		menu
-		DS9Utils extract_sources -x $xpa_method  $param(Source-Extraction); $erosion-dilatation $threshold $fwhm $theta $iters  $ratio $delete-doublons  "$path"  | $text
+		DS9Utils extract_sources -x $xpa_method  $param(Source-Extraction); -e $erosion-dilatation -t $threshold -f $fwhm -a  $theta -i $iters  -r $ratio -d $delete-doublons    | $text #-p "$path"
 
 
 		Subtract Background
@@ -538,7 +506,61 @@ hmenu 3. Astronomical Softwares
 		DS9Utils interactive_plotter -x $xpa_method  $param(Function); "$formula" "$xrange" $plot "$path" | $text
 
 
-	endhmenu
+
+		endhmenu
+
+endhmenu
+		hmenu 4. Under development
+					Throw Apertures
+					*
+					menu
+					DS9Utils throw_apertures -x $xpa_method   $param(Throw-Apertures);  -n $number -s $size  -f $form -e $spacing | $text
+
+
+					Plot aperture's values
+					*
+					menu
+					DS9Utils AperturesParams -x $xpa_method   $param(Plot-Apertures);  "$path" $x $y  $select" | $text
+
+					Interpolate NaNs
+					*
+					menu
+					#DS9Utils interpolate_nans -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
+					DS9Utils interpolate_nans -x $xpa_method  | $text
+
+					Get image depth
+					*
+					menu
+					DS9Utils  get_depth_image -x $xpa_method$param(Get-depth); -z $mag_zp -a $aper_size -n $N_aper  | $text
+
+					Compute Gain From Fluctuation #29
+					*
+					menu
+					DS9Utils compute_gain -x $xpa_method  $param(EmGain); 0 - $box 0 0  "$path"   | $text
+
+					CreateContourRegions
+					*
+					menu
+					DS9Utils CreateContourRegions -x $xpa_method  $param(CreateContourRegions);   $block $theshold  $erosion  $dilatation  | $text
+
+
+					SExtractor++ (Beta Version)
+					*
+					menu
+					DS9Utils sextractor_pp -x $xpa_method  $param(SEXTRACTOR); -d $DETECTION_IMAGE -f $CATALOG_NAME -F $CATALOG_TYPE | $text
+
+					#E  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME
+
+
+		endhmenu
+
+
+
+
+
+
+
+
 
 param Function
 plot menu {Plot type} Linear|Polar|LinLog|LogLog {Choose beyond the 2D plots, still use x (not r) in polar plots.}#|PolarLog|Plot3D
@@ -556,13 +578,6 @@ param Cosmology
 #Ode0 entry {Ode0} 0.70 {Omega dark energy: density of dark energy in units of the critical density at z=0.}
 #Uncertainty entry {Uncertainty} H0:1 {Parameter and uncertainty in % eg. H0:1 or Om0:2.5 or Ode0:1.5}
 endparam
-
-endhmenu
-
-
-
-
-
 
 
 
@@ -777,7 +792,8 @@ sort menu {Sorting-type} MAG_AUTO|FWHM_IMAGE|THETA_IMAGE|ELLIPTICITY|X_IMAGE|Y_I
 endparam
 
 param Setup
-#var2 text {} {jbfibcuewcbuewuoycveuwqvxybqwxb ljbdeiwubxweiuxin libilduasbxiwbdeilbc \n kbec kljbiucyvewc ilbcyuvdw jvhucydvdsbc jlvaxbdsc \n vcuyxblcsw} {}
+#var2 text {} {To explore a specific part of the image select a region. We can not write more...} {}
+var2 text {} {It is not possible to write a lot here... Indeed there is not much room...} {}
 scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization|zscale|minmax {Scale}
 cut entry {Scale Limits} 50-99.9 {Scale limits in percentile of the image (or defined region)}
 #smooth menu {Smooth} 0|1|2|3|4|5|6|7|8|9|10 {Smoothing boxcar radius in pixel}
@@ -905,7 +921,7 @@ var3 entry {path 3} - {Path to the blue image eg. ~g (480nm) band}
 OUTFILE_NAME entry {OUTFILE_NAME} stiff.tiff {Output image file name}
 IMAGE_TYPE menu {IMAGE_TYPE} AUTO|TIFF|TIFF-pyramid {Output image format.}
 
-BITS_PER_CHANNEL menu {Background estimator}  8|16|-32 {Number of bits per channel in the output image. 8, 16 for int, -32 for float.}
+BITS_PER_CHANNEL menu {BITS PER CHANNEL}  8|16|-32 {Number of bits per channel in the output image. 8, 16 for int, -32 for float.}
 BINNING menu {BINNING} 1|2 {Pixel binning factor for both axes, or along each axis.}
 
 SKY_TYPE menu {SKY_TYPE} AUTO|MANUAL {Sky level determination in each input image.}
@@ -1173,10 +1189,10 @@ erosion-dilatation entry {Erosion-dilatation size} 2 {Percentile of the image to
 threshold entry {Detection threshold / sigma} 10 {The number of standard deviations above which to select sources. Enter eg. 10,15 to loop on threshold}
 fwhm entry {Sources FWHM} 8 {The full-width half-maximum (FWHM) of the major axis of the Gaussian kernel in pixels. Enter eg. 8,10 to loop on FWHM}
 theta entry {Angle} 0 {The position angle (in degrees) of the major axis of the Gaussian kernel measured counter-clockwise from the positive x axis}
-iters entry {Interation} 5 {The number of iterations to perform sigma clipping, or None to clip until convergence is achieved when calculating the statistics}
+iters entry {Iteration} 5 {The number of iterations to perform sigma clipping, or None to clip until convergence is achieved when calculating the statistics}
 ratio entry {Gaussian ratio} 1 {The ratio of the minor to major axis standard deviations of the Gaussian kernel}
 delete-doublons entry {Minimal distance} 30 {When entering several thresholds/FWHMs, the minimal distance between two sources in order to delete duplicates}
-path entry {RegExp Path} $filename {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+#path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -1346,141 +1362,10 @@ REGION_NAME menu {REGION_NAME} NUMBER|FWHM_IMAGE|MAG_AUTO|MAG_ISO|MAG_APER|MU_MA
 endtab
 endparam
 
-#CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
-#MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
-#MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
-#MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
-
-#VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {}
-#WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
-#XML_NAME entry {XML_NAME} sex.xml {Filename for XML output}
-#REGION_THRESHOLD entry {DS9 Regions Mag} 1000 {Min,max observed magnitude of the galaxy reghions to display}
 
 
 
 
-param SEXTRACTOR-BASICS
-DETECTION_IMAGE entry {DETECTION_IMAGE} $filename {Image to use for detection of the sources. If - using ../DetectionImages/}
-CATALOG_NAME entry {CATALOG_NAME} - {Name of the output catalog. eg /tmp/catalog.fits, if -, saved in ../DetectionImages/Photometric_Catalogs/ }
-CATALOG_TYPE menu {CATALOG_TYPE} ASCII_HEAD|FITS_1.0|NONE|ASCII|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
-
-DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
-DETECT_MINAREA entry {DETECT_MINAREA} 3 {}
-#DETECT_MAXAREA entry {DETECT_MAXAREA} - {}
-THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
-DETECT_THRESH entry {DETECT_THRESH} 1.5 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
-ANALYSIS_THRESH entry {ANALYSIS_THRESH} 1.5 {sigmas or threshold,ZP in mag.arcsec-2}
-
-FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
-FILT_NAME menu {FILTER_NAME} default.conv|NONE|gauss_4.0_7x7.conv|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
-
-DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 32 {Number of deblending sub-thresholds}
-DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.005 {Minimum contrast parameter for deblending}
-
-CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
-CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency, 0 for no cleaning}
-MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
-
-WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
-WEIGHT_IMAGE entry {WEIGHT_IMAGE} - {}
-#RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 0 {}#FLAG_IMAGE entry {FLAG_IMAGE} - {}#FLAG_TYPE menu {FLAG_TYPE} MAX|MIN|? {}
-
-PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
-PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,3.5 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
-PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,3.5 {MAG_PETRO parameters: <Petrosian_fact>}
-PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95 {flux fraction[s] used for FLUX_RADIUS}
-#SATUR_LEVEL entry {SATUR_LEVEL} - {level (in ADUs) at which arises saturation}
-MAG_ZEROPOINT entry {MAG_ZEROPOINT} 0.0 {magnitude zero-point}
-#MAG_GAMMA entry {MAG_GAMMA} - {gamma of emulsion (for photographic scans)}
-#GAIN entry {GAIN} - {detector gain in e-/ADU}
-PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
-
-SEEING_FWHM entry {SEEING_FWHM} 1.2 {stellar FWHM in arcsec}
-STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
-
-BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
-BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
-BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Background filter: <size> or <width>,<height>}
-BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
-BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
-BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
-
-CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
-#CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
-REGION_NAME menu {REGION_NAME} NUMBER|FWHM_IMAGE|MAG_AUTO|MAG_ISO|MAG_APER|MU_MAX|ELLIPTICITY|CLASS_STAR|THETA_IMAGE|ELONGATION {The name you want to display above each source on DS9}
-
-endparam
-
-
-
-
-
-
-param SEXTRACTOR-CLAUDS
-DETECTION_IMAGE entry {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using ../DetectionImages/}
-CATALOG_NAME entry {CATALOG_NAME} - {Name of the output catalog. eg /tmp/catalog.fits, if -, saved in ../DetectionImages/Photometric_Catalogs/ }
-CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
-
-DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
-DETECT_MINAREA entry {DETECT_MINAREA} 10 {}
-#DETECT_MAXAREA entry {DETECT_MAXAREA} - {}
-THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
-DETECT_THRESH entry {DETECT_THRESH} 0.8 {}
-ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
-
-FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
-FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/}
-
-DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 64 {Number of deblending sub-thresholds}
-DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.0003 {Minimum contrast parameter for deblending}
-
-
-CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
-CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency}
-MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
-
-WEIGHT_TYPE menu {WEIGHT_TYPE} NONE,MAP_VAR|MAP_VAR|NONE {First one for detection image, second one for photometric image}
-WEIGHT_IMAGE entry {WEIGHT_IMAGE} - {}
-#RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 0 {}
-
-#FLAG_IMAGE entry {FLAG_IMAGE} - {}
-#FLAG_TYPE menu {FLAG_TYPE} MAX|MIN|? {}
-
-PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
-PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,4.0 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
-PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,4.0 {MAG_PETRO parameters: <Petrosian_fact>}
-PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95 {flux fraction[s] used for FLUX_RADIUS}
-#SATUR_LEVEL entry {SATUR_LEVEL} - {level (in ADUs) at which arises saturation}
-MAG_ZEROPOINT entry {MAG_ZEROPOINT} 30.0 {magnitude zero-point}
-#MAG_GAMMA entry {MAG_GAMMA} - {gamma of emulsion (for photographic scans)}
-#GAIN entry {GAIN} - {detector gain in e-/ADU}
-PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
-
-SEEING_FWHM entry {SEEING_FWHM} 0.8 {stellar FWHM in arcsec}
-STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
-
-BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
-BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
-BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Background filter: <size> or <width>,<height>}
-BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
-BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
-BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
-
-CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
-#CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Filename for the check ex}
-
-#MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
-#MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
-#MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
-
-#VERBOSE_TYPE menu {VERBOSE_TYPE} NORMAL|QUIET|FULL {}
-#WRITE_XML checkbox {WRITE_XML} 1 {Write XML file (Y/N)?}
-#XML_NAME entry {XML_NAME} sex.xml {Filename for XML output}
-REGION_THRESHOLD entry {DS9 Regions Mag} 1000 {Min,max observed magnitude of the galaxy reghions to display}
-
-endparam
 
 
 
@@ -1488,12 +1373,18 @@ endparam
 
 param PSFex
 
+tab {PSF model}
+
 ENTRY_PATH entry {ENTRY_CAT} - {Linux path of the FITS_LDAC (!!!) entry catalogs. Can contain * and ?}
 BASIS_TYPE menu {BASIS_TYPE} PIXEL_AUTO|NONE|PIXEL|GAUSS-LAGUERRE|FILE {}
-BASIS_NUMBER entry {BASIS_NUMBER} 20 {NBasis number or parameter}
+BASIS_NUMBER entry {BASIS_NUMBER} 20 {Basis number or parameter}
 PSF_SAMPLING entry {PSF_SAMPLING} 1.0 {Sampling step in pixel units (0.0 = auto)}
 PSF_ACCURACY entry {PSF_ACCURACY} 0.01 {Accuracy to expect from PSF "pixel" values}
 PSF_SIZE entry {PSF_SIZE} 45,45 {Image size of the PSF model}
+
+endtab
+
+tab {PSF variability}
 
 CENTER_KEYS entry {CENTER_KEYS} X_IMAGE,Y_IMAGE {Catalogue parameters for source pre-centering}
 PHOTFLUX_KEY entry {PHOTFLUX_KEY} FLUX_APER(2) {Catalogue parameter for photometric norm.}
@@ -1502,14 +1393,24 @@ PSFVAR_KEYS entry {PSFVAR_KEYS} X_IMAGE,Y_IMAGE {Catalogue or FITS (preceded by 
 PSFVAR_GROUPS entry {PSFVAR_GROUPS} 1,1 {Group tag for each context key}
 PSFVAR_DEGREES menu {PSFVAR_DEGREES} 0|1|2|3|4 {Polynom degree for each group}
 
+endtab
 
-SAMPLE_AUTOSELECT menu {SAMPLE_AUTOSELECT} Y|N {Automatically select the FWHM?}
+tab {Sample selection}
+
+SAMPLE_AUTOSELECT checkbox {SAMPLE_AUTOSELECT} 1 {Automatically select the FWHM?}
 SAMPLEVAR_TYPE menu {SAMPLEVAR_TYPE} SEEING|NONE {File-to-file PSF variability}
 SAMPLE_FWHMRANGE entry {SAMPLE_FWHMRANGE} 2.0,10.0 {Allowed FWHM range}
 SAMPLE_VARIABILITY entry {SAMPLE_VARIABILITY} 0.2 {Allowed FWHM variability (1.0 = 100%)}
 SAMPLE_MINSN entry {SAMPLE_MINSN} 20 {Minimum S/N for a source to be used}
 SAMPLE_MAXELLIP entry {SAMPLE_MAXELLIP} 0.3 {Maximum (A-B)/(A+B) for a source to be used}
 
+
+endtab
+
+tab {Homogeneisation & checks}
+
+HOMOBASIS_TYPE menu {HOMOBASIS_TYPE} GAUSS-LAGUERRE|NONE {GAUSS_LAGUERRE or no homogeneisation is computed}
+HOMOPSF_PARAMS entry {HOMOPSF_PARAMS} 5.3,2.5 {Moffat FWHM and B parameter of the idealized target PSF chosen for homogeneisation}
 
 CHECKPLOT_DEV menu {CHECKPLOT_DEV} PNG|XWIN|TK|PS|PSC|XFIG|JPEG|AQT|PDF|SVG {}
 CHECKPLOT_TYPE menu {CHECKPLOT_TYPE} NONE|FWHM|ELLIPTICITY|COUNTS|COUNT_FRACTION|CHI2|RESIDUALS {or NONE}
@@ -1519,15 +1420,13 @@ CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} CHI|PROTOTYPES|SAMPLES|RESIDUALS|SNAPSHOT
 CHECKIMAGE_NAME entry {CHECKIMAGE_NAME} check.fits {Group tag for each context key}
 PSF_DIR entry {PSF_DIR} . {Where to write PSFs (empty=same as input)}
 
-HOMOBASIS_TYPE menu {HOMOBASIS_TYPE} GAUSS-LAGUERRE|NONE {GAUSS_LAGUERRE or no homogeneisation is computed}
-HOMOPSF_PARAMS entry {HOMOPSF_PARAMS} 5.3,2.5 {Moffat FWHM and B parameter of the idealized target PSF chosen for homogeneisation}
 
-
-VERBOSE_TYPE menu {VERBOSE_TYPE} QUIET|NORMAL|LOG {}
-WRITE_XML menu {WRITE_XML} Y|N {}
+WRITE_XML menu {WRITE_XML} 1|0 {}
 XML_NAME entry {XML_NAME} psfex.xml {Filename for XML output}
 NTHREADS entry {NTHREADS} 2 {Number of simultaneous threads for the SMP version of PSFEx, 0 = automatic}
 Selection entry {[Selection]} - {Selection of the objetcs in th catalog: Use | for OR and \& for AND}
+endtab
+
 endparam
 
 
