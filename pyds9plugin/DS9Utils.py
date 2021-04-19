@@ -52,6 +52,7 @@ class MyParser(argparse.ArgumentParser):
         if len(argv)==0:
             args = self.parse_args()
         else:
+            verboseprint(['test']+argv.split())
             args = self.parse_args(['test']+argv.split())
         if hasattr(args, "path") is False:
             args.path = None
@@ -66,8 +67,8 @@ class MyParser(argparse.ArgumentParser):
 
 def CreateParser(namedoc,path=False):
     name, doc = namedoc
-    parser = MyParser(description=doc,usage="DS9Utils %s [-h] [-x xpapoint] [--optional OPTIONAL]"%(name))#,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('function', help="Function to perform")#,required=True)
+    parser = MyParser(description=bcolors.BOLD+'%s: %s'%(name+bcolors.END, doc),usage=bcolors.FAIL+"DS9Utils %s [-h] [-x xpapoint] [--optional OPTIONAL]"%(bcolors.BOLD+name+bcolors.END+bcolors.FAIL)+bcolors.END,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('function', help="Function to perform [here: %s]"%(name))#,required=True)
     parser.add_argument('-x', '--xpapoint', help='XPA access point for DS9 communication. If none is provided, it will take the last DS9 window if one, else it will run the function without DS9.', metavar='')
     if path:
         parser.add_argument('-p', '--path', help='Path of the image(s) to process, regexp accepted', metavar='',default='-')
@@ -301,12 +302,12 @@ if len(sys.argv) > 2:
 
 
 def compute_fluctuation(
-    xpapoint, fileOutName=None, ext=1, ext_seg=1, mag_zp=None, sub=None, aper_size=10, verbose=False, plot=False, seg=None, type="image", nomemmap=False, argv=[]):
+    xpapoint=None, fileOutName=None, ext=1, ext_seg=1, mag_zp=None, sub=None, aper_size=10, verbose=False, plot=False, seg=None, type="image", nomemmap=False, argv=[]):
     """Compute image(s) gain by fluctuation method"""
     import numpy as np
     parser = CreateParser(get_name_doc())
     parser.add_argument('-a', '--aperture',    default='5,10,15', help='Aperture radius in pixels', type=str)#metavar='',
-    parser.add_argument('-n', '--number_apertures',    default='1000', help='Number of apertures to throw in the image', type=str)#metavar='',
+    parser.add_argument('-n', '--number_apertures',    default='1000', help='Number of apertures to throw in the image', type=str,metavar='')#metavar='',
     args = parser.parse_args_modif(argv)
     d = DS9n(xpapoint)
     fileInName = getfilename(d)
@@ -377,9 +378,9 @@ def lock(xpapoint=None, argv=[]):
     parser = CreateParser(get_name_doc())
     parser.add_argument('-f', '--frame',    default='image', help='', type=str, choices=['image','none','wcs'])#metavar='',
     parser.add_argument('-c', '--crosshair',    default='image', help='', type=str, choices=['image','none','wcs'])#metavar='',
-    parser.add_argument('-l', '--scalelimits',    default='1', help='', type=str)#, choices=['image','none','wcs'])#metavar='',
-    parser.add_argument('-s', '--smooth',    default='0', help='', type=str)#, choices=['image','none','wcs'])#metavar='',
-    parser.add_argument('-m', '--cmap',    default='1', help='', type=str)#, choices=['image','none','wcs'])#metavar='',
+    parser.add_argument('-l', '--scalelimits',    default='1', help='', type=str,metavar='')#, choices=['image','none','wcs'])#,metavar='',
+    parser.add_argument('-s', '--smooth',    default='0', help='', type=str,metavar='')#, choices=['image','none','wcs'])#metavar='',
+    parser.add_argument('-m', '--cmap',    default='1', help='', type=str,metavar='')#, choices=['image','none','wcs'])#metavar='',
     args = parser.parse_args_modif(argv,required=False)
 
     ds9 = DS9n(xpapoint)
@@ -798,7 +799,7 @@ def PresentPlugIn():
 #@fn_timer
 # @profile
 def setup(xpapoint=None, config=my_conf, color="cool",argv=[]):
-    """This function aims at giving a quick and general visualisation of the image by applying specific thresholding
+    """Give a quick/general visualisation of the image by applying specific thresholding [DS9 required]
         and smoothing parameters. This allows to detect easily:
         •Different spot that the image contains
         •The background low frequency/medium variation
@@ -1269,7 +1270,7 @@ def build_wcs_header(xpapoint=None, filename=None, pix_coord=None, increment=Non
 
 
 def aperture_photometry(xpapoint=None, argv=[]):
-    """Computes photometry in a given aperture
+    """Computes photometry in a given aperture [DS9 required]
     """
     from astropy.table import Table
     import numpy as np
@@ -1517,7 +1518,7 @@ def fit_gaussian_2d(xpapoint=None, Plot=True, n=300, cmap="twilight_shifted", ar
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
     import numpy as np
     parser = CreateParser(get_name_doc(),path=False)
-    parser.add_argument('-p', '--plot',    default='1', help='Interactive plot for gaussian fitting', type=str)#metavar='',
+    parser.add_argument('-p', '--plot',    default='1', help='Interactive plot for gaussian fitting', type=str,metavar='',)#metavar='',
     args = parser.parse_args_modif(argv,required=False)
 
     fwhm, center, test = "-", 0, 0  # sys.argv[-3:]
@@ -1798,7 +1799,7 @@ def CreateWCS(PathExec, filename, Newfilename, params, type_="Image"):
 
 
 def original_settings(xpapoint=None, argv=[]):
-    """Return to original settings
+    """Return to original settings [DS9 required]
     """
     parser = CreateParser(get_name_doc())
     args = parser.parse_args_modif(argv,required=False)
@@ -2482,7 +2483,7 @@ def AnalyzeSpot(data, center, size=40, n=1.5, radius=40, fit=True, center_type="
 
 
 def throughfocus(xpapoint=None, Plot=True, argv=[]):
-    """Perform a throughfocus analysis and return the best focused image
+    """Perform a throughfocus analysis and return the best focused image [DS9 required]
     """
     from astropy.io import fits
     from astropy.table import Table
@@ -2569,7 +2570,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
     PyvistaThoughfocus(a)
 
 
-def explore_throughfocus(xpapoint, argv=[]):
+def explore_throughfocus(xpapoint=None, argv=[]):
     """Create focus exploration based on sextractor catalog including VIGNETS
     """
     from astropy.convolution import convolve, Gaussian2DKernel
@@ -3598,10 +3599,10 @@ def throw_apertures(xpapoint=None, argv=[]):
     from astropy.io import fits
     import numpy as np
     parser = CreateParser(get_name_doc())
-    parser.add_argument('-a', '--aperture',    default='10,10', help='Aperture radius in pixels', type=str)#metavar='',
+    parser.add_argument('-a', '--aperture',    default='10,10', help='Aperture radius in pixels', type=str,metavar='',)#metavar='',
     parser.add_argument('-f', '--form',    default='0', help='Aperture form', type=str,choices=['box','circle'])#metavar='',
     parser.add_argument('-d', '--distribution',    default='Random', help='Apertures position', type=str,choices=['Random','Equidistributed'])#metavar='',
-    parser.add_argument('-n', '--number_apertures',    default='1000', help='Number of apertures to throw in the image', type=str)#metavar='',
+    parser.add_argument('-n', '--number_apertures',    default='1000', help='Number of apertures to throw in the image', type=str,metavar='')#metavar='',
 
     args = parser.parse_args_modif(argv)
     d = DS9n(xpapoint)
@@ -4122,7 +4123,7 @@ def StackImagesPath(paths, Type='np.nanmean', clipping=3, dtype=float, fname="",
 
 
 def throughslit(xpapoint=None, DS9backUp=DS9_BackUp_path, config=my_conf, argv=[]):
-    """Perform a throughslit analysis and return the centered image
+    """Perform a throughslit analysis and return the centered image [DS9 required]
     How to use: Open one an image of the through focus which is close to the focus. Click on region. Then click
     precisely on what you think is the centre of the PSF. Select the region you created and press t (throughfocus)
     or go in analysis menu: Through slit analysis. This will open a dialog box that asks what is the number of
@@ -4219,7 +4220,7 @@ def DS9Plot(d=None, path="", title="", name="", xlabel="", ylabel="", type_="xy"
 
 
 def guidance(xpapoint=None, Plot=True, reg=True, style="--o", lw=0.5, argv=[]):
-    """Always display last image of the repository and will upate with new ones
+    """Always display last image of the repository and will upate with new ones [DS9 required]
     """
     import matplotlib.pyplot as plt
     import time
@@ -4691,19 +4692,19 @@ def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, syst
     parser.add_argument('-p', '--path', help='Path of the catalog to load', type=str,metavar='')#metavar='',
     parser.add_argument('-xy', '--fields', help='Name of the x and y fields: ex = xcentroid,ycentroid', type=str,metavar='')#metavar='',
     parser.add_argument('-n', '--name', default='-',help='field to put in region name: ex = magnitude, name, etc', type=str,metavar='')#metavar='',
-    parser.add_argument('-f', '--form', help='orm of the regions to display', type=str,metavar='',choices=['circle','box'])#metavar='',
+    parser.add_argument('-f', '--form', default='circle', help='form of the regions to display', type=str,metavar='',choices=['circle','box'])#metavar='',
     parser.add_argument('-r', '--radius', help='Size in pixel or arcseconds', type=str,metavar='',default='10')#metavar='',
     parser.add_argument('-w', '--WCS', help='Check if the catalog fields are in degree-WCS, then radius must be in arc-second', type=str,metavar='', default='0')#metavar='',
-    parser.add_argument('-s', '--selection', help='selection of the region in th catalog: Use | for OR and \& for AND', type=str,metavar='')#metavar='',
-
+    parser.add_argument('-s', '--selection', default='-', help='selection of the region in th catalog: Use | for OR and \& for AND', type=str,metavar='')#metavar='',
+    # print(argv)
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
-    name = args.path
+    print(args.path)
     try:
-        cat = Table.read(name.rstrip()[::-1].rstrip()[::-1])
+        cat = Table.read(args.path.rstrip()[::-1].rstrip()[::-1])
     except astropy.io.registry.IORegistryError:
-        cat = Table.read(name.rstrip()[::-1].rstrip()[::-1], format="ascii")
+        cat = Table.read(args.path.rstrip()[::-1].rstrip()[::-1], format="ascii")
     cat = DeleteMultiDimCol(cat)
     # if (len(sys.argv) > 3) & (sys.argv[1] == "import_table_as_region"):
     form = args.form
@@ -4768,7 +4769,7 @@ def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, syst
 
 
 def save_region_as_catalog(xpapoint=None, name=None, new_name=None, argv=[]):
-    """Save DS9 regions as a catalog
+    """Save DS9 regions as a catalog [DS9 required]
     """
     import numpy as np
     from astropy.table import Table
@@ -6130,8 +6131,8 @@ def fill_regions(xpapoint=None, argv=[]):
     import numpy as np
     from numpy import inf, nan
     parser = CreateParser(get_name_doc())
-    parser.add_argument('-v', '--value', help='Value to replace in the regions', type=str)#metavar='',
-    parser.add_argument('-o', '--overwrite',    default='1', help='Overwrite the image', type=str)#metavar='',
+    parser.add_argument('-v', '--value', help='Value to replace in the regions', type=str,metavar='')#metavar='',
+    parser.add_argument('-o', '--overwrite',    default='1', help='Overwrite the image', type=str,metavar='')#metavar='',
     args = parser.parse_args_modif(argv)
 
     verboseprint(inf + nan)
@@ -6211,7 +6212,7 @@ def InterpolateNaNs(path, stddev=1):
     return result, name
 
 
-def interpolate_nans(xpapoint, argv=[]):
+def interpolate_nans(xpapoint=None, argv=[]):
     """Replace NaNs value in given image(s) by values interpolated around NaNs value
     """
     parser = CreateParser(get_name_doc(),path=True)
@@ -6251,13 +6252,14 @@ def extract_sources(xpapoint=None, argv=[]):
     fwhm = np.array(fwhm.split(","), dtype=float)
     verboseprint("ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons = ", ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons)
     path = globglob(args.path)
-    for filename in path:
-        verboseprint(filename)
-        sources = ExtractSources(filename, fwhm=fwhm, threshold=threshold, theta=float(theta), ratio=float(ratio), n=int(ErosionDilatation), iters=int(iters), deleteDoublons=int(deleteDoublons))
-        if len(path) < 2:
-            create_DS9regions2(sources["xcentroid"], sources["ycentroid"], radius=10, form="circle", save=True, color="yellow", savename="/tmp/centers")
-            d.set("region delete all ; region {}".format("/tmp/centers.reg"))
-    csvwrite(sources, filename[:-5] + ".csv")
+    # for filename in path:
+    #     verboseprint(filename)
+    #     sources = ExtractSources(filename, fwhm=fwhm, threshold=threshold, theta=float(theta), ratio=float(ratio), n=int(ErosionDilatation), iters=int(iters), deleteDoublons=int(deleteDoublons))
+    sources = Parallelize(function=ExtractSources, parameters=[fwhm, threshold, float(theta), float(ratio), int(ErosionDilatation),3, int(iters),int(deleteDoublons)], action_to_paralize=path, number_of_thread=10)
+
+    if len(path) < 2:
+        create_DS9regions2(sources["xcentroid"], sources["ycentroid"], radius=10, form="circle", save=True, color="yellow", savename="/tmp/centers")
+        d.set("region delete all ; region {}".format("/tmp/centers.reg"))
     return
 
 
@@ -6310,6 +6312,7 @@ def ExtractSources(filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, sigma=3
                 if len(sources0) == 0:
                     sources0 = sources1
     sources = delete_doublons(sources0, dist=deleteDoublons)
+    csvwrite(sources, filename[:-5] + ".csv")
     return sources
 
 
@@ -6425,7 +6428,7 @@ def add_field_to_header(xpapoint=None, field="", value="", comment="-", argv=[])
 def background_estimation(xpapoint=None, n=2, DS9backUp=DS9_BackUp_path, Plot=True, argv=[]):
     """Estimate image(s) background
     """
-    from multiprocessing import Process, Manager, Pipe
+    # from multiprocessing import Process, Manager, Pipe
     from pyds9plugin.BasicFunctions import RunFunction
     import numpy as np
     parser = CreateParser(get_name_doc(),path=True)
@@ -6453,19 +6456,20 @@ def background_estimation(xpapoint=None, n=2, DS9backUp=DS9_BackUp_path, Plot=Tr
     return_dict = manager.dict()
     if len(path) > 1:
         Plot = False
+    name = Parallelize(function=BackgroundEstimationPhot, parameters=[ float(sigma), bckd, rms, (filter1, filter2), (box1, box2), n, DS9_BackUp_path, snr, npixels, dilate, percentile, mask, Plot], action_to_paralize=path, number_of_thread=10)
 
-    for filename in path:
-        parent_conn, child_conn = Pipe()
-        p = Process(
-            target=RunFunction,
-            args=(BackgroundEstimationPhot, [filename, float(sigma), bckd, rms, (filter1, filter2), (box1, box2), n, DS9_BackUp_path, snr, npixels, dilate, percentile, mask, Plot], return_dict,),
-        )
-        jobs.append(p)
-        p.start()
-
-    for job in jobs:
-        job.join()
-    name = return_dict["output"]
+    # for filename in path:
+    #     parent_conn, child_conn = Pipe()
+    #     p = Process(
+    #         target=RunFunction,
+    #         args=(BackgroundEstimationPhot, [filename, float(sigma), bckd, rms, (filter1, filter2), (box1, box2), n, DS9_BackUp_path, snr, npixels, dilate, percentile, mask, Plot], return_dict,),
+    #     )
+    #     jobs.append(p)
+    #     p.start()
+    #
+    # for job in jobs:
+    #     job.join()
+    # name = return_dict["output"]
 
     if len(path) < 2:
         d.set("frame new ; tile yes ; file " + name)
@@ -7143,7 +7147,7 @@ def linear1D_centered(x, intercept, slope, x0=0):
 
 
 def fit_ds9_plot(xpapoint=None, config=my_conf, exp=False, double_exp=False, double_schechter=False, schechter=False, Type="Linear", EMCCD_=False, nb_blackbody=0, argv=[]):
-    """Fit interactively any DS9 plot with different fucntions [DS9 required]
+    """Fit interactively any DS9 plot with different fucntions
     """
     import matplotlib.pyplot as plt
     from matplotlib.widgets import CheckButtons  # RadioButtons,
@@ -7519,11 +7523,13 @@ def InteractivManualFitting(xdata, ydata, initial="a+b*max(ydata)*exp(-(x-c*x[ar
     plt.show()
 
 
-def manual_fitting(xpapoint=None, initial="a+b*max(ydata)*exp(-(x-c*x[argmax(ydata)])**2/len(ydata)/d)"):
+def manual_fitting(xpapoint=None, initial="a+b*max(ydata)*exp(-(x-c*x[argmax(ydata)])**2/len(ydata)/d)",argv=[]):
     """Fit background 1d with different features
     """
     from astropy.table import Table
     import numpy as np
+    parser = CreateParser(get_name_doc(),path=True)
+    args = parser.parse_args_modif(argv)
     d = DS9n(xpapoint)
     if d is not None:
         try:
@@ -7949,9 +7955,9 @@ def get_depth_image(xpapoint=None, argv=[]):
     """Get the depth of astronomical image(s)
     """
     parser = CreateParser(get_name_doc(),path=True)
-    parser.add_argument('-a', '--aperture',    default='2', help='Aperture radius in pixels', type=str)#metavar='',
-    parser.add_argument('-z', '--zero_point_magnitude',    default='0', help='Zero point magnitude of the image', type=str)#metavar='',
-    parser.add_argument('-n', '--number_apertures',    default='1000', help='Number of apertures to throw in the image', type=str)#metavar='',
+    parser.add_argument('-a', '--aperture',    default='2', help='Aperture radius in pixels', type=str,metavar='',)#metavar='',
+    parser.add_argument('-z', '--zero_point_magnitude',    default='0', help='Zero point magnitude of the image', type=str,metavar='',)#metavar='',
+    parser.add_argument('-n', '--number_apertures',    default='1000', help='Number of apertures to throw in the image', type=str,metavar='',)#metavar='',
     args = parser.parse_args_modif(argv,required=True)
 
     d = DS9n(xpapoint)
@@ -8068,12 +8074,10 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
     parser.add_argument('-PN', '--PARAMETERS_NAME',    default='sex.param', help='File name in ds9_package/Calibration/Sextractor/', type=str,metavar='',)#metavar='',
     parser.add_argument('-DT', '--DETECT_TYPE', help='CCD (linear) or PHOTO (with gamma correction)', type=str,choices=['CCD','PHOTO'])
     parser.add_argument('-DM', '--DETECT_MINAREA',    default='10', help='min number of pixels above threshold', type=str,metavar='',)#metavar='',
-
     parser.add_argument('-Dm', '--DETECT_MAXAREA',    default='0', help='max number of pixels above threshold (0=unlimited)}', type=str,metavar='',)#metavar='',
     parser.add_argument('-TT', '--THRESH_TYPE',default='RELATIVE', type=str,choices=['RELATIVE','ABSOLUTE'])
     parser.add_argument('-dT', '--DETECT_THRESH',    default='0.8', help='Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE', type=str,metavar='',)#metavar='',
     parser.add_argument('-AT', '--ANALYSIS_THRESH',    default='2.0',  type=str,metavar='',)#metavar='',
-
     parser.add_argument('-F', '--FILTER', help='apply filter for detection', type=str,choices=['1','0'])
     parser.add_argument('-FN', '--FILTER_NAME',    default='NONE',  type=str,metavar='',help='Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter')#metavar='',
     parser.add_argument('-DN', '--DEBLEND_NTHRESH',    default='64', help='Number of deblending sub-thresholds', type=str,metavar='',)#metavar='',
@@ -8081,33 +8085,25 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
     parser.add_argument('-C', '--CLEAN', help='Clean spurious detections?', type=str,choices=['1','0'])
     parser.add_argument('-CP', '--CLEAN_PARAM',    default='1.0', help='Cleaning efficiency', type=str,metavar='',)#metavar='',
     parser.add_argument('-M', '--MASK_TYPE', help='type of detection MASKing', type=str,choices=['CORRECT','NONE','BLANK'])
-
     parser.add_argument('-WT', '--WEIGHT_TYPE', type=str,choices=['NONE','NONE,MAP_VAR','MAP_VAR','MAP_VAR,MAP_VAR'],help='First one for detection image, second one for photometric image')
     parser.add_argument('-RW', '--RESCALE_WEIGHTS', help='Rescale input weights/variances ', type=str,choices=['1','0'])
     parser.add_argument('-WI', '--WEIGHT_IMAGE',    default='NONE', help='weight-map filename', type=str,metavar='',)#metavar='',
     parser.add_argument('-WG', '--WEIGHT_GAIN', help='modulate gain (E/ADU) with weights?', type=str,choices=['1','0'])
-
-
     parser.add_argument('-FI', '--FLAG_IMAGE',    default='NONE', help='filename for an input FLAG-image', type=str,metavar='',)#metavar='',
     parser.add_argument('-FT', '--FLAG_TYPE',  type=str,choices=['OR','AND','MAX','MIN','MOST'],help='flag pixel combination')
-
     parser.add_argument('-PA', '--PHOT_APERTURES',    default='6,12,18', help='MAG_APER aperture diameter(s) in pixels', type=str,metavar='',)#metavar='',
     parser.add_argument('-P', '--PHOT_AUTOPARAMS',    default='2.5,4.0', help='MAG_AUTO parameters: <Kron_fact>,<min_radius>', type=str,metavar='',)#metavar='',
     parser.add_argument('-PP', '--PHOT_PETROPARAMS',    default='2.0,4.0', help='MAG_PETRO parameters: <Petrosian_fact>', type=str,metavar='',)#metavar='',
     parser.add_argument('-PF', '--PHOT_FLUXFRAC',    default='0.3,0.5,0.9', help='flux fraction[s] used for FLUX_RADIUS', type=str,metavar='',)#metavar='',
-
     parser.add_argument('-SL', '--SATUR_LEVEL',    default='50000.0', help='level (in ADUs) at which arises saturation', type=str,metavar='',)#metavar='',
     parser.add_argument('-SK', '--SATUR_KEY',    default='SATURATE', help='keyword for saturation level (in ADUs)', type=str,metavar='',)#metavar='',
     parser.add_argument('-MZ', '--MAG_ZEROPOINT',    default='0.0', type=str,metavar='',)#metavar='',
     parser.add_argument('-MG', '--MAG_GAMMA',    default='4.0', type=str,metavar='',help='gamma of emulsion (for photographic scans)')#metavar='',
     parser.add_argument('-G', '--GAIN',    default='GAIN', type=str,metavar='',help='detector gain in e-/ADU')#metavar='',
     parser.add_argument('-PS', '--PIXEL_SCALE',    default='0.0', help='size of pixel in arcsec (0=use FITS WCS info)', type=str)#metavar='',
-
     parser.add_argument('-SF', '--SEEING_FWHM',    default='0.8', help='stellar FWHM in arcsec', type=str)#metavar='',
     parser.add_argument('-SN', '--STARNNW_NAME',    default='default.nnw', help='File name in ds9_package/Calibration/Sextractor/', type=str)#metavar='',
     parser.add_argument('-ct', '--CHECKIMAGE_TYPE', help='type of detection MASKing', type=str,choices=['NONE','BACKGROUND','BACKGROUND_RMSMINIBACKGROUND','MINIBACK_RMS','-BACKGROUND','FILTERED','OBJECTS','-OBJECTS','SEGMENTATION','APERTURES'])
-
-
     # parser.add_argument('-SB', '--SUBTRACT_BACK',default='1', help='Subtraction sky background ?', type=str,choices=['1','0'])
     parser.add_argument('-BT', '--BACK_TYPE',default='1',type=str,choices=['AUTO','MANUAL'])
     parser.add_argument('-BV', '--BACK_VALUE',    default='0.0', help='Default background value in MANUAL mode', type=str,metavar='',)#metavar='',
@@ -8115,7 +8111,6 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
     parser.add_argument('-BFS', '--BACK_FILTERSIZE',    default='3', help='Size in background meshes of the background-filtering mask.', type=str,metavar='',)#metavar='',
     parser.add_argument('-BFT', '--BACK_FILTTHRESH',    default='0.0', help='Threshold above which the background map filter operates', type=str,metavar='',)#metavar='',
     parser.add_argument('-BPT', '--BACKPHOTO_TYPE',default='1',type=str,choices=['LOCAL','GLOBAL'])
-
     parser.add_argument('-bpt', '--BACKPHOTO_THICK',    default='24', help='thickness of the background LOCAL annulus', type=str,metavar='',)#metavar='',
     parser.add_argument('-MO', '--MEMORY_OBJSTACK',    default='3000', help='number of objects in stack', type=str,metavar='',)#metavar='',
     parser.add_argument('-MP', '--MEMORY_PIXSTACK',    default='300000', help='number of pixels in stack', type=str,metavar='',)#metavar='',
@@ -8176,11 +8171,8 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
         "MEMORY_OBJSTACK",
         "MEMORY_PIXSTACK",
         "MEMORY_BUFSIZE",
-        "NTHREADS",
-    ]
+        "NTHREADS"]
 
-    # params = np.array(sys.argv[-len(param_names) :], dtype="<U256")  # str)
-    # verboseprint(params)
     DETECTION_IMAGE = args.DETECTION_IMAGE#sys.argv[4]
     ID = 'NUMBER'#None#sys.argv[3]
 
@@ -8192,8 +8184,6 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
         param_dir = resource_filename("pyds9plugin", "Sextractor")
     except:
         param_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Sextractor")
-
-    # verboseprint(filename, params[0], filename + "_sex.fits")
 
     param_dict["FILTER"] = "Y" if param_dict["FILTER"] == "1" else "N"
     param_dict["CLEAN"] = "Y" if param_dict["CLEAN"] == "1" else "N"
@@ -8318,7 +8308,7 @@ def sextractor_pp(xpapoint=None, filename=None, detector=None, path=None, argv=[
     parser = CreateParser(get_name_doc(),path=False)
     parser.add_argument('-d', '--detection_image', type=str,metavar='')#metavar='',
     parser.add_argument('-f', '--output-catalog-filename',  type=str,metavar='')#metavar='',
-    parser.add_argument('-F', '--output-catalog-format',   type=str,metavar='')#metavar='',
+    parser.add_argument('-F', '--output-catalog-format',   default='FITS', type=str,metavar='')#metavar='',
     args = parser.parse_args_modif(argv,required=False)
     d = DS9n(xpapoint)
     filename = getfilename(d)
@@ -8338,17 +8328,11 @@ def sextractor_pp(xpapoint=None, filename=None, detector=None, path=None, argv=[
         "thread-count",
     ]
 
-    #params = np.array(sys.argv[4:6], dtype="<U256")  # str)
-    #verboseprint(params)
     DETECTION_IMAGE = args.detection_image
-    # ID = sys.argv[3]
     param_dict = {}
-    for key in zip(param_names[:2]):
+    for key in zip(param_names[:1]):
         param_dict[key[0]] = getattr(args,key[0].replace('-','_'))
-
     param_dict["output-catalog-filename"] = filename[:-5] + "_cat.fits" if param_dict["output-catalog-filename"] == "-" else param_dict["output-catalog-filename"]
-
-
     if DETECTION_IMAGE == "-":
         DETECTION_IMAGE = None
     else:
@@ -8371,11 +8355,12 @@ def sextractor_pp(xpapoint=None, filename=None, detector=None, path=None, argv=[
     command = "SourceXtractor++ --detection-image %s  --" % (filename) + " --".join([key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]])
     verboseprint(command)
 
-    # answer = os.system(command)
+
     try:
-        import_table_as_region(xpapoint, argv="-p %s -xy pixel_centroid_x,pixel_centroid_y"%(filename).split())
+        import_table_as_region(xpapoint, argv="-p %s -xy pixel_centroid_x,pixel_centroid_y"%(param_dict["output-catalog-filename"]))
     except KeyError:
-        import_table_as_region(xpapoint, argv="-p %s -xy col1,col2"%(filename).split())
+        import_table_as_region(xpapoint, argv="-p %s -xy col1,col2"%(param_dict["output-catalog-filename"]))
+        # import_table_as_region(xpapoint, argv="-p %s -xy col1,col2"%(filename).split())
         # import_table_as_region(xpapoint, name=param_dict["output-catalog-filename"], x="col1", y="col2", ID="-")
     if yesno(d, "Analysis completed! Do you want to load the sextractor catalog with PRISM?"):
         d.set("prism " + param_dict["output-catalog-filename"])
@@ -8406,11 +8391,11 @@ def DS9SWARP(xpapoint=None, argv=[]):
     parser.add_argument('-C', '--CENTER',    default='0', help='Position of the center in CENTER TYPE MANUAL mode. Can be given in floating point notation, in hh:mm:ss or dd:mm:ss', type=str,metavar='',)
     parser.add_argument('-C_T', '--CENTER_TYPE',    default='ALL', help='Tells SWarp how to center the output frame', type=str,choices=['ALL','MOST','MANUAL'])#metavar='',
     parser.add_argument('-PST', '--PIXELSCALE_TYPE', default='MEDIAN', help='Tells SWarp how to adjust the output pixel size',type=str,choices=['MEDIAN','MIN','MAX','MANUAL','FIT'])
-    parser.add_argument('-PS', '--PIXEL_SCALE',    default='0.0', help='Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.', type=str)#metavar='',
-    parser.add_argument('-IS', '--IMAGE_SIZE',    default='0.0', help='Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic', type=str)#metavar='',
+    parser.add_argument('-PS', '--PIXEL_SCALE',    default='0.0', help='Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.', type=str,metavar='')#metavar='',
+    parser.add_argument('-IS', '--IMAGE_SIZE',    default='0.0', help='Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic', type=str,metavar='')#metavar='',
 
     parser.add_argument('-R', '--RESAMPLE', help='Resample input images ?', type=str,choices=['1','0'])
-    parser.add_argument('-r', '--RESAMPLING_TYPE',    default='2', help='Image resampling method', type=str,choices=['LANCZOS3','NEAREST','BILINEAR','LANCZOS2','LANCZOS4'])#metavar='',
+    parser.add_argument('-r', '--RESAMPLING_TYPE',    default='2', help='Image resampling method', type=str,choices=['LANCZOS3','NEAREST','BILINEAR','LANCZOS2','LANCZOS4'],metavar='')#metavar='',
     parser.add_argument('-o', '--OVERSAMPLING',    default='0', help='Amount of oversampling in each dimension. 0 means automatic.', type=str,metavar='',)#metavar='',
     parser.add_argument('-I', '--INTERPOLATE', help='Interpolate bad input pixels ?', type=str,choices=['1','0'])
 
@@ -8494,10 +8479,10 @@ def resample(xpapoint=None, argv=[]):
     """
     from shutil import which
     parser = CreateParser(get_name_doc(),path=True)
-    parser.add_argument('-P', '--PIXEL_SCALE',    default='0.0', help='Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.', type=str)#metavar='',
-    parser.add_argument('-i', '--IMAGE_SIZE',    default='0.0', help='Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic', type=str)#metavar='',
-    parser.add_argument('-r', '--RESAMPLING_TYPE',    default='2', help='Image resampling method', type=str,choices=['LANCZOS3','NEAREST','BILINEAR','LANCZOS2','LANCZOS4'])#metavar='',
-    parser.add_argument('-s', '--RESAMPLE_SUFFIX',    default='.resamp.fits', help='filename extension for resampled images', type=str)#metavar='',
+    parser.add_argument('-P', '--PIXEL_SCALE',    default='0.0', help='Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.', type=str,metavar='')#metavar='',
+    parser.add_argument('-i', '--IMAGE_SIZE',    default='0.0', help='Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic', type=str,metavar='')#metavar='',
+    parser.add_argument('-r', '--RESAMPLING_TYPE',    default='2', help='Image resampling method', type=str,choices=['LANCZOS3','NEAREST','BILINEAR','LANCZOS2','LANCZOS4'],metavar='')#metavar='',
+    parser.add_argument('-s', '--RESAMPLE_SUFFIX',    default='.resamp.fits', help='filename extension for resampled images', type=str,metavar='')#metavar='',
 
     args = parser.parse_args_modif(argv,required=True)
 
@@ -9184,7 +9169,7 @@ def fitsconverter(fname, savefile="/tmp/test.fits"):
 
 
 def open_file(xpapoint=None, filename=None, argv=[]):
-    """Open file(s) in DS9 in an easier way
+    """Open file(s) in DS9 in an easier way [DS9 required]
     As the OSX version of DS9 does not allow to enter the path of an image when we want to access some data
     I added this possibility. Then you only need to press o (open) so that DS9 opens a dialog box where you can
     enter the path. Then click OK.
@@ -9192,8 +9177,8 @@ def open_file(xpapoint=None, filename=None, argv=[]):
     from PIL import ImageGrab
     parser = CreateParser(get_name_doc(),path=False)
     parser.add_argument('-p', '--path', help='Path of the images to load, regexp accepted', type=str,metavar='')#metavar='',
-    parser.add_argument('-t', '--type',    default='Slice', help='Way to open the images', type=str)#metavar='',
-    parser.add_argument('-c', '--clip',    default='0', help='Open screenshot image from mac', type=str)#metavar='',
+    parser.add_argument('-t', '--type',    default='Slice', help='Way to open the images', type=str,metavar='')#metavar='',
+    parser.add_argument('-c', '--clip',    default='0', help='Open screenshot image from mac', type=str,metavar='')#metavar='',
     args = parser.parse_args_modif(argv)
 
     d = DS9n(xpapoint)
@@ -9938,7 +9923,7 @@ rendering in order to the objects in the image. When it is done,
 
 
 def test_suite(xpapoint=None, argv=[]):
-    """Test suite: run several fucntions in DS9
+    """Test suite: run several fucntions in DS9 [DS9 required]
     """
     from subprocess import Popen
     parser = CreateParser(get_name_doc())
@@ -10053,10 +10038,11 @@ def python_command(xpapoint=None,argv=[]):
             fitswrite(fitsimage, "/tmp/image.fits")
         except TypeError:
             pass
-    if len(path) == 1:
-        result, name = ExecCommand(path[0], xpapoint=xpapoint, path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_)), overwrite=overwrite)
-    else:
-        result, name = Parallelize(function=ExecCommand, parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite], action_to_paralize=path, number_of_thread=10)
+    result, name = Parallelize(function=ExecCommand, parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite], action_to_paralize=path, number_of_thread=10)
+    # if len(path) == 1:
+    #     result, name = ExecCommand(path[0], xpapoint=xpapoint, path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_)), overwrite=overwrite)
+    # else:
+    #     result, name = Parallelize(function=ExecCommand, parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite], action_to_paralize=path, number_of_thread=10)
 
     if len(path) < 2:
         d.set("frame new ; tile yes ; file " + name)
@@ -10114,13 +10100,13 @@ def maxi_mask(xpapoint=None, path=None, argv=[]):
     from shutil import which
     import numpy as np
     parser = CreateParser(get_name_doc(),path=True)
-    parser.add_argument('-t', '--proba_threshold',    default='0', help='Scale to apply', type=str, choices=['0','1'])#metavar='',
-    parser.add_argument('-b', '--batch_size',    default='8', help='Scale limit in percentile of the image', metavar='')
-    parser.add_argument('-m', '--mask',    default='0', help='Scale limit in percentile of the image', metavar='')
-    parser.add_argument('-n', '--net_path',    default='_mask', help='Scale limit in percentile of the image', metavar='')
-    parser.add_argument('-F', '--flags',    default='1-1-1-1-1-1-1-1-1-1-1-1-1-1', help='Scale limit in percentile of the image', metavar='')
-    parser.add_argument('-P', '--priors',    default='1-1-1-1-1-1-1-1-1-1-1-1-1-1', help='Scale limit in percentile of the image', metavar='')
-    parser.add_argument('-T', '--thresholds',    default='1-1-1-1-1-1-1-1-1-1-1-1-1-1', help='Scale limit in percentile of the image', metavar='')
+    parser.add_argument('-t', '--proba_threshold',    default='0', help='Apply a threshold to the probability map', type=str, choices=['0','1'])#metavar='',
+    parser.add_argument('-b', '--batch_size',    default='8', help='Size of the batch', metavar='')
+    parser.add_argument('-m', '--mask',    default='0', help='Single mask with power of two', metavar='')
+    parser.add_argument('-n', '--net_path',    default='_mask', metavar='')
+    parser.add_argument('-F', '--flags',    default='1-1-1-1-1-1-1-1-1-1-1-1-1-1', help='Compute flags for Cosmic Rays, hot CL, dead CL, persistence, Trailes, Fringe, Nebulosities. Saturation, Spikes, Overscanned, Bright backgorund, background', metavar='')
+    parser.add_argument('-P', '--priors',    default='0.0007-0.0008-0.0080-0.000001-0.000001-0.00001-0.006-0.01-0.01-0.0016-0.013-0.005-0.007-0.9', help='Priors to use', metavar='')# (default: %(default)s)
+    parser.add_argument('-T', '--thresholds',    default='0.51-0.52-0.5-0.23-0.99-0.66-0.55-0.62-0.45-0.78-0.41-0.37-0.49-0.33', help='Thresholds to apply', metavar='')
     args = parser.parse_args_modif(argv,required=True)
     print(args.flags)
     #sys.exit()
@@ -10589,12 +10575,12 @@ def main():
         CreateFolders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/")
         PresentPlugIn()
         for function in DictFunction:
-            if function not in ["verbose", "next_step",'Quit','checkFile','Button','CreateContourRegions',"mask_regions"]:  # ,'setup'
-                if function in ['trim','throw_apertures','throughslit', 'throughfocus_visualisation','throughfocus','test_suite','save_region_as_catalog','organize_files','open_file','fill_regions','fit_gaussian_2d','CreateImageFromCatalogObject','aperture_photometry',
-                'background_estimation','guidance','import_table_as_region','manual_fitting','get_depth_image','resample','explore_throughfocus','convert_image','python_command','Convertissor','PlotSpectraFilters','cosmology_calculator','lock','setup','interactive_plotter','create_header_catalog','fit_ds9_plot','radial_profile','plot_3d','original_settings','center_region','column_line_correlation','column_line_correlation','interpolate_nans','add_field_to_header']:
-                    print("\033[94m\033[1m{0:30}\033[0;0m\033[0m {1}".format(function,DictFunction[function].__doc__.split('\n')[0] ))
-                else:
-                    print("\033[1m{0:30}\033[0;0m {1}".format(function,DictFunction[function].__doc__.split('\n')[0] ))
+            if function not in ["verbose", "next_step",'Quit','checkFile','Button','CreateContourRegions',"mask_regions", "compute_fluctuation",'compute_gain','emccd_model', 'throw_apertures']:  # ,'setup'
+                # if function in ['trim','throw_apertures','throughslit', 'throughfocus_visualisation','throughfocus','test_suite','save_region_as_catalog','organize_files','open_file','fill_regions','fit_gaussian_2d','CreateImageFromCatalogObject','aperture_photometry',
+                # 'background_estimation','guidance','import_table_as_region','manual_fitting','get_depth_image','resample','explore_throughfocus','convert_image','python_command','Convertissor','PlotSpectraFilters','cosmology_calculator','lock','setup','interactive_plotter','create_header_catalog','fit_ds9_plot','radial_profile','plot_3d','original_settings','center_region','column_line_correlation','column_line_correlation','interpolate_nans','add_field_to_header']:
+                print("\033[94m\033[1m{0:30}\033[0;0m\033[0m {1}".format(function,DictFunction[function].__doc__.split('\n')[0] ))
+                # else:
+                #     print("\033[1m{0:30}\033[0;0m {1}".format(function,DictFunction[function].__doc__.split('\n')[0] ))
             #print('\033[1m %s \033[0;0m :   %s'%(function,DictFunction[function].__doc__.split('\n')[0] ))
         # print("which('DS9Utils') =", which('DS9Utils'))
         # print("__file__ =", __file__)
