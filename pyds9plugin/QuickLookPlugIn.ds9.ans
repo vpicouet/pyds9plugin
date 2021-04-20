@@ -475,39 +475,6 @@ hmenu 3. Astronomical Softwares
 
 	endhmenu
 
-	hmenu Astronomy Calculator
-
-#		Cosmology Calculator
-#		*
-#		menu
-#		DS9Utils cosmology_calculator -x $xpa_method  $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text
-
-		Cosmology Calculator
-		*
-		menu
-		DS9Utils cosmology_calculator -x $xpa_method  LambdaCDM 1 70 0.2 0.7 -  | $text
-
-
-
-		Spectra/Filter simulator
-		*
-		menu
-		DS9Utils PlotSpectraFilters -x $xpa_method   | $text
-
-
-		Convertissor
-		*
-		menu
-		DS9Utils Convertissor -x $xpa_method  $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift  | $text
-
-		Function displayor
-		*
-		menu
-		DS9Utils interactive_plotter -x $xpa_method  $param(Function); "$formula" "$xrange" $plot "$path" | $text
-
-
-
-		endhmenu
 
 endhmenu
 		hmenu 4. Under development
@@ -550,6 +517,37 @@ endhmenu
 					DS9Utils sextractor_pp -x $xpa_method  $param(SEXTRACTOR); -d $DETECTION_IMAGE -f $CATALOG_NAME -F $CATALOG_TYPE | $text
 
 					#E  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME
+
+
+				#		Cosmology Calculator
+				#		*
+				#		menu
+				#		DS9Utils cosmology_calculator -x $xpa_method  $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text
+
+						Cosmology Calculator
+						*
+						menu
+						DS9Utils cosmology_calculator -x $xpa_method  LambdaCDM 1 70 0.2 0.7 -  | $text
+
+
+
+						Spectra/Filter simulator
+						*
+						menu
+						DS9Utils PlotSpectraFilters -x $xpa_method   | $text
+
+
+						Convertissor
+						*
+						menu
+						DS9Utils Convertissor -x $xpa_method  $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift  | $text
+
+						Function displayor
+						*
+						menu
+						DS9Utils interactive_plotter -x $xpa_method  $param(Function); "$formula" "$xrange" $plot "$path" | $text
+
+
 
 
 		endhmenu
