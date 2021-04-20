@@ -3688,7 +3688,8 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
         sys.exit()
     ds9 = ldict["ds9"]
     # verboseprint(ds9)
-    fitsimage.data = ds9  # ds9
+    fitsimage.data = ds9
+    fitsimage.header = header
     if (ds9.astype(int) == ds9).all():
         fitsimage.data = np.int16(fitsimage.data)
         fitsimage.header["BITPIX"] = 16
@@ -6303,9 +6304,9 @@ def add_field_to_header(xpapoint=None, field="", value="", comment="-", argv=[])
     for filename in path:
         verboseprint(filename)
         header = fits.getheader(filename)
-        if "NAXIS3" in header:
-            verboseprint("2D array: Removing NAXIS3 from header...")
-            fits.delval(filename, "NAXIS3")
+        # if "NAXIS3" in header:
+        #     verboseprint("2D array: Removing NAXIS3 from header...")
+        #     fits.delval(filename, "NAXIS3")
         fits.setval(filename, field[:8], value=value, comment=comment)
 
     if len(path) < 2:
@@ -9922,11 +9923,6 @@ def python_command(xpapoint=None,argv=[]):
         except TypeError:
             pass
     result, name = Parallelize(function=ExecCommand, parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite], action_to_paralize=path, number_of_thread=args.number_processors)
-    # if len(path) == 1:
-    #     result, name = ExecCommand(path[0], xpapoint=xpapoint, path2remove=path2remove, exp=exp, config=my_conf, eval_=bool(int(eval_)), overwrite=overwrite)
-    # else:
-    #     result, name = Parallelize(function=ExecCommand, parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite], action_to_paralize=path, number_of_thread=10)
-
     if len(path) < 2:
         d.set("frame new ; tile yes ; file " + name)
     return

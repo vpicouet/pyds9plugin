@@ -107,10 +107,10 @@ hmenu 1. Generic Functions
 		DS9Utils organize_files -x $xpa_method  $param(subset_); -p "$cat" -n "all" -a $Fields -s "$Mask" | $text
 
 
-		Add header Field
-		*
-		menu
-		DS9Utils add_field_to_header -x $xpa_method  $param(CreateHeader); -f $Field -v $Value -c $Comment   | $text
+#		Add header Field
+#		*
+#		menu
+#		DS9Utils add_field_to_header -x $xpa_method  $param(CreateHeader); -f $Field -v $Value -c $Comment   | $text
 
 #		Create WCS
 #		*
