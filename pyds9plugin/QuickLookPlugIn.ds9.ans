@@ -43,7 +43,7 @@ hmenu 1. Generic Functions
 	Button #7
 	*
 	bind B
-	DS9Utils button -x $xpa_method
+	DS9Utils button #-x $xpa_method
 
 	hmenu Setups
 		Change Display Parameters (S) #7
@@ -361,11 +361,11 @@ hmenu 2. Instrumentation - AIT
 	bind C
 	DS9Utils center_region -x $xpa_method   $param(Centering); -m $method -b 0  | $text
 
-	Transit/Through-Slit Analysis
+	Light curve
 	*
 	menu
-	#DS9Utils throughslit -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    | $text
-	DS9Utils throughslit -x $xpa_method  $param(Images-to-analyze); "$path"    | $text
+	#DS9Utils light_curve -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    | $text
+	DS9Utils light_curve -x $xpa_method  $param(Images-to-analyze); "$path"    | $text
 
 
 
@@ -594,12 +594,12 @@ endparam
 Test
 *
 bind n
-DS9Utils -x $xpa_method next_step   | $text
+DS9Utils  next_step   | $text #-x $xpa_method
 
 Test
 *
 bind N
-DS9Utils -x $xpa_method next_step   | $text
+DS9Utils next_step   | $text #-x $xpa_method
 
 #DS9Utils -x $xpa_method Help
 #file:DS9Utils -x $xpa_method Help
@@ -1244,7 +1244,7 @@ endparam
 
 param Background-Fit-1D
 #axis menu {Direction} x|y {Variation direction to be analyzed}
-background menu {Background deg} Constant|None|slope|Exponential|DoubleExponential {Shape of the background}
+background menu {Background deg} Constant|None|slope|Exponential|DoubleExponential|Logarithmic {Shape of the background}
 #law menu {Law} None|Exponiential|DoubleExponiential {Law used to fit the background}
 gaussians menu {Number of Gaussians} 0|1|2|3|4|5 {Number of features to be fitted by a gaussian}
 moffats menu {Number of Moffats} 0|1|2|3 {Number of features to be fitted by a moffat}
