@@ -1,4 +1,50 @@
 # [DS9 Quick look Plug-in](https://people.lam.fr/picouet.vincent/index.html)
+=========
+
+pyDS9plugin is a high-level python package for both data analysis and data processing. 
+
+
+[![GitHub License](http://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
+[//]: <> ([![PyPI Version](https://img.shields.io/pypi/v/dataphile.svg)](https://pypi.org/project/dataphile/))
+[//]: <> ([![Docs Latest](https://readthedocs.org/projects/dataphile/badge/?version=latest)](https://dataphile.readthedocs.io))
+
+---
+
+<!-- Animated GIF of AutoGUI -->
+<img src="https://people.lam.fr/picouet.vincent/pyds9plugin/gif/3d2d_new.mov.gif" width="80%"
+style="display:block;margin: 0 auto;">
+
+**Figure**: Demonstration of of one of pyds9plugin features.
+
+Installation
+------------
+
+To install pyds9plugin for general purposes use Pip:
+
+```
+pip install pyds9plugin
+```
+
+If you are using Anaconda, install using the above call to pip _from inside your environment_.
+There is not as of yet a separate conda package.
+
+Documentation
+-------------
+
+Some documentation is availanle available at [https://people.lam.fr/picouet.vincent/pyds9plugin](https://people.lam.fr/picouet.vincent/index.html).
+
+
+Contributions
+-------------
+
+Contributions are welcome in the form of  suggestions for additional features,  pull requests with
+new features or  bug fixes, etc. If you find  bugs or have questions, open an  _Issue_ here. If and
+when the project grows, a  code of conduct will be provided along side  a more comprehensive set of
+guidelines for contributing; until then, just be nice.
+
+Features
+--------
+
 
 SAOImage DS9 is an astronomical imaging and data visualization application. Its 30 years of development has made it very stable and easy to use. Because of this it became an essential tool in all fields of astronomy (observation, simulation, instrumentation). Much more profitable but pretty unsung feature, its extensibility makes it a limitless tool to interact with astronomical (or not) data. Unfortunately it appears that this extensibility did not inspire or generate a large collaborative and well organized effort to develop important extensions that would finally, years after years, converge towards a stable/rapid/configurable multi-extension package of DS9 which would make it as essential as Photoshop for photographers.
 
