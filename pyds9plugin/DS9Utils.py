@@ -6679,7 +6679,7 @@ def linear1D_centered(x, intercept, slope, x0=0):
 
 
 def fit_ds9_plot(xpapoint=None, config=my_conf, exp=False, double_exp=False, double_schechter=False, schechter=False, Type="Linear", EMCCD_=False, nb_blackbody=0,log=False, argv=[]):
-    """Fit interactively any DS9 plot with different fucntions
+    """Fit interactively any DS9 plot or catalog by different pre-defined functions
     """
     import matplotlib.pyplot as plt
     from matplotlib.widgets import CheckButtons  # RadioButtons,
