@@ -7,16 +7,17 @@ with open("README.md", "r") as fh:
 
 
 requires = ['numpy >=1.8', #'PyQt5','Pillow',
-            'scipy >=0.14', 
+            'scipy >=0.14',
             'matplotlib>=3.1.1',
             'astropy >=1.3',
             'pyds9',
-            'photutils',    
+            'photutils',
             'tqdm',
-            'pyvista==0.25.3', 
-            'datetime',  
-            'pandas', 
-            'PyQt5',                
+            'pyvista==0.25.3',#
+            'datetime',
+            'pandas',
+            'argparse',
+            'PyQt5',
             'dataphile']
 
 entry_points = {}
@@ -39,7 +40,7 @@ def setup_package():
     license='Creative Commons Attribution-Noncommercial-Share Alike license',
     install_requires = requires,
     long_description=long_description,
-    url='https://people.lam.fr/picouet.vincent/index.html', 
+    url='https://people.lam.fr/picouet.vincent/index.html',
     platforms=["Linux", "Mac OS-X", "Unix"],
     packages = find_packages(),
     package_data = data,

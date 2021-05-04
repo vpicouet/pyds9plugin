@@ -54,12 +54,18 @@ Features
 -   Multi-operability: Command line access and python import allows to operate the plugin for other pipelines. The plugin for DS9 could actually pretty easily be operated by other visualization softwares like ginga or glueviz.
 
 -   Python interpreter/macros:
+
+
 <img src="https://people.lam.fr/picouet.vincent/pyds9plugin/gif/python.mov.gif" width="80%"
 style="display:block;margin: 0 auto;">
 -   VTK 3D rendering:
+
+
 <img src="https://people.lam.fr/picouet.vincent/pyds9plugin/gif/3d2d_new.mov.gif" width="80%"
 style="display:block;margin: 0 auto;">
 
 -   Interactive profile fitting :
+
+
 <img src="https://people.lam.fr/picouet.vincent/pyds9plugin/gif/fitinter.mov.gif" width="80%"
 style="display:block;margin: 0 auto;">

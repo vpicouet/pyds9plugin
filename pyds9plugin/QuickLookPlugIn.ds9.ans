@@ -129,7 +129,7 @@ hmenu 1. Generic Functions
 		Import Regions From Catalog
 		*
 		menu
-		DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); -p "$path"  -xy $fields -n $name -f $form -r $size -w $wcs -s "$Selection" | $text
+		DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); -p "$path"  -xy "$fields" -n "$name" -f "$form" -r $size -w $wcs -s "$Selection" | $text
 
 
 		Export DS9 Regions To Catalog
@@ -140,10 +140,10 @@ hmenu 1. Generic Functions
 
 
 
-		Replace Regions by value
-		*
-		menu
-		DS9Utils fill_regions -x $xpa_method   $param(Replace-region);  -v $number -o $overwrite   | $text
+#		Replace Regions by value
+#		*
+#		menu
+#		DS9Utils fill_regions -x $xpa_method   $param(Replace-region);  -v $number -o $overwrite   | $text
 
 
 	endhmenu
@@ -158,7 +158,7 @@ hmenu 1. Generic Functions
 		*
 		menu
 #		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-		DS9Utils python_command -x $xpa_method  $param(Python-Command); -r $im_path -e "$exp"  -o $overwrite | $text
+		DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "$im_path" -e "$exp"  -o $overwrite | $text
 
 		Interactive 1D Fitting On Plot
 		*
@@ -191,12 +191,10 @@ hmenu 1. Generic Functions
 
 
 
-		Trimming
-		*
-		menu
-		#DS9Utils trim -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
-#		DS9Utils trim -x $xpa_method  $param(Trimming);  -s Image  -p "$path"  | $text
-		DS9Utils trim -x $xpa_method  | $text
+#		Trimming
+#		*
+#		menu
+#		DS9Utils trim -x $xpa_method  | $text
 
 #		Plot 3rd Dimension From Region(s)
 #		*
@@ -242,13 +240,9 @@ hmenu 1. Generic Functions
 	Convert image
 	*
 	menu
-	DS9Utils convert_image  -x $xpa_method $param(Conversion); -r $scaling -t $type -p "$path" | $text
+	DS9Utils convert_image  -x $xpa_method $param(Conversion); -r $scaling -t $type -p - | $text
 
 
-	Simulate Sky Image
-	*
-	menu
-	DS9Utils CreateImageFromCatalogObject -x $xpa_method  -p '"$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"'  | $text
 
 
 
@@ -271,12 +265,12 @@ hmenu 2. Instrumentation - AIT
 		Throughfocus  #24
 		*
 		menu
-		DS9Utils throughfocus -x $xpa_method  $param(Throughfocus); -p "$Path" -w $WCS -s $sort -v $offsets  | $text  #$steps
+		DS9Utils throughfocus -x $xpa_method  $param(Throughfocus); -p "$Path" -w $WCS -s $sort -v "$offsets"  | $text  #$steps
 
-		Explore Throughfocus PSFs #24
+		Explore PSFs/Vignettes #24
 		*
 		menu
-		DS9Utils explore_throughfocus -x $xpa_method  $param(SWARP-Path); -p "$Path" -s $sort | $text  #$steps
+		DS9Utils explore_throughfocus -x $xpa_method  $param(SExtractor-Vignets-Path); -p "$Path" -s $sort | $text  #$steps
 
 
 #		Throughfocus Image Key
@@ -393,7 +387,7 @@ hmenu 3. Astronomical Softwares
 	STIFF - Color Images
 	*
 	menu
-	DS9Utils DS9saveColor -x $xpa_method   $param(STIFF-Color-image); -p1 $var1 -p2 $var2 -p3 $var3 -B $BINNING -b $BITS_PER_CHANNEL -c $COLOUR_SAT -G $GAMMA_ -F $GAMMAFAC -g $GAMMATYPE -t $IMAGE_TYPE -maxl $MAX_LEVEL -maxt $MAX_TYPE -minl $MIN_LEVEL -mint $MIN_TYPE -o $OUTFILE_NAME -S $SKY_LEVEL -s $SKY_TYPE    | $text
+	DS9Utils DS9saveColor -x $xpa_method   $param(STIFF-Color-image); -p1 "$var1" -p2 "$var2" -p3 "$var3" -B $BINNING -b $BITS_PER_CHANNEL -c $COLOUR_SAT -G $GAMMA_ -F $GAMMAFAC -g $GAMMATYPE -t $IMAGE_TYPE -maxl $MAX_LEVEL -maxt $MAX_TYPE -minl $MIN_LEVEL -mint $MIN_TYPE -o $OUTFILE_NAME -S $SKY_LEVEL -s $SKY_TYPE    | $text
 
 
 	PSFex
@@ -405,7 +399,7 @@ hmenu 3. Astronomical Softwares
 	Astrometric Calibration (astrometry.net)
 	*
 	menu
-	DS9Utils astrometry_net -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); --type $Image --scale-units $scale_units --scale-lower $scale_lower --scale-upper $scale_upper --scale-est $scale_est --scale-err $scale_err --ra  $center_ra --dec $center_dec --radius $radius  --downsample $downsample_factor --tweak-order $tweak_order --crpix-center $crpix_center --parity  $parity --positional_error $positional_error   | $text
+	DS9Utils astrometry_net -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); --type $Image --scale-units "$scale_units" --scale-lower "$scale_lower" --scale-upper "$scale_upper" --scale-est "$scale_est" --scale-err "$scale_err" --ra  "$center_ra" --dec "$center_dec" --radius "$radius"  --downsample "$downsample_factor" --tweak-order "$tweak_order" --crpix-center $crpix_center --parity  $parity --positional_error "$positional_error"   | $text
 
 	MaxiMask
 	*
@@ -414,23 +408,23 @@ hmenu 3. Astronomical Softwares
 
 
 
-	hmenu SExtractor
+	#hmenu SExtractor
 
 		SExtractor #36
 		*
 		menu
 
-		DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR-NEW); -d $DETECTION_IMAGE -CN $CATALOG_NAME -CT $CATALOG_TYPE -PN $PARAMETERS_NAME -DT $DETECT_TYPE -DM $DETECT_MINAREA -Dm $DETECT_MAXAREA -TT $THRESH_TYPE -dT $DETECT_THRESH -AT $ANALYSIS_THRESH -F $FILTER -FN $FILT_NAME -DN $DEBLEND_NTHRESH -D $DEBLEND_MINCONT -C $CLEAN_T -CP $CLEAN_PARAM -M $MASK_TYPE -WT $WEIGHT_TYPE -RW $RESCALE_WEIGHTS -WI $WEIGHT_IMAGE -WG $WEIGHT_GAIN -FI $FLAG_IMAGE -FT $FLAG_TYPE -PA $PHOT_APERTURES -P $PHOT_AUTOPARAMS -PP $PHOT_PETROPARAMS -PF $PHOT_FLUXFRAC -SL $SATUR_LEVEL -SK $SATUR_KEY -MZ $MAG_ZEROPOINT -MG $MAG_GAMMA -G $GAIN -PS $PIXEL_SCALE -SF $SEEING_FWHM -SN $STARNNW_NAME -ct $CHECKIMAGE_TYPE -BT $BACK_TYPE -BV $BACK_VALUE -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BPT $BACKPHOTO_TYPE -bpt $BACKPHOTO_THICK -BFT $BACK_FILTTHRESH -MO $MEMORY_OBJSTACK -MP $MEMORY_PIXSTACK -MB $MEMORY_BUFSIZE -N $NTHREADS | $text
+		DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR-NEW); -d "$DETECTION_IMAGE" -CN "$CATALOG_NAME" -CT $CATALOG_TYPE -PN $PARAMETERS_NAME -DT $DETECT_TYPE -DM $DETECT_MINAREA -Dm $DETECT_MAXAREA -TT $THRESH_TYPE -dT $DETECT_THRESH -AT $ANALYSIS_THRESH -F $FILTER -FN $FILT_NAME -DN $DEBLEND_NTHRESH -D $DEBLEND_MINCONT -C $CLEAN_T -CP $CLEAN_PARAM -M $MASK_TYPE -WT $WEIGHT_TYPE -RW $RESCALE_WEIGHTS -WI "$WEIGHT_IMAGE" -WG $WEIGHT_GAIN -FI $FLAG_IMAGE -FT $FLAG_TYPE -PA $PHOT_APERTURES -P $PHOT_AUTOPARAMS -PP $PHOT_PETROPARAMS -PF $PHOT_FLUXFRAC -SL $SATUR_LEVEL -SK $SATUR_KEY -MZ $MAG_ZEROPOINT -MG $MAG_GAMMA -G $GAIN -PS $PIXEL_SCALE -SF $SEEING_FWHM -SN $STARNNW_NAME -ct $CHECKIMAGE_TYPE -BT $BACK_TYPE -BV $BACK_VALUE -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BPT $BACKPHOTO_TYPE -bpt $BACKPHOTO_THICK -BFT $BACK_FILTTHRESH -MO $MEMORY_OBJSTACK -MP $MEMORY_PIXSTACK -MB $MEMORY_BUFSIZE  | $text
 
 
-		SExtractor (Basic parameters)
-		*
-		menu
-		DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR-NEW); -d $DETECTION_IMAGE -CN $CATALOG_NAME -CT $CATALOG_TYPE -PN $PARAMETERS_NAME -DT $DETECT_TYPE -DM $DETECT_MINAREA -Dm $DETECT_MAXAREA -TT $THRESH_TYPE -dT $DETECT_THRESH -AT $ANALYSIS_THRESH -F $FILTER -FN $FILT_NAME -DN $DEBLEND_NTHRESH -D $DEBLEND_MINCONT -C $CLEAN_T -CP $CLEAN_PARAM -M $MASK_TYPE -WT $WEIGHT_TYPE -RW $RESCALE_WEIGHTS -WI $WEIGHT_IMAGE -WG $WEIGHT_GAIN -FI $FLAG_IMAGE -FT $FLAG_TYPE -PA $PHOT_APERTURES -P $PHOT_AUTOPARAMS -PP $PHOT_PETROPARAMS -PF $PHOT_FLUXFRAC -SL $SATUR_LEVEL -SK $SATUR_KEY -MZ $MAG_ZEROPOINT -MG $MAG_GAMMA -G $GAIN -PS $PIXEL_SCALE -SF $SEEING_FWHM -SN $STARNNW_NAME -ct $CHECKIMAGE_TYPE -BT $BACK_TYPE -BV $BACK_VALUE -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BPT $BACKPHOTO_TYPE -bpt $BACKPHOTO_THICK -BFT $BACK_FILTTHRESH -MO $MEMORY_OBJSTACK -MP $MEMORY_PIXSTACK -MB $MEMORY_BUFSIZE -N $NTHREADS | $text
+#		SExtractor (Basic parameters)
+#		*
+#		menu
+#		DS9Utils RunSextractor -x $xpa_method  $param(SEXTRACTOR-NEW); -d "$DETECTION_IMAGE" -CN "$CATALOG_NAME" -CT $CATALOG_TYPE -PN $PARAMETERS_NAME -DT $DETECT_TYPE -DM $DETECT_MINAREA -Dm $DETECT_MAXAREA -TT $THRESH_TYPE -dT $DETECT_THRESH -AT $ANALYSIS_THRESH -F $FILTER -FN $FILT_NAME -DN $DEBLEND_NTHRESH -D $DEBLEND_MINCONT -C $CLEAN_T -CP $CLEAN_PARAM -M $MASK_TYPE -WT $WEIGHT_TYPE -RW $RESCALE_WEIGHTS -WI "$WEIGHT_IMAGE" -WG $WEIGHT_GAIN -FI $FLAG_IMAGE -FT $FLAG_TYPE -PA $PHOT_APERTURES -P $PHOT_AUTOPARAMS -PP $PHOT_PETROPARAMS -PF $PHOT_FLUXFRAC -SL $SATUR_LEVEL -SK $SATUR_KEY -MZ $MAG_ZEROPOINT -MG $MAG_GAMMA -G $GAIN -PS $PIXEL_SCALE -SF $SEEING_FWHM -SN $STARNNW_NAME -ct $CHECKIMAGE_TYPE -BT $BACK_TYPE -BV $BACK_VALUE -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BPT $BACKPHOTO_TYPE -bpt $BACKPHOTO_THICK -BFT $BACK_FILTTHRESH -MO $MEMORY_OBJSTACK -MP $MEMORY_PIXSTACK -MB $MEMORY_BUFSIZE -N $NTHREADS | $text
 
 
 
-	endhmenu
+	#endhmenu
 
 
 
@@ -441,7 +435,7 @@ hmenu 3. Astronomical Softwares
 		SWARP #38
 		*
 		menu
-		DS9Utils DS9SWARP -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME -w $WEIGHT_TYPE -rw $RESCALE_WEIGHTS -W $WEIGHT_IMAGE -c $COMBINEI -ct $COMBINE_TYPE -CA $CLIP_AMPFRAC -CS $CLIP_SIGMA -CT $CELESTIAL_TYPE -PT $PROJECTION_TYPE -PE $PROJECTION_ERR -C_T $CENTER_TYPE -C $CENTERI -PST $PIXELSCALE_TYPE -PS $PIXEL_SCALE -IS $IMAGE_SIZE -R $RE-SAMPLING  -r $RESAMPLING_TYPE  -o $OVERSAMPLING  -I $INTERPOLATE -SB $SUBTRACT_BACK  -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BFT $BACK_FILTTHRESH     | $text
+		DS9Utils DS9SWARP -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME -w $WEIGHT_TYPE -rw $RESCALE_WEIGHTS -W "$WEIGHT_IMAGE" -c $COMBINEI -ct $COMBINE_TYPE -CA $CLIP_AMPFRAC -CS $CLIP_SIGMA -CT $CELESTIAL_TYPE -PT $PROJECTION_TYPE -PE $PROJECTION_ERR -C_T $CENTER_TYPE -C $CENTERI -PST $PIXELSCALE_TYPE -PS $PIXEL_SCALE -IS $IMAGE_SIZE -R $RE-SAMPLING  -r $RESAMPLING_TYPE  -o $OVERSAMPLING  -I $INTERPOLATE -SB $SUBTRACT_BACK  -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BFT $BACK_FILTTHRESH     | $text
 
 
 
@@ -464,7 +458,7 @@ hmenu 3. Astronomical Softwares
 		Subtract Background
 		*
 		menu
-		DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); -s $sigma -b $bckd -r $rms -f $filter -box $box -per $percentile -m $mask -snr $snr -n $npixels -d $dilate -p "$path"  | $text
+		DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); -s $sigma -b $bckd -r $rms -f $filter -box $box -per $percentile -m $mask -snr $snr -n $npixels -d $dilate -p -  | $text
 
 		Aperture photometry
 		*
@@ -492,7 +486,7 @@ endhmenu
 					Interpolate NaNs
 					*
 					menu
-					#DS9Utils interpolate_nans -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"   | $text
+					#DS9Utils interpolate_nans -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "-"   | $text
 					DS9Utils interpolate_nans -x $xpa_method  | $text
 
 					Get image depth
@@ -514,9 +508,9 @@ endhmenu
 					SExtractor++ (Beta Version)
 					*
 					menu
-					DS9Utils sextractor_pp -x $xpa_method  $param(SEXTRACTOR); -d $DETECTION_IMAGE -f $CATALOG_NAME -F $CATALOG_TYPE | $text
+					DS9Utils sextractor_pp -x $xpa_method  $param(SEXTRACTOR); -d "$DETECTION_IMAGE" -f "$CATALOG_NAME" -F "$CATALOG_TYPE" | $text
 
-					#E  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  $WEIGHT_IMAGE  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME
+					#E  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  "$WEIGHT_IMAGE"  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME
 
 
 				#		Cosmology Calculator
@@ -548,6 +542,10 @@ endhmenu
 						DS9Utils interactive_plotter -x $xpa_method  $param(Function); "$formula" "$xrange" $plot "$path" | $text
 
 
+						Simulate Sky Image
+						*
+						menu
+						DS9Utils CreateImageFromCatalogObject -x $xpa_method  -p '"$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"'  | $text
 
 
 		endhmenu
@@ -784,8 +782,8 @@ var3 entry {Var_3} - {Var_3 in plot Var_1 - Var_2 in terms of Var_3 }
 Bins entry {Bins} 20,22,24,26 {Bins on wich compute sigma estimator}
 endparam
 
-param SWARP-Path
-Path open {Path} - {SExtractor catalog with VIGNETS}
+param SExtractor-Vignets-Path
+Path open {Path} "" {SExtractor catalog with VIGNETS}
 sort menu {Sorting-type} MAG_AUTO|FWHM_IMAGE|THETA_IMAGE|ELLIPTICITY|X_IMAGE|Y_IMAGE|AMPLITUDE {Column to use to sort the PSFs}
 endparam
 
@@ -838,7 +836,7 @@ IMAGEOUT_NAME entry {IMAGEOUT_NAME} $filename_coadd.fits {Name of the output ima
 
 WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|BACKGROUND|MAP_RMS|MAP_VARIANCE|MAP_WEIGHT {}
 RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 1 {Rescale input weights/variances (Y/N)?}
-WEIGHT_IMAGE  entry {WEIGHT_IMAGE} - {Name of the input weight image file}
+WEIGHT_IMAGE  entry {WEIGHT_IMAGE} "" {Name of the input weight image file}
 
 
 COMBINEI checkbox {COMBINE} 1 {Combine resampled images (Y/N)?}
@@ -898,7 +896,7 @@ endparam
 
 
 param Resample
-PATH entry {PATHS} $filename {Path of the images you want to stack, use glob syntax with ? and *.}
+PATH open {PATHS} $filename {Path of the images you want to stack, use glob syntax with ? and *.}
 #PIXELSCALE_TYPE menu {PIXELSCALE_TYPE} MEDIAN|MIN|MAX|MANUAL|FIT {Tells SWarp how to adjust the output pixel size}
 PIXEL_SCALE entry {PIXEL_SCALE} 0.0 {Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.}
 IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic}
@@ -913,9 +911,9 @@ endparam
 
 
 param STIFF-Color-image
-var1 entry {path 1} - {Path of the red image eg. ~i (770nm) band}
-var2 entry {path 2} - {Path to the green image eg. ~r (620nm) band}
-var3 entry {path 3} - {Path to the blue image eg. ~g (480nm) band}
+var1 open {path 1} "" {Path of the red image eg. ~i (770nm) band}
+var2 open {path 2} "" {Path to the green image eg. ~r (620nm) band}
+var3 open {path 3} "" {Path to the blue image eg. ~g (480nm) band}
 OUTFILE_NAME entry {OUTFILE_NAME} stiff.tiff {Output image file name}
 IMAGE_TYPE menu {IMAGE_TYPE} AUTO|TIFF|TIFF-pyramid {Output image format.}
 
@@ -1059,10 +1057,10 @@ tutorials menu {Tutorials} 1-Generic-Tools|2-Photometric-Analysis|3-Image-Qualit
 endparam
 
 param Throughfocus
-Path entry {RegExp Path} - {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
+Path open {RegExp Path} "" {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
 sort menu {Sorting type} 	AlphaNumerical|CreationDate|DS9-Order {Way to sort files to create throughfocus profile}
 WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
-offsets entry {Steps} - {If throughfocus images not taken uniformely, provide the offset of each image separated by a coma, eg: 0,0.5,2,3}
+offsets entry {Steps} "" {If throughfocus images not taken uniformely, provide the offset of each image separated by a coma, eg: 0,0.5,2,3}
 endparam
 
 param Click-Enter-For-Only-DS9-Image
@@ -1079,7 +1077,7 @@ endparam
 param subset_
 #cat entry {Input Header catalog} - {Path of the input header catalog to filter/organize files}
 cat open {Input Header catalog} {$env(HOME)/DS9QuickLookPlugIn/HeaderDataBase/} {Path of the input header catalog to filter/organize files}
-Mask entry {Selection} - {Selection to be applied.  Use \| for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) \| (EMGAIN>0) }
+Mask entry {Selection} "" {Selection to be applied.  Use \| for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) \| (EMGAIN>0) }
 Fields entry {Re-arange} Directory {Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2}
 #number menu {Number of images} all|1|2|5|10|100 {Number of images having the same characteristics}
 endparam
@@ -1142,26 +1140,26 @@ endparam
 
 param LostInSpace
 Image menu {Type} Image|XY-catalog {If Image, upload the image, else upload the used defined DS9 regions as jsoned fits catalog!}
-scale_units menu {scale_units} -|degwidth|arcminwidth|arcsecperpix|focalmm {The units for the scale_lower and scale_upper arguments becomes the scale-units argument to solve-field on the server side}
+scale_units menu {scale_units} |degwidth|arcminwidth|arcsecperpix|focalmm {The units for the scale_lower and scale_upper arguments becomes the scale-units argument to solve-field on the server side}
 #scale_type menu {scale_type} ul|ev {Set ul if you are going to provide scale_lower and scale_upper arguments, or ev if you are going to provide scale_est and scale_err error percentage  arguments.}
-scale_lower entry {scale_lower} - {The lower-bound of the scale of the image.}
-scale_upper entry {scale_upper} - {The upper-bound of the scale of the image.}
+scale_lower entry {scale_lower} "" {The lower-bound of the scale of the image.}
+scale_upper entry {scale_upper} "" {The upper-bound of the scale of the image.}
 
-scale_est entry {scale_estimate} - {The estimated scale of the image.}
-scale_err entry {scale_error} - {0 to 100. The error (percentage) on the estimated scale of the image.}
-center_ra entry {center_ra} - {float, 0 to 360, in degrees. The position of the center of the image}
-center_dec entry {center_dec} - {float, -90 to 90, in degrees. The position of the center of the image}
+scale_est entry {scale_estimate} "" {The estimated scale of the image.}
+scale_err entry {scale_error} "" {0 to 100. The error (percentage) on the estimated scale of the image.}
+center_ra entry {center_ra} "" {float, 0 to 360, in degrees. The position of the center of the image}
+center_dec entry {center_dec} "" {float, -90 to 90, in degrees. The position of the center of the image}
 
-radius entry {radius} - {float, in degrees.}
-downsample_factor entry {downsample_factor} - {float, >1. Downsample (bin) your image by this factor before performing source detection. This often helps with saturated images, noisy images, and large images. 2 and 4 are commonly-useful values.}
+radius entry {radius} "" {float, in degrees.}
+downsample_factor entry {downsample_factor} "" {float, >1. Downsample (bin) your image by this factor before performing source detection. This often helps with saturated images, noisy images, and large images. 2 and 4 are commonly-useful values.}
 tweak_order menu {tweak_order} 2|1|3|4|5 {Polynomial degree order for distortion correction. Orders>2 may produce totally bogus results high-order polynomials are strange beasts.}
 #use_sextractor menu {use_sextractor} True|False {Use the SourceExtractor program to detect stars, not our built-in program.}
 
 crpix_center menu {crpix_center} False|True {Set the WCS reference position to be the center pixel in the image. By default the center is the center of the quadrangle of stars used to identify the image.}
 parity checkbox {parity} 0 {0 means that the sign of the determinant of the WCS CD matrix is positive, 1 means negative.}
-#image_width entry {image_width} - {int, only necessary if you are submitting an x,y list of source positions}
-#image_height entry {image_height} - {int, ditto.}
-positional_error entry {positional_error} - {float, expected error on the positions of stars in your image}
+#image_width entry {image_width} "" {int, only necessary if you are submitting an x,y list of source positions}
+#image_height entry {image_height} "" {int, ditto.}
+positional_error entry {positional_error} "" {float, expected error on the positions of stars in your image}
 #test $filedialog(open) {fielane} 0 {float}
 endparam
 
@@ -1178,7 +1176,7 @@ mask checkbox {Masking sources} 0 {Check this and fill following entries to dete
 snr entry {snr} 3 {The snr per pixel above the background for which to consider a pixel as possibly being part of a source}
 npixels entry {npixels} 3 {The number of connected pixels, each greater than threshold, that an object must have to be detected.}
 dilate entry {dilate} 5 {The size of the square array used to dilate the segmentation image.}
-path entry {RegExp Path} $filename {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+#path entry {RegExp Path} $filename {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -1287,21 +1285,21 @@ endparam
 
 
 param Catalog-to-region
-path open {Path} - {Path of the catalog}
-fields entry {x,y fields} - {Name of the x and y fields: ex = xcentroid,ycentroid}
-name entry {field name} - {field to put in region name: ex = magnitude, name, etc}
+path open {Path} "" {Path of the catalog}
+fields entry {x,y fields} "" {Name of the x and y fields: ex = xcentroid,ycentroid}
+name entry {field name} "" {field to put in region name: ex = magnitude, name, etc}
 form menu {form of the region} circle|box {Form of the regions to display}
 size entry {Regions size} 10 {Size in pixel or arcseconds}
 wcs checkbox {WCS} 0 {Check if the catalog fields are in degree-WCS, then radius must be in arc-second}
-Selection entry {[Selection]} - {selection of the region in th catalog: Use | for OR and \& for AND}
+Selection entry {[Selection]} "" {selection of the region in th catalog: Use | for OR and \& for AND}
 endparam
 
 
 
 param SEXTRACTOR
 tab {Basic Params}
-DETECTION_IMAGE open {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using DS9 image}
-CATALOG_NAME save {CATALOG_NAME} - {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
+DETECTION_IMAGE open {DETECTION_IMAGE} "" {Image to use for detection of the sources. If - using same than photometric image, eg. DS9 frame}
+CATALOG_NAME save {CATALOG_NAME} "" {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
 PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
 
@@ -1325,7 +1323,7 @@ CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency, 0 for no cleaning}
 MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
 
 WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
-WEIGHT_IMAGE entry {WEIGHT_IMAGE} - {}
+WEIGHT_IMAGE entry {WEIGHT_IMAGE} "" {}
 #RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 0 {}
 
 #FLAG_IMAGE entry {FLAG_IMAGE} - {}
@@ -1460,18 +1458,18 @@ endparam
 
 
 param Python-Command
-exp entry {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image). See doc for exemples (convolution, adding noise, masking, trimming).}
-im_path entry {image} - {Path of a second image to use. Keep '-' if not used}
+exp open {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image)}#. See doc for exemples (convolution, adding noise, masking, trimming).
+im_path entry {image} "" {Path of a second image to use.}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
 #path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
-overwrite checkbox {Overwrite} 0 {Overwrite the modification on the original file. USE WITH CAUTION!}
+overwrite checkbox {Overwrite} 0 {Overwrite the modification on the original file.}#USE WITH CAUTION!
 endparam
 
 
 param Conversion
 scaling checkbox {Rescaling min max} 0 {Rescale values of fits image to spouse chosen type}#|Gaussian-Picouet
 type menu {BITPIX-Type} 8,uint8|16,int16|32,int32|64,int64|-32,float32|-64,float64 {}
-path entry {Regexp path not implemented} - {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
+#path entry {Regexp path not implemented} - {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 endparam
 
 
@@ -1533,9 +1531,9 @@ param SEXTRACTOR-NEW
 
 tab {EXTRACTION}
 
-DETECTION_IMAGE open {DETECTION_IMAGE} - {Image to use for detection of the sources. If - using DS9 image}
+DETECTION_IMAGE open {DETECTION_IMAGE} "" {Image to use for detection of the sources. If none using same than photometric image, eg. DS9 frame}
 
-CATALOG_NAME save {CATALOG_NAME} - {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
+CATALOG_NAME save {CATALOG_NAME} "" {Name of the output catalog without extension. eg /tmp/catalog.fits, if none, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
 PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
 
@@ -1567,7 +1565,7 @@ tab {WEIGHTING & FLAG}
 
 WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
 RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 1 {Rescale input weights/variances }
-WEIGHT_IMAGE open {WEIGHT_IMAGE} - {weight-map filename}
+WEIGHT_IMAGE open {WEIGHT_IMAGE} "" {weight-map filename}
 WEIGHT_GAIN checkbox {WEIGHT_GAIN} 1 {modulate gain (E/ADU) with weights? }
 
 FLAG_IMAGE open {FLAG_IMAGE} NONE {filename for an input FLAG-image}
@@ -1620,7 +1618,7 @@ tab {MEMORY & MISC.}
 MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
 MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
 MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
-NTHREADS menu {NTHREADS} 1|2|4|8|16|32 {Number of threads for multi processing}
+#NTHREADS menu {NTHREADS} 1|2|4|8|16|32 {Number of threads for multi processing}
 
 endtab
 
