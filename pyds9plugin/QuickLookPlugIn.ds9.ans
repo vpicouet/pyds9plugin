@@ -98,7 +98,7 @@ hmenu 1. Generic Functions
 		Create Header Data Base
 		*
 		menu
-		DS9Utils create_header_catalog -x $xpa_method   $param(Click-Enter-For-Only-DS9-Image-); -p "$path"   | $text
+		DS9Utils create_header_catalog -x $xpa_method   $param(Header-Catalog); -p "$path" -i "$info"  | $text
 
 
 		Filtering & organizing images
@@ -158,7 +158,7 @@ hmenu 1. Generic Functions
 		*
 		menu
 #		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-		DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "$im_path" -e "$exp"  -o $overwrite | $text
+		DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
 
 		Interactive 1D Fitting On Plot
 		*
@@ -1098,10 +1098,10 @@ endparam
 
 
 
-param Click-Enter-For-Only-DS9-Image-
+param Header-Catalog
 #path entry {RegExp Path} $filename {Path of the images to extract.  Use global pattern matching (*/?/[9-16], etc)}
 path open {RegExp Path} {$env(HOME)/*fits} {Path of the images to extract.  Use global pattern matching (*/?/[9-16], etc)}
-#info checkbox {Info} 0 {Analyze each image (Means, vars, so-regions, gain, smearing, etc). Take ~1s/image}
+info menu {Info} |basic_image_estimators.py|FIREBall.py {Macros file to add image estimators to header catalog, takes more time. Leave blank for no image analysis}
 #ext entry {Ext} 0 {Header extensions to be extracted: eg. 0,1,2,3}
 endparam
 
@@ -1459,7 +1459,7 @@ endparam
 
 param Python-Command
 exp open {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image)}#. See doc for exemples (convolution, adding noise, masking, trimming).
-im_path entry {image} "" {Path of a second image to use.}
+#im_path entry {image} "" {Optional path of a second image to use}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
 #path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 overwrite checkbox {Overwrite} 0 {Overwrite the modification on the original file.}#USE WITH CAUTION!

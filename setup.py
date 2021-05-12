@@ -13,7 +13,7 @@ requires = ['numpy >=1.8', #'PyQt5','Pillow',
             'pyds9',
             'photutils',
             'tqdm',
-            'pyvista==0.25.3',#
+            'pyvista',#==0.25.3
             'datetime',
             'pandas',
             'argparse',
@@ -24,12 +24,13 @@ entry_points = {}
 entry_points['console_scripts'] = ['DS9Utils = pyds9plugin.DS9Utils:main']
 
 #data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","config/*","Images/stack????????.fits","Images/stack.fits","Sextractor/*","dataphile/*","doc/ref/*/*","doc/ref/*"]}#,"doc/features_files/*","doc/img/*","doc/index_files/*"
-data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","filters/*","SEDs/*","config/*","Images/stack????????.fits","Images/m33_hi.fits","Images/stack.fits","Sextractor/*","dataphile/*","doc/ref/examples/*","doc/ref/img/*","doc/ref/index_files/*","doc/ref/*.html"]}#,"doc/ref/*/*","doc/features_files/*","doc/img/*","doc/index_files/*"
+data = { "pyds9plugin": ["QuickLookPlugIn.ds9.ans","Macros/*","Macros/Macros_Header_catalog/*","filters/*","SEDs/*","config/*","Images/stack????????.fits","Images/m33_hi.fits","Images/stack.fits","Sextractor/*","dataphile/*","doc/ref/examples/*","doc/ref/img/*","doc/ref/index_files/*","doc/ref/*.html"]}
+#,"doc/ref/*/*","doc/features_files/*","doc/img/*","doc/index_files/*"
 
 
 MAJOR = '2'
 MINOR = '9'
-MICRO = '4dev4'
+MICRO = '4dev5'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 def setup_package():
@@ -37,7 +38,7 @@ def setup_package():
     name='pyds9plugin',
     python_requires='>3.5.2',
     version=version,
-    license='Creative Commons Attribution-Noncommercial-Share Alike license',
+    # license='Creative Commons Attribution-Noncommercial-Share Alike license',
     install_requires = requires,
     long_description=long_description,
     url='https://people.lam.fr/picouet.vincent/index.html',

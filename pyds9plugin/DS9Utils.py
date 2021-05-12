@@ -4,6 +4,40 @@
 Created on Wed Jul  4 10:35:13 2018
 
 @author: V. Picouet
+
+Copyright Vincent Picouet (01/01/2019)
+
+vincent@picouet.fr
+
+This software is a computer program whose purpose is to perform quicklook
+image processing and analysis. It can ionteract with SAOImage DS9 Software
+when loaded as an extension.
+
+This software is governed by the CeCILL-B license under French law and
+abiding by the rules of distribution of free software.  You can  use,
+modify and/ or redistribute the software under the terms of the CeCILL-B
+license as circulated by CEA, CNRS and INRIA at the following URL
+"http://www.cecill.info".
+
+As a counterpart to the access to the source code and  rights to copy,
+modify and redistribute granted by the license, users are provided only
+with a limited warranty  and the software's author,  the holder of the
+economic rights,  and the successive licensors  have only  limited
+liability.
+
+In this respect, the user's attention is drawn to the risks associated
+with loading,  using,  modifying and/or developing or reproducing the
+software by the user in light of its specific status of free software,
+that may mean  that it is complicated to manipulate,  and  that  also
+therefore means  that it is reserved for developers  and  experienced
+professionals having in-depth computer knowledge. Users are therefore
+encouraged to load and test the software's suitability as regards their
+requirements in conditions enabling the security of their systems and/or
+data to be ensured and,  more generally, to use and operate it in the
+same conditions as regards security.
+
+The fact that you are presently reading this means that you have had
+knowledge of the CeCILL-B license and that you accept its terms.
 """
 import resource
 import time
@@ -67,7 +101,7 @@ class MyParser(argparse.ArgumentParser):
 
 def CreateParser(namedoc,path=False):
     name, doc = namedoc
-    formatter = lambda prog: argparse.HelpFormatter(prog,max_help_position=32) #argparse.ArgumentDefaultsHelpFormatter
+    formatter = lambda prog: argparse.HelpFormatter(prog,max_help_position=32,width=136) #argparse.ArgumentDefaultsHelpFormatter
     parser = MyParser(description=bcolors.BOLD+'%s: %s'%(name+bcolors.END, doc),usage=bcolors.FAIL+"DS9Utils %s [-h] [-x xpapoint] [--optional OPTIONAL]"%(bcolors.BOLD+name+bcolors.END+bcolors.FAIL)+bcolors.END,formatter_class=formatter)
     parser.add_argument('function', help="Function to perform [here: %s]"%(name))#,required=True)
     parser.add_argument('-x', '--xpapoint', help='XPA access point for DS9 communication. If none is provided, it will take the last DS9 window if one, else it will run the function without DS9.', metavar='')
@@ -2818,7 +2852,7 @@ def DS9plot_rp_convolved(
     else:
         d_ = {"Flux": 0, "SizeSource": popt[1], "Sigma": popt[2], "EE50": mina, "EE80": minb, "Platescale": platescale, "Center": NewCenter}
         verboseprint("Flux = 0\nSizeSource = {}\nSigma = {} \nEE50 = {}\nEE80 = {}\nPlatescale = {}\nCenter = {}".format(popt[1], popt[2], minb, mina, platescale, NewCenter))
-    csvwrite(np.vstack((rmean[:size], profile, ConvolveDiskGaus2D(rmean[:size], *popt))).T, DS9backUp + "CSVs/%s_RadialProfile.csv" % (datetime.datetime.now().strftime("%y%m%d-%HH%M")))
+        csvwrite(np.vstack((rmean[:size], profile, ConvolveDiskGaus2D(rmean[:size], *popt))).T, DS9backUp + "CSVs/%s_RadialProfile.csv" % (datetime.datetime.now().strftime("%y%m%d-%HH%M")))
     csvwrite(np.vstack((rsurf, EE)).T, DS9backUp + "CSVs/%s_EnergyProfile.csv" % (datetime.datetime.now().strftime("%y%m%d-%HH%M")))
     d = []
     d.append("plot line open")
@@ -2863,6 +2897,7 @@ def DS9plot_rp_convolved(
     d.append("plot layout STRIP ; plot layout STRIP scale 100")
     d.append("plot font legend size 9 ")
     d.append("plot font labels size 13 ")
+    d.append("plot current graph 1 ")
     ds9 = DS9n()
     ds9.set(" ; ".join(d))  # d.set("""""")
     return d_
@@ -3218,9 +3253,9 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             range_ = [np.nanmin(data), np.nanmax(data)]
             range_ = [np.nanpercentile(data, 30), np.nanpercentile(data, 99)]
             scalars = data.flatten()
-            p.add_mesh(
-                mesh, clim=range_, scalars=scalars, opacity=0.7, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, stitle="Value"
-            )  # ,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+            # p.add_mesh(mesh, clim=range_, scalars=scalars, opacity=0.7, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, stitle="Value")
+            p.add_mesh(mesh, rng=range_, scalars=scalars, opacity=0.7, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, stitle="Value")
+            # ,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
             contours = mesh.contour()
             contours_c = mesh_c.contour()
             p.add_mesh(contours, color="white", line_width=5)
@@ -5087,16 +5122,17 @@ def create_header_catalog(xpapoint=None, files=None, info=False, config=my_conf,
     from astropy.io import fits
     import numpy as np
     parser = CreateParser(get_name_doc(),path=True)
+    parser.add_argument('-i', '--info',    default='None', help='Addition file in pyds9plugin/Macros/Macros_Header_catalog/ that can be added for image analysis', type=str,metavar='')#, choices=['image','none','wcs'])#metavar='',
     args = parser.parse_args_modif(argv,required=True)
-    info, extension = '','-'
-    try:
-        verboseprint("info, extension = %s, %s"%( info, extension))
-        if info == "1":
-            info = True
-        elif info == "0":
-            info = False
-    except IndexError:
-        pass
+    extension = '-'
+    verboseprint("info, extension = %s, %s"%( args.info, extension))
+    # try:
+    #     if info == "1":
+    #         info = True
+    #     elif info == "0":
+    #         info = False
+    # except IndexError:
+    #     pass
     if files is None:
         files = globglob(args.path, ds9_im=False)
         verboseprint('%s : %s'%(args.path,files))
@@ -5112,7 +5148,7 @@ def create_header_catalog(xpapoint=None, files=None, info=False, config=my_conf,
     except TypeError:
         d = DS9n(xpapoint)
     if ext != 1:
-        if yesno(d, "Your image contains %i extensions. Do you wish to analyze only the primary header?}" % (ext)):
+        if yesno(d, "Your image contains %i extensions. Do you wish to analyze only the primary header?" % (ext)):
             extentsions = [0]
         else:
             extentsions = np.arange(ext)
@@ -5121,7 +5157,7 @@ def create_header_catalog(xpapoint=None, files=None, info=False, config=my_conf,
     verboseprint("Extensions to add: %s"%(extentsions))
     # paths = np.unique([os.path.dirname(f) for f in files ])
     verboseprint(files)
-    t1s = [CreateCatalog_new(files, ext=extentsions)]
+    t1s = [CreateCatalog_new(files, ext=extentsions, info=os.path.join(os.path.dirname(__file__),'Macros/Macros_Header_catalog/' + args.info))]
     from datetime import datetime
 
     path_db = os.environ["HOME"] + "/DS9QuickLookPlugIn/HeaderDataBase/HeaderCatalog_%s.csv" % (datetime.now().strftime("%y%m%d-%HH%Mm%Ss"))
@@ -5152,7 +5188,6 @@ def GetColumns(path):
 def Parallelize(function=lambda x: print(x), action_to_paralize=[], parameters=[], number_of_thread=10):
     """Use multi-processing to run the function on all the entries
     """
-    from pyds9plugin.BasicFunctions import RunFunction
     from tqdm import tqdm
     from multiprocessing import Process, Manager
 
@@ -5434,7 +5469,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     return
 
 
-def CreateCatalog_new(files, ext=[0], config=my_conf):
+def CreateCatalog_new(files, ext=[0], config=my_conf,info=None):
     """Create header catalog from a list of fits file
     """
     from astropy.table import Column, vstack  # hstack,
@@ -5452,7 +5487,7 @@ def CreateCatalog_new(files, ext=[0], config=my_conf):
     # for i  in tqdm(range(len(files)), file=sys.stdout, desc='Number of files : ', ncols=100):
     for i in tqdm_gui(range(len(files)), file=sys.stdout, desc="Number of files : ", ncols=100):
         try:
-            table = CreateTableFromHeader(files[i], exts=ext)
+            table = CreateTableFromHeader(files[i], exts=ext,info=info)
             if table is not None:
                 file_header.append(table)
                 files_name.append(files[i])
@@ -5464,24 +5499,16 @@ def CreateCatalog_new(files, ext=[0], config=my_conf):
     table_header.add_column(Column(files_name, name="Path"), index=-1, rename_duplicate=True)
     table_header.add_column(Column([os.path.basename(file) for file in files_name]), name="Filename", index=1, rename_duplicate=True)
     table_header.add_column(Column([os.path.basename(os.path.dirname(file)) for file in files_name]), name="Directory", index=2, rename_duplicate=True)
-    table_header.add_column(
         # Column([datetime.strptime(time.ctime(os.path.getctime(file)), "%a %b %d %H:%M:%S %Y").strftime("%Y-%m-%dT%H:%M:%S") for file in files_name]),
-        Column([datetime.strptime(time.ctime(os.path.getctime(file)), "%a %b %d %H:%M:%S %Y").strftime("%y%m%d.%H%M") for file in files_name]),
-        name="CreationTime",
-        index=3,
-        rename_duplicate=True,
-    )
+    table_header.add_column(Column([datetime.strptime(time.ctime(os.path.getctime(file)), "%a %b %d %H:%M:%S %Y").strftime("%y%m%d.%H%M") for file in files_name]),
+        name="CreationTime",index=3,rename_duplicate=True,)
     # table_header.add_column(
     #     # Column([datetime.strptime(time.ctime(os.path.getctime(file)), "%a %b %d %H:%M:%S %Y").strftime("%Y-%m-%d") for file in files_name]), name="CreationDate", index=5, rename_duplicate=True
     #     Column([datetime.strptime(time.ctime(os.path.getctime(file)), "%a %b %d %H:%M:%S %Y").strftime("%y%m%d.%H%M") for file in files_name]), name="CreationDate", index=4, rename_duplicate=True
     # )
-    table_header.add_column(
         # Column([datetime.strptime(time.ctime(os.path.getmtime(file)), "%a %b %d %H:%M:%S %Y").strftime("%Y-%m-%dT%H:%M:%S") for file in files_name]),
-        Column([datetime.strptime(time.ctime(os.path.getmtime(file)), "%a %b %d %H:%M:%S %Y").strftime("%y%m%d.%H%M") for file in files_name]),
-        name="ModificationTime",
-        index=4,
-        rename_duplicate=True,
-    )
+    table_header.add_column(Column([datetime.strptime(time.ctime(os.path.getmtime(file)), "%a %b %d %H:%M:%S %Y").strftime("%y%m%d.%H%M") for file in files_name]),
+        name="ModificationTime",index=4,rename_duplicate=True,)
     table_header.add_column(Column(["%0.2f" % (os.stat(file).st_size / 1e6) for file in files_name]), name="FileSize_Mo", index=5, rename_duplicate=True)
     csvwrite(table_header.filled(""), os.path.dirname(path) + "/HeaderCatalog.csv")  # fill_values=[(ascii.masked, 'N/A')]
 
@@ -5505,7 +5532,7 @@ def remove_duplicates(hdr):
     return hdr
 
 
-def CreateTableFromHeader(path, exts=[0]):
+def CreateTableFromHeader(path, exts=[0],info=None):
     """Create table from fits header
     """
     from astropy.table import Table, hstack
@@ -5517,14 +5544,30 @@ def CreateTableFromHeader(path, exts=[0]):
             exts = np.arange(len(file))
     for ext in exts:
         try:
-            hdr = remove_duplicates(fits.getheader(path, ext))
-            tabs.append(Table(data=np.array([val for val in hdr.values()]), names=[key for key in hdr.keys()], dtype=["S20" for key in hdr.keys()]))
+            header = remove_duplicates(fits.getheader(path, ext))
+            cat = Table(data=np.array([val for val in header.values()]), names=[key for key in header.keys()], dtype=["S20" for key in header.keys()])
+            tabs.append(cat)
         except IndexError:
             pass
+    verboseprint(info,os.path.isfile(info))
+    # sys.exit()
     if len(tabs) > 0:
-        return hstack(tabs)
-    else:
-        return None
+        table = hstack(tabs)
+        # verboseprint(table.colnames)
+        if os.path.isfile(info):
+            fitsfile = fits.open(path)
+            ldict = {'fitsfile':fitsfile,'header':header,"np":np,"table":table}
+            verboseprint('Executing file %s'%(exp))
+            try:
+                exec(open(info).read(), globals(), ldict)
+            except (SyntaxError, NameError) as e:
+                print(e)
+        # verboseprint(table.colnames)
+        # sys.exit()
+        return table
+
+    # else:
+    #     return None
 
 
 
@@ -8509,8 +8552,8 @@ def Convertissor(xpapoint=None, argv=[]):
     from decimal import Decimal
     parser = CreateParser(get_name_doc())
     parser.add_argument('-v', '--value',    default='1', help='Value to convert', type=str, required=True,metavar='')#metavar='',
-    parser.add_argument('-u', '--unit1',    default='angstrom', help='Unit1', type=str, choices=['angstrom','meter','parsec','astronomical_unit','lightyear','Joule','erg','Ry','cal','eV','','kg','earthMass','M_e','M_p','Msun','lb','oz'],metavar='')#metavar='',
-    parser.add_argument('-U', '--unit2',    default='meter', help='Unit1', type=str, choices=['angstrom','meter','parsec','astronomical_unit','lightyear','Joule','erg','Ry','cal','eV','','kg','earthMass','M_e','M_p','Msun','lb','oz'],metavar='')#metavar='',
+    parser.add_argument('-u', '--unit1',    default='angstrom', help='Unit1', type=str,metavar='')#metavar='',, choices=['angstrom','meter','parsec','astronomical_unit','lightyear','Joule','erg','Ry','cal','eV','','kg','earthMass','M_e','M_p','Msun','lb','oz']
+    parser.add_argument('-U', '--unit2',    default='meter', help='Unit1', type=str,metavar='')#metavar='', choices=['angstrom','meter','parsec','astronomical_unit','lightyear','Joule','erg','Ry','cal','eV','','kg','earthMass','M_e','M_p','Msun','lb','oz']
     parser.add_argument('-z', '--redshift',    default='0', help='Redshift', type=str,metavar='')#metavar='',
     args = parser.parse_args_modif(argv, required=False)
 
@@ -8867,41 +8910,41 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
                                 [Next]""", verbose="1")
     WaitForN(xpapoint)
 
-    d.set("analysis message {Let us do some 2D gaussian fitting!}")
+    d.set("analysis message {Let us do some Radial profile!}")
     d.set("regions delete all ; zoom to 2")
-
-    verboseprint(
-        """********************************************************************************
-                             Fit Gaussian 2D
-         Generic functions -> Image Processing -> Fit Gaussian 2D
-********************************************************************************
-* This function fits your encircled data by a 2D assymetrical gaussian
-* You might need to hit [Shift+S] to make the compact sources appear.
-* You can check the log box on the plot window to have a logarithmic y scale.
-
-%i/%i - Create only one region over a star or galaxy and select it.
-         It must be small enough to encircle only one source.
-%i/%i - Then press n to use the 2D gaussian fit function!
-         Don't forget that you can smooth the data before if needed."""
-        % (i, n, i + 1, n), verbose="1")
-    i += 2
-    WaitForN(xpapoint)
-    while getregion(d, selected=True) is None:
-        d.set("analysis message {It seems that you did not create or select the region before hitting [Next]. Please make sure to click on the region after creating it and hit n}")
-        WaitForN(xpapoint)
-    d.set('analysis task  "Fit Gaussian 2D"')
-    time.sleep(2)
-    verboseprint(
-        """* Perfect!
-* As you can see it also created an ellipse around the region!
-* The major/minor axis are the gaussian's FWHMs, the angle is also saved.
-
-%i/%i - Then press n to go to next function: Radial profile!
-"""
-        % (i, n), verbose="1")
-    i += 1
-
-    WaitForN(xpapoint)
+#
+#     verboseprint(
+#         """********************************************************************************
+#                              Fit Gaussian 2D
+#          Generic functions -> Image Processing -> Fit Gaussian 2D
+# ********************************************************************************
+# * This function fits your encircled data by a 2D assymetrical gaussian
+# * You might need to hit [Shift+S] to make the compact sources appear.
+# * You can check the log box on the plot window to have a logarithmic y scale.
+#
+# %i/%i - Create only one region over a star or galaxy and select it.
+#          It must be small enough to encircle only one source.
+# %i/%i - Then press n to use the 2D gaussian fit function!
+#          Don't forget that you can smooth the data before if needed."""
+#         % (i, n, i + 1, n), verbose="1")
+#     i += 2
+#     WaitForN(xpapoint)
+#     while getregion(d, selected=True) is None:
+#         d.set("analysis message {It seems that you did not create or select the region before hitting [Next]. Please make sure to click on the region after creating it and hit n}")
+#         WaitForN(xpapoint)
+#     d.set('analysis task  "Fit Gaussian 2D"')
+#     time.sleep(2)
+#     verboseprint(
+#         """* Perfect!
+# * As you can see it also created an ellipse around the region!
+# * The major/minor axis are the gaussian's FWHMs, the angle is also saved.
+#
+# %i/%i - Then press n to go to next function: Radial profile!
+# """
+#         % (i, n), verbose="1")
+#     i += 1
+#
+#     WaitForN(xpapoint)
     verboseprint(
         """********************************************************************************
                              Radial Profile
@@ -9047,6 +9090,8 @@ def ImageProcessingTutorial(xpapoint=None, i=0, n=1):
 * with user adjustment of the initial fitting parameters!
 * You might need to hit [Shift+S] to make appear some features in the image.
 * You can check the log box on the plot window to have a logarithmic y scale.
+* This function works on any DS9 plot (histograms or even plots generated by
+  by this plugin like a radial profile or la light curve
 
 %i/%i - Create a projection (Region->Shape->Projection) on a shape you want
          to fit. Move it until you have a fittable feature (several gaussians,
@@ -9075,62 +9120,62 @@ def ImageProcessingTutorial(xpapoint=None, i=0, n=1):
     d.set('analysis task "Interactive 1D Fitting On Plot"')
     WaitForN(xpapoint)
 
-    verboseprint(
-        """* This fitting function works on any DS9 plot! Now let's use it
-* on an histogram to compute the read noise of the image! Delete the projection.
-
-%i/%i - Create a r~200 region over a dark area of the image. Double click on
-         it. The region's window should appear, click on Analysis -> Histogram
-         to plot the histogram of the encircled data!
-%i/%i - If the plot does not show a nice gaussian, move a bit the region or
-         change the radius to have enough pixels without too bright ones.
-         The plot should refresh automatically.
-%i/%i - When you are ready [Next]
-  """
-        % (i, n, i + 1, n, i + 2, n), verbose="1")
-    i += 3
-
-    d.set("zoom to fit")
-    WaitForN(xpapoint)
-    while d.get("plot") == "":
-        d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")
-        WaitForN(xpapoint)
-    d.set('analysis task "Interactive 1D Fitting On Plot"')
-
-    verboseprint(
-        """%i/%i - Fit this shape by just 1 gaussian with constant
-         background to compute the read noise of the image! Adjust the para-
-         meters and click on fit! The read noise is the FWHGM of your gaussian!
-%i/%i - Hit [Next] when you want to go to next function."""
-        % (i, n, i + 1, n), verbose="1")
-    i += 2
-
-    WaitForN(xpapoint)
-    while d.get("plot") == "":
-        d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")
-        WaitForN(xpapoint)
-    verboseprint(
-        """********************************************************************************
-                             Interactive Manual Fitting
-    Generic functions -> Image Processing -> Interactive Manual Fitting
-********************************************************************************
-* This will allow you to write your own function y=f(x) and fit it!
-* a, b, c, and d are parameters of than you can put in your function to fit it
-* You can also use xdata/ydata, the data points from the projection/histogram
-* You can check the log box on the plot window to have a logarithmic y scale.
-
-%i/%i - If you want to fit another function you can also fit
-           whatever function you want. Either keep your own plots or create
-           another one by doing a new projection or histogram.
-%i/%i - Hit n when you want to go to next function."""
-        % (i, n, i + 1, n), verbose="1")
-    i += 2
-    WaitForN(xpapoint)
-    while d.get("plot") == "":
-        d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")
-        WaitForN(xpapoint)
-    d.set('analysis task "Interactive Manual Fitting"')
-    WaitForN(xpapoint)
+#     verboseprint(
+#         """* This fitting function works on any DS9 plot! Now let's use it
+# * on an histogram to compute the read noise of the image! Delete the projection.
+#
+# %i/%i - Create a r~200 region over a dark area of the image. Double click on
+#          it. The region's window should appear, click on Analysis -> Histogram
+#          to plot the histogram of the encircled data!
+# %i/%i - If the plot does not show a nice gaussian, move a bit the region or
+#          change the radius to have enough pixels without too bright ones.
+#          The plot should refresh automatically.
+# %i/%i - When you are ready [Next]
+#   """
+#         % (i, n, i + 1, n, i + 2, n), verbose="1")
+#     i += 3
+#
+#     d.set("zoom to fit")
+#     WaitForN(xpapoint)
+#     while d.get("plot") == "":
+#         d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")
+#         WaitForN(xpapoint)
+#     d.set('analysis task "Interactive 1D Fitting On Plot"')
+#
+#     verboseprint(
+#         """%i/%i - Fit this shape by just 1 gaussian with constant
+#          background to compute the read noise of the image! Adjust the para-
+#          meters and click on fit! The read noise is the FWHGM of your gaussian!
+# %i/%i - Hit [Next] when you want to go to next function."""
+#         % (i, n, i + 1, n), verbose="1")
+#     i += 2
+#
+#     WaitForN(xpapoint)
+#     while d.get("plot") == "":
+#         d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")
+#         WaitForN(xpapoint)
+#     verboseprint(
+#         """********************************************************************************
+#                              Interactive Manual Fitting
+#     Generic functions -> Image Processing -> Interactive Manual Fitting
+# ********************************************************************************
+# * This will allow you to write your own function y=f(x) and fit it!
+# * a, b, c, and d are parameters of than you can put in your function to fit it
+# * You can also use xdata/ydata, the data points from the projection/histogram
+# * You can check the log box on the plot window to have a logarithmic y scale.
+#
+# %i/%i - If you want to fit another function you can also fit
+#            whatever function you want. Either keep your own plots or create
+#            another one by doing a new projection or histogram.
+# %i/%i - Hit n when you want to go to next function."""
+#         % (i, n, i + 1, n), verbose="1")
+#     i += 2
+#     WaitForN(xpapoint)
+#     while d.get("plot") == "":
+#         d.set("analysis message {Please create a plot by creating a histogram to run this function. Hit n when it is done.}")
+#         WaitForN(xpapoint)
+#     d.set('analysis task "Interactive Manual Fitting"')
+#     WaitForN(xpapoint)
 
     d.set("analysis message {Now let us use a basic python interpretor}")
 
@@ -9170,17 +9215,16 @@ def ImageProcessingTutorial(xpapoint=None, i=0, n=1):
     d.set('analysis task "Execute Python Command "')
     verboseprint(
         """Well Done!
-* You also have the possibility to combine another image in your python
-* expression. It cam be very interesting for dark subtraction or convolution
-* for instance:
-*    ds9= ds9-image    (Must be the same size!)   -> Subtract the image
-*    ds9=convolve(ds9,image)  (image must be odd) -> Convolve with image
-*To do this you must copy the path of the image in the image field.
+* You also have the possibility to run a python macro. Several example Macros
+* are available here (copy it):
+%s
+* But you can also write your own
+* The image is avilable via 'ds9' variable, you can open other images in the
+* python file if needed and import any package your want.
 
-%i/%i - Test the convolution function with the following path in the image
-* field : %s
+%i/%i - Test one of the Macros avilable in the path above.
                      [Next]"""
-        % (i, n, resource_filename("pyds9plugin", "Images/stack18446524.fits")), verbose="1")
+        % (resource_filename("pyds9plugin", "Macros"), i, n), verbose="1")
 
     WaitForN(xpapoint)
 
@@ -10061,7 +10105,7 @@ def main():
                 import traceback
                 verboseprint(traceback.format_exc(), verbose="1")
                 verboseprint("To have more information about the error run this in the terminal:", verbose="1")
-                verboseprint(" ".join(sys.argv), verbose="1")
+                verboseprint("'" + "' '".join(sys.argv) + "'", verbose="1")
         else:
             DictFunction[function]()#(xpapoint=xpapoint)
 
