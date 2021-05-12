@@ -38,3 +38,11 @@ pyds9plugin/parameters/
 *.mov
 
 run
+
+copy_from_svn.sh
+
+pyds9plugin/__init__.py
+
+pyds9plugin/__init__.pyc
+
+pyds9plugin/DS9Utils_.cpython-36m-darwin.so
