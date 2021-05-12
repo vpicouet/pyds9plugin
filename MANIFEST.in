@@ -8,7 +8,22 @@
 #prune DS9functions/pyds9plugin/DS9Utils.py
 #prune DS9functions/pyds9plugin/DS9Utils.c
 
-DS9functions/__init__.py
+include pyds9plugin/QuickLookPlugIn.ds9.ans
+include pyds9plugin/Images/stack????????.fits
+include pyds9plugin/Images/stack.fits
+include pyds9plugin/Images/m33_hi.fits
+include pyds9plugin/Macros/Macros_Header_catalog/*
+include pyds9plugin/Macros/*
+include pyds9plugin/Sextractor/*
+include pyds9plugin/MaxiMask-1.1/model/*
+include pyds9plugin/MaxiMask-1.1/track_model/*
+include pyds9plugin/MaxiMask-1.1/*
+include pyds9plugin/doc/ref/index.html
+include pyds9plugin/doc/ref/img/*
+include pyds9plugin/doc/ref/features_files/*
+exclude setup_cython.py
+
+<!-- DS9functions/__init__.py -->
 prune pyds9plugin/DS9Utils.c
 prune DS9functions/pyds9plugin/DS9Utils.c
 prune DS9Utils.c

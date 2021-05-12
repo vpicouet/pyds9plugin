@@ -770,10 +770,10 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
         #        if  var.lower() != 'n':
         symlink_force(which("DS9Utils"), os.path.join(os.path.dirname(AnsDS9path), "DS9Utils"))
 
-    if "file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html" in open(AnsDS9path).read():
+    if "file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html" in open(AnsDS9path).read():
         #        var = input("Are you sure you want to modify %s with this: %s? [y]/n"%(AnsDS9path,'file:%s'%(help_path)))
         #        if  var.lower() != 'n':
-        ReplaceStringInFile(path=AnsDS9path, string1="file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html", string2="file:%s" % (help_path))
+        ReplaceStringInFile(path=AnsDS9path, string1="file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html", string2="file:%s" % (help_path))
 
     # if ds9_targets() is not None:
     #     if AnsDS9path in open(os.path.join(os.environ["HOME"], ".ds9/%s.prf" % (d.get("version").replace(" ", ".")))).read():
@@ -813,18 +813,17 @@ def PresentPlugIn():
                      DS9 Quick Look Plug-in
 
             Written by Vincent PICOUET <vincent.picouet@lam.fr>
-            Copyright 2019
+            License: CeCILL-B
             visit https://people.lam.fr/picouet.vincent/pyds9plugin
-            for more information
+            for more information:
 
             DS9 Quick Look Plug-in comes with ABSOLUTELY NO WARRANTY
 
             To use it run:
-            > ds9 &
-            and play with the analysis commands!
+            > DS9Utils LoadDS9QuickLookPlugin
+            Then launch DS9 and play with the analysis commands!
             You can also access it via command line:
-            > DS9Utils xpapoint function [-h] [--optionals OPTIONALS]
-            xpapoint is the accespoint to DS9, eg. 7f000001:60370
+            > DS9Utils function [-h] [--optionals OPTIONALS]
             Find bellow the list of the available functions
                                                                                  """
         + bcolors.END
@@ -1263,6 +1262,8 @@ def aperture_photometry(xpapoint=None, argv=[]):
     Phot["aper_sum_bkgsub"] = 0
     Phot.remove_row(0)
     apers = np.array(args.apertures.split(','), dtype=float)
+    if regions is None:
+        message(d,'Please select a region before running this analysis.');sys.exit()
     for reg in regions:
         # id = 'M = '
         for aper in apers:
@@ -8752,7 +8753,7 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                 d.set("multiframe {}".format(filename))  # a = OpenFile(xpaname,filename = filename)
 
         else:
-            print(bcolors.BLACK_RED + "File not found, please verify your path" + bcolors.END)
+            verboseprint(bcolors.BLACK_RED + "File not found, please verify your path" + bcolors.END)
             d = DS9n(xpapoint)
             d.set("analysis message {File not found, please verify your path. %s}" % (filename))
             sys.exit()
@@ -9744,7 +9745,7 @@ def MaxiMask_cc(path=None, xpapoint=None):
 # import subprocess, os, glob
 # for file in glob.glob('/data/deepZ/HSC_CLAUDS/DetectionImages/*-?.fits')[:2]:
 #     if os.path.isfile(file.replace('fits','.mask.fits')) is False:
-#         a = subprocess.check_output('/net/CLUSTER/apps/miniconda3/bin/python3 /net/CLUSTER/VAULT/users/vpicouet/DS9functions/pyds9plugin/MaxiMask-1.1/maximask.py  -v --single_mask False --batch_size 8 --proba_thresh False --prior_modif  True %s'%(file), shell=True, stderr=subprocess.STDOUT)
+#         a = subprocess.check_output('/net/CLUSTER/apps/miniconda3/bin/python3 /net/CLUSTER/VAULT/users/vpicouet/pyds9plugin/pyds9plugin/MaxiMask-1.1/maximask.py  -v --single_mask False --batch_size 8 --proba_thresh False --prior_modif  True %s'%(file), shell=True, stderr=subprocess.STDOUT)
 #     else:
 #         print('already done')
 # a = Table.read('/net/fs/deepZ/HSC_CLAUDS/DetectionTracts/Photometric_Catalogs/calexp-HSC-G-9813_cat.fits')
