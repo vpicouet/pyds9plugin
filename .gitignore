@@ -8,8 +8,7 @@ __pycache__
 pyds9plugin/images/*.png
 pyds9plugin/images/*.xml
 pyds9plugin/test*
-pyds9plugin/filters/*
-
+pyds9plugin/filters
 pyds9plugin/doc/ref/old_high_quality/
 
 pyds9plugin.egg-info/
@@ -46,3 +45,5 @@ pyds9plugin/__init__.py
 pyds9plugin/__init__.pyc
 
 pyds9plugin/DS9Utils_.cpython-36m-darwin.so
+
+pyds9plugin/config/verbose.npy
