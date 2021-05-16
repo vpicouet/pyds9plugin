@@ -23,6 +23,20 @@ hmenu Quick Look Plugin
 	#echo "$env(DS9Function)" | $text
 	DS9Utils test_suite -x $xpa_method $param(Tutorials); -t $tutorials   | $text
 
+
+
+	verbose
+	*
+	menu
+	DS9Utils verbose -x $xpa_method
+
+	verbose
+	*
+	bind V
+	DS9Utils verbose -x $xpa_method
+
+
+
 endhmenu
 
 
@@ -140,7 +154,6 @@ hmenu 1. Generic Functions
 		DS9Utils save_region_as_catalog -x $xpa_method   $param(Catalog-name); -p "$save"
 
 
-
 #		Replace Regions by value
 #		*
 #		menu
@@ -214,12 +227,12 @@ hmenu 1. Generic Functions
 	Open Image (O)
 	*
 	menu
-	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c $clip | $text
+	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
 	Open Image Key
 	*
 	bind O
-	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c $clip | $text
+	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
 #	Stack Images (s)  #20#
 #	*
@@ -472,84 +485,84 @@ hmenu 3. Astronomical Softwares
 
 
 endhmenu
-		hmenu 4. Under development
-					Throw Apertures
-					*
-					menu
-					DS9Utils throw_apertures -x $xpa_method   $param(Throw-Apertures);  -n $number -s $size  -f $form -e $spacing | $text
+#	hmenu 4. Under development
+#				Throw Apertures
+#				*
+#				menu
+#				DS9Utils throw_apertures -x $xpa_method   $param(Throw-Apertures);  -n $number -s $size  -f $form -e $spacing | $text
 
 
-					Plot aperture's values
-					*
-					menu
-					DS9Utils AperturesParams -x $xpa_method   $param(Plot-Apertures);  "$path" $x $y  $select" | $text
+#				Plot aperture's values
+#				*
+#				menu
+#				DS9Utils AperturesParams -x $xpa_method   $param(Plot-Apertures);  "$path" $x $y  $select" | $text
 
-					Interpolate NaNs
-					*
-					menu
-					#DS9Utils interpolate_nans -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "-"   | $text
-					DS9Utils interpolate_nans -x $xpa_method  | $text
+#				Interpolate NaNs
+#				*
+#				menu
+#				#DS9Utils interpolate_nans -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "-"   | $text
+#				DS9Utils interpolate_nans -x $xpa_method  | $text
 
-					Get image depth
-					*
-					menu
-					DS9Utils  get_depth_image -x $xpa_method$param(Get-depth); -z $mag_zp -a $aper_size -n $N_aper  | $text
+#				Get image depth
+#				*
+#				menu
+#				DS9Utils  get_depth_image -x $xpa_method$param(Get-depth); -z $mag_zp -a $aper_size -n $N_aper  | $text
 
-					Compute Gain From Fluctuation #29
-					*
-					menu
-					DS9Utils compute_gain -x $xpa_method  $param(EmGain); 0 - $box 0 0  "$path"   | $text
+#				Compute Gain From Fluctuation #29
+#				*
+#				menu
+#				DS9Utils compute_gain -x $xpa_method  $param(EmGain); 0 - $box 0 0  "$path"   | $text
 
-					CreateContourRegions
-					*
-					menu
-					DS9Utils CreateContourRegions -x $xpa_method  $param(CreateContourRegions);   $block $theshold  $erosion  $dilatation  | $text
-
-
-					SExtractor++ (Beta Version)
-					*
-					menu
-					DS9Utils sextractor_pp -x $xpa_method  $param(SEXTRACTOR); -d "$DETECTION_IMAGE" -f "$CATALOG_NAME" -F "$CATALOG_TYPE" | $text
-
-					#E  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  "$WEIGHT_IMAGE"  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME
+#				CreateContourRegions
+#				*
+#				menu
+#				DS9Utils CreateContourRegions -x $xpa_method  $param(CreateContourRegions);   $block $theshold  $erosion  $dilatation  | $text
 
 
-				#		Cosmology Calculator
-				#		*
-				#		menu
-				#		DS9Utils cosmology_calculator -x $xpa_method  $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text
+#				SExtractor++ (Beta Version)
+#				*
+#				menu
+#				DS9Utils sextractor_pp -x $xpa_method  $param(SEXTRACTOR); -d "$DETECTION_IMAGE" -f "$CATALOG_NAME" -F "$CATALOG_TYPE" | $text
 
-						Cosmology Calculator
-						*
-						menu
-						DS9Utils cosmology_calculator -x $xpa_method  LambdaCDM 1 70 0.2 0.7 -  | $text
+#				#E  $PARAMETERS_NAME  $DETECT_TYPE  $DETECT_MINAREA  $THRESH_TYPE  $DETECT_THRESH  $ANALYSIS_THRESH  $FILTER  $FILT_NAME  $DEBLEND_NTHRESH  $DEBLEND_MINCONT  $CLEAN_T   $CLEAN_PARAM  $MASK_TYPE  $WEIGHT_TYPE  "$WEIGHT_IMAGE"  $PHOT_APERTURES  $PHOT_AUTOPARAMS  $PHOT_PETROPARAMS  $PHOT_FLUXFRAC  $MAG_ZEROPOINT  $PIXEL_SCALE  $SEEING_FWHM  $STARNNW_NAME  $BACK_TYPE  $BACK_SIZE  $BACK_FILTERSIZE  $BACKPHOTO_TYPE  $BACKPHOTO_THICK  $BACK_FILTTHRESH  $CHECKIMAGE_TYPE check.fits   0  $REGION_NAME
 
 
+#			#		Cosmology Calculator
+#			#		*
+#			#		menu
+#			#		DS9Utils cosmology_calculator -x $xpa_method  $param(Cosmology); $Cosmo $redshift $H0 $Omega_m $Ode0 $Uncertainty  | $text
 
-						Spectra/Filter simulator
-						*
-						menu
-						DS9Utils PlotSpectraFilters -x $xpa_method   | $text
-
-
-						Convertissor
-						*
-						menu
-						DS9Utils Convertissor -x $xpa_method  $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift  | $text
-
-						Function displayor
-						*
-						menu
-						DS9Utils interactive_plotter -x $xpa_method  $param(Function); "$formula" "$xrange" $plot "$path" | $text
+#					Cosmology Calculator
+#					*
+#					menu
+#					DS9Utils cosmology_calculator -x $xpa_method  LambdaCDM 1 70 0.2 0.7 -  | $text
 
 
-						Simulate Sky Image
-						*
-						menu
-						DS9Utils CreateImageFromCatalogObject -x $xpa_method  -p '"$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"'  | $text
+
+#					Spectra/Filter simulator
+#					*
+#					menu
+#					DS9Utils PlotSpectraFilters -x $xpa_method   | $text
 
 
-		endhmenu
+#					Convertissor
+#					*
+#					menu
+#					DS9Utils Convertissor -x $xpa_method  $param(Distance-Convertissor); $Value $Unit1 $Unit2 $Redshift  | $text
+
+#					Function displayor
+#					*
+#					menu
+#					DS9Utils interactive_plotter -x $xpa_method  $param(Function); "$formula" "$xrange" $plot "$path" | $text
+
+
+#					Simulate Sky Image
+#					*
+#					menu
+#					DS9Utils CreateImageFromCatalogObject -x $xpa_method  -p '"$entry(Fits/csv/ascii sectractor catalog: xcenter, ycenter, peak, sigmax, sigmay, angle. Let BLANK to create random galaxies!)"'  | $text
+
+
+#	endhmenu
 
 
 
@@ -593,12 +606,12 @@ endparam
 Test
 *
 bind n
-DS9Utils  next_step   | $text #-x $xpa_method
+DS9Utils  next_step -x  $xpa_method  | $text #-x $xpa_method
 
 Test
 *
 bind N
-DS9Utils next_step   | $text #-x $xpa_method
+DS9Utils next_step  -x  $xpa_method  | $text #-x $xpa_method
 
 #DS9Utils -x $xpa_method Help
 #file:DS9Utils -x $xpa_method Help
@@ -606,11 +619,6 @@ DS9Utils next_step   | $text #-x $xpa_method
 #/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
 
 
-
-verbose
-*
-bind V
-DS9Utils -x $xpa_method verbose $param(verbose) $verbose | $text
 
 
 
@@ -735,7 +743,7 @@ endparam
 
 param open
 path open {Path of the image(s) to open}    {} #NORMAL
-clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
+#clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
 type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|IMPORT-3D|PRISM {}
 endparam
 
