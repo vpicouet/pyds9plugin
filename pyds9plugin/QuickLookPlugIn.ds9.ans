@@ -22,6 +22,7 @@ hmenu Quick Look Plugin
 	#echo "$filename" | $text
 	#echo "$env(DS9Function)" | $text
 	DS9Utils test_suite -x $xpa_method $param(Tutorials); -t $tutorials   | $text
+
 endhmenu
 
 

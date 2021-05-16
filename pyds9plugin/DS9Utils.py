@@ -130,20 +130,37 @@ def readV(path):
 
 
 
-def verbose(xpapoint=None, verbose=None):
+
+def verbose(xpapoint=None, verbose=None,argv=[]):
     """Change the configuration
     """
-    if verbose is None:
-        v = sys.argv[-1]
+
+    parser = CreateParser(get_name_doc())
+    args = parser.parse_args_modif(argv)
+
+    d=DS9n(args.xpapoint)
+    if verbose==None:
+        verbose_ = bool(int(os.popen("cat %s.verbose.txt" % (DS9_BackUp_path)).read()))
+        if verbose_:
+            if yesno(d,'Are you sur you want to enter QUIET mode?'):
+                os.system("echo 0 > %s" % (DS9_BackUp_path + ".verbose.txt"))
+        else:
+            if yesno(d,'Are you sur you want to enter VERBOSE mode?'):
+                os.system("echo 1 > %s" % (DS9_BackUp_path + ".verbose.txt"))
     else:
-        v = verbose
-    try:
-        conf_dir = resource_filename("pyds9plugin", "config")
-    except:
-        conf_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config")
-    if v is None:
-        sys.exit()
-    os.system("echo %s > %s" % (v, DS9_BackUp_path + ".verbose.txt"))
+        os.system("echo %s > %s" % (verbose, DS9_BackUp_path + ".verbose.txt"))
+
+#     if verbose is None:
+#         v = sys.argv[-1]
+#     else:
+#         v = verbose
+#     try:
+#         conf_dir = resource_filename("pyds9plugin", "config")
+#     except:
+#         conf_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config")
+#     if v is None:
+#         sys.exit()
+#     os.system("echo %s > %s" % (v, DS9_BackUp_path + ".verbose.txt"))
 
     return conf_dir
 
@@ -210,9 +227,9 @@ def CreateFolders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/"):
     if not os.path.exists(os.path.dirname(DS9_BackUp_path) + "/tmp"):
         os.makedirs(os.path.dirname(DS9_BackUp_path) + "/tmp")
     if not os.path.exists(DS9_BackUp_path + ".verbose.txt"):
-        os.system("echo 1 > %s" % (DS9_BackUp_path + ".verbose.txt"))
-    # if not os.path.exists(DS9_BackUp_path + ".message.txt"):
-    #     os.system("echo 1 > %s" % (DS9_BackUp_path + ".message.txt"))
+        os.system("echo 0 > %s" % (DS9_BackUp_path + ".verbose.txt"))
+    if not os.path.exists(DS9_BackUp_path + ".message.txt"):
+        os.system("echo 1 > %s" % (DS9_BackUp_path + ".message.txt"))
     return DS9_BackUp_path
 
 
@@ -220,10 +237,10 @@ if len(sys.argv) == 1:
     CreateFolders()
 
 #Do not chnage order
-if sys.stdin is not None:
-    verbose(xpapoint=None, verbose=1)
-else:
-    verbose(xpapoint=None, verbose=0)
+# if sys.stdin is not None:
+#     verbose(xpapoint=None, verbose=0)
+# else:
+#     verbose(xpapoint=None, verbose=0)
 message_ = bool(int(os.popen("cat %s.message.txt" % (DS9_BackUp_path)).read()))
 verbose_ = bool(int(os.popen("cat %s.verbose.txt" % (DS9_BackUp_path)).read()))
 
@@ -311,31 +328,6 @@ def get(d, sentence, exit_=True):
         return path
 
 
-def License(limit_date=20210425, l0="whoareyou"):
-    """Ask for license to DS9 plugin user"""
-    import numpy as np
-    today = int(datetime.date.today().strftime("%Y%m%d"))
-    path = DS9_BackUp_path + ".npy"
-    if os.path.exists(path) is False:
-        np.save(path, "00")
-    license_ = np.load(path)
-    if ((today > limit_date) & (str(license_) != l0)) or (today > limit_date + 10000):
-        d = DS9n(sys.argv[1])
-        l = get(d, "This is a trial version. We hope you enjoyed pyds9plugin. Please buy a license at https://people.lam.fr/picouet.vincent/pyds9plugin/ or enter your license key here:", exit_=False)
-        if l == l0:
-            np.save(path, l)
-            d.set("analysis message {Thanks for activating pyds9 plugin! Enjoy your time using it!}")
-        else:
-            d.set("analysis message {Your license key is not valid. Verify it or contact the support if you did buy a license.}")
-            sys.exit()
-        return
-    else:
-        return
-
-
-if len(sys.argv) > 2:
-    License()
-
 
 def compute_fluctuation(
     xpapoint=None, fileOutName=None, ext=1, ext_seg=1, mag_zp=None, sub=None, aper_size=10, verbose=False, plot=False, seg=None, type="image", nomemmap=False, argv=[]):
@@ -345,7 +337,7 @@ def compute_fluctuation(
     parser.add_argument('-a', '--aperture',    default='5,10,15', help='Aperture radius in pixels', type=str)#metavar='',
     parser.add_argument('-n', '--number_apertures',    default='1000', help='Number of apertures to throw in the image', type=str,metavar='')#metavar='',
     args = parser.parse_args_modif(argv)
-    d = DS9n(xpapoint)
+    d = DS9n(args.xpapoint)
     fileInName = getfilename(d)
 
     mag_zp = 30
@@ -735,7 +727,6 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
     """Load the plugin in DS9 parameter file
     """
     from shutil import which
-
     d = DS9n()
     try:
         AnsDS9path = resource_filename("pyds9plugin", "QuickLookPlugIn.ds9.ans")
@@ -747,20 +738,22 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
         new_file = os.path.join(os.path.dirname(AnsDS9path), "DS9Utils")
         symlink_force(which("DS9Utils"), new_file)
         print("DS9 analysis file = ", AnsDS9path)
-
         if len(glob.glob(os.path.join(os.environ["HOME"], ".ds9/*"))) > 0:
             for file in glob.glob(os.path.join(os.environ["HOME"], ".ds9", "*")):
                 if AnsDS9path not in open(file).read():
 # sinput("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n"%(os.path.basename(file)))
-                    var = input("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n"%(os.path.basename(file)))#= "y"
-                    if var.lower() != "n":
-                        ReplaceStringInFile(path=file, string1="user4 {}", string2="user4 {%s}" % (AnsDS9path))
-                        print(bcolors.BLACK_GREEN + """Plug-in added""" + bcolors.END)
+                    if "user4 {}"in open(file).read():
+                        var = input("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n:"%(os.path.basename(file)))#= "y"
+                        if var.lower() != "n":
+                            ReplaceStringInFile(path=file, string1="user4 {}", string2="user4 {%s}" % (AnsDS9path))
+                            print(bcolors.BLACK_GREEN + """Plug-in added""" + bcolors.END)
+                        else:
+                           print(bcolors.BLACK_RED + 'To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n' + AnsDS9path + bcolors.END);sys.exit()
                     else:
-                       print(bcolors.BLACK_RED + 'To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n' + AnsDS9path + bcolors.END);sys.exit()
+                       print(bcolors.BLACK_RED + 'You already have an analysis file here. To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n' + AnsDS9path + bcolors.END);sys.exit()
 
         else:
-            d = DS9n()
+            # d = DS9n()
             d.set("analysis message {In order to add the plugin to DS9 go to Preferences-Analysis, paste the path that is going to appear. Click on auto-load and save the preferences.}")
             d.set("analysis text {%s}" % (AnsDS9path))
             print(bcolors.BLACK_RED + "To use DS9Utils, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n" + AnsDS9path + bcolors.END)
@@ -4276,7 +4269,6 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
     # gaussian and a size-free box and plot it (see figure 11).
     # In both cases it will return the computed center of the spot and print a new region with the computed
     # center. It will also give the characteristics of the spot.
-    import matplotlib
     import numpy as np
     parser = CreateParser(get_name_doc(),path=False)
     parser.add_argument('-m', '--method',    default='1', help='', type=str, choices=['Maximum','Center-of-mass','2x1D-Gaussian-fitting','2D-Gaussian-fitting'])#metavar='',
@@ -4285,8 +4277,6 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
 
     method, bck = args.method, args.background_removal
 
-    matplotlib.use("TkAgg")
-    import matplotlib.pyplot as plt
     from photutils import centroid_com, centroid_1dg, centroid_2dg
 
     from scipy.optimize import curve_fit
@@ -4339,6 +4329,9 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
                 [newCenterx - 1], [newCentery - 1], radius=[region.w, region.h], save=True, savename="/tmp/centers", form=["box"], color=["white"], ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]]
             )
             d.set("regions /tmp/centers.reg")
+            import matplotlib
+            matplotlib.use("TkAgg")
+            import matplotlib.pyplot as plt
 
             fig, axes = plt.subplots(2, 1, sharex=True)  # , figsize=(8,6))
             axes[0].plot(x, imagex, "bo", label="Spatial direction")
@@ -5191,6 +5184,7 @@ def Parallelize(function=lambda x: print(x), action_to_paralize=[], parameters=[
     """
     from tqdm import tqdm
     from multiprocessing import Process, Manager
+    from pyds9plugin.BasicFunctions import RunFunction
 
     info = [action_to_paralize[x : x + int(number_of_thread)] for x in range(0, len(action_to_paralize), int(number_of_thread))]
     for i in tqdm(range(len(info))):
@@ -5931,7 +5925,7 @@ def background_estimation(xpapoint=None, n=2, DS9backUp=DS9_BackUp_path, Plot=Tr
     """Estimate image(s) background
     """
     # from multiprocessing import Process, Manager, Pipe
-    from pyds9plugin.BasicFunctions import RunFunction
+    # from pyds9plugin.BasicFunctions import RunFunction
     import numpy as np
     parser = CreateParser(get_name_doc(),path=True)
     parser.add_argument('-s', '--sigma',    default='3', metavar='',help='', type=str)#metavar='',
@@ -9418,7 +9412,7 @@ def test_suite(xpapoint=None, argv=[]):
     Popen([" DS9Utils Button %s" % (xpapoint)], shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
     xpapoint = args.xpapoint
     d = DS9n(xpapoint)
-    verbose(xpapoint, verbose="0")
+    # verbose(xpapoint, verbose="0")
     tutorial = args.tutorial
     tutorial_number = "0"
     if tutorial == "1-Generic-Tools":

@@ -35,7 +35,7 @@ data = { "pyds9plugin": ["pyds9plugin/QuickLookPlugIn.ds9.ans","Macros/*","Macro
 
 MAJOR = '3'
 MINOR = '0'
-MICRO = '0dev7'
+MICRO = '0dev9'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 
@@ -46,6 +46,7 @@ class PostDevelopCommand(develop):
     def run(self):
         develop.run(self)
         # PUT YOUR POST-INSTALL SCRIPT HERE or CALL A FUNCTION
+        # print("\033[32mPackage installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.\x1b[0m")
         import os
         os.system('DS9Utils')
         os.system('DS9Utils LoadDS9QuickLookPlugin')
@@ -55,7 +56,7 @@ class PostInstallCommand(install):
     def run(self):
         install.run(self)
         # PUT YOUR POST-INSTALL SCRIPT HERE or CALL A FUNCTION
-        print("Package installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.")
+        # print("\033[32mPackage installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.\x1b[0m")
         import os
         os.system('DS9Utils')
         os.system('DS9Utils LoadDS9QuickLookPlugin')
@@ -84,5 +85,4 @@ def setup_package():
 
 if __name__ == '__main__':
     setup_package()
-    print("Package installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.")
-
+    print("\033[32mPackage installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.\x1b[0m")
