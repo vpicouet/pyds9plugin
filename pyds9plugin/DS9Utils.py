@@ -298,11 +298,11 @@ def verboseprint(*args, logger=logger, verbose=verbose_):  # False
     logger.critical(st)
     if bool(int(verbose)):
         print(*args)
-        if sys.stdin is None:
-            from tqdm import tqdm
-            with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}", postfix=["", dict(value="")], file=sys.stdout) as t:
-                for i in range(0):
-                    t.update()
+        # if sys.stdin is None:
+        from tqdm import tqdm
+        with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}", postfix=["", dict(value="")], file=sys.stdout) as t:
+            for i in range(0):
+                t.update()
     else:
         pass
     return
@@ -730,6 +730,7 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
     d = DS9n()
     try:
         AnsDS9path = resource_filename("pyds9plugin", "QuickLookPlugIn.ds9.ans")
+        AnsDS9path_old = resource_filename("pyds9plugin", "QuickLookPlugIn_DS9<8.2.ds9.ans")
         help_path = resource_filename("pyds9plugin", "doc/ref/index.html")
     except:
         # sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
@@ -738,20 +739,31 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
         new_file = os.path.join(os.path.dirname(AnsDS9path), "DS9Utils")
         symlink_force(which("DS9Utils"), new_file)
         print("DS9 analysis file = ", AnsDS9path)
-        if len(glob.glob(os.path.join(os.environ["HOME"], ".ds9/*"))) > 0:
-            for file in glob.glob(os.path.join(os.environ["HOME"], ".ds9", "*")):
-                if AnsDS9path not in open(file).read():
+        print("DS9 (version <8.2) analysis file = ", AnsDS9path_old)
+        if len(glob.glob(os.path.join(os.environ["HOME"], ".ds9/ds9*.prf"))) > 0:
+            for file in glob.glob(os.path.join(os.environ["HOME"],  ".ds9", "ds9*.prf")):
+                # print(file)
+                if 'QuickLookPlugIn' not in open(file).read():
 # sinput("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n"%(os.path.basename(file)))
-                    if "user4 {}"in open(file).read():
+                    if "user4 {}" not in open(file).read():
+                        if float('.'.join(os.path.basename(file).split('.')[1:-1]))>8.1:
+                            print(bcolors.BLACK_RED + file +  ' : You already have an analysis file here. To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n' + AnsDS9path + bcolors.END)#;sys.exit()
+                        else:
+                            print(bcolors.BLACK_RED + file +  ' : You already have an analysis file here. To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n' + AnsDS9path_old + bcolors.END)#;sys.exit()
+
+                    else:
                         var = input("Do you want to add the Quick Look plug-in to the DS9 %s files? [y]/n:"%(os.path.basename(file)))#= "y"
                         if var.lower() != "n":
-                            ReplaceStringInFile(path=file, string1="user4 {}", string2="user4 {%s}" % (AnsDS9path))
+                            if float('.'.join(os.path.basename(file).split('.')[1:-1]))>8.1:
+                                ReplaceStringInFile(path=file, string1="user4 {}", string2="user4 {%s}" % (AnsDS9path))
+                            else:
+                                ReplaceStringInFile(path=file, string1="user4 {}", string2="user4 {%s}" % (AnsDS9path_old))
                             print(bcolors.BLACK_GREEN + """Plug-in added""" + bcolors.END)
                         else:
                            print(bcolors.BLACK_RED + 'To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n' + AnsDS9path + bcolors.END);sys.exit()
-                    else:
-                       print(bcolors.BLACK_RED + 'You already have an analysis file here. To use the Quick Look plug-in, add the following file in the DS9 Preferences->Analysis menu And switch on Autoload:  \n' + AnsDS9path + bcolors.END);sys.exit()
-
+                           print(bcolors.BLACK_RED + 'For DS9 versions < 8.2 please use:  \n' + AnsDS9path_old + bcolors.END);sys.exit()
+                else:
+                    print(file + ' : Analysis file already in preferences')
         else:
             # d = DS9n()
             d.set("analysis message {In order to add the plugin to DS9 go to Preferences-Analysis, paste the path that is going to appear. Click on auto-load and save the preferences.}")
@@ -764,9 +776,11 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
         symlink_force(which("DS9Utils"), os.path.join(os.path.dirname(AnsDS9path), "DS9Utils"))
 
     if "file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html" in open(AnsDS9path).read():
+        ReplaceStringInFile(path=AnsDS9path, string1="file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html", string2="file:%s" % (help_path))
+    if "file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html" in open(AnsDS9path_old).read():
+        ReplaceStringInFile(path=AnsDS9path_old, string1="file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html", string2="file:%s" % (help_path))
         #        var = input("Are you sure you want to modify %s with this: %s? [y]/n"%(AnsDS9path,'file:%s'%(help_path)))
         #        if  var.lower() != 'n':
-        ReplaceStringInFile(path=AnsDS9path, string1="file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html", string2="file:%s" % (help_path))
 
     # if ds9_targets() is not None:
     #     if AnsDS9path in open(os.path.join(os.environ["HOME"], ".ds9/%s.prf" % (d.get("version").replace(" ", ".")))).read():
@@ -810,7 +824,7 @@ def PresentPlugIn():
             visit https://people.lam.fr/picouet.vincent/pyds9plugin
             for more information:
 
-            DS9 Quick Look Plug-in comes with ABSOLUTELY NO WARRANTY
+            For better experience use last version of DS9 (>8.1)
 
             To use it run:
             > DS9Utils LoadDS9QuickLookPlugin
@@ -859,6 +873,13 @@ def setup(xpapoint=None, config=my_conf, color="cool",argv=[]):
     Xinf, Xsup, Yinf, Ysup = image_area
     # verboseprint(Xinf, Xsup, Yinf, Ysup)
     from astropy.io import fits
+    # from tqdm import tqdm
+    # with tqdm(total=1, bar_format="{postfix[0]} {postfix[1][value]:>s}", postfix=["", dict(value="")], file=sys.stdout) as t:
+    #     for i in range(10):
+    #         time.sleep(0.1)
+    #         t.update()
+    #         print(1)
+
 
     try:
         fitsimage = fits.open(getfilename(d))
@@ -875,6 +896,7 @@ def setup(xpapoint=None, config=my_conf, color="cool",argv=[]):
         d.set("cmap %s ; scale %s ; scale limits %0.3f %0.3f " % (args.color, args.scale, np.nanpercentile(image_ok, cuts[0]), np.nanpercentile(image_ok, cuts[1])))
     except ValueError:
         d.set("cmap %s ; scale %s " % (args.color, args.scale))
+
     return
 
 
@@ -891,9 +913,7 @@ def organize_files(xpapoint=None, cat=None, number=2, dpath=DS9_BackUp_path + "s
     parser.add_argument('-a', '--arange',    default='Directory', help='Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2', type=str,metavar='')#, choices=['image','none','wcs'])#metavar='',
     parser.add_argument('-n', '--number',    default='all', help='Number of same files to take', type=str,metavar='')#, choices=['image','none','wcs'])#metavar='',
     args = parser.parse_args_modif(argv)
-
     d = DS9n(args.xpapoint)
-
     #cat_path, number, fields, query = sys.argv[-4:]
     cat_path, number, fields, query = args.path, args.number, args.arange, args.selection
     if number == "all":
@@ -1163,7 +1183,7 @@ def PlotFit1D(
             l = ax1.plot(xp, zp, **kwargs)#ls, label=name, c=c)
             ax2.plot(x, y - zz, fmt, **kwargs)#label=name, c=c)
             ax2.set_xlim(ax1.get_xlim())
-            ax2.plot([-1e100, 1e100], [0, 0], ls, c=c)
+            ax2.plot([-1e100, 1e100], [0, 0], **kwargs)#ls, c=c)
             ax1.grid(linestyle="dotted")
             ax2.grid(linestyle="dotted")
             ax1.legend()
@@ -1583,9 +1603,9 @@ def fit_gaussian_2d(xpapoint=None, Plot=True, n=300, cmap="twilight_shifted", ar
         fit.points = foo.points
         fit["z"] = image.ravel()
         fit.dimensions = [image.shape[1], image.shape[0], 1]
-        p1 = p.add_mesh(fit, opacity=0.7, nan_opacity=0, use_transparency=False, name="3D plot, FLUX = %0.1f" % (fluxes[0]), flip_scalars=True, stitle="Value", scalars=z.flatten() + image.flatten())  # y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+        p1 = p.add_mesh(fit, opacity=0.7, nan_opacity=0, use_transparency=False, name="3D plot, FLUX = %0.1f" % (fluxes[0]), flip_scalars=True, scalar_bar_args={'title': 'Value'}, scalars=z.flatten() + image.flatten())  # y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
         p2 = p.add_mesh(
-            data_mesh, scalars=z.flatten() + image.flatten(), opacity=1 - 0.7, nan_opacity=0, use_transparency=False, flip_scalars=True, stitle="Value"
+            data_mesh, scalars=z.flatten() + image.flatten(), opacity=1 - 0.7, nan_opacity=0, use_transparency=False, flip_scalars=True,  scalar_bar_args={'title': 'Value'}
         )  # y=True, opacity=0.3,,pickable=True)
         p.add_text(
             "Gaussian fit: F = %0.0f, FWHMs = %0.1f, %0.1f, angle=%0.0fd" % (2 * np.pi * popt[3] * popt[4] * popt[0], popt[3], popt[4], (180 * popt[5] / np.pi) % 180),
@@ -2570,7 +2590,7 @@ def PyvistaThoughfocus(a):
     p = Plotter(notebook=False, window_size=[1500, 1600], line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title="Throughfocus")
     value = a["VIGNET1"][0].shape[0]
     mesh = CreateMesh(a["VIGNET1"][0], value=value)
-    p.add_mesh(mesh, scalars=a["VIGNET1"][0], opacity=0.9, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, stitle="Value", show_scalar_bar=True)  # , cmap='jet')
+    p.add_mesh(mesh, scalars=a["VIGNET1"][0], opacity=0.9, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, scalar_bar_args={'title': 'Value'}, show_scalar_bar=True)  # , cmap='jet')
     dict_ = {"smooth": "VIGNET1", "number": 0}
     # p.show()
     labels = list(np.arange(len(a)) + 1)
@@ -3015,14 +3035,13 @@ def PlotArea3DColor(d):
         nan_opacity=0,
         use_transparency=False,
         name="Data2",
-        flip_scalars=True,
-        stitle="Value",
+        flip_scalars=True,scalar_bar_args={'title': 'Value'},
         cmap=cm.get_cmap("Blues_r", 128),
         show_scalar_bar=False,
     )  # _transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
     zr = -np.nanmax(mesh_green.points[:, 2]) + ((data_red - np.nanmin(data_red[np.isfinite(data_red)])) * value)
     red = p.add_mesh(
-        mesh_red, scalars=data_red.ravel(), opacity=0.7, nan_opacity=0, use_transparency=False, name="Data3", flip_scalars=True, stitle="Value", cmap=cm.get_cmap("Reds_r", 128), show_scalar_bar=False
+        mesh_red, scalars=data_red.ravel(), opacity=0.7, nan_opacity=0, use_transparency=False, name="Data3", flip_scalars=True, scalar_bar_args={'title': 'Value'}, cmap=cm.get_cmap("Reds_r", 128), show_scalar_bar=False
     )  # ,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
     return blue, red
 
@@ -3119,7 +3138,7 @@ def analyze_fwhm(xpapoint, argv=[]):
     fit.points = foo.points
     fit["z"] = z.ravel()
     fit.dimensions = [image.shape[1], image.shape[0], 1]
-    p2 = p.add_mesh(data_mesh, opacity=1 - 0.7, nan_opacity=0, use_transparency=False, flip_scalars=True, stitle="Value", show_scalar_bar=False)  # y=True, opacity=0.3,,pickable=True)
+    p2 = p.add_mesh(data_mesh, opacity=1 - 0.7, nan_opacity=0, use_transparency=False, flip_scalars=True, scalar_bar_args={'title': 'Value'}, show_scalar_bar=False)  # y=True, opacity=0.3,,pickable=True)
     p1 = p.add_mesh(
         fit,
         cmap="Greys_r",
@@ -3128,8 +3147,7 @@ def analyze_fwhm(xpapoint, argv=[]):
         nan_opacity=0,
         use_transparency=False,
         name="3D plot, FLUX = %0.1f" % (fluxes[0]),
-        flip_scalars=True,
-        stitle="Value",
+        flip_scalars=True, scalar_bar_args={'title': 'Value'},
         show_scalar_bar=False,
     )  ##y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
     global args
@@ -3245,7 +3263,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             range_ = [np.nanpercentile(data, 30), np.nanpercentile(data, 99)]
             scalars = data.flatten()
             # p.add_mesh(mesh, clim=range_, scalars=scalars, opacity=0.7, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, stitle="Value")
-            p.add_mesh(mesh, rng=range_, scalars=scalars, opacity=0.7, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, stitle="Value")
+            p.add_mesh(mesh, rng=range_, scalars=scalars, opacity=0.7, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, scalar_bar_args={'title': 'Value'})
             # ,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
             contours = mesh.contour()
             contours_c = mesh_c.contour()
@@ -3357,7 +3375,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
         p = Plotter(notebook=False, window_size=[2000, 1500], line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title="3D", shape=(rows, cols))
         for i, data in enumerate(datas):
             p.subplot(int(i / cols), i % cols)  # data.flatten()
-            p.add_mesh(CreateMesh(data, value=value), scalars=None, opacity=0.9, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, stitle="Value", show_scalar_bar=False)
+            p.add_mesh(CreateMesh(data, value=value), scalars=None, opacity=0.9, nan_opacity=0, use_transparency=False, name="Data", flip_scalars=True, scalar_bar_args={'title': 'Value'}, show_scalar_bar=False)
             p.link_views()
             p.add_axes()
         p.show()
@@ -3481,7 +3499,7 @@ def throw_apertures(xpapoint=None, argv=[]):
     return
 
 
-def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, overwrite=False):
+def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, overwrite=False,d=FakeDS9()):
     """Combine two images and an evaluable expression
     """
     from scipy.ndimage import grey_dilation, grey_erosion, gaussian_filter, median_filter, sobel, binary_propagation, binary_opening, binary_closing, label
@@ -3502,7 +3520,9 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
         filename = "/tmp/image.fits"
         fitsimage = fits.open(resource_filename("pyds9plugin", "Images/stack18446524.fits"))[0]
     ds9 = fitsimage.data
+    # ds9_old = fitsimage.data.copy()
     header = fitsimage.header
+    # header_old = fitsimage.header
     if os.path.isfile(path2remove) is False:
         if "image" in exp:
             d = DS9n()
@@ -3513,6 +3533,7 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
         fitsimage2 = fits.open(path2remove)[ext]
         image = fitsimage2.data
     ds9 = np.array(ds9, dtype=float)
+
     ldict = {
         "ds9": ds9,
         "header": header,
@@ -3534,7 +3555,7 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
         "correlate2d":correlate2d,
         "interpolate_replace_nans":interpolate_replace_nans,
         "Gaussian2DKernel":Gaussian2DKernel,
-        # "d":d,
+        "d":d,
     }
 
     try:
@@ -3581,29 +3602,32 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
             * which you want to sun the command! """, verbose="1")
         sys.exit()
     ds9 = ldict["ds9"]
-    # verboseprint(ds9)
-    fitsimage.data = ds9
-    fitsimage.header = header
-    if (ds9.astype(int) == ds9).all():
-        fitsimage.data = np.int16(fitsimage.data)
-        fitsimage.header["BITPIX"] = 16
-    if overwrite is False:
-        name = filename[:-5] + "_modified.fits"
+    if (fitsimage.data == ds9).all() & (fitsimage.header == header):
+        return None, filename
     else:
-        name = filename
-    fitsimage.header["DS9"] = filename
-    fitsimage.header["IMAGE"] = path2remove
-    try:
-        fitsimage.header["COMMAND"] = exp
-    except ValueError as e:
-        verboseprint(e)
-        verboseprint(len(exp))
-        fitsimage.header.remove("COMMAND")
-    try:
-        fitsimage.writeto(name, overwrite=True)
-    except RuntimeError:
-        fitswrite(ds9, name)
-    return fitsimage.data, name
+        fitsimage.data = ds9
+        fitsimage.header = header
+        if (ds9.astype(int) == ds9).all():
+            fitsimage.data = np.int16(fitsimage.data)
+            fitsimage.header["BITPIX"] = 16
+        if overwrite is False:
+            name = filename[:-5] + "_modified.fits"
+        else:
+            name = filename
+        fitsimage.header["DS9"] = filename
+        fitsimage.header["IMAGE"] = path2remove
+        try:
+            fitsimage.header["COMMAND"] = exp
+        except ValueError as e:
+            verboseprint(e)
+            verboseprint(len(exp))
+            fitsimage.header.remove("COMMAND")
+        try:
+            fitsimage.writeto(name, overwrite=True)
+        except RuntimeError:
+            fitswrite(ds9, name)
+        return fitsimage.data, name
+
 
 
 def fitswrite(fitsimage, filename, verbose=True, config=my_conf, header=None):
@@ -6617,7 +6641,7 @@ def fit_ds9_plot(xpapoint=None, config=my_conf, exp=False, double_exp=False, dou
     parser.add_argument('-g', '--gaussians',    default=1, help='Number of gaussian features to fit', metavar='',type=str, choices=['0','1','2','3','4','5'])
     parser.add_argument('-m', '--moffats',    default=1, help='Number of moffats features to fit', metavar='',type=str, choices=['0','1','2','3','4','5'])
     parser.add_argument('-v', '--voights',    default=1, help='Number of voights features to fit', metavar='',type=str, choices=['0','1','2','3','4','5'])
-    parser.add_argument('-o', '--other_features',    default=1, help='Other features to fit', metavar='',type=str, choices=['None','EMCCD_Histogram','Black_Body','Schechter','Double-Schechter'])
+    parser.add_argument('-o', '--other_features',    default=1, help='Other features to fit', metavar='',type=str, choices=['None','EMCCD_Histogram','Black_Body','Schechter','Double-Schechter','User-defined'])
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
@@ -6696,39 +6720,39 @@ def fit_ds9_plot(xpapoint=None, config=my_conf, exp=False, double_exp=False, dou
         log = True
 
     # verboseprint("Using general fit new")
-    gui = GeneralFit_new(
-        x,
-        y,
-        nb_gaussians=int(nb_gaussians),
-        nb_moffats=int(nb_moffats),
-        background=int(bckgd),
-        nb_voigt1D=int(nb_voigt1D),
-        nb_sinusoid1D=int(nb_sinusoid),
-        exp=exp,
-        log=log,
-        EMCCD_=EMCCD_,
-        nb_blackbody=nb_blackbody,
-        double_exp=double_exp,
-        marker=".",
-        linestyle="dotted",
-        linewidth=1,
-        double_schechter=double_schechter,
-        schechter=schechter,
-    )
+    if args.other_features == 'User-defined':
+        gui = InteractivManualFitting(x, y, initial="a*median(ydata)+b*ptp(ydata)*exp(-(x-c*x[argmax(ydata)])**2/len(ydata)/d)")
+    else:
+        gui = GeneralFit_new(
+            x,
+            y,
+            nb_gaussians=int(nb_gaussians),
+            nb_moffats=int(nb_moffats),
+            background=int(bckgd),
+            nb_voigt1D=int(nb_voigt1D),
+            nb_sinusoid1D=int(nb_sinusoid),
+            exp=exp,
+            log=log,
+            EMCCD_=EMCCD_,
+            nb_blackbody=nb_blackbody,
+            double_exp=double_exp,
+            marker=".",
+            linestyle="dotted",
+            linewidth=1,
+            double_schechter=double_schechter,
+            schechter=schechter)
+
     # import matplotlib.pyplot as plt
     rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor="None")
-
     for edge in "left", "right", "top", "bottom":
         rax.spines[edge].set_visible(False)
     scale = CheckButtons(rax, ["log"])
-
     def scalefunc(label):
         if gui.ax.get_yscale() == "linear":
             gui.ax.set_yscale("log")
         elif gui.ax.get_yscale() == "log":
             gui.ax.set_yscale("linear")
         gui.figure.canvas.draw_idle()
-
     scale.on_clicked(scalefunc)
     gui.ax.set_title(os.path.basename(getfilename(d)))
     plt.show()
@@ -9384,7 +9408,7 @@ After a function has run you can run it again with different parameters
 by launching it from the Analysis menu [always explicited under function's name]
 
 [Next]: When you followed the instruction and I write [Next] please click on the
-        Button so that you go to the next function.
+Next Button (or hit N on the  DS9 window) so that you go to the next function.
 
                  Please [Next]""", verbose="1")
     WaitForN(xpapoint)
@@ -9462,8 +9486,8 @@ def python_command(xpapoint=None,argv=[]):
             fitswrite(fitsimage, "/tmp/image.fits")
         except TypeError:
             pass
-    result, name = Parallelize(function=ExecCommand, parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite], action_to_paralize=path, number_of_thread=args.number_processors)
-    if len(path) < 2:
+    result, name = Parallelize(function=ExecCommand, parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite,d], action_to_paralize=path, number_of_thread=args.number_processors)
+    if (len(path) < 2) & (result is not None):
         d.set("frame new ; tile yes ; file " + name)
     return
 
@@ -9496,7 +9520,7 @@ def Button(xpapoint=None):
         @pyqtSlot()  # <--- add this line
         def handleButtonNext(self):
             self.d.set("nan grey")
-            verboseprint("Button Clicked!")
+            # verboseprint("Button Clicked!")
             # verboseprint(self.d)
 
         @pyqtSlot()  # <--- add this line

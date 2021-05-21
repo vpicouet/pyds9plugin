@@ -35,7 +35,7 @@ data = { "pyds9plugin": ["pyds9plugin/QuickLookPlugIn.ds9.ans","Macros/*","Macro
 
 MAJOR = '3'
 MINOR = '0'
-MICRO = '1dev2'
+MICRO = '1dev5'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 

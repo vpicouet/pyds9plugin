@@ -136,11 +136,11 @@ hmenu 1. Generic Functions
 
 	endhmenu
 
-
+	#
 	# hmenu Regions
 	#
 	#
-	#
+	# 
 	# 	Import Regions From Catalog
 	# 	*
 	# 	menu
@@ -344,12 +344,12 @@ hmenu 2. Instrumentation - AIT
 	#endhmenu
 
 
-
+	#
 	# Column Line Correlation
 	# *
 	# menu
 	# DS9Utils column_line_correlation -x $xpa_method  | $text
-
+	#
 
 #	Guidance
 #	*
@@ -652,14 +652,11 @@ DS9Utils -x $xpa_method compute_fluctuation $param(ComputeFluctuation) -n $Numbe
 
 
 param MaxiMask
-tab {General}
 prob checkbox {PROBA THRESH} 0 {}
 size entry {BATCH SIZE} 8 {}
 single checkbox {SINGLE MASK} 0 {}
 net entry {NET PATH} 0 {}
-endtab
 
-tab {Flags}
 F1 checkbox {Cosmic Rays} 0 {}
 F2 checkbox {Hot Columns/Lines} 0 {}
 F3 checkbox {Dead Columns/Lines/Clusters} 0 {}
@@ -674,9 +671,7 @@ F_11 checkbox {diffraction SPikes} 0 {}
 F_12 checkbox {OVerscanned pixels} 0 {}
 F_13 checkbox {Bright BackGround pixel} 0 {}
 F_14 checkbox {Background} 0 {}
-endtab
 
-tab {Priors}
 P1  entry {Cosmic Rays} 0.0007 {}
 P2  entry {Hot Columns/Lines} 0.0008 {}
 P3  entry {Dead Columns/Lines/Clusters} 0.0080 {}
@@ -691,9 +686,7 @@ P_11 entry {diffraction SPikes} 0.013 {}
 P_12 entry {OVerscanned pixels} 0.005 {}
 P_13 entry {Bright BackGround pixel} 0.07 {}
 P_14 entry {Background} 0.90 {}
-endtab
 
-tab {Thresholds}
 T1  entry {Cosmic Rays} 0.51 {}
 T2  entry {Hot Columns/Lines} 0.52 {}
 T3  entry {Dead Columns/Lines/Clusters} 0.50 {}
@@ -708,7 +701,6 @@ T_11 entry {diffraction SPikes} 0.41 {}
 T_12 entry {OVerscanned pixels} 0.37 {}
 T_13 entry {Bright BackGround pixel} 0.49 {}
 T_14 entry {Background} 0.33 {}
-endtab
 
 
 endparam
@@ -837,7 +829,6 @@ endparam
 
 
 param SWARP
-tab {CO-ADDITION}
 PATH open {PATHS} $filename {Path of the images you want to stack, use glob syntax with ? and *.}
 #BACK_DEFAULT entry {BACK_DEFAULT} 0.0 {Default background value to be subtracted in BACK TYPE MANUAL mode.}
 IMAGEOUT_NAME entry {IMAGEOUT_NAME} $filename_coadd.fits {Name of the output image file}
@@ -852,8 +843,6 @@ COMBINE_TYPE menu {COMBINE_TYPE} MEDIAN|AVERAGE|MIN|MAX|WEIGHTED|CHI2|CHI-MEAN|S
 CLIP_AMPFRAC entry {CLIP_AMPFRAC} 0.3 {Fraction of flux variation allowed with clipping}
 CLIP_SIGMA entry {CLIP_SIGMA} 4.0 {error multiple variation allowed with clipping}
 
-endtab
-tab {ASTROMETRY}
 
 CELESTIAL_TYPE menu {CELESTIAL_TYPE} NATIVE|PIXEL|EQUATORIAL|GALACTIC|ECLIPTIC {Celestial coordinate system in output}
 PROJECTION_TYPE menu {PROJECTION_TYPE} TAN|AZP|STG|SIN|ARC|ZPN|ZEA|AIR|CYP|CEA|CAR|MER|COP|COE|COD|COO|BON|PCO|GLS|PAR|MOL|AIT|TSC|CSC|QSC {Projection system used in output, in standard WCS notation}
@@ -865,9 +854,6 @@ PIXELSCALE_TYPE menu {PIXELSCALE_TYPE} MEDIAN|MIN|MAX|MANUAL|FIT {Tells SWarp ho
 PIXEL_SCALE entry {PIXEL_SCALE} 0.0 {Step between pixels in each dimension in PIXELSCALE_TYPE MANUAL mode. Must be expressed in arcseconds for angular coordinates.}
 IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE TYPE MANUAL or FIT mode. 0 means automatic}
 
-endtab
-
-tab {RESAMP. & BACKGROUND}
 RE-SAMPLING checkbox {RE-SAMPLING} 1 {Resample input images ?}
 RESAMPLING_TYPE menu {RESAMPLING_TYPE} LANCZOS3|NEAREST|BILINEAR|LANCZOS2|LANCZOS4 {Image resampling method}
 OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0 means automatic.}
@@ -877,8 +863,6 @@ SUBTRACT_BACK checkbox {SUBTRACT_BACK} 1 {Subtraction sky background ?}
 BACK_SIZE entry {BACK_SIZE} 128 {Size in pixels of a background mesh.}
 BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Size in background meshes of the background-filtering mask.}
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Difference threshold (in ADUs) for the background-filtering}
-
-endtab
 
 #COMBINE_BUFSIZE entry {COMBINE_BUFSIZE} 256 {Maximum amount of buffer memory (in MB) used for the co-addition process.}
 #COPY_KEYWORDS entry {COPY_KEYWORDS} OBJECT {Coma-separated list of FITS keywords that will be propagated from the input FITS headers to the coadded and resampled image headers.}
@@ -1305,7 +1289,6 @@ endparam
 
 
 param SEXTRACTOR
-tab {Basic Params}
 DETECTION_IMAGE open {DETECTION_IMAGE} "" {Image to use for detection of the sources. If - using same than photometric image, eg. DS9 frame}
 CATALOG_NAME save {CATALOG_NAME} "" {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
@@ -1317,8 +1300,6 @@ DETECT_MINAREA entry {DETECT_MINAREA} 10 {}
 THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
 DETECT_THRESH entry {DETECT_THRESH} 0.8 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
 ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
-endtab
-tab {Filter Params}
 
 FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
 FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|NONE|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
@@ -1336,8 +1317,6 @@ WEIGHT_IMAGE entry {WEIGHT_IMAGE} "" {}
 
 #FLAG_IMAGE entry {FLAG_IMAGE} - {}
 #FLAG_TYPE menu {FLAG_TYPE} MAX|MIN|? {}
-endtab
-tab {Photometry parameters}
 
 PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
 PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,4.0 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
@@ -1351,8 +1330,6 @@ PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)
 
 SEEING_FWHM entry {SEEING_FWHM} 0.8 {stellar FWHM in arcsec}
 STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
-endtab
-tab {Background parameters}
 
 BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
 BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
@@ -1377,7 +1354,6 @@ endparam
 
 param PSFex
 
-tab {PSF model}
 
 ENTRY_PATH entry {ENTRY_CAT} - {Linux path of the FITS_LDAC (!!!) entry catalogs. Can contain * and ?}
 BASIS_TYPE menu {BASIS_TYPE} PIXEL_AUTO|NONE|PIXEL|GAUSS-LAGUERRE|FILE {}
@@ -1386,10 +1362,6 @@ PSF_SAMPLING entry {PSF_SAMPLING} 1.0 {Sampling step in pixel units (0.0 = auto)
 PSF_ACCURACY entry {PSF_ACCURACY} 0.01 {Accuracy to expect from PSF "pixel" values}
 PSF_SIZE entry {PSF_SIZE} 45,45 {Image size of the PSF model}
 
-endtab
-
-tab {PSF variability}
-
 CENTER_KEYS entry {CENTER_KEYS} X_IMAGE,Y_IMAGE {Catalogue parameters for source pre-centering}
 PHOTFLUX_KEY entry {PHOTFLUX_KEY} FLUX_APER(2) {Catalogue parameter for photometric norm.}
 PHOTFLUXERR_KEY entry {PHOTFLUXERR_KEY} FLUXERR_APER(2) {Catalogue parameter for photometric error}
@@ -1397,21 +1369,12 @@ PSFVAR_KEYS entry {PSFVAR_KEYS} X_IMAGE,Y_IMAGE {Catalogue or FITS (preceded by 
 PSFVAR_GROUPS entry {PSFVAR_GROUPS} 1,1 {Group tag for each context key}
 PSFVAR_DEGREES menu {PSFVAR_DEGREES} 0|1|2|3|4 {Polynom degree for each group}
 
-endtab
-
-tab {Sample selection}
-
 SAMPLE_AUTOSELECT checkbox {SAMPLE_AUTOSELECT} 1 {Automatically select the FWHM?}
 SAMPLEVAR_TYPE menu {SAMPLEVAR_TYPE} SEEING|NONE {File-to-file PSF variability}
 SAMPLE_FWHMRANGE entry {SAMPLE_FWHMRANGE} 2.0,10.0 {Allowed FWHM range}
 SAMPLE_VARIABILITY entry {SAMPLE_VARIABILITY} 0.2 {Allowed FWHM variability (1.0 = 100%)}
 SAMPLE_MINSN entry {SAMPLE_MINSN} 20 {Minimum S/N for a source to be used}
 SAMPLE_MAXELLIP entry {SAMPLE_MAXELLIP} 0.3 {Maximum (A-B)/(A+B) for a source to be used}
-
-
-endtab
-
-tab {Homogeneisation & checks}
 
 HOMOBASIS_TYPE menu {HOMOBASIS_TYPE} GAUSS-LAGUERRE|NONE {GAUSS_LAGUERRE or no homogeneisation is computed}
 HOMOPSF_PARAMS entry {HOMOPSF_PARAMS} 5.3,2.5 {Moffat FWHM and B parameter of the idealized target PSF chosen for homogeneisation}
@@ -1429,7 +1392,6 @@ WRITE_XML menu {WRITE_XML} 1|0 {}
 XML_NAME entry {XML_NAME} psfex.xml {Filename for XML output}
 NTHREADS entry {NTHREADS} 2 {Number of simultaneous threads for the SMP version of PSFEx, 0 = automatic}
 Selection entry {[Selection]} - {Selection of the objetcs in th catalog: Use | for OR and \& for AND}
-endtab
 
 endparam
 
@@ -1535,10 +1497,6 @@ endparam
 
 
 param SEXTRACTOR-NEW
-
-
-tab {EXTRACTION}
-
 DETECTION_IMAGE open {DETECTION_IMAGE} "" {Image to use for detection of the sources. If none using same than photometric image, eg. DS9 frame}
 
 CATALOG_NAME save {CATALOG_NAME} "" {Name of the output catalog without extension. eg /tmp/catalog.fits, if none, saved as $filename_ds9_cat.fits}
@@ -1553,7 +1511,6 @@ THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
 DETECT_THRESH entry {DETECT_THRESH} 0.8 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
 ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
 
-
 FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
 FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|NONE|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
 
@@ -1564,12 +1521,6 @@ CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
 CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency, 0 for no cleaning}
 MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
 
-endtab
-
-
-
-tab {WEIGHTING & FLAG}
-
 
 WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
 RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 1 {Rescale input weights/variances }
@@ -1578,10 +1529,6 @@ WEIGHT_GAIN checkbox {WEIGHT_GAIN} 1 {modulate gain (E/ADU) with weights? }
 
 FLAG_IMAGE open {FLAG_IMAGE} NONE {filename for an input FLAG-image}
 FLAG_TYPE menu {FLAG_TYPE} OR|AND|MAX|MIN|MOST {flag pixel combination}
-endtab
-
-
-tab {PHOTOMETEY}
 
 PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
 PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,4.0 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
@@ -1595,19 +1542,11 @@ MAG_GAMMA entry {MAG_GAMMA} 4.0 {gamma of emulsion (for photographic scans)}
 GAIN entry {GAIN} GAIN {detector gain in e-/ADU}
 PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
 
-endtab
-
-tab {STAR/GALAXY &  CHECK.}
-
 SEEING_FWHM entry {SEEING_FWHM} 0.8 {stellar FWHM in arcsec}
 STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
 CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
 REGION_NAME menu {REGION_NAME} NUMBER|FWHM_IMAGE|MAG_AUTO|MAG_ISO|MAG_APER|MU_MAX|ELLIPTICITY|CLASS_STAR|THETA_IMAGE|ELONGATION {The name you want to display above each source on DS9}
 
-
-endtab
-
-tab {BACKGROUND}
 
 BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
 BACK_VALUE entry {BACK_VALUE} 0.0 {Default background value in MANUAL mode}
@@ -1620,14 +1559,11 @@ BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
 BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
 
-endtab
 
-tab {MEMORY & MISC.}
 MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
 MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
 MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
 #NTHREADS menu {NTHREADS} 1|2|4|8|16|32 {Number of threads for multi processing}
 
-endtab
 
 endparam

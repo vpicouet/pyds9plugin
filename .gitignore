@@ -52,3 +52,5 @@ pyds9plugin/MaxiMask-1.1/old/
 pyds9plugin/doc/ref/old/
 
 setup_cython.py
+
+pyds9plugin/Images/stack_cat.fits

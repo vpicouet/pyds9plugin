@@ -9,6 +9,7 @@
 #prune DS9functions/pyds9plugin/DS9Utils.c
 
 include pyds9plugin/QuickLookPlugIn.ds9.ans
+include pyds9plugin/QuickLookPlugIn_DS9<8.2.ds9.ans
 include pyds9plugin/Images/stack????????.fits
 include pyds9plugin/Images/stack.fits
 include pyds9plugin/Images/m33_hi.fits
