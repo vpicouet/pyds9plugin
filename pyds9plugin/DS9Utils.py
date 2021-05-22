@@ -1310,7 +1310,7 @@ def aperture_photometry(xpapoint=None, argv=[]):
     return phot
 
 
-def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=["circle"], color=["green"], ID=None, system="image", font=10, lw=1):  # of fk5
+def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test", form=["circle"], DS9_offset=[1, 1], color=["green"], ID=None, system="image", font=10, lw=1):  # of fk5
     """Returns and possibly save DS9 region (circles) around sources with a given radius
     """
     import numpy as np
@@ -1318,11 +1318,10 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
     regions = """# Region file format: DS9 version 4.1
     global color=green dashlist=8 3 width=%s font="helvetica %s normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
     %s
-    """ % (
-        lw,
-        font,
-        system,
-    )
+    """ % (lw,font,system,)
+    if system == "fk5":
+        DS9_offset = [0, 0]
+
     if (type(radius) == int) or (type(radius) == float) or (type(radius) == np.int64) or (type(radius) == np.float64):
         r, r1 = radius, radius  # np.ones(len(xim))*radius, np.ones(len(xim))*radius #radius, radius
     else:
@@ -1363,92 +1362,6 @@ def create_DS9regions(xim, yim, radius=20, more=None, save=True, savename="test"
         verboseprint(("Region file saved at: " + savename + ".reg"))
         return
 
-
-def create_DS9regions_3(xim, yim, r1=None, r2=None, more=None, save=True, savename="test", form=["circle"], color=["green"], ID=None, system="image", font=10):  # of fk5
-    """Returns and possibly save DS9 region (circles) around sources with a given radius
-    """
-
-    regions = """# Region file format: DS9 version 4.1
-    global color=green dashlist=8 3 width=1 font="helvetica %s normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
-    %s
-    """ % (
-        font,
-        system,
-    )
-
-    for i in range(len(xim)):
-        if form[i] == "box":
-            rest = "{:.4f},{:.4f})".format(r1[i], r2[i])  # r[i], r1[i]
-            rest += " # color={}".format(color[i])
-        elif form[i] == "circle":
-            rest = "{:.4f})".format(r1[i])  # [i]
-            rest += " # color={}".format(color[i])
-        regions += "{}({:.6f},{:.6f},".format(form[i], xim[i] + 0, yim[i] + 0) + rest
-        if ID is not None:
-            regions += " text={{{}}}".format(ID[i])
-        regions += "\n"
-    if save:
-        with open(savename + ".reg", "w") as text_file:
-            text_file.write(regions)
-        verboseprint(("Region file saved at: " + savename + ".reg"))
-        return
-
-
-def create_DS9regions2(xim, yim, radius=20, more=None, save=True, savename="test", text=0, form="circle", color="green", config=my_conf, DS9_offset=[1, 1], system="image"):
-    """Returns and possibly save DS9 region (circles) around sources with a given radius
-    """
-    import numpy as np
-    regions = """
-        # Region file format: DS9 version 4.1
-        global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
-        %s
-        """ % (
-        system
-    )
-    if system == "fk5":
-        DS9_offset = [0, 0]
-    if form != "ellipse":
-        if (type(radius) == int) or (type(radius) == float):
-            r1, r2 = radius, radius
-        else:
-            r1, r2 = radius
-        if form == "box":
-            rest = ",%.5f,%.5f,%.5f) # color=%s" % (r1, r2, 0, color)
-        if form == "circle":
-            rest = ",%.5f) # color=%s" % (r1, color)
-        if form == "bpanda":
-            rest = ",0,360,4,0.1,0.1,%.2f,%.2f,1,0) # color=%s" % (r1, 2 * r1, color)
-        if form == "annulus":
-            n = 10
-            radius = np.linspace(0, r1, n)
-            rest = ",%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f) # color=%s" % (
-                radius[0],
-                radius[1],
-                radius[2],
-                radius[3],
-                radius[4],
-                radius[5],
-                radius[6],
-                radius[7],
-                radius[8],
-                radius[9],
-                color,
-            )
-
-        for i, x, y in zip(np.arange(len(xim)), xim, yim):
-            if form == "# text":
-                rest = ") color=%s text={%s}" % (color, text[i])  # regions += """\ncircle({},{},{})""".format(posx, posy, radius)
-            regions += """\n%s(%.5f,%.5f""" % (form, x + DS9_offset[0], y + DS9_offset[1]) + rest
-    if form == "ellipse":
-        for i in range(len(more[0])):
-            rest = ",%.2f,%.2f,%.2f) # color=%s" % (more[0][i], more[1][i], more[2][i], color)
-            regions += """\n%s(%.2f,%.2f""" % (form, xim[i] + 1, yim[i] + 1) + rest
-
-    if save:
-        with open(savename + ".reg", "w") as text_file:
-            text_file.write("{}".format(regions))
-        verboseprint(("Region file saved at: " + savename + ".reg"))
-        return
 
 
 def getdata(xpapoint=None, Plot=False, selected=False):
@@ -3494,7 +3407,8 @@ def throw_apertures(xpapoint=None, argv=[]):
         print(area)
         areas = np.array([np.random.randint(area[2], area[3], int(args.number_apertures)), np.random.randint(area[2], area[3], int(args.number_apertures)), np.random.randint(area[0], area[1], int(args.number_apertures))]).T
 
-    create_DS9regions2(np.array(areas)[:, 2] + float(r1) / 2, np.array(areas)[:, 0] + float(r2) / 2, radius=radius, form=args.form, save=True, color="yellow", savename="/tmp/centers")
+    # create_DS9regions2(np.array(areas)[:, 2] + float(r1) / 2, np.array(areas)[:, 0] + float(r2) / 2, radius=radius, form=args.form, save=True, color="yellow", savename="/tmp/centers")
+    create_DS9regions([np.array(areas)[:, 2] + float(r1) / 2], [np.array(areas)[:, 0] + float(r2) / 2], radius=[radius], save=True, savename="/tmp/centers", form=[args.form], color=["yellow"], ID=None)
     d.set("regions /tmp/centers.reg")
     return
 
@@ -4303,10 +4217,8 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
                 os.remove("/tmp/centers.reg")
             except OSError:
                 pass
-            create_DS9regions2([newCenterx], [newCentery - 15], form="# text", save=True, color="yellow", savename="/tmp/centers", text=["%0.2f - %0.2f" % (newCenterx, newCentery)])
-            create_DS9regions(
-                [newCenterx - 1], [newCentery - 1], radius=[region.w, region.h], save=True, savename="/tmp/centers", form=["box"], color=["white"], ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]]
-            )
+            # create_DS9regions2([newCenterx], [newCentery - 15], form="# text", save=True, color="yellow", savename="/tmp/centers", text=["%0.2f - %0.2f" % (newCenterx, newCentery)])
+            create_DS9regions([newCenterx - 1], [newCentery - 1], radius=[region.w, region.h], save=True, savename="/tmp/centers", form=["box"], color=["white"], ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]])
             d.set("regions /tmp/centers.reg")
             import matplotlib
             matplotlib.use("TkAgg")
@@ -4414,9 +4326,7 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
             except OSError:
                 pass
 
-            create_DS9regions(
-                [newCenterx - 1], [newCentery - 1], radius=[region.r], save=True, savename="/tmp/centers", form=["circle"], color=["white"], ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]]
-            )
+            create_DS9regions([newCenterx - 1], [newCentery - 1], radius=[region.r], save=True, savename="/tmp/centers", form=["circle"], color=["white"], ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]])
             create_DS9regions([newCenterx], [newCentery], radius=[region.r], save=True, savename="/tmp/centers", form=["circle"], color=["white"], ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]])
             d.set("regions /tmp/centers.reg")
     return newCenterx, newCentery
@@ -4530,19 +4440,20 @@ def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, syst
 
     verboseprint(cat)
     if (ID == "") or (ID is None):
-        create_DS9regions2(cat[x], cat[y], radius=float(size), form=form, save=True, color="yellow", savename="/tmp/centers", system=system)
+        # create_DS9regions2(cat[x], cat[y], radius=float(size), form=form, save=True, color="yellow", savename="/tmp/centers", system=system)
+        create_DS9regions(
+            [cat[x]],[cat[y]],
+            radius=np.ones(len(cat)) * float(size),
+            form=[form], save=True,
+            color=["yellow"], ID=None,
+            savename="/tmp/centers", system=system)
     else:
         create_DS9regions(
-            [cat[x]],
-            [cat[y]],
+            [cat[x]],[cat[y]],
             radius=np.ones(len(cat)) * float(size),
-            form=[form],
-            save=True,
-            color=["yellow"],
-            ID=[np.round(np.array(cat[ID], dtype=float), 1)],
-            savename="/tmp/centers",
-            system=system,
-        )
+            form=[form], save=True,
+            color=["yellow"], ID=[np.round(np.array(cat[ID], dtype=float), 1)],
+            savename="/tmp/centers", system=system)
 
     # if xpapoint is not None:
     d.set("regions /tmp/centers.reg")
@@ -4877,7 +4788,8 @@ def ComputeEmGain(
     else:
         r1, r2 = radius
     if d is not None:
-        create_DS9regions2(areas[:, 2] + float(r1) / 2, areas[:, 0] + float(r2) / 2, radius=radius, form="box", save=True, color="yellow", savename="/tmp/centers")
+        # create_DS9regions2(areas[:, 2] + float(r1) / 2, areas[:, 0] + float(r2) / 2, radius=radius, form="box", save=True, color="yellow", savename="/tmp/centers")
+        create_DS9regions([areas[:, 2] + float(r1) / 2], [areas[:, 0] + float(r2) / 2], radius=[radius], save=True, savename="/tmp/centers", form=["box"], color=["yellow"], ID=None)
         d.set("regions /tmp/centers.reg")
         pass
     emgain = 0
@@ -5727,7 +5639,8 @@ def extract_sources(xpapoint=None, argv=[]):
     sources = Parallelize(function=ExtractSources, parameters=[fwhm, threshold, float(theta), float(ratio), int(ErosionDilatation),3, int(iters),int(deleteDoublons)], action_to_paralize=path, number_of_thread=args.number_processors)
 
     if len(path) < 2:
-        create_DS9regions2(sources["xcentroid"], sources["ycentroid"], radius=10, form="circle", save=True, color="yellow", savename="/tmp/centers")
+        # create_DS9regions2(sources["xcentroid"], sources["ycentroid"], radius=10, form="circle", save=True, color="yellow", savename="/tmp/centers")
+        create_DS9regions([sources["xcentroid"]], [sources["ycentroid"]], radius=[10], save=True, savename="/tmp/centers", form=["circle"], color=["yellow"], ID=None)
         d.set("region delete all ; region {}".format("/tmp/centers.reg"))
     return
 
