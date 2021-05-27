@@ -1035,8 +1035,6 @@ def PlotFit1D(
     else:
         x, y = x[np.isfinite(y)], y[np.isfinite(y)]
 
-    # x =
-
     x = np.array(x)
     y = np.array(y)
 
@@ -3471,16 +3469,27 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
         "Gaussian2DKernel":Gaussian2DKernel,
         "d":d,
     }
+    new_dict = {}
+    new_dict.update(ldict)
+    new_dict.update(globals())
 
     try:
         if os.path.isfile(exp):
             verboseprint('Executing file %s'%(exp))
-            exec(open(exp).read(), globals(), ldict)
+            # exec(open(exp).read(),globals()+ldict)#, globals(), ldict)
+            exec(open(exp).read(),new_dict)#DictFunction.update(d)
+
         else:
             verboseprint("Executing expression : %s"%(exp))
-            exec(exp, globals(), ldict)  # , locals(),locals())
+            exec(exp, new_dict)#globals(), ldict)  # , locals(),locals())
     except (SyntaxError, NameError) as e:
+        import traceback
         verboseprint(e)
+        verboseprint(traceback.format_exc())
+
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        verboseprint(exc_type, fname, exc_tb.tb_lineno)
         d = DS9n(xpapoint)
         if yesno(d, "Could not execute the command. Do you wish to see examples of one line python commands?"):
 
@@ -3515,8 +3524,9 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
             * To do so, you can write their a regular expression matching the files on
             * which you want to sun the command! """, verbose="1")
         sys.exit()
-    ds9 = ldict["ds9"]
+    ds9 = new_dict["ds9"]
     if (fitsimage.data == ds9).all() & (fitsimage.header == header):
+        verboseprint('ds9 did not change')
         return None, filename
     else:
         fitsimage.data = ds9
@@ -5637,9 +5647,13 @@ def extract_sources(xpapoint=None, argv=[]):
     #     verboseprint(filename)
     #     sources = ExtractSources(filename, fwhm=fwhm, threshold=threshold, theta=float(theta), ratio=float(ratio), n=int(ErosionDilatation), iters=int(iters), deleteDoublons=int(deleteDoublons))
     sources = Parallelize(function=ExtractSources, parameters=[fwhm, threshold, float(theta), float(ratio), int(ErosionDilatation),3, int(iters),int(deleteDoublons)], action_to_paralize=path, number_of_thread=args.number_processors)
-
+    verboseprint(sources)
+    verboseprint(sources.colnames)
     if len(path) < 2:
-        # create_DS9regions2(sources["xcentroid"], sources["ycentroid"], radius=10, form="circle", save=True, color="yellow", savename="/tmp/centers")
+        # filename = '/tmp/sources.fits'
+        # sources.write(filename)
+        # d.set('catalog import FITS %s ; catalog x xcentroid ; catalog y ycentroid ; catalog symbol shape circle  ; catalog symbol Size "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog symbol angle "$THETA_IMAGE" ; mode catalog '% (filename))
+
         create_DS9regions([sources["xcentroid"]], [sources["ycentroid"]], radius=[10], save=True, savename="/tmp/centers", form=["circle"], color=["yellow"], ID=None)
         d.set("region delete all ; region {}".format("/tmp/centers.reg"))
     return
@@ -7620,9 +7634,12 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
             verboseprint("Creating regions")
             if yesno(d, """%i sources detected! Do you want to load tthem as a catalog (<10Ksources), if not, it will be loaded as regions.""" % (len(cat_sex))):
                 try:
-                    d.set(
-                        'catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse  ; catalog symbol Size "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog symbol angle "$THETA_IMAGE" ; mode catalog '
-                        % (param_dict["CATALOG_NAME"]))
+                    if (w.is_celestial) & (np.isfinite((cat_sex["ALPHA_J2000"] + cat_sex["DELTA_J2000"] + cat_sex["B_WORLD"] + cat_sex["A_WORLD"]).data).all()):#+ cat_sex["THETA_WORLD"]
+                        d.set('catalog import FITS %s ; catalog x ALPHA_J2000 ; catalog y DELTA_J2000 ; catalog symbol shape ellipse  ; catalog symbol Size "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog symbol angle "$THETA_IMAGE" ; mode catalog '
+                            % (param_dict["CATALOG_NAME"]))
+                    else:
+                        d.set('catalog import FITS %s ; catalog x X_IMAGE ; catalog y Y_IMAGE ; catalog symbol shape ellipse  ; catalog symbol Size "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog symbol angle "$THETA_IMAGE" ; mode catalog '
+                            % (param_dict["CATALOG_NAME"]))
                         # ; catalog symbol condition  "$CLASS_STAR>0.5" ;  catalog symbol 2 color Orange ; catalog symbol width 2 ; catalog symbol width dash ; catalog symbol add;catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green; catalog symbol condition  "$CLASS_STAR<0.5" ;  catalog symbol  color Green
                 except ValueError as e:
                     verboseprint(e)
@@ -8762,7 +8779,7 @@ Centering - Aperture Photometry - SExtractor (if available)
     while getregion(d, selected=True) is None:
         d.set("analysis message {It seems that you did not create or select the region before hitting n. Please make sure to click on the region after creating it and hit n}")
         WaitForN(xpapoint)
-    d.set('analysis task  "Fit Gaussian 2D"')
+    d.set('analysis task  "Interactive 2D Gaussian Fitting"')
 
     verboseprint(
         """* Perfect!
@@ -8808,7 +8825,7 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
 #     while getregion(d, selected=True) is None:
 #         d.set("analysis message {It seems that you did not create or select the region before hitting [Next]. Please make sure to click on the region after creating it and hit n}")
 #         WaitForN(xpapoint)
-#     d.set('analysis task  "Fit Gaussian 2D"')
+#     d.set('analysis task  "Interactive 2D Gaussian Fitting"')
 #     time.sleep(2)
 #     verboseprint(
 #         """* Perfect!
@@ -9088,7 +9105,7 @@ def ImageProcessingTutorial(xpapoint=None, i=0, n=1):
         % (i, n), verbose="1")
     i += 1
 
-    d.set('analysis task "Execute Python Command "')
+    d.set('analysis task "Python Command/Macro"')
     verboseprint(
         """Well Done!
 * You also have the possibility to run a python macro. Several example Macros
@@ -9104,7 +9121,7 @@ def ImageProcessingTutorial(xpapoint=None, i=0, n=1):
 
     WaitForN(xpapoint)
 
-    d.set('analysis task "Execute Python Command "')
+    d.set('analysis task "Python Command/Macro"')
 
     verboseprint(
         """* Great!

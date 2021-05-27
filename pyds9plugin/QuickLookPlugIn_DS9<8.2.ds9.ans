@@ -140,7 +140,7 @@ hmenu 1. Generic Functions
 	# hmenu Regions
 	#
 	#
-	# 
+	#
 	# 	Import Regions From Catalog
 	# 	*
 	# 	menu
@@ -164,91 +164,41 @@ hmenu 1. Generic Functions
 
 
 
-	hmenu Image Processing
-
-
-
-		Execute Python Command #13
-		*
-		menu
-#		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-		DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
-
-		Interactive 1D Fitting On Plot
-		*
-		menu
-		DS9Utils fit_ds9_plot -x $xpa_method   $param(Background-Fit-1D); -b $background -g $gaussians -m $moffats -v $voight -o $other  | $text
-
-#		Interactive Manual Fitting
-#		*
-#		menu
-#		DS9Utils manual_fitting -x $xpa_method  | $text
-
-
-		Fit Gaussian 2D
-		*
-		menu
-		DS9Utils fit_gaussian_2d -x $xpa_method  -p 1   | $text
-		#DS9Utils fit_gaussian_2d -x $xpa_method   - 0 0   | $text
-
-		Fit Gaussian 2D
-		*
-		bind f
-		DS9Utils fit_gaussian_2d -x $xpa_method   -p 0   | $text
-		#DS9Utils fit_gaussian_2d -x $xpa_method   - 0 0   | $text
-
-
-#		2D Convolution
-#		*
-#		menu
-#		DS9Utils Convolve2d -x $xpa_method  $param(Convolution); $type $pat_c $sizex  "$path"   | $text
-
-
-
-#		Trimming
-#		*
-#		menu
-#		DS9Utils trim -x $xpa_method  | $text
-
-#		Plot 3rd Dimension From Region(s)
-#		*
-#		menu
-#		DS9Utils PlotSpectraDataCube -x $xpa_method  $param(Extract-spectra);  $smoothl   | $text
-
-	endhmenu
-
-
-
-#	hmenu Data Cubes Processing
-
-#	endhmenu
-
-
-	Open Image (O)
-	*
-	menu
-	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
 	Open Image Key
 	*
 	bind O
 	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
-#	Stack Images (s)  #20#
-#	*
-#	menu
-#	DS9Utils stack_images -x $xpa_method  $param(Stacking); $Path $stack -  $output | $text
-
-#	Stack Images key
-#	*
-#	bind s
-#	DS9Utils stack -x $xpa_method  "$entry(Number of the images to stack: first-last)" "$entry(Number of dark images first-last to stack and  subtract, press enter if no dark)"   | $text
 
 
 	Plot Region In 3D
 	*
 	menu
 	DS9Utils plot_3d -x $xpa_method  | $text
+
+
+
+	Python Command/Macro#13
+	*
+	menu
+	#		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
+	DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
+
+	Interactive 1D Fitting On Plot
+	*
+	menu
+	DS9Utils fit_ds9_plot -x $xpa_method   $param(Background-Fit-1D); -b $background -g $gaussians -m $moffats -v $voight -o $other  | $text
+
+	Interactive 2D Gaussian Fitting
+	*
+	menu
+	DS9Utils fit_gaussian_2d -x $xpa_method  -p 1   | $text
+
+	Interactive 2D Gaussian Fitting
+	*
+	bind f
+	DS9Utils fit_gaussian_2d -x $xpa_method   -p 0   | $text
 
 
 	Convert image
