@@ -35,7 +35,7 @@ data = { "pyds9plugin": ["pyds9plugin/QuickLookPlugIn.ds9.ans","Macros/*","Macro
 
 MAJOR = '3'
 MINOR = '0'
-MICRO = '1dev5'
+MICRO = '1dev6'
 version = '%s.%s%s' % (MAJOR, MINOR, MICRO)
 
 
@@ -69,7 +69,7 @@ def setup_package():
     version=version,
     license='CeCILL-B',
     install_requires = requires,
-    long_description= " A python DS9 extension for quicklook processing of astronomical images. This highly interactive extension can be generalized automatically to a set of images to turn the plug-in into a real multi-processing pipeline.",
+    long_description= long_description,#" A python DS9 extension for quicklook processing of astronomical images. This highly interactive extension can be generalized automatically to a set of images to turn the plug-in into a real multi-processing pipeline.",
     url='https://people.lam.fr/picouet.vincent/index.html',
     platforms=["Linux", "Mac OS-X", "Unix"],
     cmdclass={'install': PostInstallCommand,'develop': PostDevelopCommand},

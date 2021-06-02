@@ -421,7 +421,7 @@ hmenu 3. Astronomical Softwares
 		Subtract Background
 		*
 		menu
-		DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); -s $sigma -b $bckd -r $rms -f $filter -box $box -per $percentile -m $mask -snr $snr -n $npixels -d $dilate -p -  | $text
+		DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); -s $sigma -b $bckd -r $rms -f $filter -box $box -per $percentile -m $mask -snr $snr -n $npixels -d $dilate  | $text
 
 		Aperture photometry
 		*

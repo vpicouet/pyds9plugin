@@ -791,14 +791,24 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
     return
 
 
-def ReplaceStringInFile(path, string1, string2):
+def ReplaceStringInFile(path, string1, string2,path2=None):
     """Replaces string in a txt file"""
     fin = open(path, "rt")
     data = fin.read()
     data = data.replace(string1, string2)
     fin.close()
+    if path2 is not None:
+        path = path2
+        if os.path.exists(path):
+            os.remove(path)
+        fin = open(path, "x")
+    else:
+        # try:
+        fin = open(path, "wt")
+        # except FileNotFoundError:
+        #     fin = open(path, "x")
 
-    fin = open(path, "wt")
+    # fin = open(path, "w")
     fin.write(data)
     fin.close()
     return
@@ -866,11 +876,11 @@ def setup(xpapoint=None, config=my_conf, color="cool",argv=[]):
     # verboseprint("%s - %s - %s - %s - %s - %s" % (scale, cuts, smooth, color, invert, grid))
     cuts = np.array(args.limits.split("-"), dtype=float)
     region = getregion(d, all=False, quick=True, selected=True)
-    if region is None:
-        image_area = [0, -1, 0, -1]
-    else:
-        image_area = Lims_from_region(None, coords=region)
-    Xinf, Xsup, Yinf, Ysup = image_area
+    # if region is None:
+    #     image_area = [0, -1, 0, -1]
+    # else:
+
+    # print(Xinf, Xsup, Yinf, Ysup)
     # verboseprint(Xinf, Xsup, Yinf, Ysup)
     from astropy.io import fits
     # from tqdm import tqdm
@@ -887,14 +897,25 @@ def setup(xpapoint=None, config=my_conf, color="cool",argv=[]):
         fitsimage = d.get_pyfits()
     fitsimage = fitsimage[FitsExt(fitsimage)].data
     lx, ly = fitsimage.shape[0], fitsimage.shape[1]
-    if region is None:
-        # verboseprint("No region defined, big image, taking the center.")
+    if region is not None:
+        image_area = Lims_from_region(None, coords=region)
+        Xinf, Xsup, Yinf, Ysup = image_area
+        if (Xsup<0) | (Ysup<0):
+            image_area = [int(lx / 2), int(lx / 2) + 50, int(ly / 2), int(ly / 2) + 50]
+    else:
         image_area = [int(lx / 2), int(lx / 2) + 50, int(ly / 2), int(ly / 2) + 50]
+    Xinf, Xsup, Yinf, Ysup = image_area
+    # print(image_area)
+    # if region is None:
+    #     # verboseprint("No region defined, big image, taking the center.")
+    #     image_area = [int(lx / 2), int(lx / 2) + 50, int(ly / 2), int(ly / 2) + 50]
     image = fitsimage[Yinf:Ysup, Xinf:Xsup]
     try:
+        # print('ok')
         image_ok = image[np.isfinite(image)]
         d.set("cmap %s ; scale %s ; scale limits %0.3f %0.3f " % (args.color, args.scale, np.nanpercentile(image_ok, cuts[0]), np.nanpercentile(image_ok, cuts[1])))
     except ValueError:
+        # print('error')
         d.set("cmap %s ; scale %s " % (args.color, args.scale))
 
     return
@@ -3247,6 +3268,8 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             def change_contour():
                 p.update_coordinates(d["points"], mesh=mesh)
                 p.update_coordinates(d["points"], mesh=mesh_c)
+                # p.update_scalars(d["points"], mesh=mesh)
+                # p.update_scalars(d["points"], mesh=mesh_c)
                 if d["Contour"]:
                     if d["smooth"] is True:
                         p.update_coordinates(mesh_c.contour().points, mesh=contours_c)
@@ -5848,11 +5871,8 @@ def background_estimation(xpapoint=None, n=2, DS9backUp=DS9_BackUp_path, Plot=Tr
     sigma, percentile, snr, npixels, dilate = np.array([sigma, percentile, snr, npixels, dilate], dtype=int)
     box1, box2 = np.array(boxs.split(","), dtype=int)
     path = globglob(args.path)
-    jobs = []
-    manager = Manager()
-    return_dict = manager.dict()
-    if len(path) > 1:
-        Plot = False
+    # if len(path) > 1:
+    #     Plot = False
     name = Parallelize(function=BackgroundEstimationPhot, parameters=[ float(sigma), bckd, rms, (filter1, filter2), (box1, box2), n, DS9_BackUp_path, snr, npixels, dilate, percentile, mask, Plot], action_to_paralize=path, number_of_thread=args.number_processors)
 
     # for filename in path:
@@ -5894,53 +5914,41 @@ def BackgroundEstimationPhot(filename, sigma, bckd, rms, filters, boxs, n=2, DS9
         "BiweightLocationBackground": BiweightLocationBackground,
     }
     functions_rms = {"StdBackgroundRMS": StdBackgroundRMS, "MADStdBackgroundRMS": MADStdBackgroundRMS, "BiweightScaleBackgroundRMS": BiweightScaleBackgroundRMS}
-    bkg = []
-    masks = [data]
-
-    for i, mask_data in enumerate(masks):
-        if mask:
-            mask_source = make_source_mask(mask_data, nsigma=snr, npixels=npixels, dilate_size=dilate_size)
-        else:
-            mask_source = np.ones(mask_data.shape, dtype=bool)
-        bkg_estimator = functions[bckd]()
-        bkgrms_estimator = functions_rms[rms]()
-        if len(masks) > 1:
-            bkg.append(
-                Background2D(
-                    mask_data, boxs, filter_size=filters, sigma_clip=SigmaClip(sigma=sigma), bkg_estimator=bkg_estimator, exclude_percentile=exclude_percentile, bkgrms_estimator=bkgrms_estimator
-                )
-            )  # ,mask=mask_source)
-        else:
-            bkg.append(
-                Background2D(
-                    mask_data,
-                    boxs,
-                    filter_size=filters,
-                    sigma_clip=SigmaClip(sigma=sigma),
-                    bkg_estimator=bkg_estimator,
-                    exclude_percentile=exclude_percentile,
-                    bkgrms_estimator=bkgrms_estimator,
-                    mask=mask_source,
-                )
-            )
-        verboseprint("Mask %i, median = %0.2f" % (i, bkg[-1].background_median))
-        verboseprint("Mask %i, rms = %0.2f" % (i, bkg[-1].background_rms_median))
-        if i == 0:
-            fitsfile.data = fitsfile.data - bkg[-1].background  # .astype('uint16')
-        else:
-            fitsfile.data[np.isfinite(mask)] = fitsfile.data[np.isfinite(mask)] - bkg[-1].background[np.isfinite(mask)]  # .astype('uint16')
-        if len(masks) == 2:
-            masks[-1][np.isfinite(masks[-1])] = fitsfile.data[np.isfinite(masks[-1])]
-    if len(masks) == 2:
-        diff = np.nanmean(fitsfile.data[np.isfinite(masks[1])]) - np.nanmean(fitsfile.data[np.isfinite(masks[0])])
-        fitsfile.data[np.isfinite(masks[1])] -= diff
-        diff = np.nanmean(np.hstack((fitsfile.data[np.isfinite(masks[0])], fitsfile.data[np.isfinite(masks[1])])))
-        fitsfile.data[np.isfinite(masks[1])] -= diff
+    # i, mask_data = 0, data
+    # for i, mask_data in enumerate(masks):
+    if mask:
+        mask_source = make_source_mask(data, nsigma=snr, npixels=npixels, dilate_size=dilate_size)
     else:
-        diff = np.nanmean(fitsfile.data[np.isfinite(masks[0])])
-    fitsfile.data[np.isfinite(masks[0])] -= diff
-    if np.isfinite(data).all():
-        fitsfile.data = fitsfile.data.astype("uint16")
+        mask_source = np.ones(data.shape, dtype=bool)
+    bkg_estimator = functions[bckd]()
+    bkgrms_estimator = functions_rms[rms]()
+    bkg = Background2D(
+            data,
+            boxs,
+            filter_size=filters,
+            sigma_clip=SigmaClip(sigma=sigma),
+            bkg_estimator=bkg_estimator,
+            exclude_percentile=exclude_percentile,
+            bkgrms_estimator=bkgrms_estimator,
+            mask=mask_source)
+    verboseprint("Mask, median = %0.2f" % (bkg.background_median))
+    verboseprint("Mask, rms = %0.2f" % (bkg.background_rms_median))
+    # if i == 0:
+    fitsfile.data = fitsfile.data - bkg.background  # .astype('uint16')
+    # else:
+    #     fitsfile.data[np.isfinite(mask)] = fitsfile.data[np.isfinite(mask)] - bkg[-1].background[np.isfinite(mask)]  # .astype('uint16')
+    # if len(masks) == 2:
+    #     masks[-1][np.isfinite(masks[-1])] = fitsfile.data[np.isfinite(masks[-1])]
+    # if len(masks) == 2:
+    #     diff = np.nanmean(fitsfile.data[np.isfinite(masks[1])]) - np.nanmean(fitsfile.data[np.isfinite(masks[0])])
+    #     fitsfile.data[np.isfinite(masks[1])] -= diff
+    #     diff = np.nanmean(np.hstack((fitsfile.data[np.isfinite(masks[0])], fitsfile.data[np.isfinite(masks[1])])))
+    #     fitsfile.data[np.isfinite(masks[1])] -= diff
+    # else:
+    # diff = np.nanmean(fitsfile.data[np.isfinite(masks[0])])
+    # fitsfile.data[np.isfinite(masks[0])] -= diff
+    # if np.isfinite(data).all():
+    #     fitsfile.data = fitsfile.data.astype("uint16")
 
     name = os.path.join(os.path.dirname(filename) + "/bkgd_photutils_substracted/%s" % (os.path.basename(filename)))
     fitswrite(fitsfile, name)
@@ -9427,6 +9435,7 @@ def python_command(xpapoint=None,argv=[]):
 def Button(xpapoint=None):
     """ Creates a pyQt5 button to continue the different tutorial on DS9 or quit
     """
+    #Needs to be installed via mamba install PyQt to be sure it works on OSX, and on linux: sudo apt-get install libxcb-xinerama0
     from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel
     from PyQt5.QtGui import QIcon, QPixmap
     from PyQt5.QtCore import pyqtSlot  # <--- add this line
