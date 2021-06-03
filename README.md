@@ -5,7 +5,7 @@ pyDS9plugin is the first open source pythonic [SAOImageDS9](https://sites.google
 Click on the image to see the 3 minutes youtube presentation video:
 
 [<img src="https://people.lam.fr/picouet.vincent/pyds9plugin/gif/3d2d_new.mov.gif" width="80%"
-style="display:block;margin: 0 auto;">](https://www.youtube.com/watch?v=9JzcMCxo6Fk)
+style="display:block;margin: 0 auto;">](https://www.youtube.com/watch?v=XcDm2JQDMLY)
 
 The documentation of the extension is available [here](https://nuage.osupytheas.fr/s/Z6D64wRpDkE7wTJ).
 
@@ -35,7 +35,12 @@ To install pyds9plugin for general purposes use Pip:
 ```
 pip install pyds9plugin
 ```
+Then load the analysis file in DS9 by running:
 
+```
+DS9Utils LoadDS9QuickLookPlugin
+```
+And launch DS9!
 If you are using Anaconda, install using the above call to pip _from inside your environment_.
 There is not as of yet a separate conda package.
 
