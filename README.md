@@ -45,7 +45,7 @@ There is not as of yet a separate conda package.
 Documentation
 -------------
 
-The documentation of the extension is available [here](https://nuage.osupytheas.fr/s/Z6D64wRpDkE7wTJ).
+The documentation of the extension is available [here](https://nuage.osupytheas.fr/s/TW4dZsf5XzJcQFC).
 
 Contributions
 -------------
