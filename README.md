@@ -9,9 +9,8 @@ style="display:block;margin: 0 auto;">](https://www.youtube.com/watch?v=XcDm2JQD
 
 [![Alt Text](https://people.lam.fr/picouet.vincent/pyds9plugin/gif/3d2d_new.mov.gif)](https://www.youtube.com/watch?v=XcDm2JQDMLY)
 
-![Alt Text]((https://people.lam.fr/picouet.vincent/pyds9plugin/gif/3d2d_new.mov.gif)
+![Alt Text](https://people.lam.fr/picouet.vincent/pyds9plugin/gif/3d2d_new.mov.gif)
 
-![Alt Text](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
 
 
 
