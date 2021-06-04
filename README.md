@@ -4,12 +4,12 @@ pyDS9plugin is the first open source pythonic [SAOImageDS9](https://sites.google
 
 Click on the image to see the 3 minutes youtube presentation video:
 
-[<img src="https://people.lam.fr/picouet.vincent/pyds9plugin/gif/macros.mov.gif" width="80%"
+[<img src="https://github.com/vpicouet/pyds9plugin/blob/master/pyds9plugin/doc/ref/gif/multi-image.mov.gif" width="80%"
 style="display:block;margin: 0 auto;">](https://www.youtube.com/watch?v=XcDm2JQDMLY)
 
-[![Alt Text](https://people.lam.fr/picouet.vincent/pyds9plugin/gif/macros.mov.gif)](https://www.youtube.com/watch?v=XcDm2JQDMLY)
+[![Alt Text](https://github.com/vpicouet/pyds9plugin/blob/master/pyds9plugin/doc/ref/gif/multi-image.mov.gif)](https://www.youtube.com/watch?v=XcDm2JQDMLY)
 
-![Alt Text](https://people.lam.fr/picouet.vincent/pyds9plugin/gif/macros.mov.gif)
+![Alt Text](https://github.com/vpicouet/pyds9plugin/blob/master/pyds9plugin/doc/ref/gif/multi-image.mov.gif)
 
 
 
