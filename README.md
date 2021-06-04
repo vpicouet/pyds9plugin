@@ -7,8 +7,6 @@ Click on the image to see the 3 minutes youtube presentation video:
 [<img src="https://people.lam.fr/picouet.vincent/pyds9plugin/gif/3d2d_new.mov.gif" width="80%"
 style="display:block;margin: 0 auto;">](https://www.youtube.com/watch?v=XcDm2JQDMLY)
 
-The documentation of the extension is available [here](https://nuage.osupytheas.fr/s/Z6D64wRpDkE7wTJ).
-
 SAOImage DS9 is an astronomical imaging and data visualization application. Its 30 years of development has made it very stable and easy to use. This made it an essential tool in all fields of astronomy (observation, simulation, instrumentation). Much more profitable but pretty unsung feature, its extensibility makes it a limitless tool to interact with astronomical data. This extensibility did not generate a large collaborative and well organized effort to develop important extensions that could progressively converge towards a stable/rapid/configurable multi-extension DS9 package.
 
 Because I am convince of its interest, this extension is a very naive attempt to try initiate this tendency and explore the different possibilities.
@@ -47,8 +45,7 @@ There is not as of yet a separate conda package.
 Documentation
 -------------
 
-Some documentation is available available at [https://people.lam.fr/picouet.vincent/pyds9plugin](https://people.lam.fr/picouet.vincent/index.html).
-
+The documentation of the extension is available [here](https://nuage.osupytheas.fr/s/Z6D64wRpDkE7wTJ).
 
 Contributions
 -------------
