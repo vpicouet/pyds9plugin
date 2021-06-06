@@ -2418,7 +2418,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
     if args.path == "":
         path = getfilename(d, All=True, sort=False)
     else:
-        path = globglob(args.path)
+        path = globglob(args.path, xpapoint=args.xpapoint)
 
     WCS = bool(int(args.WCS))
     sort = args.sort
@@ -3154,7 +3154,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
     args = parser.parse_args_modif(argv,required=True)
 
     d = DS9n(args.xpapoint)
-    filename = globglob(args.path)#d.get("file")
+    filename = globglob(args.path, xpapoint=args.xpapoint)
     if (".tif" in filename) | (".tiff" in filename) | (".png" in filename) | (".jpeg" in filename) | (".jpg" in filename):
         color = True
     if color:
@@ -3928,7 +3928,7 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, config=my_conf, argv=[
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
-    path = globglob(args.path)
+    path = globglob(args.path, xpapoint=args.xpapoint)
     path.sort()
     x = np.arange(len(path))
     a = getregion(d)[0]
@@ -4900,11 +4900,8 @@ def trim(xpapoint=None, config=my_conf, all_ext=False, argv=[]):
     d = DS9n(args.xpapoint)
     filename = getfilename(d)
     system = args.system
-    path = globglob(args.path)
-    # if args.path == "-":
-    #     path = [globglob(args.path)]
-    # else:
-    #     path = globglob(args.path)
+    path = globglob(args.path, xpapoint=args.xpapoint)
+
     verboseprint("system = ", system)
     verboseprint("path = ", path)
     region = getregion(d, quick=True, selected=True, system=system, dtype=float)
@@ -4960,7 +4957,7 @@ def column_line_correlation(xpapoint=None, config=my_conf, argv=[]):
     d = DS9n(args.xpapoint)
     filename = getfilename(d)
 #    path = globglob(sys.argv[-1])
-    path = globglob(args.path)
+    path = globglob(args.path, xpapoint=args.xpapoint)
     region = getregion(d, quick=True,message=False,selected=True)
     if region is not None:
         Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
@@ -5665,7 +5662,7 @@ def extract_sources(xpapoint=None, argv=[]):
     threshold = np.array(threshold.split(","), dtype=float)
     fwhm = np.array(fwhm.split(","), dtype=float)
     verboseprint("ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons = ", ErosionDilatation, threshold, fwhm, theta, iters, ratio, deleteDoublons)
-    path = globglob(args.path)
+    path = globglob(args.path, xpapoint=args.xpapoint)
     # for filename in path:
     #     verboseprint(filename)
     #     sources = ExtractSources(filename, fwhm=fwhm, threshold=threshold, theta=float(theta), ratio=float(ratio), n=int(ErosionDilatation), iters=int(iters), deleteDoublons=int(deleteDoublons))
@@ -5830,7 +5827,7 @@ def add_field_to_header(xpapoint=None, field="", value="", comment="", argv=[]):
         comment = args.comment
     except IndexError:
         pass
-    path = globglob(args.path)
+    path = globglob(args.path, xpapoint=args.xpapoint)
     for filename in path:
         verboseprint(filename)
         header = fits.getheader(filename)
@@ -5870,7 +5867,7 @@ def background_estimation(xpapoint=None, n=2, DS9backUp=DS9_BackUp_path, Plot=Tr
     mask = bool(mask)
     sigma, percentile, snr, npixels, dilate = np.array([sigma, percentile, snr, npixels, dilate], dtype=int)
     box1, box2 = np.array(boxs.split(","), dtype=int)
-    path = globglob(args.path)
+    path = globglob(args.path, xpapoint=args.xpapoint)
     # if len(path) > 1:
     #     Plot = False
     name = Parallelize(function=BackgroundEstimationPhot, parameters=[ float(sigma), bckd, rms, (filter1, filter2), (box1, box2), n, DS9_BackUp_path, snr, npixels, dilate, percentile, mask, Plot], action_to_paralize=path, number_of_thread=args.number_processors)
@@ -7493,7 +7490,7 @@ def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[
     args = parser.parse_args_modif(argv, required=True)
 
     d = DS9n(args.xpapoint)
-    filename = globglob(args.path)
+    filename = globglob(args.path,xpapoint=args.xpapoint)
     if which("sex") is None:
         d.set("analysis message {Sextractor do not seem to be installed on your machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}")
         verboseprint("On mac run on your terminal: >brew install brewsci/science/sextractor", verbose="1")
@@ -7835,12 +7832,8 @@ def DS9SWARP(xpapoint=None, argv=[]):
     param_dict["INTERPOLATE"] = "Y" if param_dict["INTERPOLATE"] == "1" else "N"
 
     d = DS9n(args.xpapoint)
-    paths = globglob(args.path)
-    # if args.path == "":
-    #     paths = [getfilename(d, All=False)]
-    # if args.path != "-":
-    #     paths = globglob(args.path)
-    #     verboseprint("globglob('%s') = %s" % (args.path, paths))
+    paths = globglob(args.path,xpapoint=args.xpapoint)
+
     verboseprint("Images to coadd: %s" % (paths))
     param_dict["IMAGEOUT_NAME"] = os.path.join(os.path.dirname(paths[0]), param_dict["IMAGEOUT_NAME"])
     if which("swarp") is None:
@@ -7892,13 +7885,8 @@ def resample(xpapoint=None, argv=[]):
         verboseprint("%s : %s" % (key, param_dict[key]))
 
     d = DS9n(args.xpapoint)
-    paths = globglob(args.path)
+    paths = globglob(args.path, xpapoint=args.xpapoint)
 
-    # if args.path == "-":
-    #     paths = [getfilename(d, All=False)]
-    # if args.path != "-":
-    #     paths = globglob(args.path)
-    #     verboseprint("globglob('%s') = %s" % (args.path, paths))
     verboseprint("Images to coadd: %s" % (paths))
 
     if which("swarp") is None:
@@ -9493,7 +9481,7 @@ def maxi_mask(xpapoint=None, path=None, argv=[]):
     args = parser.parse_args_modif(argv,required=True)
     print(args.flags)
     #sys.exit()
-    path = globglob(args.path)
+    path = globglob(args.path, xpapoint=args.xpapoint)
     d = DS9n(args.xpapoint)
     #     path = getfilename(d)
     # try:
