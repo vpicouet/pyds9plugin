@@ -1227,8 +1227,8 @@ def create_DS9regions(
         font,
         system,
     )
-    if system == "fk5":
-        DS9_offset = [0, 0] # should be deleted or removed from arguments
+    # if system == "fk5":
+    #     DS9_offset = [0, 0] # should be deleted or removed from arguments
 
     if (type(radius) == int) or (type(radius) == float) or (type(radius) == np.int64) or (type(radius) == np.float64):
         r, r1 = radius, radius  # np.ones(len(xim))*radius, np.ones(len(xim))*radius #radius, radius
@@ -1857,7 +1857,7 @@ def throughfocus_(
     center,
     files,
     datas=None,
-    x=None,
+    # x=None,
     fibersize=0,
     center_type="barycentre",
     SigmaMax=4,
@@ -2085,7 +2085,7 @@ def throughfocus_(
 def throughfocusWCS(
     center,
     files,
-    x=None,
+    # x=None,
     fibersize=0,
     center_type="barycentre",
     SigmaMax=4,
@@ -2492,7 +2492,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
         throughfocusWCS(
             center=[alpha, delta],
             files=path,
-            x=x,
+            # x=x,
             fibersize=0,
             center_type="user",
             SigmaMax=6,
@@ -2508,7 +2508,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
         datas = throughfocus_(
             center=rp["Center"],
             files=path,
-            x=x,
+            # x=x,
             fibersize=0,
             center_type="user",
             SigmaMax=6,
@@ -8466,6 +8466,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
                         color=["Yellow"] * len(cat_sex),
                         savename=cat_path,
                         system="fk5",
+                        DS9_offset = [0, 0],
                         font=10,
                     )  # ,ID=[np.array(cat_sex['MAG_AUTO'],dtype=int)])
                 else:
@@ -10922,7 +10923,7 @@ def CreateContourRegions(xpapoint=None, argv=[]):
     d.set("scale limits %s %s" % (T, T + 1))
     d.set("region select all")
     d.set("regions color white")
-    a = 1  # yesno(d,'Do you wish to continue?')
+    a = yesno(d,'Do you wish to continue?')
     if a != "n":
         im = d.get_pyfits()
         ds9 = im[0].data
