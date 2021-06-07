@@ -348,9 +348,9 @@ def compute_fluctuation(
     fileOutName=None,
     ext=1,
     ext_seg=1,
-    mag_zp=None,
+    # mag_zp=None,
     sub=None,
-    aper_size=10,
+    # aper_size=10,
     verbose=False,
     plot=False,
     seg=None,
@@ -374,7 +374,7 @@ def compute_fluctuation(
     pix_scale = 1
     mag_zp = 30
     sigma = [5.0, 10.0]  # Signal-to-noise ratios
-    N_aper, aper_size = args.number_apertures, args.number_apertures  # np.array(sys.argv[-2:], dtype=int)
+    N_aper, aper_size = args.number_apertures, args.aperture  # np.array(sys.argv[-2:], dtype=int)
     flux, n_aper_used, results = throwAper(image, pix_scale, 2 * aper_size, N_aper, verbose=True, seg=seg, type=type, sub_bkg=sub)
     result = results[np.isfinite(results["aperture_sum"])]
     fresult = results[~np.isfinite(results["aperture_sum"])]
@@ -781,7 +781,7 @@ def setup(xpapoint=None, color="cool", argv=[]):
 
 
 ###################################################################################
-def organize_files(xpapoint=None, cat=None, number=2, dpath=DS9_BackUp_path + "subsets/", argv=[]):
+def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
     """From a fits file database, create a subset of images considering a selection and ordering rules
     """
     from astropy.table import Table, vstack
@@ -1228,7 +1228,7 @@ def create_DS9regions(
         system,
     )
     if system == "fk5":
-        DS9_offset = [0, 0]
+        DS9_offset = [0, 0] # should be deleted or removed from arguments
 
     if (type(radius) == int) or (type(radius) == float) or (type(radius) == np.int64) or (type(radius) == np.float64):
         r, r1 = radius, radius  # np.ones(len(xim))*radius, np.ones(len(xim))*radius #radius, radius
@@ -1310,7 +1310,7 @@ def getdata(xpapoint=None, Plot=False, selected=False):
         return datas[0]
 
 
-def fit_gaussian_2d(xpapoint=None, Plot=True, n=300, cmap="twilight_shifted", argv=[]):
+def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
     """2D gaussian fitting on the encircled region in DS9 [DS9 required]
     """
     from astropy.io import fits
@@ -1777,10 +1777,10 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
                 processed_regions.append(coords)
             else:
                 raise ValueError("Can't process region %s" % name)
-    if len(processed_regions) == 1:
-        return processed_regions  # [0]
-    else:
-        return processed_regions
+    # if len(processed_regions) == 1:
+    #     return processed_regions  # [0]
+    # else:
+    return processed_regions
 
 
 # @fn_timer
@@ -1857,7 +1857,7 @@ def throughfocus_(
     center,
     files,
     datas=None,
-    x=None,
+    # x=None,
     fibersize=0,
     center_type="barycentre",
     SigmaMax=4,
@@ -2085,7 +2085,7 @@ def throughfocus_(
 def throughfocusWCS(
     center,
     files,
-    x=None,
+    # x=None,
     fibersize=0,
     center_type="barycentre",
     SigmaMax=4,
@@ -2654,7 +2654,7 @@ def PyvistaThoughfocus(a):
     p.show()
 
 
-def radial_profile(xpapoint=None, Plot=True, center_type=None, fibersize=None, log=None, argv=[]):
+def radial_profile(xpapoint=None, Plot=True, fibersize=None, argv=[]):
     """Compute and plot the radial profile of the encircled source in DS9 [DS9 required]
     How to use: Click on region and select Circle shape (default one). Then click precisely on what you think is
     the centre of the PSF. Select the region you created and press p or go in analysis menu: radial profile.
@@ -3136,28 +3136,28 @@ def PlotArea3DColor(d):
     )  # ,use_transparency=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
     return blue, red
 
-    def callback2(value):
-        if color:
-            p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zb.reshape(-1) - value * (np.nanmax(mesh_green.points[:, 2]))], mesh=mesh_blue)
-            p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zr.reshape(-1) + value * (np.nanmax(mesh_green.points[:, 2]))], mesh=mesh_red)
-        else:
-            p.update_coordinates(
-                np.c_[xx.reshape(-1), yy.reshape(-1), ((data_green - np.nanmin(data_green[np.isfinite(data_green)])) * value).reshape(-1)], mesh=mesh_green
-            )
-        return
-
-    p.add_slider_widget(
-        callback2,
-        rng=[0, np.max([1, data_green.shape[0] / (np.nanmax(data_green) - np.nanmin(data_green))])],
-        value=value,
-        title="Stretching",
-        color=None,
-        pass_widget=False,
-        event_type="always",
-        style=None,
-    )
-    p.add_axes()
-    p.show()
+    # def callback2(value):
+    #     if color:
+    #         p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zb.reshape(-1) - value * (np.nanmax(mesh_green.points[:, 2]))], mesh=mesh_blue)
+    #         p.update_coordinates(np.c_[xx.reshape(-1), yy.reshape(-1), zr.reshape(-1) + value * (np.nanmax(mesh_green.points[:, 2]))], mesh=mesh_red)
+    #     else:
+    #         p.update_coordinates(
+    #             np.c_[xx.reshape(-1), yy.reshape(-1), ((data_green - np.nanmin(data_green[np.isfinite(data_green)])) * value).reshape(-1)], mesh=mesh_green
+    #         )
+    #     return
+    #
+    # p.add_slider_widget(
+    #     callback2,
+    #     rng=[0, np.max([1, data_green.shape[0] / (np.nanmax(data_green) - np.nanmin(data_green))])],
+    #     value=value,
+    #     title="Stretching",
+    #     color=None,
+    #     pass_widget=False,
+    #     event_type="always",
+    #     style=None,
+    # )
+    # p.add_axes()
+    # p.show()
 
 
 def analyze_fwhm(xpapoint, argv=[]):
@@ -3375,8 +3375,8 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             p = Plotter(
                 notebook=False, window_size=size, line_smoothing=True, point_smoothing=True, polygon_smoothing=True, splitting_position=None, title="3D"
             )
-            if d.get("scale") == "log":
-                data = data  # np.log10(data - np.nanmin(data))
+            # if d.get("scale") == "log":
+            #     data = data  # np.log10(data - np.nanmin(data))
             value = data.shape[0] / (np.nanmax(data) - np.nanmin(data))  # np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
             # value_= data.shape[0]#value
             mesh = StructuredGrid()
@@ -3426,10 +3426,11 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
 
             def callback(value):
                 points = mesh.points
-                if d["log"] is False:
-                    points[:, -1] = d["data_points"].reshape(-1) * value
-                else:  #
-                    points[:, -1] = d["data_points"].reshape(-1) * value
+                points[:, -1] = d["data_points"].reshape(-1) * value
+                # if d["log"] is False:
+                #     points[:, -1] = d["data_points"].reshape(-1) * value
+                # else:  #
+                #     points[:, -1] = d["data_points"].reshape(-1) * value
                 d["value"] = value
                 d["points"] = points
                 change_contour()
@@ -4765,14 +4766,15 @@ def ApplyQuery(cat=None, query=None, path=None, new_path=None, delete=False):
     if new_path is not None:
         if ".fits" in os.path.basename(new_path):
             cat.write(new_path, overwrite=True)
-        elif ".fits" in os.path.basename(new_path):
+        elif ".csv" in os.path.basename(new_path):
             cat.write(new_path, overwrite=True, format="csv")
         else:
             cat.write(new_path, overwrite=True, format="ascii")
     return cat
 
 
-def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, system="image", form="circle", size=10, wcs=False, query="-", argv=[]):
+# def import_table_as_region(xpapoint=None, name=None, x="x", y="y", ID=None, system="image", form="circle", size=10, wcs=False, query="-", argv=[]):
+def import_table_as_region(xpapoint=None, name=None,  ID=None, system="image", argv=[]):
     """Import a catalog as regions in DS9
     """
     import astropy
@@ -4999,22 +5001,14 @@ def MaskCosmicRays2(image, cosmics, top=0, bottom=0, left=4, right=0, cols=None,
     image = image.astype(float)
     if all is False:
         cosmics = cosmics[(cosmics["front"] == 1) & (cosmics["dark"] < 1)]
-    if cols is None:
-        for i in tqdm_gui(range(len(cosmics))):  # range(len(cosmics)):
-            image[
-                (y > cosmics[i]["ycentroid"] - bottom - 0.1)
-                & (y < cosmics[i]["ycentroid"] + top + 0.1)
-                & (x < cosmics[i]["xcentroid"] + right + 0.1)
-                & (x > -left - 0.1 + cosmics[i]["xcentroid"])
-            ] = np.nan
-    else:
-        for i in tqdm_gui(range(len(cosmics))):  # range(len(cosmics)):
-            image[
-                (y > cosmics[i]["ycentroid"] - bottom - 0.1)
-                & (y < cosmics[i]["ycentroid"] + top + 0.1)
-                & (x < cosmics[i]["xcentroid"] + right + 0.1)
-                & (x > -left - 0.1 + cosmics[i]["xcentroid"])
-            ] = np.nan
+    for i in tqdm_gui(range(len(cosmics))):  # range(len(cosmics)):
+        image[
+            (y > cosmics[i]["ycentroid"] - bottom - 0.1)
+            & (y < cosmics[i]["ycentroid"] + top + 0.1)
+            & (x < cosmics[i]["xcentroid"] + right + 0.1)
+            & (x > -left - 0.1 + cosmics[i]["xcentroid"])
+        ] = np.nan
+
     return image
 
 
@@ -5068,7 +5062,7 @@ def ReturnPath(filename, number=None, All=False):
         return path
 
 
-def compute_gain(xpapoint=None, subtract=True, verbose=False):
+def compute_gain(xpapoint=None, verbose=False):
     """Compute EMgain with the variance intensity method
     """
     d = DS9n(xpapoint)
@@ -5619,7 +5613,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
         # Bias = float(Bias) / ConversionGain
         # im=np.ones(int(np.sum(10**ydata)))
-        n_registers = 604
+        # n_registers = 604
 
         imaADU = np.random.gamma(flux * ConversionGain, EmGain, size=im.shape)
 
@@ -5938,11 +5932,10 @@ def rescale(img, target_type):
     new_img = (a * img + b).astype(target_type)
     return new_img
 
-    [(target_type_max - target_type_min) / (imax - imin)] * img + (target_type_max - a * img.max())
 
 
 # @profile
-def convert_image(xpapoint=None, path=None, argv=[]):
+def convert_image(xpapoint=None, argv=[]):
     """Convert and scale file into other type
     """
     from astropy.io import fits
@@ -6321,7 +6314,7 @@ def DS9FumberFrames(xpapoint):
     return number
 
 
-def add_field_to_header(xpapoint=None, field="", value="", comment="", argv=[]):
+def add_field_to_header(xpapoint=None, field="", value="",  argv=[]):
     """Add header field to image header
     """
     from astropy.io import fits
@@ -6546,7 +6539,7 @@ def BackgroundEstimationPhot(
     return name
 
 
-def CreateImageFromCatalogObject(xpapoint=None, nb=int(1e3), path="", argv=[]):
+def CreateImageFromCatalogObject(xpapoint=None, nb=int(1e3), argv=[]):
     """Create galaxy image form a sextractor catalog
     """
     import astropy
@@ -6922,7 +6915,7 @@ if len(sys.argv) > 1:
                     p0 = [ydata_i.max() - ydata_i.min(), 10, 0.5, 5]
                     try:
                         popt, pcov = curve_fit(double_exponential, ydata_i[:end], ydata_i[:end], p0=p0)
-                    except (RuntimeError or TypeError) as e:
+                    except (RuntimeError, TypeError) as e:
                         verboseprint(e)
                         popt = p0
                     Models.append(
@@ -7136,7 +7129,7 @@ def findMaxima(x, y, conv=10, max_=True):
     """
     import numpy as np
 
-    y = y  # [::-1]
+    # y = y  # [::-1]
     a = np.convolve(y, np.ones(conv) / conv, mode="same")
     if max_:
         maxim = np.r_[True, a[1:] - a[:-1] > 0] & np.r_[a[:-1] - a[1:] > 0, True]
@@ -8127,7 +8120,7 @@ def get_depth_image(xpapoint=None, argv=[]):
     return
 
 
-def RunSextractor(xpapoint=None, filename=None, detector=None, path=None, argv=[]):
+def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
     """Run SExtraxtor astromatic software
     """
     import astropy
@@ -10690,7 +10683,7 @@ def Button(xpapoint=None):
     sys.exit(app.exec_())
 
 
-def maxi_mask(xpapoint=None, path=None, argv=[]):
+def maxi_mask(xpapoint=None, argv=[]):
     """Run MaxiMask processing tool on given image(s)
     """
     from astropy.io import fits
@@ -11063,9 +11056,9 @@ def createRegContour(path, n=50):
     """ Create contour on some ds9 image
     """
     # limit=100
-    path = "/Users/Vincent/Downloads/Masks_int/coadd_det_cosmos.fits"
+    # path = "/Users/Vincent/Downloads/Masks_int/coadd_det_cosmos.fits"
     # for path in glob.glob('/Users/Vincent/Downloads/Masks_int/coadd_det_*.fits'):
-    n = 1
+    # n = 1
     from astropy.io import fits
     from scipy.ndimage import grey_dilation  # , grey_erosion, binary_erosion, binary_dilation
     from astropy.wcs import WCS
