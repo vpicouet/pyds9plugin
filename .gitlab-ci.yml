@@ -47,7 +47,7 @@ sonar_scanner:
   script:
       - sonar-scanner \
         -Dsonar.projectKey=pyds9plugin \
-        -Dsonar.sources=pyds9plugin \
+        # -Dsonar.sources=pyds9plugin \
         -Dsonar.host.url=https://sonarqube.lam.fr \
         -Dsonar.login=pyds9plugin
         # -Dsonar.python.coverage.reportPaths=report/coverage.xml
