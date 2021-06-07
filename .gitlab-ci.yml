@@ -11,11 +11,12 @@
 
 stages:
 - build
-- sonar_scanner
+# - sonar_scanner
 
 variables :
   WHEEL       : 0
   OSX         : 0
+  TEST         : 1
 #  TESTPYPI    : 0
 #  PYPI        : 0
 #  TESTPYPIOSX : 0
@@ -34,11 +35,14 @@ variables :
 
 
 sonar_scanner:
-  stage: sonar_scanner
+  stage: build#sonar_scanner
   tags:
     - docker
   only:
-    - develop
+    # - develop
+    variables:
+      - $TEST == "1"
+
   image: sonarsource/sonar-scanner-cli:latest
   script:
       - sonar-scanner \
