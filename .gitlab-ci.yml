@@ -35,7 +35,7 @@ variables :
 
 
 sonar_scanner:
-  stage: build#sonar_scanner
+  stage: build #sonar_scanner
   tags:
     - docker
   only:
