@@ -11,7 +11,7 @@
 
 stages:
 - build
-
+- sonar_scanner
 
 variables :
   WHEEL       : 0
@@ -31,9 +31,8 @@ variables :
 # BUILD wheels for all linux flavors/python
 #
 
-stages:
-  - sonar_scanner
-  
+
+
 sonar_scanner:
   stage: sonar_scanner
   tags:
