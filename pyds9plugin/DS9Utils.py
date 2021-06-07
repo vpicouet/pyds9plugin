@@ -1857,7 +1857,7 @@ def throughfocus_(
     center,
     files,
     datas=None,
-    # x=None,
+    x=None,
     fibersize=0,
     center_type="barycentre",
     SigmaMax=4,
@@ -2085,7 +2085,7 @@ def throughfocus_(
 def throughfocusWCS(
     center,
     files,
-    # x=None,
+    x=None,
     fibersize=0,
     center_type="barycentre",
     SigmaMax=4,
@@ -8508,7 +8508,7 @@ def RunSex(path, DETECTION_IMAGE, param_dict):
     return os.system(command)
 
 
-def sextractor_pp(xpapoint=None, filename=None, detector=None, path=None, argv=[]):
+def sextractor_pp(xpapoint=None, detector=None, path=None, argv=[]):
     """Run sextraxtor ++ software (Beta version)
     """
     import numpy as np
@@ -8822,7 +8822,7 @@ def resample(xpapoint=None, argv=[]):
         param_dict["PIXELSCALE_TYPE"] = "FIT"
 
     for key, val in zip(param_names, params):
-        if params == "":
+        if val == "":
             param_dict.pop(key, None)
     for key, val in zip(param_names, params):
         verboseprint("%s : %s" % (key, param_dict[key]))
