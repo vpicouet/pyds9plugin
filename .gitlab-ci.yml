@@ -45,11 +45,10 @@ sonar_scanner:
 
   image: sonarsource/sonar-scanner-cli:latest
   script:
-      - sonar-scanner \
-        -Dsonar.projectKey=pyds9plugin \
+      - sonar-scanner -Dsonar.projectKey=pyds9plugin \
         -Dsonar.host.url=https://sonarqube.lam.fr \
-        -Dsonar.login=pyds9plugin
-        # -Dsonar.sources=pyds9plugin \
+        -Dsonar.sources=pyds9plugin \
+        -Dsonar.login=8b58eb9ef217a29985134b131967c5f6f8bd88d2
         # -Dsonar.python.coverage.reportPaths=report/coverage.xml
         # -Dsonar.python.xunit.reportPath=report/pytest.xml
         # -Dsonar.exclusions="src/svom_api_import/tests/*"
