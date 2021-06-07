@@ -487,7 +487,7 @@ def lock(xpapoint=None, argv=[]):
 # except (IOError or FileNotFoundError) as e:
 #     logger.warning(e)
 #     pass
-my_conf = []
+# my_conf = []
 
 
 def fn_timer(function):
@@ -698,7 +698,7 @@ def PresentPlugIn():
 
 # @fn_timer
 # @profile
-def setup(xpapoint=None, config=my_conf, color="cool", argv=[]):
+def setup(xpapoint=None, color="cool", argv=[]):
     """Give a quick/general visualisation of the image by applying specific thresholding [DS9 required]
         and smoothing parameters. This allows to detect easily:
         •Different spot that the image contains
@@ -781,7 +781,7 @@ def setup(xpapoint=None, config=my_conf, color="cool", argv=[]):
 
 
 ###################################################################################
-def organize_files(xpapoint=None, cat=None, number=2, dpath=DS9_BackUp_path + "subsets/", config=my_conf, argv=[]):
+def organize_files(xpapoint=None, cat=None, number=2, dpath=DS9_BackUp_path + "subsets/", argv=[]):
     """From a fits file database, create a subset of images considering a selection and ordering rules
     """
     from astropy.table import Table, vstack
@@ -1135,7 +1135,7 @@ def addRegion(region, color="Yellow", text=""):
 def getDatafromRegion(d, region, ext):
     """Get data from region
     """
-    Xinf, Xsup, Yinf, Ysup = Lims_from_region(region=region, coords=None, config=my_conf)
+    Xinf, Xsup, Yinf, Ysup = Lims_from_region(region=region, coords=None)
     data = d.get_pyfits()[ext].data[Yinf:Ysup, Xinf:Xsup]
     return data
 
@@ -1709,7 +1709,7 @@ def parse_data(data, map=map, float=float):
     return X.T, Y.T, arr.T
 
 
-def process_region(regions, win, quick=False, config=my_conf, message=True, dtype=int):
+def process_region(regions, win, quick=False, message=True, dtype=int):
     """Process DS9 regions to return pythonic regions
     """
     from collections import namedtuple
@@ -1784,7 +1784,7 @@ def process_region(regions, win, quick=False, config=my_conf, message=True, dtyp
 
 
 # @fn_timer
-def getregion(win, debug=False, all=False, quick=False, config=my_conf, selected=False, message=True, system="Image", dtype=int):
+def getregion(win, debug=False, all=False, quick=False, selected=False, message=True, system="Image", dtype=int):
     """ Read a region from a ds9 instance.
     Returns a tuple with the data in the region.
     """
@@ -1867,7 +1867,6 @@ def throughfocus_(
     pas=None,
     WCS=False,
     DS9backUp=DS9_BackUp_path,
-    config=my_conf,
     offsets=10,
 ):
     """Perform a throughfocus analysis and return the best focused image
@@ -2655,7 +2654,7 @@ def PyvistaThoughfocus(a):
     p.show()
 
 
-def radial_profile(xpapoint=None, Plot=True, config=my_conf, center_type=None, fibersize=None, log=None, argv=[]):
+def radial_profile(xpapoint=None, Plot=True, center_type=None, fibersize=None, log=None, argv=[]):
     """Compute and plot the radial profile of the encircled source in DS9 [DS9 required]
     How to use: Click on region and select Circle shape (default one). Then click precisely on what you think is
     the centre of the PSF. Select the region you created and press p or go in analysis menu: radial profile.
@@ -2841,7 +2840,6 @@ def DS9plot_rp_convolved(
     fibersize=100,
     SigmaMax=4,
     DS9backUp=DS9_BackUp_path,
-    config=my_conf,
     name="",
     ds9=None,
 ):
@@ -3711,7 +3709,7 @@ def throw_apertures(xpapoint=None, argv=[]):
     return
 
 
-def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, overwrite=False, d=FakeDS9()):
+def ExecCommand(filename, path2remove, exp, xpapoint=None, eval_=False, overwrite=False, d=FakeDS9()):
     """Combine two images and an evaluable expression
     """
     from scipy.ndimage import grey_dilation, grey_erosion, gaussian_filter, median_filter, sobel, binary_propagation, binary_opening, binary_closing, label
@@ -3855,7 +3853,7 @@ def ExecCommand(filename, path2remove, exp, config, xpapoint=None, eval_=False, 
         return fitsimage.data, name
 
 
-def fitswrite(fitsimage, filename, verbose=True, config=my_conf, header=None):
+def fitswrite(fitsimage, filename, verbose=True, header=None):
     """Write fits image function with different tests
     """
     from astropy.io import fits
@@ -3897,7 +3895,7 @@ def fitswrite(fitsimage, filename, verbose=True, config=my_conf, header=None):
     return filename
 
 
-def csvwrite(table, filename, verbose=True, config=my_conf):
+def csvwrite(table, filename, verbose=True):
     """Write a catalog in csv format
     """
     import importlib
@@ -4130,7 +4128,7 @@ def stack_images(xpapoint=None, dtype=float, std=False, Type=None, clipping=None
     return
 
 
-def StackImagesPath(paths, Type="np.nanmean", clipping=3, dtype=float, fname="", std=False, DS9_BackUp_path=DS9_BackUp_path, config=my_conf, name=None):
+def StackImagesPath(paths, Type="np.nanmean", clipping=3, dtype=float, fname="", std=False, DS9_BackUp_path=DS9_BackUp_path, name=None):
     """Stack images of the files given in the path
     """
     from astropy.io import fits
@@ -4194,7 +4192,7 @@ def StackImagesPath(paths, Type="np.nanmean", clipping=3, dtype=float, fname="",
     return fitsfile, name
 
 
-def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, config=my_conf, argv=[]):
+def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
     """Perform a light_curve analysis and return the centered image [DS9 required]
     How to use: Open one an image of the through focus which is close to the focus. Click on region. Then click
     precisely on what you think is the centre of the PSF. Select the region you created and press t (throughfocus)
@@ -4414,7 +4412,7 @@ def Center_Flux_std(image, bck=0, method="Gaussian-Picouet"):
     return d
 
 
-def Lims_from_region(region=None, coords=None, config=my_conf, dtype=int):
+def Lims_from_region(region=None, coords=None, dtype=int):
     """Return the pixel locations limits of a DS9 region
     """
     import numpy as np
@@ -5070,7 +5068,7 @@ def ReturnPath(filename, number=None, All=False):
         return path
 
 
-def compute_gain(xpapoint=None, subtract=True, verbose=False, config=my_conf):
+def compute_gain(xpapoint=None, subtract=True, verbose=False):
     """Compute EMgain with the variance intensity method
     """
     d = DS9n(xpapoint)
@@ -5180,7 +5178,6 @@ def ComputeEmGain(
     area=None,
     DS9backUp=DS9_BackUp_path,
     verbose=True,
-    config=my_conf,
     OSR1=[20, -20, 0, 400],
     OSR2=[20, -20, 2200, 2400],
 ):
@@ -5273,7 +5270,7 @@ def ComputeEmGain(
     return 1  # D
 
 
-def CreateAreas(image, area=None, radius=100, offset=20, verbose=False, config=my_conf):
+def CreateAreas(image, area=None, radius=100, offset=20, verbose=False):
     """Create areas in the given image
     """
     import numpy as np
@@ -5311,7 +5308,7 @@ def PlotComputeEmGain(intensity, var, emgain, n, filename, len_area_det, ax=None
     return ax, emgain
 
 
-def trim(xpapoint=None, config=my_conf, all_ext=False, argv=[]):
+def trim(xpapoint=None, all_ext=False, argv=[]):
     """Crop/trim the image, WCS compatible [DS9 required]
     """
     parser = CreateParser(get_name_doc(), path=True)
@@ -5372,7 +5369,7 @@ def cropCLAUDS(path, position=[0, 0], size=[10, 10], all_ext=False):  # ,area=[0
     return a, path[:-5] + "_trim.fits"
 
 
-def column_line_correlation(xpapoint=None, config=my_conf, argv=[]):
+def column_line_correlation(xpapoint=None, argv=[]):
     """Performs a column to column or or line to line auto-correlation on a DS9 image
     """
     parser = CreateParser(get_name_doc(), path=True)
@@ -5395,7 +5392,7 @@ def column_line_correlation(xpapoint=None, config=my_conf, argv=[]):
     return
 
 
-def CLcorrelation(path, area=[0, -1, 1053, 2133], DS9backUp=DS9_BackUp_path, config=my_conf):
+def CLcorrelation(path, area=[0, -1, 1053, 2133], DS9backUp=DS9_BackUp_path):
     """Performs a column to column or or line to line auto-correlation on a DS9 image
     """
     from astropy.io import fits
@@ -5453,7 +5450,7 @@ def CLcorrelation(path, area=[0, -1, 1053, 2133], DS9backUp=DS9_BackUp_path, con
     return
 
 
-def create_header_catalog(xpapoint=None, files=None, info=False, config=my_conf, argv=[]):
+def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
     """Generate fits files database based on header information
     0.5 second per image for info
     10ms per image for header info, 50ms per Mo so 240Go->
@@ -5819,7 +5816,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     return
 
 
-def CreateCatalog_new(files, ext=[0], config=my_conf, info=None):
+def CreateCatalog_new(files, ext=[0], info=None):
     """Create header catalog from a list of fits file
     """
     from astropy.table import Column, vstack  # hstack,
@@ -6255,7 +6252,7 @@ def ExtractSources(filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, sigma=3
     return sources
 
 
-def getfilename(ds9, config=my_conf, All=False, sort=True):
+def getfilename(ds9, All=False, sort=True):
     """Get the filename of the loaded image in DS9
     """
     if isinstance(ds9, FakeDS9):
@@ -7195,7 +7192,6 @@ def linear1D_centered(x, intercept, slope, x0=0):
 
 def fit_ds9_plot(
     xpapoint=None,
-    config=my_conf,
     exp=False,
     double_exp=False,
     double_schechter=False,
@@ -7709,7 +7705,6 @@ def openTable(path):
 
 def interactive_plotter(
     xpapoint=None,
-    config=my_conf,
     Plot="Linear",
     path=None,
     xrange=[-10, 10],
@@ -10628,7 +10623,7 @@ def python_command(xpapoint=None, argv=[]):
             pass
     result, name = Parallelize(
         function=ExecCommand,
-        parameters=[path2remove, exp, my_conf, xpapoint, bool(int(eval_)), overwrite, d],
+        parameters=[path2remove, exp, xpapoint, bool(int(eval_)), overwrite, d],
         action_to_paralize=path,
         number_of_thread=args.number_processors,
     )

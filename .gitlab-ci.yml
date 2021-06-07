@@ -30,6 +30,32 @@ variables :
 #
 # BUILD wheels for all linux flavors/python
 #
+
+# 8b58eb9ef217a29985134b131967c5f6f8bd88d2
+sonar_scanner:
+  stage: sonar_scanner
+  tags:
+    - docker
+  only:
+    - develop
+  image: sonarsource/sonar-scanner-cli:latest
+  script:
+    # - sonar-scanner -Dsonar.projectKey=$SONAR_PROJECT_KEY
+        # -Dsonar.sources=src
+        # -Dsonar.host.url=$SONAR_HOST
+        # -Dsonar.login=$SONAR_TOKEN
+      - sonar-scanner \
+        -Dsonar.projectKey=pyds9plugin \
+        -Dsonar.sources=. \
+        -Dsonar.host.url=https://sonarqube.lam.fr \
+        -Dsonar.login=pyds9plugin
+        -Dsonar.python.coverage.reportPaths=report/coverage.xml
+        -Dsonar.python.xunit.reportPath=report/pytest.xml
+        -Dsonar.exclusions="src/svom_api_import/tests/*"
+  allow_failure: true
+
+
+
 manylinux2010 :
   stage : build
 #  image : portus.lam.fr/jclamber/unsio-manylinux2010
