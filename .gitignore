@@ -56,3 +56,7 @@ setup_cython.py
 pyds9plugin/Images/stack_cat.fits
 
 pyds9plugin/Images/stack18446197_cat.fits
+
+*.xsl
+
+pyds9plugin/Macros/Plot_filters.py
