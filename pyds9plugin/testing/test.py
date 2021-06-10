@@ -29,6 +29,7 @@ def main():
     # ipython.magic("lprun -u 1e-1  -T /tmp/prun_open.py -s -r -f DS9open -f get DS9open('%s','%s/stack.fits')  "%(name,files_folder))
     # ipython.magic("lprun -u 1e-1  -T /tmp/prun_get.py -s -r -f d.get  d.get('file')" )
 
+    lock(xpapoint=name, argv='-x %s  -f image -c  image -l 1 -l  1 -m 1')
     os.system('DS9Utils lock -x %s  -f image -c  image -l 0 -l  0 -m 0    '%(name))
     os.system('DS9Utils lock -x %s  -f wcs  -c   wcs -l 1  -s 1  -m 1    '%(name))
     os.system('DS9Utils lock -x %s  -f none -c none  -l 1  -m 0  -m 1    '%(name))
