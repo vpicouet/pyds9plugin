@@ -49,8 +49,8 @@ sonar_scanner:
         -Dsonar.host.url=https://sonarqube.lam.fr
         -Dsonar.sources=pyds9plugin/DS9Utils.py
         -Dsonar.login=$login
-        # -Dsonar.python.coverage.reportPaths=report/coverage.xml
-        # -Dsonar.python.xunit.reportPath=report/pytest.xml
+        -Dsonar.python.coverage.reportPaths=report/coverage.xml
+        -Dsonar.python.xunit.reportPath=report/pytest.xml
         # -Dsonar.exclusions="src/svom_api_import/tests/*"
   allow_failure: true
 

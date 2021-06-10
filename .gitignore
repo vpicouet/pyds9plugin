@@ -60,3 +60,7 @@ pyds9plugin/Images/stack18446197_cat.fits
 *.xsl
 
 pyds9plugin/Macros/Plot_filters.py
+
+.coverage
+
+*.dat

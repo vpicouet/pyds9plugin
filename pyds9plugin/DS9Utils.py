@@ -11188,7 +11188,7 @@ def main():
         "astrometry_net": astrometry_net,
         "resample": resample,
         "interactive_plotter": interactive_plotter,
-        "PlotSpectraFilters": PlotSpectraFilters,
+        # "PlotSpectraFilters": PlotSpectraFilters,
         "sextractor_pp": sextractor_pp,
         "maxi_mask": maxi_mask,
     }  #'Function_parametric':Function_parametric

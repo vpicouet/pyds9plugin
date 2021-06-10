@@ -203,10 +203,10 @@ hmenu 1. Generic Functions
 #	endhmenu
 
 
-	# Open Image (O)
-	# *
-	# menu
-	# DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
+	Open Image (O)
+	*
+	bind O
+	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
 	Plot Region In 3D
 	*
