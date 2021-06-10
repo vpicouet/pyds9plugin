@@ -2925,9 +2925,9 @@ def DS9plot_rp_convolved(
     d.append("plot legend position top ")
     d.append("plot title legend ''")
     d.append("plot name 'Data: Flux = %i, FWHM_fit = %0.1f' " % (d_["Flux"], abs(popt[1])))
-    d.append("plot line shape circle ")
+    # d.append("plot line shape circle ")
     d.append("plot line dash yes ")
-    d.append("plot line shape color black")
+    # d.append("plot line shape color black")
     d.append("plot error color black ")
     d.append("plot load /tmp/3.dat xy  ")
     d.append("plot name 'Moffat: Amp=%0.1f, alpha=%0.1f, beta=%0.1f' " % (popt_m[0], popt_m[1], popt_m[2]))
@@ -4516,7 +4516,7 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
 
     parser = CreateParser(get_name_doc(), path=False)
     parser.add_argument(
-        "-m", "--method", default="1", help="", type=str, choices=["Maximum", "Center-of-mass", "2x1D-Gaussian-fitting", "2D-Gaussian-fitting"]
+        "-m", "--method", default="Maximum", help="", type=str, choices=["Maximum", "Center-of-mass", "2x1D-Gaussian-fitting", "2D-Gaussian-fitting"]
     )  # metavar='',
     parser.add_argument("-b", "--background_removal", default="0", help="", type=str, choices=["1", "0"])  # metavar='',
     args = parser.parse_args_modif(argv, required=False)
@@ -8152,7 +8152,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
     parser.add_argument(
         "-PN", "--PARAMETERS_NAME", default="sex.param", help="File name in ds9_package/Calibration/Sextractor/", type=str, metavar="",
     )  # metavar='',
-    parser.add_argument("-DT", "--DETECT_TYPE", help="CCD (linear) or PHOTO (with gamma correction)", type=str, choices=["CCD", "PHOTO"])
+    parser.add_argument("-DT", "--DETECT_TYPE", default="CCD", help="CCD (linear) or PHOTO (with gamma correction)", type=str, choices=["CCD", "PHOTO"])
     parser.add_argument("-DM", "--DETECT_MINAREA", default="10", help="min number of pixels above threshold", type=str, metavar="")  # metavar='',
     parser.add_argument(
         "-Dm", "--DETECT_MAXAREA", default="0", help="max number of pixels above threshold (0=unlimited)}", type=str, metavar=""
@@ -8191,6 +8191,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         "-WT",
         "--WEIGHT_TYPE",
         type=str,
+        default='NONE',
         choices=["NONE", "NONE,MAP_VAR", "MAP_VAR", "MAP_VAR,MAP_VAR"],
         help="First one for detection image, second one for photometric image",
         metavar="",
@@ -8201,7 +8202,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
     parser.add_argument(
         "-FI", "--FLAG_IMAGE", default="NONE", help="filename for an input FLAG-image", type=str, metavar="",
     )  # metavar='',
-    parser.add_argument("-FT", "--FLAG_TYPE", type=str, choices=["OR", "AND", "MAX", "MIN", "MOST"], help="flag pixel combination", metavar="")
+    parser.add_argument("-FT", "--FLAG_TYPE", type=str, default='OR',choices=["OR", "AND", "MAX", "MIN", "MOST"], help="flag pixel combination", metavar="")
     parser.add_argument(
         "-PA", "--PHOT_APERTURES", default="6,12,18", help="MAG_APER aperture diameter(s) in pixels", type=str, metavar="",
     )  # metavar='',
@@ -8250,7 +8251,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         ],
     )
     # parser.add_argument('-SB', '--SUBTRACT_BACK',default='1', help='Subtraction sky background ?', type=str,choices=['1','0'])
-    parser.add_argument("-BT", "--BACK_TYPE", default="1", type=str, choices=["AUTO", "MANUAL"], metavar="")
+    parser.add_argument("-BT", "--BACK_TYPE", default="AUTO", type=str, choices=["AUTO", "MANUAL"], metavar="")
     parser.add_argument(
         "-BV", "--BACK_VALUE", default="0.0", help="Default background value in MANUAL mode", type=str, metavar="",
     )  # metavar='',
@@ -8263,7 +8264,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
     parser.add_argument(
         "-BFT", "--BACK_FILTTHRESH", default="0.0", help="Threshold above which the background map filter operates", type=str, metavar="",
     )  # metavar='',
-    parser.add_argument("-BPT", "--BACKPHOTO_TYPE", default="1", type=str, choices=["LOCAL", "GLOBAL"], metavar="")
+    parser.add_argument("-BPT", "--BACKPHOTO_TYPE", default="LOCAL", type=str, choices=["LOCAL", "GLOBAL"], metavar="")
     parser.add_argument(
         "-bpt", "--BACKPHOTO_THICK", default="24", help="thickness of the background LOCAL annulus", type=str, metavar="",
     )  # metavar='',

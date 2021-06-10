@@ -7,7 +7,7 @@ __pycache__
 
 pyds9plugin/images/*.png
 pyds9plugin/images/*.xml
-pyds9plugin/test*
+pyds9plugin/test/*
 pyds9plugin/doc/ref/old_high_quality/
 
 pyds9plugin.egg-info/
