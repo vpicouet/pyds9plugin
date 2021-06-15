@@ -80,6 +80,7 @@ def main():
     Profile(command="lock('%s',argv='-f none -c  none -l 1 -l  0 -m 1')"%(name),functions=[lock,])   
 
     Profile(command="setup(argv='-x %s')"%(name),functions=[setup,])  
+    # sys.exit()
     d=DS9n()
     d.set('regions command "circle 100 100 20"')
     d.set('regions select all')
@@ -174,6 +175,8 @@ def main():
 
 if __name__ == '__main__':
     try:
+        os.system('DS9Utils')
+        os.system('DS9Utils setup -h ')
         os.system('echo 0 > %s'%(DS9_BackUp_path + '/.verbose.txt'))
         os.system('echo 0 > %s'%(DS9_BackUp_path + '/.message.txt'))
         copyfile(im, test_folder + '/files/' + os.path.basename(im))

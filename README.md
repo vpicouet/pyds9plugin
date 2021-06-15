@@ -37,7 +37,14 @@ To install pyds9plugin for general purposes use Pip:
 ```
 pip install pyds9plugin
 ```
-Then load the analysis file in DS9 by running:
+
+Finish the installation and see the different functions by running:
+
+```
+DS9Utils
+```
+
+Finally, load the analysis file in DS9 by running:
 
 ```
 DS9Utils LoadDS9QuickLookPlugin

@@ -22,6 +22,7 @@ pyds9plugin/Images/m33_hi2.fits
 pyds9plugin/Images/HorseHead.fits
 
 pyds9plugin/Images/G_Trimm.fits
+pyds9plugin/Images/*modified*.fits
 
 pyds9plugin/doc/ref/old_only_ok/
 
@@ -64,3 +65,13 @@ pyds9plugin/Macros/Plot_filters.py
 .coverage
 
 *.dat
+
+sex.xml
+
+htmlcov/
+
+pyds9plugin/testing/profiles/
+
+pyds9plugin/testing/files/
+
+report/coverage.xml
