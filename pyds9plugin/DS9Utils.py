@@ -247,7 +247,7 @@ def CreateFolders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/"):
     return DS9_BackUp_path
 
 
-if len(sys.argv) == 1:
+if (len(sys.argv) == 1) | ('LoadDS9QuickLookPlugin' in sys.argv):
     CreateFolders()
 
 # Do not chnage order
@@ -11244,41 +11244,15 @@ def main():
                     "add_field_to_header",
                 ]:  # ,'setup'
                     print("{0}{1}{2:30}\033[0;0m{3} {4}".format(color, bcolors.BOLD, function, bcolors.ENDC, DictFunction[function].__doc__.split("\n")[0]))
-                    # print("\033[94m\033[1m{0:30}\033[0;0m\033[0m {1}".format(function,DictFunction[function].__doc__.split('\n')[0] ))
-    # bcolors.OKBLUE bcolors.ENDC
-
-    # if function in ['trim','throw_apertures','throughslit', 'throughfocus_visualisation','throughfocus','test_suite','save_region_as_catalog','organize_files','open_file','fill_regions','fit_gaussian_2d','CreateImageFromCatalogObject','aperture_photometry',
-    # 'background_estimation','guidance','import_table_as_region','manual_fitting','get_depth_image','resample','explore_throughfocus','convert_image','python_command','Convertissor','PlotSpectraFilters','cosmology_calculator','lock','setup','interactive_plotter','create_header_catalog','fit_ds9_plot','radial_profile','plot_3d','original_settings','center_region','column_line_correlation','column_line_correlation','interpolate_nans','add_field_to_header']:
-
-    # else:
-    #     print("\033[1m{0:30}\033[0;0m {1}".format(function,DictFunction[function].__doc__.split('\n')[0] ))
-    # print('\033[1m %s \033[0;0m :   %s'%(function,DictFunction[function].__doc__.split('\n')[0] ))
     # print("which('DS9Utils') =", which('DS9Utils'))
     # print("__file__ =", __file__)
     # print("__package__ =", __package__)
     # print("Python version = ", sys.version)
     # print("DS9 analysis file = ", resource_filename("pyds9plugin", "QuickLookPlugIn.ds9.ans"))
     # print("Python main file = ", resource_filename("pyds9plugin", "DS9Utils.py"))
-    # if (len(sys.argv) == 2) & (sys.argv[-1] in ['load','l','-l']):
-    #     LoadDS9QuickLookPlugin()
-    # sys.exit()
 
     else:
-        # import argparse
-        # parser = argparse.ArgumentParser()
-        # parser.add_argument('-x', '--xpapoint',    default='None', type=str , help="DS9 xpapoint ")
-        # parser.add_argument('-f', '--function',    default='None', type=str, help="Input fits image")
-        # args = parser.parse_args()
-        # xpapoint = args.xpapoint
-        # function = args.function
-        # xpapoint = sys.argv[1]
         function = sys.argv[1]
-
-        # if function not in ["verbose", "next_step"]:  # ,'setup'
-        # verboseprint(
-        #     "\n****************************************************\nDS9Utils " + " ".join(sys.argv[1:]) + "\n****************************************************"
-        # )  # %s %s '%(xpapoint, function) + ' '.join())
-        # verboseprint(sys.argv)
         if sys.stdin is None:
             try:
                 DictFunction[function]()  # (xpapoint=xpapoint)
