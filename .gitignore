@@ -75,3 +75,9 @@ pyds9plugin/testing/profiles/
 pyds9plugin/testing/files/
 
 report/coverage.xml
+
+pyds9plugin/Macros/Create_contour_regions.oy
+
+pyds9plugin/Macros/EMCCD.py
+
+report/

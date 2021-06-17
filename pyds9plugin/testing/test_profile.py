@@ -7,13 +7,18 @@ Created on Mon Dec  7 20:30:33 2020
 """
 import numpy as np
 import os, glob, sys
+DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn'
+os.system('echo 0 > %s'%(DS9_BackUp_path + '/.verbose.txt'))
+os.system('echo 0 > %s'%(DS9_BackUp_path + '/.message.txt'))
+
 from pyds9plugin.DS9Utils import *
 from shutil import copyfile, rmtree
 from pyds9 import DS9
 from  pkg_resources  import resource_filename
 from IPython import get_ipython
-# ipython = get_ipython()        
-# get_ipython().magic("%load_ext line_profiler")
+ipython = get_ipython()        
+get_ipython().magic("%load_ext line_profiler")
+get_ipython().magic("%load_ext coverage")
 
 from line_profiler import LineProfiler
 import pstats
@@ -24,7 +29,6 @@ from io import StringIO
 
 
 
-DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn'
 test_folder = '/Users/Vincent/Github/pyds9plugin/pyds9plugin/testing'#resource_filename('pyds9plugin', 'testing')
 im  = '/Users/Vincent/Github/pyds9plugin/pyds9plugin/images/stack.fits'#resource_filename('pyds9plugin', 'images/stack.fits')
 if os.path.exists(test_folder) is False:
@@ -34,7 +38,7 @@ profiles_folder = test_folder + '/profiles'
 if os.path.exists(files_folder) is False:
     os.mkdir(files_folder)
     
-def Profile_old(file=None,command="DS9open('%s','%s/stack.fits')",argv=None,profiles_folder=profiles_folder,functions=''):
+def Profile_old(file=None,command="open_file('%s','%s/stack.fits')",argv=None,profiles_folder=profiles_folder,functions=''):
     if file is None:
         file = command.split('(')[0]
     if argv is not None:
@@ -47,7 +51,8 @@ def Profile(command="lock(xpapoint=name, argv='-x %s  -f image -c  image -l 1 -l
     result=StringIO()
     file = command.split('(')[0]
 
-    LineProfiler(*functions).run(command).print_stats(result)    
+    line_prof = LineProfiler(*functions)
+    line_prof.run(command).print_stats(result)    
     result=result.getvalue()
     print(result)
     # chop the string into a csv-like buffer
@@ -57,7 +62,7 @@ def Profile(command="lock(xpapoint=name, argv='-x %s  -f image -c  image -l 1 -l
     f=open('%s/Prun_%s.py'%(profiles_folder, file),'w')
     f.write(result)
     f.close()
-    return
+    return line_prof
 
 #Profile(file='prun_open.py',command="DS9open(None,'%s/stack.fits')"%(files_folder))
 
@@ -67,11 +72,17 @@ def main():
     name = xpapoint
     print('\n    Setup    \n' )
     #os.system('DS9Utils %s open  " %s/stack.fits" Slice  0 '%(name,files_folder))
-    # Profile(command="DS9open(None,'%s/stack.fits')"%(files_folder))
-    
-    
+    # Profile(command="DS9open(None,'%s/stack.fitsfiles_folder))
+    # %lprun -f open_file(name,argv='  -p %s -t Slice  -c 0 '%(im))
+
+    Profile_old(command="open_file('%s')"%(name),argv=[im,'Slice','0'] )#,functions=[open_file,])    
+    sys.exit()
+    # Profile_old(command="open_file('%s','%s/stack.fits')" )#,functions=[open_file,])    
+    # %lprun  -f open_file open_file(name,argv='  -p %s -t Slice  -c 0 '%(im)) 
     
     Profile(command="open_file('%s',argv='  -p %s -t Slice  -c 0 ')"%(name,im),functions=[open_file,])    
+
+
 #    ipython.magic("lprun -u 1e-1  -T /tmp/prun_open.py -s -r -f DS9open -f get DS9open('%s','%s/stack.fits')  "%(name,files_folder))
     # ipython.magic("lprun -u 1e-1  -T /tmp/prun_get.py -s -r -f d.get  d.get('file')" )
 
@@ -79,6 +90,7 @@ def main():
     Profile(command="lock('%s',argv='-f wcs -c  wcs -l 1 -l  1 -m 1')"%(name),functions=[lock,])   
     Profile(command="lock('%s',argv='-f none -c  none -l 1 -l  0 -m 1')"%(name),functions=[lock,])   
 
+    # sys.exit()
     Profile(command="setup(argv='-x %s')"%(name),functions=[setup,])  
     # sys.exit()
     d=DS9n()
@@ -124,10 +136,8 @@ def main():
     d.set('regions delete all')
     d.set('regions command "circle 477 472 20"')
     d.set('regions select all')
-    Profile(command="fit_gaussian_2d(argv = '-x %s -p 1')"%(name),functions=[fit_gaussian_2d,])   
+    # Profile(command="fit_gaussian_2d(argv = '-x %s -p 1')"%(name),functions=[fit_gaussian_2d,])   
 
-
-    # Profile(command="DS9InterpolateNaNs('%s')"%(xpapoint),argv=[d.get('file')],functions='-f InterpolateNaNs -f fitswrite')
 
     d.set('regions delete all')
     d.set('regions command "box 477 472 100 99"')
@@ -155,7 +165,7 @@ def main():
     d.set('regions delete all')
     d.set('regions command "circle 50 50 20"')
     d.set('regions select all')
-    Profile(command="plot_3d(argv='-x %s')"%(name),functions=[plot_3d,])    
+    # Profile(command="plot_3d(argv='-x %s')"%(name),functions=[plot_3d,])    
 
 
     print('\n    TEST COMPLETED 100%     \n' )
@@ -177,8 +187,6 @@ if __name__ == '__main__':
     try:
         os.system('DS9Utils')
         os.system('DS9Utils setup -h ')
-        os.system('echo 0 > %s'%(DS9_BackUp_path + '/.verbose.txt'))
-        os.system('echo 0 > %s'%(DS9_BackUp_path + '/.message.txt'))
         copyfile(im, test_folder + '/files/' + os.path.basename(im))
         a = main()
         [os.remove(file) for file in glob.glob(os.environ['HOME'] +  '/Github/DS9functions/pyds9plugin/testing/files/*')]
