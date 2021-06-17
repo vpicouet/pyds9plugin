@@ -13771,9 +13771,7 @@ def image_processing_tutorial(xpapoint=None, i=0, n=1):
             message(d, """Please create a plot by creating a
                           Region->Shape->Projection to run this function.
                           Hit n when it is done.""")
-
-        wait_for_n(xpapoint)
-
+    wait_for_n(xpapoint)
     verboseprint(
         """%i/%i - Choose the background and the number of gaussians you want
          to fit the data with.
@@ -14544,9 +14542,7 @@ def kill_long_process(function='DS9Utils.*'):
     import subprocess
 
     subprocess.Popen(
-        [
-            "ps -eaf|grep '%s' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "%(function)
-        ],
+        ["ps -eaf|grep '%s' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "%(function)],
         shell=True,
         stdin=None,
         stdout=None,
@@ -14612,17 +14608,15 @@ def ReadBigAsciiTable(path, tmpFOlder="/tmp", n=10):
     if ["\n"] in cols:
         cols.remove("\n")
     tab = ascii.read(
-        files[0], fast_reader={"parallel": True, "use_fast_converter": True}
-    )
+        files[0], fast_reader={"parallel": True, "use_fast_converter": True})
     print(tab.colnames, cols)
     print(len(tab.colnames), len(cols))
     print("The new %i tables have %i rows" % (n, len(tab)))
     for pathi in files:
-        print(pathi)
-        tab = ascii.read(
-            pathi, fast_reader={"parallel": True, "use_fast_converter": True}
-        )
-        # print(tab.colnames,len(tab.colnames))
+        verboseprint(pathi)
+        tab = ascii.read(pathi, fast_reader={"parallel": True, "use_fast_converter": True})
+        verboseprint(tab.colnames)
+        verboseprint(len(tab.colnames))
         if len(tab.colnames) == len(cols):
             tab.rename_columns(tab.colnames, cols)
         a.append(tab)
@@ -14803,7 +14797,7 @@ def main():
                     "throw_apertures",
                     "PlotSpectraFilters",
                     "add_field_to_header",
-                ]:  # ,'setup'
+                ]:
                     print(
                         "{0}{1}{2:30}\033[0;0m{3} {4}".format(
                             color,
@@ -14822,8 +14816,8 @@ def main():
         function = sys.argv[1]
         if sys.stdin is None:
             try:
-                dict_function[function]()  # (xpapoint=xpapoint)
-            except Exception as e:  # Exception #ValueError #SyntaxError
+                dict_function[function]()
+            except Exception as e:
                 verboseprint(e)
                 import traceback
 
@@ -14833,8 +14827,7 @@ def main():
                        about the error""", verbose="1")
                 verboseprint("'" + "' '".join(sys.argv) + "'", verbose="1")
         else:
-            dict_function[function]()  # (xpapoint=xpapoint)
-
+            dict_function[function]()
     return
 
 
