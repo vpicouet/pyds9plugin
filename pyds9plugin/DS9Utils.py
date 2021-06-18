@@ -940,15 +940,11 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
 
     for line, numbers in zip(t2, numbers):
         filename = line["Path"]
-        # print(fields)
         number = list(numbers)  # np.array(list(line[fields]))
-        # print(numbers)
         f = "/".join(["%s_%s" % (a, b) for a, b in zip(fields, number)])
         new_path = os.path.join(path_date, f)
-        # print(new_path)
         if not os.path.exists(new_path):
             os.makedirs(new_path)
-        # print('Copying file',os.path.basename(filename))
         symlink_force(
             filename, new_path + "/%s" % (os.path.basename(filename))
         )
@@ -14811,7 +14807,6 @@ def main():
     # print("__file__ =", __file__)
     # print("__package__ =", __package__)
     # print("Python version = ", sys.version)
-
     else:
         function = sys.argv[1]
         if sys.stdin is None:
