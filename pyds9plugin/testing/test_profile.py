@@ -17,8 +17,8 @@ from pyds9 import DS9
 from  pkg_resources  import resource_filename
 from IPython import get_ipython
 ipython = get_ipython()        
-get_ipython().magic("%load_ext line_profiler")
-get_ipython().magic("%load_ext coverage")
+# get_ipython().magic("%load_ext line_profiler")
+# get_ipython().magic("%load_ext coverage")
 
 from line_profiler import LineProfiler
 import pstats
@@ -75,8 +75,8 @@ def main():
     # Profile(command="DS9open(None,'%s/stack.fitsfiles_folder))
     # %lprun -f open_file(name,argv='  -p %s -t Slice  -c 0 '%(im))
 
-    Profile_old(command="open_file('%s')"%(name),argv=[im,'Slice','0'] )#,functions=[open_file,])    
-    sys.exit()
+    # Profile_old(command="open_file('%s')"%(name),argv=[im,'Slice','0'] )#,functions=[open_file,])    
+    # sys.exit()
     # Profile_old(command="open_file('%s','%s/stack.fits')" )#,functions=[open_file,])    
     # %lprun  -f open_file open_file(name,argv='  -p %s -t Slice  -c 0 '%(im)) 
     
@@ -130,7 +130,7 @@ def main():
 
 
     Profile(command="python_command(argv = '-x %s -e ds9+=np.random.normal(0,0.5*np.nanstd(ds9),size=ds9.shape)')"%(name),functions=[python_command,])   
-    DS9Plot(d,path='%s/test.dat'%(test_folder))
+    ds9_plot(d,path='%s/test.dat'%(test_folder))
 
     #Profile(command="BackgroundFit1D('%s')"%(xpapoint),argv='x none none 1 1 1 0 none'.split(' '))
     d.set('regions delete all')

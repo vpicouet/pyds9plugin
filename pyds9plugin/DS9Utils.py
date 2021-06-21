@@ -56,7 +56,10 @@ else:
     sys.excepthook = IPython.core.ultratb.ColorTB()
 from functools import wraps
 
-DS9_BackUp_path = os.environ["HOME"] + "/DS9QuickLookPlugIn/"
+DS9_BackUp_path = os.path.join(os.environ["HOME"], "DS9QuickLookPlugIn")
+tmp_path = os.path.join(DS9_BackUp_path, "tmp")
+tmp_image = os.path.join(tmp_path, "image.fits")
+tmp_region = os.path.join(tmp_path, "regions.reg")
 
 
 def resource_filename(a="", b=""):
@@ -89,19 +92,14 @@ class MyParser(argparse.ArgumentParser):
             args = self.parse_args(["test"] + argv.split())
         if hasattr(args, "path") is False:
             args.path = None
-        # if required&(args.xpapoint is None)&((args.path is None)|(args.path == "")):
         if required & (args.xpapoint is None) & (args.path in (None, "")):
             self.error("at least one of --xpapoint and --path required")
-        # else:
-        #     print('ok il y a un des arguments', args.xpapoint,args.path)
         return args
 
 
-def CreateParser(namedoc, path=False):
+def create_parser(namedoc, path=False):
     name, doc = namedoc
-    formatter = lambda prog: argparse.HelpFormatter(
-        prog, max_help_position=32, width=136
-    )
+    formatter = lambda prog: argparse.HelpFormatter(prog, max_help_position=32, width=136)
     parser = MyParser(
         description=bcolors.BOLD + "%s: %s" % (name + bcolors.END, doc),
         usage=bcolors.FAIL
@@ -130,7 +128,7 @@ def CreateParser(namedoc, path=False):
     return parser
 
 
-def readV(path):
+def read_v(path):
     """Read a table and try ascii or CSV if an error is raised"""
     from astropy.table import Table
 
@@ -147,14 +145,14 @@ def readV(path):
     return cat
 
 
-# Table.readV = staticmethod(readV)
+# Table.read_v = staticmethod(read_v)
 
 
 def verbose(xpapoint=None, verbose=None, argv=[]):
     """Change the configuration
     """
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
@@ -219,7 +217,7 @@ def DS9n(xpapoint=None, stop=False):
         d = DS9()
 
 
-def create_folders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/"):
+def create_folders(DS9_BackUp_path=DS9_BackUp_path):
     """Create the folders in which are stored DS9 related data
     """
     if not os.path.exists(os.path.dirname(DS9_BackUp_path)):
@@ -234,10 +232,10 @@ def create_folders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/"):
         os.makedirs(os.path.dirname(DS9_BackUp_path) + "/subsets")
     if not os.path.exists(os.path.dirname(DS9_BackUp_path) + "/tmp"):
         os.makedirs(os.path.dirname(DS9_BackUp_path) + "/tmp")
-    if not os.path.exists(DS9_BackUp_path + ".verbose.txt"):
-        os.system("echo 0 > %s" % (DS9_BackUp_path + ".verbose.txt"))
-    if not os.path.exists(DS9_BackUp_path + ".message.txt"):
-        os.system("echo 1 > %s" % (DS9_BackUp_path + ".message.txt"))
+    if not os.path.exists(DS9_BackUp_path + "/.verbose.txt"):
+        os.system("echo 0 > %s" % (DS9_BackUp_path + "/.verbose.txt"))
+    if not os.path.exists(DS9_BackUp_path + "/.message.txt"):
+        os.system("echo 1 > %s" % (DS9_BackUp_path + "/.message.txt"))
     return DS9_BackUp_path
 
 
@@ -249,8 +247,8 @@ if (len(sys.argv) == 1) | ("LoadDS9QuickLookPlugin" in sys.argv):
 #     verbose(xpapoint=None, verbose=0)
 # else:
 #     verbose(xpapoint=None, verbose=0)
-message_ = bool(int(os.popen("cat %s.message.txt" % (DS9_BackUp_path)).read()))
-verbose_ = bool(int(os.popen("cat %s.verbose.txt" % (DS9_BackUp_path)).read()))
+message_ = bool(int(os.popen("cat %s/.message.txt" % (DS9_BackUp_path)).read()))
+verbose_ = bool(int(os.popen("cat %s/.verbose.txt" % (DS9_BackUp_path)).read()))
 
 
 def Log(v=None):
@@ -356,13 +354,9 @@ def compute_fluctuation(
     """Compute image(s) gain by fluctuation method"""
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
-        "-a",
-        "--aperture",
-        default="5,10,15",
-        help="Aperture radius in pixels",
-        type=str,
+        "-a", "--aperture", default="5,10,15", help="Aperture radius in pixels", type=str,
     )
     parser.add_argument(
         "-n",
@@ -377,7 +371,7 @@ def compute_fluctuation(
     fileInName = getfilename(d)
 
     mag_zp = 30
-    image, header, area, filename, offset = getImage(xpapoint)
+    image, header, area, filename, offset = get_image(xpapoint)
 
     pix_scale = 1
     mag_zp = 30
@@ -386,20 +380,13 @@ def compute_fluctuation(
         args.number_apertures,
         args.aperture,
     )  # np.array(sys.argv[-2:], dtype=int)
-    flux, n_aper_used, results = throwAper(
-        image,
-        pix_scale,
-        2 * aper_size,
-        N_aper,
-        verbose=True,
-        seg=seg,
-        type=type,
-        sub_bkg=sub,
+    flux, n_aper_used, results = throw_apers(
+        image, pix_scale, 2 * aper_size, N_aper, verbose=True, seg=seg, type=type, sub_bkg=sub,
     )
     result = results[np.isfinite(results["aperture_sum"])]
     fresult = results[~np.isfinite(results["aperture_sum"])]
 
-    create_DS9regions(
+    create_ds9_regions(
         [np.array(fresult["xcenter"]) + offset[0]],
         [np.array(fresult["ycenter"]) + offset[1]],
         radius=np.ones(len(fresult)) * aper_size,
@@ -407,13 +394,13 @@ def compute_fluctuation(
         save=True,
         ID=[np.array(fresult["aperture_sum"], dtype=int)],
         color=["Yellow"] * len(fresult),
-        savename="/tmp/photometry",
+        savename=tmp_region,
         system="image",
         font=1,
     )
-    d.set("regions tmp/photometry.reg")
+    d.set("regions %s" % (tmp_region))
 
-    create_DS9regions(
+    create_ds9_regions(
         [np.array(result["xcenter"]) + offset[0]],
         [np.array(result["ycenter"]) + offset[1]],
         radius=np.ones(len(fresult)) * aper_size,
@@ -421,11 +408,11 @@ def compute_fluctuation(
         save=True,
         ID=[np.array(result["aperture_sum"], dtype=int)],
         color=["green"] * len(result),
-        savename="/tmp/photometry",
+        savename=tmp_region,
         system="image",
         font=1,
     )
-    d.set("regions tmp/photometry.reg")
+    d.set("regions %s" % (tmp_region))
 
     d, d_err, flux_std = depth(flux, mag_zp, sigma, type)
     print_d = "{0:3.2f}".format(d[0])
@@ -434,12 +421,7 @@ def compute_fluctuation(
         print_d += " {0:3.2f}".format(d[i])
         print_sigma += " {0:3.2f}".format(sigma[i])
     title = '{0}:\n Depth in {1:3.2f}" diam. apertures: {2:s} ({3:s} sigmas) +/- {4:3.2f}. flux_std = {5:3.2f}'.format(
-        os.path.basename(fileInName),
-        aper_size,
-        print_d,
-        print_sigma,
-        d_err[0],
-        flux_std,
+        os.path.basename(fileInName), aper_size, print_d, print_sigma, d_err[0], flux_std,
     )
 
     if plot:
@@ -462,16 +444,12 @@ def lock(xpapoint=None, argv=[]):
     """
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
         "-f", "--frame", default="image", type=str, choices=["image", "none", "wcs"],
     )
     parser.add_argument(
-        "-c",
-        "--crosshair",
-        default="image",
-        type=str,
-        choices=["image", "none", "wcs"],
+        "-c", "--crosshair", default="image", type=str, choices=["image", "none", "wcs"],
     )
     parser.add_argument("-l", "--scalelimits", default="1", type=str, metavar="")
     parser.add_argument("-s", "--smooth", default="0", type=str, metavar="")
@@ -518,8 +496,7 @@ def fn_memory_load(function):
         m2 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6
         mem1, mem2, mem3 = (m2 - m1) / 1e6, m2 / 1e6, m1 / 1e6
         verboseprint(
-            "Memory used %s: %0.1f MB (%0.1f - %0.1f)"
-            % (function.__name__, mem1, mem2, mem3)
+            "Memory used %s: %0.1f MB (%0.1f - %0.1f)" % (function.__name__, mem1, mem2, mem3)
         )
         return result
 
@@ -542,11 +519,9 @@ def fits_ext(fitsimage):
     """Returns the first extension of a fits file containing an image"""
     import numpy as np
 
-    ext = np.where(
-        np.array([type(ext.data) == np.ndarray for ext in fitsimage]) is True
-    )[0][0]
-    verboseprint("Taking extension: %s" % (ext))
-    return ext
+    ext = np.where(np.array([type(ex.data) == np.ndarray for ex in fitsimage]))
+    verboseprint("Taking extension: %s" % (ext[0][0]))
+    return ext[0][0]
 
 
 # @fn_timer
@@ -592,17 +567,12 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
                         % (os.path.basename(file))
                     )  # = "y"
                     if var.lower() != "n":
-                        if (
-                            float(".".join(os.path.basename(file).split(".")[1:-1]))
-                            > 8.1
-                        ):
-                            ReplaceStringInFile(
-                                path=file,
-                                string1="user4 {}",
-                                string2="user4 {%s}" % (AnsDS9path),
+                        if float(".".join(os.path.basename(file).split(".")[1:-1])) > 8.1:
+                            replace_string_in_file(
+                                path=file, string1="user4 {}", string2="user4 {%s}" % (AnsDS9path),
                             )
                         else:
-                            ReplaceStringInFile(
+                            replace_string_in_file(
                                 path=file,
                                 string1="user4 {}",
                                 string2="user4 {%s}" % (AnsDS9path_old),
@@ -643,31 +613,21 @@ def LoadDS9QuickLookPlugin(xpapoint=None):
         symlink_force(
             which("DS9Utils"), os.path.join(os.path.dirname(AnsDS9path), "DS9Utils"),
         )
-
-    if (
-        "file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html"
-        in open(AnsDS9path).read()
-    ):
-        ReplaceStringInFile(
-            path=AnsDS9path,
-            string1="file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html",
-            string2="file:%s" % (help_path),
+    html_file = "file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html"
+    if html_file in open(AnsDS9path).read():
+        replace_string_in_file(
+            path=AnsDS9path, string1=html_file, string2="file:%s" % (help_path),
         )
-    if (
-        "file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html"
-        in open(AnsDS9path_old).read()
-    ):
-        ReplaceStringInFile(
-            path=AnsDS9path_old,
-            string1="file:/Users/Vincent/Github/pyds9plugin/pyds9plugin/doc/ref/index.html",
-            string2="file:%s" % (help_path),
+    if html_file in open(AnsDS9path_old).read():
+        replace_string_in_file(
+            path=AnsDS9path_old, string1=html_file, string2="file:%s" % (help_path),
         )
         sys.exit()
 
     return
 
 
-def ReplaceStringInFile(path, string1, string2, path2=None):
+def replace_string_in_file(path, string1, string2, path2=None):
     """Replaces string in a txt file"""
     fin = open(path, "rt")
     data = fin.read()
@@ -730,7 +690,7 @@ def setup(xpapoint=None, color="cool", argv=[]):
     """
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-s",
         "--scale",
@@ -750,15 +710,9 @@ def setup(xpapoint=None, color="cool", argv=[]):
         ],
     )
     parser.add_argument(
-        "-l",
-        "--limits",
-        default="50-99.9",
-        help="Scale limit in percentile of data",
-        metavar="",
+        "-l", "--limits", default="50-99.9", help="Scale limit in percentile of data", metavar="",
     )
-    parser.add_argument(
-        "-c", "--color", default="cool", help="Colormap to use", metavar=""
-    )
+    parser.add_argument("-c", "--color", default="cool", help="Colormap to use", metavar="")
 
     args = parser.parse_args_modif(argv, required=False)
 
@@ -775,7 +729,7 @@ def setup(xpapoint=None, color="cool", argv=[]):
     fitsimage = fitsimage[fits_ext(fitsimage)].data
     lx, ly = fitsimage.shape[0], fitsimage.shape[1]
     if region is not None:
-        image_area = Lims_from_region(None, coords=region)
+        image_area = lims_from_region(None, coords=region)
         x_inf, x_sup, y_inf, y_sup = image_area
         if (x_sup < 0) | (y_sup < 0):
             image_area = [
@@ -818,7 +772,7 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
     from shutil import copyfile
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-p",
         "--path",
@@ -843,12 +797,7 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-n",
-        "--number",
-        default="all",
-        help="Number of same files to take",
-        type=str,
-        metavar="",
+        "-n", "--number", default="all", help="Number of same files to take", type=str, metavar="",
     )
     args = parser.parse_args_modif(argv)
     d = DS9n(args.xpapoint)
@@ -880,13 +829,13 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
         cat = Table.read(cat_path, format="csv")
         print(e)
         logger.warning(e)
-    cat = DeleteMultiDimCol(cat)
+    cat = delete_multidim_columns(cat)
     if query != "":
         df = cat.to_pandas()
         verboseprint(query)
         try:
             new_table = df.query(query)
-        except:
+        except Exception:
             query = ds9entry(
                 args.xpapoint,
                 "UndefinedVariableError in query, please rewrite a query.",
@@ -1057,8 +1006,7 @@ def PlotFit1D(
             )
         elif deg == "gaus":
             law = (
-                lambda x, a, xo, sigma, offset: a ** 2
-                * np.exp(-np.square((x - xo) / sigma) / 2)
+                lambda x, a, xo, sigma, offset: a ** 2 * np.exp(-np.square((x - xo) / sigma) / 2)
                 + offset
             )
             if P0 is None:
@@ -1080,29 +1028,26 @@ def PlotFit1D(
 
             get_ipython().run_line_magic("matplotlib", "")
             if len(P0) == 1:
-                InteractivManualFitting(
-                    x,
-                    y,
-                    initial="%s(x,a*%f)" % (law.__name__, *P0,),
-                    dict_={law.__name__: law},
+                interactiv_manual_fitting(
+                    x, y, initial="%s(x,a*%f)" % (law.__name__, *P0,), dict_={law.__name__: law},
                 )
             if len(P0) == 2:
                 print("Interactive Fit")
-                InteractivManualFitting(
+                interactiv_manual_fitting(
                     x,
                     y,
                     initial="%s(x,a*%f,b*%f)" % (law.__name__, *P0,),
                     dict_={law.__name__: law},
                 )
             if len(P0) == 3:
-                InteractivManualFitting(
+                interactiv_manual_fitting(
                     x,
                     y,
                     initial="%s(x,a*%f,b*%f,c*%f)" % (law.__name__, *P0,),
                     dict_={law.__name__: law},
                 )
             if len(P0) == 4:
-                InteractivManualFitting(
+                interactiv_manual_fitting(
                     x,
                     y,
                     initial="%s(x,a*%f,b*%f,c*%f,d*%f)" % (law.__name__, *P0,),
@@ -1132,28 +1077,28 @@ def PlotFit1D(
 
                     get_ipython().run_line_magic("matplotlib", "")
                     if len(P0) == 1:
-                        InteractivManualFitting(
+                        interactiv_manual_fitting(
                             x,
                             y,
                             initial="%s(x,a*%f)" % (law.__name__, *P0,),
                             dict_={law.__name__: law},
                         )
                     if len(P0) == 2:
-                        InteractivManualFitting(
+                        interactiv_manual_fitting(
                             x,
                             y,
                             initial="%s(x,a*%f,b*%f)" % (law.__name__, *P0,),
                             dict_={law.__name__: law},
                         )
                     if len(P0) == 3:
-                        InteractivManualFitting(
+                        interactiv_manual_fitting(
                             x,
                             y,
                             initial="%s(x,a*%f,b*%f,c*%f)" % (law.__name__, *P0,),
                             dict_={law.__name__: law},
                         )
                     if len(P0) == 4:
-                        InteractivManualFitting(
+                        interactiv_manual_fitting(
                             x,
                             y,
                             initial="%s(x,a*%f,b*%f,c*%f,d*%f)" % (law.__name__, *P0,),
@@ -1181,10 +1126,7 @@ def PlotFit1D(
         res = np.sum(np.square(y - deg(x, *popt)))
         zp = law(xp, *popt)
         zz = law(x, *popt)
-        name = "Fit %s, R=%0.2E" % (
-            np.round(np.array(popt, dtype=int), 0),
-            Decimal(res),
-        )
+        name = "Fit %s, R=%0.2E" % (np.round(np.array(popt, dtype=int), 0), Decimal(res),)
     if Plot:
         if ax is None:
             if deg == "gaus":
@@ -1214,9 +1156,7 @@ def PlotFit1D(
                 np.nanmin(xp) - 2 * xp.ptp(), np.nanmax(xp) + 2 * xp.ptp(), 5 * len(xp),
             )
             try:
-                line = ax.plot(
-                    xp, np.poly1d(z)(xp), **kwargs
-                )  # ls=ls, c=c, label=name,
+                line = ax.plot(xp, np.poly1d(z)(xp), **kwargs)  # ls=ls, c=c, label=name,
             except UnboundLocalError:
                 line = ax.plot(xp, law(xp, *popt), **kwargs)  # ls=ls, c=c, label=name,
             # l = ax.plot(xp, zp,ls='dotted',c=c,label=name)
@@ -1258,7 +1198,7 @@ def PlotFit1D(
     }
 
 
-def CreateRegions(regions, savename="/tmp/region.reg", texts="               "):
+def create_regions(regions, savename=tmp_region, texts="               "):
     """Create DS9 regions files from imported python region from DS9
     """
     regions_ = """# Region file format: DS9 version 4.1
@@ -1269,12 +1209,12 @@ def CreateRegions(regions, savename="/tmp/region.reg", texts="               "):
     for region, text, color in zip(regions, texts, colors):
         verboseprint(region)
         regions_ += "\n"
-        regions_ += addRegion(region, color=color, text=text)
+        regions_ += add_region(region, color=color, text=text)
     with open(savename, "w") as text_file:
         text_file.write(regions_)
 
 
-def addRegion(region, color="Yellow", text=""):
+def add_region(region, color="Yellow", text=""):
     """Add a region
     """
 
@@ -1309,10 +1249,10 @@ def addRegion(region, color="Yellow", text=""):
     return text
 
 
-def getDatafromRegion(d, region, ext):
+def get_data_from_region(d, region, ext):
     """Get data from region
     """
-    x_inf, x_sup, y_inf, y_sup = Lims_from_region(region=region, coords=None)
+    x_inf, x_sup, y_inf, y_sup = lims_from_region(region=region, coords=None)
     data = d.get_pyfits()[ext].data[y_inf:y_sup, x_inf:x_sup]
     return data
 
@@ -1326,7 +1266,7 @@ def aperture_photometry(xpapoint=None, argv=[]):
     from photutils import aperture_photometry
     from photutils import CircularAperture, CircularAnnulus
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
         "-a", "--apertures", default="30,30", help="Aperture radius in pixel", type=str,
     )
@@ -1376,8 +1316,7 @@ def aperture_photometry(xpapoint=None, argv=[]):
             phot["aper_sum_bkgsub"] = phot["aperture_sum"] - phot["aper_bkg"]
             Phot.add_row(phot[0])
     Phot["MAG_APER"] = np.around(
-        -2.5 * np.log10(Phot["aperture_sum"] - Phot["aper_bkg"]) + zero_point_magnitude,
-        1,
+        -2.5 * np.log10(Phot["aperture_sum"] - Phot["aper_bkg"]) + zero_point_magnitude, 1,
     )
     for col in Phot.colnames:
         Phot[col].info.format = "%.8g"  # for consistent table output
@@ -1385,28 +1324,28 @@ def aperture_photometry(xpapoint=None, argv=[]):
     Phot = Table(Phot)
     for aper, color in zip(apers, 10 * ["green", "yellow", "white"][: len(apers)]):
         t_sub = Phot[Phot["aper_pix"] == aper]
-        create_DS9regions(
+        create_ds9_regions(
             [t_sub["xcenter"]],
             [t_sub["ycenter"]],
             radius=[aper],
             color=[color] * len(t_sub),
             form=["circle"] * len(t_sub),
             save=True,
-            savename="/tmp/centers",
+            savename=tmp_region,
             ID=[t_sub["MAG_APER"]],
         )
-        d.set("regions /tmp/centers.reg")
+        d.set("regions %s" % (tmp_region))
 
     return phot
 
 
-def create_DS9regions(
+def create_ds9_regions(
     xim,
     yim,
     radius=20,
     more=None,
     save=True,
-    savename="test",
+    savename=tmp_region,
     form=["circle"],
     DS9_offset=[1, 1],
     color=["green"],
@@ -1460,9 +1399,7 @@ def create_DS9regions(
             for j, (x, y) in enumerate(np.nditer([xim[i], yim[i]])):
 
                 if form[0] == "ellipse":
-                    rest = "{:.6f},{:.6f},{:.6f})".format(
-                        more[0][j], more[1][j], more[2][j]
-                    )
+                    rest = "{:.6f},{:.6f},{:.6f})".format(more[0][j], more[1][j], more[2][j])
                     rest += " # color={}".format(color[j])
                     # print(color[j])
                 regions += "{}({:.6f},{:.6f},".format(form[i], x + 0, y + 0) + rest
@@ -1475,9 +1412,9 @@ def create_DS9regions(
             pass
 
     if save:
-        with open(savename + ".reg", "w") as text_file:
+        with open(savename, "w") as text_file:
             text_file.write(regions)
-        verboseprint(("Region file saved at: " + savename + ".reg"))
+        verboseprint(("Region file saved at: " + savename))
         return
 
 
@@ -1502,12 +1439,9 @@ def getdata(xpapoint=None, Plot=False, selected=False):
         for region in regions:
             verboseprint(region)
             verboseprint("region = %s" % (region))
-            x_inf, x_sup, y_inf, y_sup = Lims_from_region(
-                None, coords=region, dtype=float
-            )
+            x_inf, x_sup, y_inf, y_sup = lims_from_region(None, coords=region, dtype=float)
             verboseprint(
-                "x_inf, x_sup, y_inf, y_sup = %s, %s, %s, %s"
-                % (x_inf, x_sup, y_inf, y_sup)
+                "x_inf, x_sup, y_inf, y_sup = %s, %s, %s, %s" % (x_inf, x_sup, y_inf, y_sup)
             )
             data = d.get_pyfits()[0].data
             if len(data.shape) == 2:
@@ -1539,6 +1473,23 @@ def getdata(xpapoint=None, Plot=False, selected=False):
         return datas[0]
 
 
+def raise_create_region(d):
+    message(
+        d,
+        """Please create and select a region (Circle/Box)
+              before runnning this analysis""",
+    )
+
+
+def raise_create_plot(d):
+    message(
+        d,
+        """Please create a plot by creating a Region->Shape->Projection
+                 or an histogram of any region! """,
+    )
+    return
+
+
 def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
     """2D gaussian fitting on the encircled region in DS9 [DS9 required]
     """
@@ -1547,7 +1498,7 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-p",
         "--plot",
@@ -1566,45 +1517,10 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
         Plot = False
         filename = getfilename(d)
         try:
-            x_inf, x_sup, y_inf, y_sup = Lims_from_region(None, coords=region)
+            x_inf, x_sup, y_inf, y_sup = lims_from_region(None, coords=region)
         except Exception:
-            message(
-                d,
-                """Please create and select a region (Circle/Box)
-                          before runnning this analysis""",
-            )
-
+            raise_create_region(d)
             sys.exit()
-
-        print(x_inf, x_sup, y_inf, y_sup)
-        data = fits.open(filename)[0].data
-        size = x_sup - x_inf
-        x_infs, y_infs = (
-            np.random.randint(1100, 1900, size=n),
-            np.random.randint(100, 1900, size=n),
-        )
-        images = [
-            data[y_inf : y_inf + size, x_inf : x_inf + size]
-            for x_inf, y_inf in zip(x_infs, y_infs)
-        ]
-        verboseprint("Test: number of images = %s" % (len(images)))
-    else:
-        try:
-            x_inf, x_sup, y_inf, y_sup = Lims_from_region(region)
-        except Exception:
-            message(
-                d,
-                """Please create and select a region (Circle/Box)
-                          before runnning this analysis""",
-            )
-            sys.exit()
-
-        data = d.get_pyfits()[0].data
-        images = [
-            data[y_inf:y_sup, x_inf:x_sup]
-        ]  # - np.nanpercentile(data[y_inf:y_sup, x_inf:x_sup], 30)]
-    fluxes = []
-    for i, image in enumerate(images):
         while np.isfinite(image).all() == False:
             kernel = Gaussian2DKernel(x_stddev=2, y_stddev=2)
             image = interpolate_replace_nans(image, kernel)  # .astype('float16')
@@ -1683,9 +1599,7 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
                 )  # (-np.inf, np.inf)#
         try:
             verboseprint(bounds)
-            popt, pcov = curve_fit(
-                gaussian_2dim, (x, y), image.flat, Param
-            )  # ,bounds=bounds)
+            popt, pcov = curve_fit(gaussian_2dim, (x, y), image.flat, Param)  # ,bounds=bounds)
         except RuntimeError as e:
             logger.warning(e)
             popt = [0, 0, 0, 0, 0, 0]
@@ -1696,21 +1610,11 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
     verboseprint("New center = %s %s " % (popt[1], popt[2]))
     verboseprint("New center = %s %s " % (x_inf, y_inf))
     verboseprint(
-        x_inf + xn + 1,
-        y_inf + yn + 1,
-        2.35 * popt[3],
-        2.35 * popt[4],
-        180 * popt[5] / np.pi,
+        x_inf + xn + 1, y_inf + yn + 1, 2.35 * popt[3], 2.35 * popt[4], 180 * popt[5] / np.pi,
     )
     d.set(
         'regions format ds9 ; regions system detector ; regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "'
-        % (
-            x_inf + xn + 1,
-            y_inf + yn + 1,
-            2.35 * popt[3],
-            2.35 * popt[4],
-            180 * popt[5] / np.pi,
-        )
+        % (x_inf + xn + 1, y_inf + yn + 1, 2.35 * popt[3], 2.35 * popt[4], 180 * popt[5] / np.pi,)
     )
 
     if Plot:
@@ -1744,11 +1648,7 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
             StructuredGrid()
         )  # wrap(np.array([xx.ravel(),yy.ravel(),((z-np.nanmin(z))*value).reshape(-1)]).T)
         data_mesh.points = PolyData(
-            np.c_[
-                xx.reshape(-1),
-                yy.reshape(-1),
-                ((z - np.nanmin(z)) * value).reshape(-1),
-            ]
+            np.c_[xx.reshape(-1), yy.reshape(-1), ((z - np.nanmin(z)) * value).reshape(-1),]
         ).points
         data_mesh[
             "Intensity"
@@ -1757,13 +1657,11 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
         )  # np.log10(data.ravel()[mask])#exp(-((yy-yy.mean())**2+(xx-xx.mean())**2+(zz-zz.mean())**2)/100).ravel()
         data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
         points = np.c_[
-            xx.reshape(-1),
-            yy.reshape(-1),
-            ((image - np.nanmin(z)) * value).reshape(-1),
+            xx.reshape(-1), yy.reshape(-1), ((image - np.nanmin(z)) * value).reshape(-1),
         ]
         # points = np.c_[xx.reshape(-1), yy.reshape(-1), (z * value).reshape(-1)]
-        foo = PolyData(points)
-        fit.points = foo.points
+        data_points = PolyData(points)
+        fit.points = data_points.points
         fit["z"] = image.ravel()
         fit.dimensions = [image.shape[1], image.shape[0], 1]
         p1 = p.add_mesh(
@@ -1906,7 +1804,7 @@ def astrometry_net(xpapoint=None, argv=[]):
     from astropy.io import fits
     from astropy.wcs import wcs
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument("--type", choices=("Image", "XY-catalog"), metavar="")
     parser.add_argument(
         "--scale-units", default="", help="Units for scale estimate", metavar="",
@@ -1917,9 +1815,7 @@ def astrometry_net(xpapoint=None, argv=[]):
     parser.add_argument(
         "--scale-upper", default="", type=str, help="Scale upper-bound", metavar="",
     )
-    parser.add_argument(
-        "--scale-est", default="", type=str, help="Scale estimate", metavar=""
-    )
+    parser.add_argument("--scale-est", default="", type=str, help="Scale estimate", metavar="")
     parser.add_argument(
         "--scale-err",
         default="",
@@ -1930,18 +1826,10 @@ def astrometry_net(xpapoint=None, argv=[]):
     parser.add_argument("--ra", default="", type=str, help="RA center", metavar="")
     parser.add_argument("--dec", default="", type=str, help="Dec center", metavar="")
     parser.add_argument(
-        "--radius",
-        default="",
-        type=str,
-        help="Search radius around RA,Dec center",
-        metavar="",
+        "--radius", default="", type=str, help="Search radius around RA,Dec center", metavar="",
     )
     parser.add_argument(
-        "--downsample",
-        default="",
-        type=str,
-        help="Downsample image by this factor",
-        metavar="",
+        "--downsample", default="", type=str, help="Downsample image by this factor", metavar="",
     )
     parser.add_argument(
         "--tweak-order",
@@ -1951,10 +1839,7 @@ def astrometry_net(xpapoint=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "--crpix-center",
-        default="",
-        help="Set reference point to center of image?",
-        metavar="",
+        "--crpix-center", default="", help="Set reference point to center of image?", metavar="",
     )
     parser.add_argument(
         "--parity",
@@ -1986,7 +1871,7 @@ def astrometry_net(xpapoint=None, argv=[]):
     verboseprint("Processing might take a few minutes ~5-10")
     PathExec = os.path.dirname(os.path.realpath(__file__)) + "/astrometry3.py"
     Newfilename = filename[:-5] + "_wcs.fits"
-    CreateWCS(PathExec, filename, Newfilename, params=args, type_=type_)
+    create_wcs(PathExec, filename, Newfilename, params=args, type_=type_)
 
     wcs_header = wcs.WCS(fits.getheader(Newfilename)).to_header()
     filename = getfilename(d)
@@ -1997,10 +1882,7 @@ def astrometry_net(xpapoint=None, argv=[]):
         except ValueError as e:
             logger.warning(e)
     fits.setval(
-        filename,
-        "WCSDATE",
-        value=datetime.datetime.now().strftime("%y%m%d-%HH%M"),
-        comment="",
+        filename, "WCSDATE", value=datetime.datetime.now().strftime("%y%m%d-%HH%M"), comment="",
     )
     d.set("lock frame wcs")
     message(
@@ -2011,7 +1893,7 @@ def astrometry_net(xpapoint=None, argv=[]):
     return
 
 
-def CreateWCS(PathExec, filename, Newfilename, params, type_="Image"):
+def create_wcs(PathExec, filename, Newfilename, params, type_="Image"):
     """Sends the image on the astrometry.net server
     and run a lost in space algorithm to have this header.
     Processing might take a few minutes
@@ -2090,7 +1972,7 @@ def CreateWCS(PathExec, filename, Newfilename, params, type_="Image"):
 def original_settings(xpapoint=None, argv=[]):
     """Return to original settings [DS9 required]
     """
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv, required=False)
 
     d = DS9n(args.xpapoint)
@@ -2159,11 +2041,7 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
         except ValueError:
             if message:
                 d = win
-                message(
-                    d,
-                    """It seems that you did not create a region.
-                              Please create a region and rerun the analysis""",
-                )
+                raise_create_region(d)
                 sys.exit()
         coords = [float(c) for c in info.split(")")[0].split(",")]
         if quick:
@@ -2206,18 +2084,14 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
                 Xc, Yc = np.floor(xc), np.floor(yc)
                 inside = ((X - Xc) / a2) ** 2 + ((Y - Yc) / b2) ** 2 <= 1
                 if len(coords) == 5:
-                    ellipse = namedtuple(
-                        "Ellipse", "data databox inside xc yc a b angle"
-                    )
+                    ellipse = namedtuple("Ellipse", "data databox inside xc yc a b angle")
                     return ellipse(arr, arr, inside, xc, yc, a2, b2, angle)
 
                 inside &= ((X - Xc) / a1) ** 2 + ((Y - Yc) / b1) ** 2 >= 1
                 annulus = namedtuple(
                     "EllipticalAnnulus", "data databox inside xc yc a1 b1 a2 b2 angle",
                 )
-                processed_regions.append(
-                    annulus(arr, arr, inside, xc, yc, a1, b1, a2, b2, angle)
-                )
+                processed_regions.append(annulus(arr, arr, inside, xc, yc, a1, b1, a2, b2, angle))
             elif name == "polygon":
                 # return(coords)
                 processed_regions.append(coords)
@@ -2245,9 +2119,8 @@ def getregion(
     """
     # if isinstance(win, FakeDS9):
     #     return None
-    win.set(
-        "regions format ds9 ; regions system %s" % (system)
-    )  # rows = win.get("regions list")
+    win.set("regions format ds9 ; regions system %s" % (system))
+    # rows = win.get("regions list")
     if all is False:
         regions = win.get("regions selected")
         # verboseprint(regions)
@@ -2262,12 +2135,7 @@ def getregion(
             try:
                 rows = win.get("regions all")
             except TypeError:
-                message(
-                    win,
-                    """It seems that you did not create a region.
-                              Please create a region and rerun the analysis""",
-                )
-
+                raise_create_region(d)
                 sys.exit()
         else:
             return None
@@ -2278,11 +2146,7 @@ def getregion(
         try:
             rows = win.get("regions all")
         except TypeError:
-            message(
-                win,
-                """It seems that you did not create a region.
-                          Please create a region and rerun the analysis""",
-            )
+            raise_create_region(d)
 
             sys.exit()
 
@@ -2296,13 +2160,9 @@ def getregion(
             | ("projection" in rows[2])
             | ("ellipse" in rows[2])
         ):
-            region = process_region(
-                rows[2:], win, quick=quick, message=message, dtype=dtype
-            )
+            region = process_region(rows[2:], win, quick=quick, message=message, dtype=dtype)
         else:
-            region = process_region(
-                rows[3:], win, quick=quick, message=message, dtype=dtype
-            )
+            region = process_region(rows[3:], win, quick=quick, message=message, dtype=dtype)
         if type(region) == list:
             return region
         else:
@@ -2312,7 +2172,7 @@ def getregion(
         return process_region([rows[-1]], win, quick=quick, message=message)
 
 
-def ENC(x, ENCa):
+def enc(x, ENCa):
     """Return encoder step of FB2 tip-tilds focus A
     """
     a = (ENCa[-1] - ENCa[0]) / (len(ENCa) - 1) * x + ENCa[0]
@@ -2393,19 +2253,14 @@ def throughfocus_(
         # day, h, m, s = float(time[-11:-9]), float(time[-8:-6]), float(time[-5:-3]), float(time[-2:])
         # sec.append(t2s(h=h, m=m, s=s, d=day))
 
-        background = 1 * estimateBackground(image, center)
+        background = 1 * estimate_background(image, center)
         n = 25
         subimage = (image - background)[
-            int(center[1]) - n : int(center[1]) + n,
-            int(center[0]) - n : int(center[0]) + n,
+            int(center[1]) - n : int(center[1]) + n, int(center[0]) - n : int(center[0]) + n,
         ]
         images.append(subimage)
-        d = AnalyzeSpot(
-            image,
-            center=center,
-            fibersize=fibersize,
-            center_type=center_type,
-            SigmaMax=SigmaMax,
+        d = analyze_spot(
+            image, center=center, fibersize=fibersize, center_type=center_type, SigmaMax=SigmaMax,
         )
         max20 = subimage.flatten()
         max20.sort()
@@ -2497,11 +2352,11 @@ def throughfocus_(
             min(maxpix),
             min(sumpix),
             max(varpix),
-            # ENC(bestx1, ENCa),
-            # ENC(bestx2, ENCa),
-            # ENC(bestx3, ENCa),
-            # ENC(bestx4, ENCa),
-            # ENC(bestx6, ENCa),
+            # enc(bestx1, ENCa),
+            # enc(bestx2, ENCa),
+            # enc(bestx3, ENCa),
+            # enc(bestx4, ENCa),
+            # enc(bestx6, ENCa),
         )
     )  # tbm
 
@@ -2592,7 +2447,7 @@ def throughfocus_(
     return images  # fwhm, EE50, EE80
 
 
-def throughfocusWCS(
+def throughfocus_wcs(
     center,
     files,
     # x=None,
@@ -2644,9 +2499,7 @@ def throughfocusWCS(
         # else:
         nombre = 5
         if ENCa_center is not None:
-            verboseprint(
-                "Actuator given: Center = {} , PAS = {}".format(ENCa_center, pas)
-            )
+            verboseprint("Actuator given: Center = {} , PAS = {}".format(ENCa_center, pas))
             ENCa = np.linspace(
                 ENCa_center - nombre * pas, ENCa_center + nombre * pas, 2 * nombre + 1,
             )[::-1]
@@ -2658,20 +2511,18 @@ def throughfocusWCS(
 
             w = wcs.WCS(header)
             center_wcs = center
-            center_pix = w.all_world2pix(
-                center_wcs[0] * u.deg, center_wcs[1] * u.deg, 0,
-            )
+            center_pix = w.all_world2pix(center_wcs[0] * u.deg, center_wcs[1] * u.deg, 0,)
             center_pix = [int(center_pix[0]), int(center_pix[1])]
         else:
             center_pix = center
-        d = AnalyzeSpot(
+        d = analyze_spot(
             image,
             center=center_pix,
             fibersize=fibersize,
             center_type=center_type,
             SigmaMax=SigmaMax,
         )
-        background = 1 * estimateBackground(image, center)
+        background = 1 * estimate_background(image, center)
         n = 25
         subimage = (image - background)[
             int(center_pix[1]) - n : int(center_pix[1]) + n,
@@ -2746,11 +2597,11 @@ def throughfocusWCS(
     mean = np.nanmean(
         np.array(
             [
-                ENC(bestx1, ENCa),
-                ENC(bestx2, ENCa),
-                ENC(bestx3, ENCa),
-                ENC(bestx4, ENCa),
-                ENC(bestx6, ENCa),
+                enc(bestx1, ENCa),
+                enc(bestx2, ENCa),
+                enc(bestx3, ENCa),
+                enc(bestx4, ENCa),
+                enc(bestx6, ENCa),
             ]
         )
     )
@@ -2811,11 +2662,11 @@ def throughfocusWCS(
             min(maxpix),
             min(sumpix),
             max(varpix),
-            ENC(bestx1, ENCa),
-            ENC(bestx2, ENCa),
-            ENC(bestx3, ENCa),
-            ENC(bestx4, ENCa),
-            ENC(bestx6, ENCa),
+            enc(bestx1, ENCa),
+            enc(bestx2, ENCa),
+            enc(bestx3, ENCa),
+            enc(bestx4, ENCa),
+            enc(bestx6, ENCa),
         )
     )
     np.savetxt("/tmp/fwhm.dat", np.array([x, fwhm]).T)
@@ -2903,7 +2754,7 @@ def throughfocusWCS(
     return images  # fwhm, EE50, EE80
 
 
-def AnalyzeSpot(
+def analyze_spot(
     data,
     center,
     size=40,
@@ -2935,20 +2786,15 @@ def AnalyzeSpot(
         )  # ,bounds=([0,0],[1,5]))#[1,1,1,1,1] (x,a,b,sigma,lam,alpha):
     else:
         popt, pcov = curve_fit(
-            ConvolveDiskGaus2D,
+            convolve_diskgaus_2d,
             rmean[:size],
             profile,
             p0=[1, fiber, 2, np.nanmean(profile)],
-            bounds=(
-                [0, 0.95 * fiber - 1e-5, 1, -1],
-                [2, 1.05 * fiber + 1e-5, SigmaMax, 1],
-            ),
+            bounds=([0, 0.95 * fiber - 1e-5, 1, -1], [2, 1.05 * fiber + 1e-5, SigmaMax, 1],),
         )  # [1,1,1,1,1] (x,a,b,sigma,lam,alpha):
     EE_interp = interpolate.interp1d(rsurf[:size], EE[:size], kind="cubic")
     ninterp = 10
-    xnew = np.linspace(
-        rsurf[:size].min(), rsurf[:size].max(), ninterp * len(rsurf[:size])
-    )
+    xnew = np.linspace(rsurf[:size].min(), rsurf[:size].max(), ninterp * len(rsurf[:size]))
     mina = min(xnew[EE_interp(xnew)[: ninterp * size] > 79])
     minb = min(xnew[EE_interp(xnew)[: ninterp * size] > 49])
     if fiber == 0:
@@ -2993,7 +2839,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
     from astropy.table import Table
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-p",
         "--path",
@@ -3032,9 +2878,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
     d = DS9n(args.xpapoint)
     filename = getfilename(d)
     if getregion(d, selected=True) is None:
-        d.set(
-            "analysis message {It seems that you did not create or select the region. Please create a circle on a close to focus spot, select it re-run the analysis.}"
-        )
+        raise_create_region(d)
         sys.exit()
     a = getregion(d)[0]
     if args.path == "":
@@ -3075,9 +2919,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
     if args.value == "":
         offsets = np.arange(len(path))
     else:
-        offsets = np.array(
-            [float(value) for value in args.value.split(",") if value != ""]
-        )
+        offsets = np.array([float(value) for value in args.value.split(",") if value != ""])
         if len(offsets) != len(path):
             message(
                 d,
@@ -3086,7 +2928,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
             ), sys.exit()
 
     image = fits.open(filename)[0]
-    rp = AnalyzeSpot(image.data, center=[np.int(a.xc), np.int(a.yc)], fibersize=0)
+    rp = analyze_spot(image.data, center=[np.int(a.xc), np.int(a.yc)], fibersize=0)
     x, y = rp["Center"]
     d.set("regions system image")
     verboseprint(
@@ -3108,7 +2950,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
         alpha, delta = float(center_wcs[0]), float(center_wcs[1])
         verboseprint("alpha, delta = %s %s" % (alpha, delta))
 
-        throughfocusWCS(
+        throughfocus_wcs(
             center=[alpha, delta],
             files=path,
             # x=x,
@@ -3146,7 +2988,7 @@ def throughfocus(xpapoint=None, Plot=True, argv=[]):
     datc = [convolve(data, Gaussian2DKernel(x_stddev=1)) for data in dat]
     ptp = [data.ptp() for data in dat]
     a = Table([dat, datc, ptp], names=("VIGNET1", "VIGNET2", "AMPLITUDE"))
-    PyvistaThoughfocus(a)
+    pyvista_throughfocus(a)
 
 
 def explore_throughfocus(xpapoint=None, argv=[]):
@@ -3156,7 +2998,7 @@ def explore_throughfocus(xpapoint=None, argv=[]):
     import numpy as np
     from astropy.table import Table
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-p", "--path", default="", help="SExtractor catalog with VIGNETS", metavar="",
     )
@@ -3188,20 +3030,17 @@ def explore_throughfocus(xpapoint=None, argv=[]):
     mask = np.nanmin(a["VIGNET"], axis=(1, 2)) > -1e30
     a = a[mask]
     a["VIGNET1"] = [
-        (data - np.nanmin(data)) / (data - np.nanmin(data)).ptp()
-        for data in a["VIGNET"]
+        (data - np.nanmin(data)) / (data - np.nanmin(data)).ptp() for data in a["VIGNET"]
     ]  #
-    a["VIGNET2"] = [
-        convolve(data, Gaussian2DKernel(x_stddev=1)) for data in a["VIGNET1"]
-    ]
+    a["VIGNET2"] = [convolve(data, Gaussian2DKernel(x_stddev=1)) for data in a["VIGNET1"]]
 
     a["AMPLITUDE"] = [data.ptp() for data in a["VIGNET"]]
     a.sort(args.sort)
-    PyvistaThoughfocus(a)
+    pyvista_throughfocus(a)
     return
 
 
-def PyvistaThoughfocus(a):
+def pyvista_throughfocus(a):
     """Explore throughfocus using pyvista in 3d
     """
     # n=60
@@ -3221,7 +3060,7 @@ def PyvistaThoughfocus(a):
         title="Throughfocus",
     )
     value = a["VIGNET1"][0].shape[0]
-    mesh = CreateMesh(a["VIGNET1"][0], value=value)
+    mesh = create_mesh(a["VIGNET1"][0], value=value)
     p.add_mesh(
         mesh,
         scalars=a["VIGNET1"][0],
@@ -3253,7 +3092,7 @@ def PyvistaThoughfocus(a):
 
         return
 
-    def CreateGIF(val):
+    def create_gif(val):
 
         points = mesh.points.copy()
         p.open_gif("/tmp/throughfocus.gif")
@@ -3271,7 +3110,7 @@ def PyvistaThoughfocus(a):
 
         return
 
-    def SmoothCallback(val):
+    def smooth_callback(val):
         if val:
             name = "VIGNET2"
         else:
@@ -3293,14 +3132,12 @@ def PyvistaThoughfocus(a):
         value=0,
         event_type="always",
     )
-    p.add_checkbox_button_widget(
-        CreateGIF
-    )  # ,position=(200,10))#,position='upper_left')
+    p.add_checkbox_button_widget(create_gif)  # ,position=(200,10))#,position='upper_left')
     p.add_text(
         "Create GIF in /tmp/thoughfocus.gif", name="button", position=(70, 10)
     )  #'lower_left')
     p.add_checkbox_button_widget(
-        SmoothCallback, position=(10, 80), value=False
+        smooth_callback, position=(10, 80), value=False
     )  # ,position='upper_left')
     p.add_text("Smooth", name="buttonSmooth", position=(70, 80))  #'lower_left')
     p.show()
@@ -3312,7 +3149,7 @@ def radial_profile(xpapoint=None, Plot=True, fibersize=None, argv=[]):
     """
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
         "-c",
         "--centering",
@@ -3354,7 +3191,7 @@ def radial_profile(xpapoint=None, Plot=True, fibersize=None, argv=[]):
     a = getregion(d)[0]
     fitsfile = d.get_pyfits()[0]
     try:
-        DS9plot_rp_convolved(
+        ds9_plot_radial_profile(
             data=fitsfile.data,
             center=[np.int(a.xc), np.int(a.yc)],
             fibersize=fibersize,
@@ -3398,51 +3235,39 @@ def radial_profile_normalized(
     verboseprint("center_type = %s" % (center_type))
     n1 = np.nanmin([n1, int(center[1]), int(center[0])])
     image = data[
-        int(center[1]) - n1 : int(center[1]) + n1,
-        int(center[0]) - n1 : int(center[0]) + n1,
+        int(center[1]) - n1 : int(center[1]) + n1, int(center[0]) - n1 : int(center[0]) + n1,
     ]
     if center_type.lower() == "maximum":
         # verboseprint("data=", data)
         # verboseprint("center=", center, n1)
         # verboseprint("image=", image)
         barycentre = np.array(
-            [
-                np.where(image == image.max())[0][0],
-                np.where(image == image.max())[1][0],
-            ]
+            [np.where(image == image.max())[0][0], np.where(image == image.max())[1][0],]
         )  # ndimage.measurements.center_of_mass(data[center[1]-n1:center[1]+n1,center[0]-n1:center[0]+n1])
     if center_type.lower() == "barycentre":
-        background = estimateBackground(data, center, radius, 1.8)
+        background = estimate_background(data, center, radius, 1.8)
         new_image = image - background
         index = new_image > 0.5 * np.nanmax(new_image)  # .max()
         new_image[~index] = 0
-        barycentre = ndimage.measurements.center_of_mass(
-            new_image
-        )  # background#np.nanmin(image)
+        barycentre = ndimage.measurements.center_of_mass(new_image)  # background#np.nanmin(image)
     if center_type.lower() == "user":
         barycentre = [n1, n1]
     else:
         verboseprint("Center type not understood, taking barycenter one")
-        background = estimateBackground(data, center, radius, 1.8)
+        background = estimate_background(data, center, radius, 1.8)
         new_image = image - background
         index = new_image > 0.5 * np.nanmax(new_image)  # .max()
         new_image[~index] = 0
-        barycentre = ndimage.measurements.center_of_mass(
-            new_image
-        )  # background#np.nanmin(image)
+        barycentre = ndimage.measurements.center_of_mass(new_image)  # background#np.nanmin(image)
     new_center = np.array(center) + barycentre[::-1] - n1
-    verboseprint(
-        "new_center = {}, defined with center type: {}".format(new_center, center_type)
-    )
+    verboseprint("new_center = {}, defined with center type: {}".format(new_center, center_type))
     if radius_bg:
-        fond = estimateBackground(data, new_center, radius, n)
+        fond = estimate_background(data, new_center, radius, n)
     else:
         fond = 0
     image = data - fond  # (data - fond).astype(np.int)
 
-    r = np.sqrt(
-        (x - new_center[0]) ** 2 + (y - new_center[1]) ** 2
-    )  #    r = np.around(r)-1
+    r = np.sqrt((x - new_center[0]) ** 2 + (y - new_center[1]) ** 2)  #    r = np.around(r)-1
     rint = r.astype(np.int)
 
     image_normalized = image  # / np.nansum(image[r<radius])
@@ -3459,14 +3284,10 @@ def radial_profile_normalized(
         nr_spectral = np.bincount(r[theta < angle].ravel())
         nr_spatial = np.bincount(r[theta > 90 - angle].ravel())
         EE_spatial = (
-            100
-            * np.nancumsum(tbin_spatial)
-            / np.nanmax(np.nancumsum(tbin_spatial)[:100] + 1e-5)
+            100 * np.nancumsum(tbin_spatial) / np.nanmax(np.nancumsum(tbin_spatial)[:100] + 1e-5)
         )
         EE_spectral = (
-            100
-            * np.nancumsum(tbin_spectral)
-            / np.nanmax(np.nancumsum(tbin_spectral)[:100] + 1e-5)
+            100 * np.nancumsum(tbin_spectral) / np.nanmax(np.nancumsum(tbin_spectral)[:100] + 1e-5)
         )
         return (
             tbin_spectral / nr_spectral,
@@ -3498,7 +3319,7 @@ def radial_profile_normalized(
         )
 
 
-def estimateBackground(data, center, radius=30, n=1.8):
+def estimate_background(data, center, radius=30, n=1.8):
     """Function that estimate the Background behing a source given an inner radius and a factor n to the outter radius
     such as the background is computed on the area which is on C2(n*radius)/C1(radius)
     """
@@ -3512,7 +3333,7 @@ def estimateBackground(data, center, radius=30, n=1.8):
     return fond
 
 
-def ConvolveDiskGaus2D(r, amp=2, RR=4, sig=4 / 2.35, offset=0):
+def convolve_diskgaus_2d(r, amp=2, RR=4, sig=4 / 2.35, offset=0):
     """Convolution of a disk with a gaussian to simulate the image of a fiber
     """
     from scipy.integrate import quad  # , fixed_quad, quadrature
@@ -3533,7 +3354,7 @@ def ConvolveDiskGaus2D(r, amp=2, RR=4, sig=4 / 2.35, offset=0):
     return offset + amp * np.array(integ)  # , error
 
 
-def DS9plot_rp_convolved(
+def ds9_plot_radial_profile(
     data,
     center,
     size=40,
@@ -3592,35 +3413,21 @@ def DS9plot_rp_convolved(
     else:
         stddev /= profile.max()
         profile /= profile.max()
-        popt_m, pcov_m = curve_fit(
-            moffat_1d, rmean[:size], profile, p0=[profile.max(), 4, 2.5]
-        )
+        popt_m, pcov_m = curve_fit(moffat_1d, rmean[:size], profile, p0=[profile.max(), 4, 2.5])
         popt, pcov = curve_fit(
-            ConvolveDiskGaus2D,
+            convolve_diskgaus_2d,
             rmean[:size],
             profile,
             p0=[np.nanmax(profile), fiber, 2, np.nanmin(profile)],
             bounds=(
-                [
-                    1e-3 * (profile.max() - profile.min()),
-                    0.8 * fiber,
-                    1,
-                    profile.min(),
-                ],
-                [
-                    1e3 * (profile.max() - profile.min()),
-                    1.2 * fiber,
-                    SigmaMax,
-                    profile.max(),
-                ],
+                [1e-3 * (profile.max() - profile.min()), 0.8 * fiber, 1, profile.min(),],
+                [1e3 * (profile.max() - profile.min()), 1.2 * fiber, SigmaMax, profile.max(),],
             ),
         )  # [1,1,1,1,1] (x,a,b,sigma,lam,alpha):
 
     EE_interp = interpolate.interp1d(rsurf[:size], EE[:size], kind="cubic")
     ninterp = 10
-    xnew = np.linspace(
-        rsurf[:size].min(), rsurf[:size].max(), ninterp * len(rsurf[:size])
-    )
+    xnew = np.linspace(rsurf[:size].min(), rsurf[:size].max(), ninterp * len(rsurf[:size]))
     mina = min(xnew[EE_interp(xnew)[: ninterp * size] > 79])
     minb = min(xnew[EE_interp(xnew)[: ninterp * size] > 49])
 
@@ -3667,35 +3474,28 @@ def DS9plot_rp_convolved(
             )
         )
         csvwrite(
-            np.vstack(
-                (rmean[:size], profile, ConvolveDiskGaus2D(rmean[:size], *popt),)
-            ).T,
+            np.vstack((rmean[:size], profile, convolve_diskgaus_2d(rmean[:size], *popt),)).T,
             DS9backUp
-            + "CSVs/%s_RadialProfile.csv"
-            % (datetime.datetime.now().strftime("%y%m%d-%HH%M")),
+            + "CSVs/%s_RadialProfile.csv" % (datetime.datetime.now().strftime("%y%m%d-%HH%M")),
         )
     csvwrite(
         np.vstack((rsurf, EE)).T,
         DS9backUp
-        + "CSVs/%s_EnergyProfile.csv"
-        % (datetime.datetime.now().strftime("%y%m%d-%HH%M")),
+        + "CSVs/%s_EnergyProfile.csv" % (datetime.datetime.now().strftime("%y%m%d-%HH%M")),
     )
     d = []
     d.append("plot line open")
     d.append("plot axis x grid no ")
     d.append("plot axis y grid no ")
     d.append(
-        "plot title '%s , %0.1f - %0.1f' "
-        % (os.path.basename(name), NewCenter[0], NewCenter[1])
+        "plot title '%s , %0.1f - %0.1f' " % (os.path.basename(name), NewCenter[0], NewCenter[1])
     )
     d.append("plot title y 'Radial profile' ")
     d.append("plot load /tmp/1.dat xyey")
     d.append("plot legend yes ")
     d.append("plot legend position top ")
     d.append("plot title legend ''")
-    d.append(
-        "plot name 'Data: Flux = %i, FWHM_fit = %0.1f' " % (d_["Flux"], abs(popt[1]))
-    )
+    d.append("plot name 'Data: Flux = %i, FWHM_fit = %0.1f' " % (d_["Flux"], abs(popt[1])))
     # d.append("plot line shape circle ")
     d.append("plot line dash yes ")
     # d.append("plot line shape color black")
@@ -3737,7 +3537,7 @@ def DS9plot_rp_convolved(
     return d_
 
 
-def getImage(xpapoint):
+def get_image(xpapoint):
     """Get image encircled by a region in DS9.
     """
     import numpy as np
@@ -3746,11 +3546,9 @@ def getImage(xpapoint):
     filename = getfilename(d)
     region = getregion(d, selected=True)
     try:
-        x_inf, x_sup, y_inf, y_sup = Lims_from_region(region)
+        x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
     except Exception:
-        d.set(
-            "analysis message {Please create and select a region (Circle/Box) before runnning this analysis}"
-        )
+        raise_create_region(d)
         sys.exit()
 
     area = [y_inf, y_sup, x_inf, x_sup]
@@ -3758,9 +3556,7 @@ def getImage(xpapoint):
     if len(fitsimage.shape) == 2:
         image = fitsimage.data[area[0] : area[1], area[2] : area[3]]
     elif len(fitsimage.shape) == 3:
-        image = fitsimage.data[
-            int(d.get("cube")) - 1, area[0] : area[1], area[2] : area[3]
-        ]
+        image = fitsimage.data[int(d.get("cube")) - 1, area[0] : area[1], area[2] : area[3]]
 
     # verboseprint("Region =%s"%( region))
     if hasattr(region[0], "r"):
@@ -3801,7 +3597,7 @@ def set_axes_equal(ax):
     return
 
 
-def CreateMesh(array, value=None):
+def create_mesh(array, value=None):
     """
     """
     from pyvista import (
@@ -3817,11 +3613,7 @@ def CreateMesh(array, value=None):
         StructuredGrid()
     )  # wrap(np.array([xx.ravel(),yy.ravel(),((z-np.nanmin(z))*value).reshape(-1)]).T)
     data_mesh.points = PolyData(
-        np.c_[
-            xx.reshape(-1),
-            yy.reshape(-1),
-            value * (array - np.nanmin(array)).reshape(-1),
-        ]
+        np.c_[xx.reshape(-1), yy.reshape(-1), value * (array - np.nanmin(array)).reshape(-1),]
     ).points
     data_mesh["Intensity"] = (array - np.nanmin(array)).reshape(
         -1
@@ -3830,7 +3622,7 @@ def CreateMesh(array, value=None):
     return data_mesh
 
 
-def PlotArea3DColor(d):
+def plot_area_3d_color(d):
     """
     """
     # import pyvista as pv
@@ -3849,13 +3641,11 @@ def PlotArea3DColor(d):
 
     set_plot_theme("document")
     # p = Plotter(notebook=False, shape=(1,3))
-    value = data_blue.shape[0] / np.max(
-        [data_blue.ptp(), data_green.ptp(), data_red.ptp()]
-    )
+    value = data_blue.shape[0] / np.max([data_blue.ptp(), data_green.ptp(), data_red.ptp()])
 
-    mesh_blue = CreateMesh(data_blue, value=value)
-    mesh_green = CreateMesh(data_green, value=value)
-    mesh_red = CreateMesh(data_red, value=value)
+    mesh_blue = create_mesh(data_blue, value=value)
+    mesh_green = create_mesh(data_green, value=value)
+    mesh_red = create_mesh(data_red, value=value)
 
     p = Plotter(
         notebook=False,
@@ -3868,7 +3658,7 @@ def PlotArea3DColor(d):
         shape=(1, 4),
     )
     p.add_mesh(
-        CreateMesh(data_blue, value=value),
+        create_mesh(data_blue, value=value),
         opacity=0.9,
         nan_opacity=0,
         use_transparency=False,
@@ -3880,7 +3670,7 @@ def PlotArea3DColor(d):
     p.add_axes()
     p.subplot(0, 1)
     p.add_mesh(
-        CreateMesh(data_green, value=value),
+        create_mesh(data_green, value=value),
         opacity=0.9,
         nan_opacity=0,
         use_transparency=False,
@@ -3892,7 +3682,7 @@ def PlotArea3DColor(d):
     p.add_axes()
     p.subplot(0, 2)
     p.add_mesh(
-        CreateMesh(data_red, value=value),
+        create_mesh(data_red, value=value),
         opacity=0.9,
         nan_opacity=0,
         use_transparency=False,
@@ -3914,7 +3704,7 @@ def PlotArea3DColor(d):
         cmap=cm.get_cmap("Greens_r", 128),
         show_scalar_bar=False,
     )
-    zb = np.nanmax(CreateMesh(data_green, value=value).points[:, 2]) + (
+    zb = np.nanmax(create_mesh(data_green, value=value).points[:, 2]) + (
         (data_blue - np.nanmin(data_blue[np.isfinite(data_blue)])) * value
     )
     blue = p.add_mesh(
@@ -3987,18 +3777,17 @@ def analyze_fwhm(xpapoint, argv=[]):
     )  # , wrap
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args_ = parser.parse_args_modif(argv)
 
     fwhm, center, test = sys.argv[-3:]
     d = DS9n(args_.xpapoint)
     region = getregion(d, selected=True, message=True)  # [0]
 
-    x_inf, x_sup, y_inf, y_sup = Lims_from_region(region)
+    x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
     data = d.get_pyfits()[0].data
     images = [
-        data[y_inf:y_sup, x_inf:x_sup]
-        - np.nanpercentile(data[y_inf:y_sup, x_inf:x_sup], 30)
+        data[y_inf:y_sup, x_inf:x_sup] - np.nanpercentile(data[y_inf:y_sup, x_inf:x_sup], 30)
     ]
     fluxes = []
     image = (
@@ -4034,9 +3823,7 @@ def analyze_fwhm(xpapoint, argv=[]):
     verboseprint("bounds = %s" % (bounds))
     verboseprint("\nParam = %s" % (Param))
     try:
-        popt, pcov = curve_fit(
-            gaussian_2dim, (x, y), image.flat, Param
-        )  # ,bounds=bounds)
+        popt, pcov = curve_fit(gaussian_2dim, (x, y), image.flat, Param)  # ,bounds=bounds)
     except RuntimeError as e:
         logger.warning(e)
         popt = [0, 0, 0, 0, 0, 0]
@@ -4072,8 +3859,8 @@ def analyze_fwhm(xpapoint, argv=[]):
     data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
 
     points = np.c_[xx.reshape(-1), yy.reshape(-1), ((z - np.nanmin(z))).reshape(-1)]
-    foo = PolyData(points)
-    fit.points = foo.points
+    data_points = PolyData(points)
+    fit.points = data_points.points
     fit["z"] = z.ravel()
     fit.dimensions = [image.shape[1], image.shape[0], 1]
     p2 = p.add_mesh(
@@ -4084,7 +3871,7 @@ def analyze_fwhm(xpapoint, argv=[]):
         flip_scalars=True,
         scalar_bar_args={"title": "Value"},
         show_scalar_bar=False,
-    )  # y=True, opacity=0.3,,pickable=True)
+    )
     p1 = p.add_mesh(
         fit,
         cmap="Greys_r",
@@ -4096,7 +3883,7 @@ def analyze_fwhm(xpapoint, argv=[]):
         flip_scalars=True,
         scalar_bar_args={"title": "Value"},
         show_scalar_bar=False,
-    )  ##y=True, opacity=0.3,flip_scalars=True,stitle='Value',nan_opacity=0,pickable=True)
+    )
     global args
     args = popt
 
@@ -4123,21 +3910,14 @@ def analyze_fwhm(xpapoint, argv=[]):
         print("value", value)
         if value is True:
             print(Param)
-            # print("1 : ", args)
-            args, cov = curve_fit(
-                gaussian_2dim, (x, y), image.flat, p0=args
-            )  # ,bounds=bounds)
-            # print("1 : ", args)
+            args, cov = curve_fit(gaussian_2dim, (x, y), image.flat, p0=args)
+            # ,bounds=bounds)
         else:
-            args, cov = curve_fit(
-                gaussian_2dim, (x, y), image.flat, p0=args
-            )  # ,bounds=bounds)Param
-            # print("2 : ", args)
+            args, cov = curve_fit(gaussian_2dim, (x, y), image.flat, p0=args)
+            # ,bounds=bounds)Param
 
         points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
-        # print(2)
         p.update_coordinates(points, mesh=fit)
-        # print(3)
         update_text("Gaussian fit: FWHMs = %0.1f, %0.1f" % (args[3], args[4]))
         return
 
@@ -4184,9 +3964,7 @@ def analyze_fwhm(xpapoint, argv=[]):
     )
 
     p.view_xy()  # [1,0,0]
-    p.add_checkbox_button_widget(
-        callback
-    )  # ,position=(200,10))#,position='upper_left')
+    p.add_checkbox_button_widget(callback)  # ,position=(200,10))#,position='upper_left')
     p.add_text("Gaussian fit", name="mylabel", position=(70, 10))  #'lower_left')
     p.clear_box_widgets()
     p.show()
@@ -4202,13 +3980,9 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
     from astropy.convolution import convolve, Gaussian2DKernel
     from astropy.io import fits
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
-        "-p",
-        "--path",
-        default="",
-        help="Path of the image to display in 3D",
-        metavar="",
+        "-p", "--path", default="", help="Path of the image to display in 3D", metavar="",
     )
     args = parser.parse_args_modif(argv, required=True)
 
@@ -4234,7 +4008,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
     verboseprint(data)
     if type(data) != list:
         if (len(data.shape) == 2) & (color):
-            PlotArea3DColor(d)
+            plot_area_3d_color(d)
         elif (len(data.shape) == 2) & (~color):
             xx, yy = np.indices(data.shape)  # np.meshgrid(x, y)
             set_plot_theme("document")
@@ -4257,9 +4031,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             data_points = ((data - np.nanmin(data[np.isfinite(data)]))) / (
                 np.nanmax(data) - np.nanmin(data)
             )
-            log_data_points = (
-                np.log10(data_points - np.nanmin(data_points) + 1)
-            ) / np.nanmax(
+            log_data_points = (np.log10(data_points - np.nanmin(data_points) + 1)) / np.nanmax(
                 np.log10(data_points - np.nanmin(data_points) + 1)
             )  # -1
             data_points_c = convolve(data_points, Gaussian2DKernel(x_stddev=1))
@@ -4270,8 +4042,8 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             mesh.points = points
             mesh["test"] = data.reshape(-1)
             mesh.dimensions = [data.shape[1], data.shape[0], 1]
-            mesh = CreateMesh(data_points, value=None)
-            mesh_c = CreateMesh(data_points_c, value=None)
+            mesh = create_mesh(data_points, value=None)
+            mesh_c = create_mesh(data_points_c, value=None)
 
             range_ = [np.nanpercentile(data, 0), np.nanpercentile(data, 100)]
             range_ = [np.nanmin(data), np.nanmax(data)]
@@ -4338,18 +4110,18 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
 
                 return
 
-            def Contour_callback(value):
+            def contour_callback(value):
                 d["Contour"] = value
                 change_contour()
                 return
 
-            def GIF_callback(value):  # p.show(auto_close=False)
+            def gif_callback(value):  # p.show(auto_close=False)
                 path = p.generate_orbital_path(n_points=36, shift=mesh.length)
                 p.open_gif("/tmp/orbit.gif")
                 p.orbit_on_path(path, write_frames=True)  # p.close()
                 return
 
-            def SmoothCallback(value):
+            def smooth_callback(value):
                 if value is True:
                     if d["log"]:
                         data = log_data_points_c
@@ -4375,19 +4147,13 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
                 if d["Contour"]:
                     if d["smooth"] is True:
                         p.update_coordinates(mesh_c.contour().points, mesh=contours_c)
-                        p.update_coordinates(
-                            np.nan * mesh.contour().points, mesh=contours
-                        )
+                        p.update_coordinates(np.nan * mesh.contour().points, mesh=contours)
                     else:
                         p.update_coordinates(mesh.contour().points, mesh=contours)
-                        p.update_coordinates(
-                            np.nan * mesh_c.contour().points, mesh=contours_c
-                        )
+                        p.update_coordinates(np.nan * mesh_c.contour().points, mesh=contours_c)
                 else:
                     p.update_coordinates(np.nan * mesh.contour().points, mesh=contours)
-                    p.update_coordinates(
-                        np.nan * mesh_c.contour().points, mesh=contours_c
-                    )
+                    p.update_coordinates(np.nan * mesh_c.contour().points, mesh=contours_c)
                 return
 
             p.add_slider_widget(
@@ -4404,28 +4170,24 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
                 log_callback
             )  # ,position=(200,10))#,position='upper_left')
             p.add_checkbox_button_widget(
-                Contour_callback, position=(10, 80), value=True
+                contour_callback, position=(10, 80), value=True
             )  # ,position='upper_left')
             p.add_checkbox_button_widget(
-                GIF_callback, position=(10, 70 + 80)
+                gif_callback, position=(10, 70 + 80)
             )  # ,position='upper_left')
             p.add_text("Log scale", name="log", position=(70, 10))  #'lower_left')
             p.add_text("Contour", name="contour", position=(70, 80))  #'lower_left')
-            p.add_text(
-                "Create a GIF", name="gif", position=(70, 70 + 80)
-            )  #'lower_left')
+            p.add_text("Create a GIF", name="gif", position=(70, 70 + 80))  #'lower_left')
             p.add_checkbox_button_widget(
-                SmoothCallback, position=(10, 80 + 70 + 70), value=False
+                smooth_callback, position=(10, 80 + 70 + 70), value=False
             )  # ,position='upper_left')
-            p.add_text(
-                "Smooth", name="buttonSmooth", position=(70, 80 + 70 + 70)
-            )  #'lower_left')
+            p.add_text("Smooth", name="buttonSmooth", position=(70, 80 + 70 + 70))  #'lower_left')
             p.clear_box_widgets()
             p.add_axes()  # interactive=True)
             p.show()
 
         else:
-            CreateCube(d, data)
+            create_cube(d, data)
     else:
         datas = data
         set_plot_theme("document")
@@ -4448,7 +4210,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
         for i, data in enumerate(datas):
             p.subplot(int(i / cols), i % cols)  # data.flatten()
             p.add_mesh(
-                CreateMesh(data, value=value),
+                create_mesh(data, value=value),
                 scalars=None,
                 opacity=0.9,
                 nan_opacity=0,
@@ -4463,7 +4225,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
         p.show()
 
 
-def CreateCube(d, data):
+def create_cube(d, data):
     """Replaces a 3D image  by a 3D cube for pyvista to plot
     """
     from pyvista import Plotter, set_plot_theme, wrap
@@ -4474,24 +4236,20 @@ def CreateCube(d, data):
     lx, ly, lz = data.shape
     if d.get("scale") == "log":
         data = np.log10(
-            np.array(
-                data[:, :, :] - np.nanmin(data[np.isfinite(data)]) + 1, dtype=float,
-            )
+            np.array(data[:, :, :] - np.nanmin(data[np.isfinite(data)]) + 1, dtype=float,)
         )
     else:
         data = np.array(data[:, :, :], dtype=float)
     mask = np.ones(len(data.ravel()), dtype=bool)  #
     xx, yy, zz = np.indices(data.shape)  # np.me
-    starting_mesh = wrap(
-        np.array([yy.ravel()[mask], zz.ravel()[mask], xx.ravel()[mask]]).T
-    )
+    starting_mesh = wrap(np.array([yy.ravel()[mask], zz.ravel()[mask], xx.ravel()[mask]]).T)
     verboseprint(data.ravel()[mask])
     starting_mesh["Intensity"] = data.ravel()[mask]
 
-    def createMesh(DensityMin=0.5, DensityMax=0.5, StretchingFactor=0.5, PointSize=5):
-        mask = (
-            data.ravel() > np.nanpercentile(data[np.isfinite(data)], DensityMin)
-        ) & (data.ravel() < np.nanpercentile(data[np.isfinite(data)], DensityMax))
+    def create_mesh(DensityMin=0.5, DensityMax=0.5, StretchingFactor=0.5, PointSize=5):
+        mask = (data.ravel() > np.nanpercentile(data[np.isfinite(data)], DensityMin)) & (
+            data.ravel() < np.nanpercentile(data[np.isfinite(data)], DensityMax)
+        )
         mesh = wrap(
             np.array(
                 [
@@ -4531,11 +4289,9 @@ def CreateCube(d, data):
                 self.output.overwrite(self.output)
                 return
             else:
-                result = createMesh(**self.kwargs)
+                result = create_mesh(**self.kwargs)
                 self.output.overwrite(result)
-                p.update_scalar_bar_range(
-                    [result["Intensity"].min(), result["Intensity"].max()]
-                )
+                p.update_scalar_bar_range([result["Intensity"].min(), result["Intensity"].max()])
                 return
 
     engine = Change3dMesh(starting_mesh)
@@ -4592,7 +4348,7 @@ def throw_apertures(xpapoint=None, argv=[]):
     from astropy.io import fits
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
         "-a",
         "--aperture",
@@ -4602,12 +4358,7 @@ def throw_apertures(xpapoint=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-f",
-        "--form",
-        default="0",
-        help="Aperture form",
-        type=str,
-        choices=["box", "circle"],
+        "-f", "--form", default="0", help="Aperture form", type=str, choices=["box", "circle"],
     )
     parser.add_argument(
         "-d",
@@ -4636,7 +4387,7 @@ def throw_apertures(xpapoint=None, argv=[]):
     if region is None:
         area = [0, image.shape[1], 0, image.shape[0]]
     else:
-        x_inf, x_sup, y_inf, y_sup = Lims_from_region(None, coords=region)
+        x_inf, x_sup, y_inf, y_sup = lims_from_region(None, coords=region)
         area = [x_inf, x_sup, y_inf, y_sup]
     radius = np.array(args.aperture.split(","), dtype=int)
     if type(radius) == int:
@@ -4659,29 +4410,22 @@ def throw_apertures(xpapoint=None, argv=[]):
             ]
         ).T
 
-    # create_DS9regions2(np.array(areas)[:, 2] + float(r1) / 2, np.array(areas)[:, 0] + float(r2) / 2, radius=radius, form=args.form, save=True, color="yellow", savename="/tmp/centers")
-    create_DS9regions(
+    create_ds9_regions(
         [np.array(areas)[:, 2] + float(r1) / 2],
         [np.array(areas)[:, 0] + float(r2) / 2],
         radius=[radius],
         save=True,
-        savename="/tmp/centers",
+        savename=tmp_region,
         form=[args.form],
         color=["yellow"],
         ID=None,
     )
-    d.set("regions /tmp/centers.reg")
+    d.set("regions %s" % (tmp_region))
     return
 
 
-def ExecCommand(
-    filename,
-    path2remove,
-    exp,
-    xpapoint=None,
-    eval_=False,
-    overwrite=False,
-    d=FakeDS9(),
+def execute_command(
+    filename, path2remove, exp, xpapoint=None, eval_=False, overwrite=False, d=FakeDS9(),
 ):
     """Combine two images and an evaluable expression
     """
@@ -4709,10 +4453,8 @@ def ExecCommand(
         ext = fits_ext(fitsimage)
         fitsimage = fitsimage[ext]
     except ValueError:
-        filename = "/tmp/image.fits"
-        fitsimage = fits.open(
-            resource_filename("pyds9plugin", "Images/stack18446524.fits")
-        )[0]
+        filename = tmp_image
+        fitsimage = fits.open(resource_filename("pyds9plugin", "Images/stack18446524.fits"))[0]
     ds9 = fitsimage.data
     # ds9_old = fitsimage.data.copy()
     header = fitsimage.header
@@ -4851,10 +4593,9 @@ def fitswrite(fitsimage, filename, verbose=True, header=None):
         fitsimage = fits.HDUList([fits.PrimaryHDU(fitsimage, header=header)])[0]
     if len(filename) == 0:
         verboseprint(
-            "Impossible to save image in filename %s, saving it to /tmp/image.fits"
-            % (filename)
+            "Impossible to save image in filename %s, saving it to %s" % (filename, tmp_image)
         )
-        filename = "/tmp/image.fits"
+        filename = tmp_image
         fitsimage.header["NAXIS3"], fitsimage.header["NAXIS1"] = (
             fitsimage.header["NAXIS1"],
             fitsimage.header["NAXIS3"],
@@ -4936,7 +4677,7 @@ def Gaussian(x, amplitude, xo, sigma2, offset):
     return g.ravel()
 
 
-def checkFile(xpapoint):
+def check_file(xpapoint):
     """Check the properties of the DS9 file
     """
     from astropy.io import fits
@@ -4948,10 +4689,7 @@ def checkFile(xpapoint):
 
     for i, fitsi in enumerate(fitsim):
         print(
-            "\n\n********************** ",
-            i,
-            " **********************\nImage = ",
-            fitsi.is_image,
+            "\n\n********************** ", i, " **********************\nImage = ", fitsi.is_image,
         )
         try:
             print("Shape = ", fitsi.data.shape)
@@ -4983,9 +4721,7 @@ class bcolors:
     UNDERLINE = "\033[4m"
 
 
-def stackImages(
-    path, all=False, DS=0, function="mean", numbers=None, save=True, name=""
-):
+def stackImages(path, all=False, DS=0, function="mean", numbers=None, save=True, name=""):
     """Stack all images contained in a folder, if all=True all images contained in each sub folder
     """
     from astropy.io import fits
@@ -5037,10 +4773,7 @@ def stackImages(
                 #                name = '{}StackedImage_{}-{}-{}.fits'.format(fname, numbers.min(), numbers.max(), name)
                 image.writeto(name, overwrite=True)
                 fits.setval(
-                    name,
-                    "DARKUSED",
-                    value=0,
-                    comment="Images subtracted for dark subtraction",
+                    name, "DARKUSED", value=0, comment="Images subtracted for dark subtraction",
                 )
                 # add
                 verboseprint("Stacked image save at: " + name)
@@ -5096,12 +4829,7 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
         d = DS9n(xpapoint)
         # verboseprint(paths, file, d.get("file"))
         # verboseprint(len(paths) == 0, file != "-", file.rstrip()[::-1].rstrip()[::-1] == d.get("file").rstrip()[::-1].rstrip()[::-1], file != getfilename(d))
-        if (
-            (len(paths) == 0)
-            & (file != "")
-            & (file == d.get("file"))
-            & (file != getfilename(d))
-        ):
+        if (len(paths) == 0) & (file != "") & (file == d.get("file")) & (file != getfilename(d)):
             verboseprint("Loaded image not on drive, saving it to run the analysis")
             paths = [getfilename(d)]
         elif ds9_im:
@@ -5118,14 +4846,12 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
     return paths
 
 
-def stack_images(
-    xpapoint=None, dtype=float, std=False, Type=None, clipping=None, argv=[]
-):
+def stack_images(xpapoint=None, dtype=float, std=False, Type=None, clipping=None, argv=[]):
     """Stack same size images
     """
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
@@ -5179,10 +4905,7 @@ def StackImagesPath(
     i = fits_ext(fitsfile)
     x_inf, x_sup, y_inf, y_sup = 0, -1, 0, -1  # my_conf.physical_region
     stds = np.array(
-        [
-            np.nanstd(fits.open(image)[i].data[x_inf:x_sup, y_inf:y_sup])
-            for image in paths
-        ]
+        [np.nanstd(fits.open(image)[i].data[x_inf:x_sup, y_inf:y_sup]) for image in paths]
     )
     index = stds < np.nanmean(stds) + clipping * np.nanstd(stds)
     paths = np.array(paths)
@@ -5213,22 +4936,17 @@ def StackImagesPath(
         )
     else:  # Type == np.nanmean:
         stack = Type(
-            np.array([fits.open(file)[i].data for file in paths[index]]),
-            dtype=dtype,
-            axis=0,
+            np.array([fits.open(file)[i].data for file in paths[index]]), dtype=dtype, axis=0,
         )
     try:
         numbers = [
-            int(re.findall(r"\d+", os.path.basename(filename))[-1])
-            for filename in paths[index]
+            int(re.findall(r"\d+", os.path.basename(filename))[-1]) for filename in paths[index]
         ]
     except IndexError:
         numbers = paths
     images = " - ".join(list(np.array(numbers, dtype=str)))
     new_fitsfile = fitsfile[i]
-    new_fitsfile.data = (
-        stack  # ,dtype='uint16')#AddParts2Image(np.nanmean(stack,axis=2))
-    )
+    new_fitsfile.data = stack  # ,dtype='uint16')#AddParts2Image(np.nanmean(stack,axis=2))
     new_fitsfile.header[
         "STK_NB"
     ] = images  # '-'.join(re.findall(r'\d+',images))#'-'.join(list(np.array(name_images)[index]))
@@ -5267,7 +4985,7 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
     from scipy.optimize import curve_fit
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
@@ -5283,21 +5001,18 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
         fitsfile = fits.open(file)[ext]
         image = fitsfile.data
         subimage = image[
-            int(a.yc) - radius : int(a.yc) + radius,
-            int(a.xc) - radius : int(a.xc) + radius,
+            int(a.yc) - radius : int(a.yc) + radius, int(a.xc) - radius : int(a.xc) + radius,
         ]
-        background = estimateBackground(image, [a.xc, a.yc], radius=30, n=1.8)
+        background = estimate_background(image, [a.xc, a.yc], radius=30, n=1.8)
         flux = np.nansum(
             subimage - background
-        )  # - estimateBackground(image, center, radius, n_bg)
+        )  # - estimate_background(image, center, radius, n_bg)
         fluxes.append(flux)
     fluxesn = (fluxes - min(fluxes)) / max(fluxes - min(fluxes))
     x = np.arange(len(path)) + 1
     popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(), 3, 0])
     xl = np.linspace(x.min(), x.max(), 100)
-    maxf = xl[
-        np.where(Gaussian(xl, *popt) == np.nanmax(Gaussian(xl, *popt)))[0][0]
-    ]  # [0]
+    maxf = xl[np.where(Gaussian(xl, *popt) == np.nanmax(Gaussian(xl, *popt)))[0][0]]  # [0]
 
     name = DS9backUp + "CSVs/%s_ThroughSlit.csv" % (
         datetime.datetime.now().strftime("%y%m%d-%HH%M")
@@ -5335,7 +5050,7 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
         b = Table(np.vstack((xl, Gaussian(xl, *popt))).T)
         a.write(name, format="ascii")
         b.write(name[:-4] + "_fit.csv", format="ascii")
-        d = DS9Plot(
+        d = ds9_plot(
             path=name[:-4] + "_fit.csv",
             title="Best_image:{}".format(maxf),
             name="Fit",
@@ -5346,7 +5061,7 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
             ylim=None,
             shape="none",
         )
-        DS9Plot(
+        ds9_plot(
             d=d,
             path=name,
             title="Best image : {}".format(maxf),
@@ -5362,7 +5077,7 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
     return
 
 
-def DS9Plot(
+def ds9_plot(
     d=None,
     path="",
     title="",
@@ -5398,16 +5113,14 @@ def guidance(xpapoint=None, Plot=True, reg=True, style="--o", lw=0.5, argv=[]):
     import time
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv, required=False)
 
     d = DS9n(args.xpapoint)
     if reg:
         regions = getregion(d, selected=True)
-        CreateRegions(
-            regions, savename="/tmp/region.reg", texts=np.arange(len(regions))
-        )
-        d.set("regions file /tmp/region.reg")
+        create_regions(regions, savename=tmp_region, texts=np.arange(len(regions)))
+        d.set("regions file %s" % (tmp_region))
     ext = fits_ext(d.get_pyfits())
     filename = getfilename(d)  # ffilename = d.get("file")
     files = glob.glob(os.path.dirname(filename) + "/*.fits")
@@ -5417,8 +5130,8 @@ def guidance(xpapoint=None, Plot=True, reg=True, style="--o", lw=0.5, argv=[]):
     colors = ["orange", "green", "red", "pink", "grey", "black"] * 100
     d0 = []
     for (i, region, color) in zip(np.arange(len(regions)), regions, colors):
-        data = getDatafromRegion(d, region, ext=ext)
-        d0.append(Center_Flux_std(data, bck=0, method="Gaussian-Picouet"))
+        data = get_data_from_region(d, region, ext=ext)
+        d0.append(center_flux_std(data, bck=0, method="Gaussian-Picouet"))
         dn = d0
         ax0.semilogy(i, d0[i]["flux"], color=color, label=str(i))  # ,linewidth=lw)
         # ax0.scatter(i, np.log10(d0['flux']),color=color,label=str(i))
@@ -5438,23 +5151,15 @@ def guidance(xpapoint=None, Plot=True, reg=True, style="--o", lw=0.5, argv=[]):
         dnm = dn.copy()
         dn = []
         for j, (region, color) in enumerate(zip(regions, colors)):
-            data = getDatafromRegion(d, region, ext=ext)
-            dn.append(Center_Flux_std(data, bck=0, method="Gaussian-Picouet"))
+            data = get_data_from_region(d, region, ext=ext)
+            dn.append(center_flux_std(data, bck=0, method="Gaussian-Picouet"))
             # print('New centers = ',dn)
             verboseprint([i - 1, i], [dnm[j]["flux"], dn[j]["flux"]])
             ax0.plot(
-                [i - 1, i],
-                [dnm[j]["flux"], dn[j]["flux"]],
-                style,
-                color=color,
-                linewidth=lw,
+                [i - 1, i], [dnm[j]["flux"], dn[j]["flux"]], style, color=color, linewidth=lw,
             )
             ax1.plot(
-                [i - 1, i],
-                [dnm[j]["std"], dn[j]["std"]],
-                style,
-                color=color,
-                linewidth=lw,
+                [i - 1, i], [dnm[j]["std"], dn[j]["std"]], style, color=color, linewidth=lw,
             )
             ax2.plot(
                 [i - 1, i],
@@ -5467,21 +5172,19 @@ def guidance(xpapoint=None, Plot=True, reg=True, style="--o", lw=0.5, argv=[]):
                 linewidth=lw,
             )
 
-            x_inf, x_sup, y_inf, y_sup = Lims_from_region(regions[j])
+            x_inf, x_sup, y_inf, y_sup = lims_from_region(regions[j])
             regions[j] = regions[j]._replace(xc=x_inf + dn[j]["x"])
             regions[j] = regions[j]._replace(yc=y_inf + dn[j]["y"])
-        CreateRegions(
-            regions, savename="/tmp/region.reg", texts=np.arange(len(regions))
-        )
+        create_regions(regions, savename=tmp_region, texts=np.arange(len(regions)))
         d.set("file " + file)
-        d.set("regions file /tmp/region.reg")
+        d.set("regions file %s" % (tmp_region))
         plt.pause(0.00001)
         time.sleep(0.01)
     plt.show()
     return
 
 
-def Center_Flux_std(image, bck=0, method="Gaussian-Picouet"):
+def center_flux_std(image, bck=0, method="Gaussian-Picouet"):
     """Fit a gaussian and give, center flux and std
     """
     from photutils import centroid_com, centroid_1dg, centroid_2dg
@@ -5504,9 +5207,7 @@ def Center_Flux_std(image, bck=0, method="Gaussian-Picouet"):
         x = np.linspace(0, lx - 1, lx)
         y = np.linspace(0, ly - 1, ly)
         x, y = np.meshgrid(x, y)
-        yo, xo = np.where(
-            image == image.max()
-        )  # ndimage.measurements.center_of_mass(image)
+        yo, xo = np.where(image == image.max())  # ndimage.measurements.center_of_mass(image)
         bounds = (
             [1e-1 * np.nanmax(image), xo - 10, yo - 10, 0.5, 0.5, -1e5],
             [10 * np.nanmax(image), xo + 10, yo + 10, 10, 10, 1e5],
@@ -5521,9 +5222,7 @@ def Center_Flux_std(image, bck=0, method="Gaussian-Picouet"):
             np.percentile(image, 15),
         )
         try:
-            popt, pcov = curve_fit(
-                gaussian_2dim, (x, y), image.flat, Param, bounds=bounds
-            )
+            popt, pcov = curve_fit(gaussian_2dim, (x, y), image.flat, Param, bounds=bounds)
         except RuntimeError as e:
             verboseprint(e)
             return np.nan, np.nan
@@ -5537,7 +5236,7 @@ def Center_Flux_std(image, bck=0, method="Gaussian-Picouet"):
     return d
 
 
-def Lims_from_region(region=None, coords=None, dtype=int):
+def lims_from_region(region=None, coords=None, dtype=int):
     """Return the pixel locations limits of a DS9 region
     """
     import numpy as np
@@ -5652,27 +5351,17 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
     from photutils import centroid_com, centroid_1dg, centroid_2dg
     from scipy.optimize import curve_fit
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-m",
         "--method",
         default="Maximum",
         help="",
         type=str,
-        choices=[
-            "Maximum",
-            "Center-of-mass",
-            "2x1D-Gaussian-fitting",
-            "2D-Gaussian-fitting",
-        ],
+        choices=["Maximum", "Center-of-mass", "2x1D-Gaussian-fitting", "2D-Gaussian-fitting",],
     )
     parser.add_argument(
-        "-b",
-        "--background_removal",
-        default="0",
-        help="",
-        type=str,
-        choices=["1", "0"],
+        "-b", "--background_removal", default="0", help="", type=str, choices=["1", "0"],
     )
     args = parser.parse_args_modif(argv, required=False)
     method, bck = args.method, args.background_removal
@@ -5682,11 +5371,7 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
     d.set("regions delete select")
     if regions is None:
         d = DS9n(args.xpapoint)
-        message(
-            d,
-            """It seems that you did not create a region.
-                      Please create a region and rerun the analysis""",
-        )
+        raise_create_region(d)
         d.set("analysis message {}")
         sys.exit()
 
@@ -5714,16 +5399,10 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
             y = np.arange(-len(imagey) / 2, len(imagey) / 2)
             try:
                 poptx, pcovx = curve_fit(
-                    model,
-                    x,
-                    imagex,
-                    p0=[imagex.max(), 20, 0.0, 10.0, np.median(imagex)],
+                    model, x, imagex, p0=[imagex.max(), 20, 0.0, 10.0, np.median(imagex)],
                 )  # ,  bounds=bounds)
                 popty, pcovy = curve_fit(
-                    model,
-                    y,
-                    imagey,
-                    p0=[imagey.max(), 10, 0.0, 10.0, np.median(imagey)],
+                    model, y, imagey, p0=[imagey.max(), 10, 0.0, 10.0, np.median(imagey)],
                 )  # ,  bounds=bounds)
                 ampx, lx, x0x, sigma2x, offsetx = poptx
                 ampy, ly, x0y, sigma2y, offsety = popty
@@ -5739,20 +5418,20 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
                 % (region.yc, region.xc, newCentery, newCenterx)
             )
             try:
-                os.remove("/tmp/centers.reg")
+                os.remove(tmp_region)
             except OSError:
                 pass
-            create_DS9regions(
+            create_ds9_regions(
                 [newCenterx - 1],
                 [newCentery - 1],
                 radius=[region.w, region.h],
                 save=True,
-                savename="/tmp/centers",
+                savename=tmp_region,
                 form=["box"],
                 color=["white"],
                 ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]],
             )
-            d.set("regions /tmp/centers.reg")
+            d.set("regions %s" % (tmp_region))
             import matplotlib
 
             matplotlib.use("TkAgg")
@@ -5837,7 +5516,7 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
             if Plot:
                 plt.show()
         if hasattr(region, "r"):
-            x_inf, x_sup, y_inf, y_sup = Lims_from_region(region)
+            x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
             data = d.get_pyfits()[0].data
             image = data[y_inf:y_sup, x_inf:x_sup]
             lx, ly = image.shape
@@ -5921,31 +5600,31 @@ def center_region(xpapoint=None, Plot=True, argv=[]):
             d.set("regions delete select")
 
             try:
-                os.remove("/tmp/centers.reg")
+                os.remove(tmp_region)
             except OSError:
                 pass
 
-            create_DS9regions(
+            create_ds9_regions(
                 [newCenterx - 1],
                 [newCentery - 1],
                 radius=[region.r],
                 save=True,
-                savename="/tmp/centers",
+                savename=tmp_region,
                 form=["circle"],
                 color=["white"],
                 ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]],
             )
-            create_DS9regions(
+            create_ds9_regions(
                 [newCenterx],
                 [newCentery],
                 radius=[region.r],
                 save=True,
-                savename="/tmp/centers",
+                savename=tmp_region,
                 form=["circle"],
                 color=["white"],
                 ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]],
             )
-            d.set("regions /tmp/centers.reg")
+            d.set("regions %s" % (tmp_region))
     return newCenterx, newCentery
 
 
@@ -5955,7 +5634,7 @@ def t2s(h, m, s, d=0):
     return 3600 * h + 60 * m + s + d * 24 * 3600
 
 
-def DeleteMultiDimCol(table):
+def delete_multidim_columns(table):
     """Deletes nulti dimmensional columns in a table
     """
     for column in table.colnames:
@@ -5976,7 +5655,7 @@ def ApplyQuery(cat=None, query=None, path=None, new_path=None, delete=False):
         except astropy.io.registry.IORegistryError:
             cat = Table.read(path, format="ascii")
     if delete:
-        cat = DeleteMultiDimCol(cat)
+        cat = delete_multidim_columns(cat)
     if query is not None:
         df = cat.to_pandas()
         new_table = df.query(query)
@@ -5999,7 +5678,7 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
     from astropy.table import Table
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-p", "--path", help="Path of the catalog to load", type=str, metavar="",
     )
@@ -6028,12 +5707,7 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
         choices=["circle", "box"],
     )
     parser.add_argument(
-        "-r",
-        "--radius",
-        help="Size in pixel or arcseconds",
-        type=str,
-        metavar="",
-        default="10",
+        "-r", "--radius", help="Size in pixel or arcseconds", type=str, metavar="", default="10",
     )
     parser.add_argument(
         "-w",
@@ -6058,7 +5732,7 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
         cat = Table.read(args.path.rstrip()[::-1].rstrip()[::-1])
     except astropy.io.registry.IORegistryError:
         cat = Table.read(args.path.rstrip()[::-1].rstrip()[::-1], format="ascii")
-    cat = DeleteMultiDimCol(cat)
+    cat = delete_multidim_columns(cat)
     form = args.form
     size = args.radius
     wcs = bool(int(args.WCS))
@@ -6093,12 +5767,7 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
         ra_min = min([corner.ra.deg for corner in corners])
         dec_max = max([corner.dec.deg for corner in corners])
         dec_min = min([corner.dec.deg for corner in corners])
-        cat = cat[
-            (cat[x] < ra_max)
-            & (cat[x] > ra_min)
-            & (cat[y] < dec_max)
-            & (cat[y] > dec_min)
-        ]
+        cat = cat[(cat[x] < ra_max) & (cat[x] > ra_min) & (cat[y] < dec_max) & (cat[y] > dec_min)]
         d.set("regions system wcs ; regions sky fk5 ; regions skyformat degrees")
         system = "fk5"
         size = float(size)  # /3600
@@ -6106,7 +5775,7 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
 
     verboseprint(cat)
     if (ID == "") or (ID is None):
-        create_DS9regions(
+        create_ds9_regions(
             [cat[x]],
             [cat[y]],
             radius=np.ones(len(cat)) * float(size),
@@ -6114,11 +5783,11 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
             save=True,
             color=["yellow"],
             ID=None,
-            savename="/tmp/centers",
+            savename=tmp_region,
             system=system,
         )
     else:
-        create_DS9regions(
+        create_ds9_regions(
             [cat[x]],
             [cat[y]],
             radius=np.ones(len(cat)) * float(size),
@@ -6126,11 +5795,11 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
             save=True,
             color=["yellow"],
             ID=[np.round(np.array(cat[ID], dtype=float), 1)],
-            savename="/tmp/centers",
+            savename=tmp_region,
             system=system,
         )
-    d.set("regions /tmp/centers.reg")
-    return cat, "/tmp/centers.reg"
+    d.set("regions %s" % (tmp_region))
+    return cat, tmp_region
 
 
 def save_region_as_catalog(xpapoint=None, name=None, new_name=None, argv=[]):
@@ -6139,13 +5808,9 @@ def save_region_as_catalog(xpapoint=None, name=None, new_name=None, argv=[]):
     import numpy as np
     from astropy.table import Table
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
-        "-p",
-        "--path",
-        help="Path where to save the region file.",
-        type=str,
-        metavar="",
+        "-p", "--path", help="Path where to save the region file.", type=str, metavar="",
     )
     args = parser.parse_args_modif(argv, required=True)
 
@@ -6215,7 +5880,7 @@ def mask_regions(xpapoint=None, length=20, argv=[]):
     """
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
@@ -6234,12 +5899,7 @@ def mask_regions(xpapoint=None, length=20, argv=[]):
     # verboseprint("path = ", path)
     for filename in path:
         fitsimage, name = mask_regions_2(
-            filename,
-            regions=cosmic_rays,
-            top=top,
-            bottom=bottom,
-            left=left,
-            right=right,
+            filename, regions=cosmic_rays, top=top, bottom=bottom, left=left, right=right,
         )
     if len(path) < 2:
         d.set("frame new ; tile yes ; file %s" % (name))
@@ -6263,21 +5923,14 @@ def mask_regions_2(filename, top, bottom, left, right, regions=None):
         cols=None,
     )
     fitsimage.data = maskedimage
-    name = (
-        os.path.dirname(filename)
-        + "/"
-        + os.path.basename(filename)[:-5]
-        + "_masked.fits"
-    )
+    name = os.path.dirname(filename) + "/" + os.path.basename(filename)[:-5] + "_masked.fits"
     if not os.path.exists(os.path.dirname(name)):
         os.makedirs(os.path.dirname(name))
     fitswrite(fitsimage, name)
     return fitsimage, name
 
 
-def mask_cosmic_rays(
-    image, cosmics, top=0, bottom=0, left=4, right=0, cols=None, all=False
-):
+def mask_cosmic_rays(image, cosmics, top=0, bottom=0, left=4, right=0, cols=None, all=False):
     """Replace pixels impacted by cosmic rays by NaN values
     """
     from tqdm import tqdm_gui  # tqdm,
@@ -6382,7 +6035,7 @@ def compute_gain(xpapoint=None, verbose=False):
         message(d, "Please define a region.")
         sys.exit()
     else:
-        x_inf, x_sup, y_inf, y_sup = Lims_from_region(None, coords=region)
+        x_inf, x_sup, y_inf, y_sup = lims_from_region(None, coords=region)
         area = [x_inf, x_sup, y_inf, y_sup]
     if len(path) == 1:
         plot_flag = True
@@ -6394,7 +6047,7 @@ def compute_gain(xpapoint=None, verbose=False):
         verboseprint(filename)
         if len(path) > 1:
             D.append(
-                ComputeEmGain(
+                compute_emgain(
                     filename,
                     Path2substract=Path2substract,
                     save=True,
@@ -6408,7 +6061,7 @@ def compute_gain(xpapoint=None, verbose=False):
                 )
             )
         else:
-            D = ComputeEmGain(
+            D = compute_emgain(
                 filename,
                 Path2substract=Path2substract,
                 save=True,
@@ -6430,8 +6083,7 @@ def cigma_clip_binned(x, y, sig=1, Plot=True, ax=None, log=False):
 
     x, y = np.array(x), np.array(y)
     ob, bins = np.histogram(
-        x,
-        bins=[np.percentile(x, i) for i in np.linspace(0, 100, int(2 + len(x) / 100))],
+        x, bins=[np.percentile(x, i) for i in np.linspace(0, 100, int(2 + len(x) / 100))],
     )
     index = []
     xn, yn = [], []
@@ -6457,11 +6109,7 @@ def cigma_clip_binned(x, y, sig=1, Plot=True, ax=None, log=False):
             if log:
                 p = ax.plot(np.log10(xi), np.log10(yi), ".", alpha=0.15)
                 ax.plot(
-                    np.log10(xi[indexi]),
-                    np.log10(yi[indexi]),
-                    ".",
-                    alpha=0.9,
-                    c=p[0].get_color(),
+                    np.log10(xi[indexi]), np.log10(yi[indexi]), ".", alpha=0.9, c=p[0].get_color(),
                 )
             else:
                 p = ax.plot(xi, yi, ".", alpha=0.15)
@@ -6472,7 +6120,7 @@ def cigma_clip_binned(x, y, sig=1, Plot=True, ax=None, log=False):
     return xx[all_index], yy[all_index]
 
 
-def ComputeEmGain(
+def compute_emgain(
     filename,
     Path2substract=None,
     save=True,
@@ -6532,17 +6180,17 @@ def ComputeEmGain(
     else:
         r1, r2 = radius
     if d is not None:
-        create_DS9regions(
+        create_ds9_regions(
             [areas[:, 2] + float(r1) / 2],
             [areas[:, 0] + float(r2) / 2],
             radius=[radius],
             save=True,
-            savename="/tmp/centers",
+            savename=tmp_region,
             form=["box"],
             color=["yellow"],
             ID=None,
         )
-        d.set("regions /tmp/centers.reg")
+        d.set("regions %s" % (tmp_region))
         pass
     emgain = 0
     if emgain > 0:
@@ -6556,13 +6204,7 @@ def ComputeEmGain(
     )
 
     GeneralFit_new(
-        intensity_phys_n,
-        var_phys_n,
-        ax=ax0,
-        background=1,
-        nb_gaussians=0,
-        marker="",
-        linewidth=0,
+        intensity_phys_n, var_phys_n, ax=ax0, background=1, nb_gaussians=0, marker="", linewidth=0,
     )
     ax0.set_ylim((1 * var_phys_n.min(), 1 * var_phys_n.max()))
     ax0.set_xlim((1 * intensity_phys_n.min(), 1 * intensity_phys_n.max()))
@@ -6616,7 +6258,7 @@ def create_areas(image, area=None, radius=100, offset=20, verbose=False):
     return areas
 
 
-def PlotComputeEmGain(
+def plot_compute_emgain(
     intensity,
     var,
     emgain,
@@ -6643,7 +6285,7 @@ def PlotComputeEmGain(
 def trim(xpapoint=None, all_ext=False, argv=[]):
     """Crop/trim the image, WCS compatible [DS9 required]
     """
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument("-s", "--system", default="Image", type=str, choices=["Image"])
     args = parser.parse_args_modif(argv)
 
@@ -6657,11 +6299,10 @@ def trim(xpapoint=None, all_ext=False, argv=[]):
     verboseprint("system = ", system)
     verboseprint("path = ", path)
     region = getregion(d, quick=True, selected=True, system=system, dtype=float)
-    x_inf, x_sup, y_inf, y_sup = Lims_from_region(None, coords=region[0], dtype=float)
+    x_inf, x_sup, y_inf, y_sup = lims_from_region(None, coords=region[0], dtype=float)
     if (len(region[0]) != 5) & (len(region[0]) != 4):
         message(
-            d,
-            "Trimming only works on box regions. Select a box region and re-run the analysis.",
+            d, "Trimming only works on box regions. Select a box region and re-run the analysis.",
         )
         sys.exit()
     else:
@@ -6708,7 +6349,7 @@ def column_line_correlation(xpapoint=None, argv=[]):
     """Performs a column to column or or line to line auto-correlation
     on a DS9 image
     """
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     args = parser.parse_args_modif(argv, required=True)
 
     d = DS9n(args.xpapoint)
@@ -6716,18 +6357,18 @@ def column_line_correlation(xpapoint=None, argv=[]):
     path = globglob(args.path, xpapoint=args.xpapoint)
     region = getregion(d, quick=True, message=False, selected=True)
     if region is not None:
-        x_inf, x_sup, y_inf, y_sup = Lims_from_region(None, coords=region)
+        x_inf, x_sup, y_inf, y_sup = lims_from_region(None, coords=region)
         area = [y_inf, y_sup, x_inf, x_sup]
     else:
         area = [0, -1, 0, -1]
 
     for filename in path:
         verboseprint(filename)
-        CLcorrelation(filename, area=area)
+        cl_correlation(filename, area=area)
     return
 
 
-def CLcorrelation(path, area=[0, -1, 1053, 2133], DS9backUp=DS9_BackUp_path):
+def cl_correlation(path, area=[0, -1, 1053, 2133], DS9backUp=DS9_BackUp_path):
     """Performs a column to column or or line to line auto-correlation
     on a DS9 image
     """
@@ -6761,20 +6402,16 @@ def CLcorrelation(path, area=[0, -1, 1053, 2133], DS9backUp=DS9_BackUp_path):
     vals4, b_ = np.histogram(y, bins=bins4)
 
     np.savetxt(
-        DS9_BackUp_path + "/CSVs/1.dat",
-        np.array([(bins1[1:] + bins1[:-1]) / 2, vals1]).T,
+        DS9_BackUp_path + "/CSVs/1.dat", np.array([(bins1[1:] + bins1[:-1]) / 2, vals1]).T,
     )
     np.savetxt(
-        DS9_BackUp_path + "/CSVs/2.dat",
-        np.array([(bins2[1:] + bins2[:-1]) / 2, vals2]).T,
+        DS9_BackUp_path + "/CSVs/2.dat", np.array([(bins2[1:] + bins2[:-1]) / 2, vals2]).T,
     )
     np.savetxt(
-        DS9_BackUp_path + "/CSVs/3.dat",
-        np.array([(bins3[1:] + bins3[:-1]) / 2, vals3]).T,
+        DS9_BackUp_path + "/CSVs/3.dat", np.array([(bins3[1:] + bins3[:-1]) / 2, vals3]).T,
     )
     np.savetxt(
-        DS9_BackUp_path + "/CSVs/4.dat",
-        np.array([(bins4[1:] + bins4[:-1]) / 2, vals4]).T,
+        DS9_BackUp_path + "/CSVs/4.dat", np.array([(bins4[1:] + bins4[:-1]) / 2, vals4]).T,
     )
 
     d = []
@@ -6814,7 +6451,7 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
     from astropy.io import fits
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument(
         "-i",
         "--info",
@@ -6838,11 +6475,7 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
         verboseprint("%s : %s" % (args.path, files))
         while len(files) == 0:
             d = DS9n(args.xpapoint)
-            path = get(
-                d,
-                "No file matching the regular expression. Use regular exp.",
-                exit_=True,
-            )
+            path = get(d, "No file matching the regular expression. Use regular exp.", exit_=True,)
             files = globglob(path, ds9_im=False)
     fname = os.path.dirname(os.path.dirname(files[0]))
     verboseprint(fname)
@@ -6872,17 +6505,14 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
     ]
     from datetime import datetime
 
-    path_db = os.environ[
-        "HOME"
-    ] + "/DS9QuickLookPlugIn/HeaderDataBase/HeaderCatalog_%s.csv" % (
+    path_db = os.environ["HOME"] + "/DS9QuickLookPlugIn/HeaderDataBase/HeaderCatalog_%s.csv" % (
         datetime.now().strftime("%y%m%d-%HH%Mm%Ss")
     )
     verboseprint(t1s)
     t1 = vstack(t1s)
     csvwrite(t1, path_db)
-    question = (
-        "Analysis completed and saved to %s! Do you want to load the file with PRISM?"
-        % (path_db)
+    question = "Analysis completed and saved to %s! Do you want to load the file with PRISM?" % (
+        path_db
     )
     if yesno(d, question):
         d.set("prism import csv " + path_db)
@@ -6906,10 +6536,7 @@ def get_columns(path):
 
 
 def Parallelize(
-    function=lambda x: print(x),
-    action_to_paralize=[],
-    parameters=[],
-    number_of_thread=10,
+    function=lambda x: print(x), action_to_paralize=[], parameters=[], number_of_thread=10,
 ):
     """Use multi-processing to run the function on all the entries
     """
@@ -6927,9 +6554,7 @@ def Parallelize(
         manager = Manager()
         return_dict = manager.dict()
         for inf in subinfo:
-            p = Process(
-                target=RunFunction, args=(function, [inf] + parameters, return_dict,),
-            )
+            p = Process(target=RunFunction, args=(function, [inf] + parameters, return_dict,),)
             jobs.append(p)
             p.start()
         for job in jobs:
@@ -6942,15 +6567,13 @@ def Parallelize(
             return
 
 
-def VariableSmearingKernels(image, Smearing=1.5, SmearExpDecrement=50000):
+def variable_smearing_kernels(image, Smearing=1.5, SmearExpDecrement=50000):
     """Creates variable smearing kernels for inversion
     """
     import numpy as np
 
     smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-    smearing_kernels = np.exp(
-        -np.arange(6)[:, np.newaxis, np.newaxis] / smearing_length
-    )
+    smearing_kernels = np.exp(-np.arange(6)[:, np.newaxis, np.newaxis] / smearing_length)
     smearing_kernels /= smearing_kernels.sum(axis=0)
     return smearing_kernels
 
@@ -6964,7 +6587,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     from matplotlib.widgets import Button
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv)
     # from matplotlib.widgets import  CheckButtons #RadioButtons,
     from dataphile.graphics.widgets import Slider
@@ -6998,7 +6621,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     n = np.log10(np.sum([10 ** yi for yi in ydata]))
     lims = np.array([0, 2])
 
-    def SimulateFIREBallemCCDHist(
+    def simulate_fireball_emccd_hist(
         x,
         data,
         ConversionGain,
@@ -7033,35 +6656,26 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
         #        prob_pCIC = np.random.rand(size[1],size[0])    #Draw a number prob in [0,1]
         #        image[prob_pCIC <  p_pCIC] += 1
-        prob_sCIC = np.random.rand(
-            im.shape[0], im.shape[1]
-        )  # Draw a number prob in [0,1]
+        prob_sCIC = np.random.rand(im.shape[0], im.shape[1])  # Draw a number prob in [0,1]
         id_scic = prob_sCIC < sCIC  # sCIC positions
         # partial amplification of sCIC
         register = np.random.randint(
             1, n_registers, size=id_scic.sum()
         )  # Draw at which stage of the EM register the electorn is created
-        imaADU[id_scic] += np.random.exponential(
-            np.power(EmGain, register / n_registers)
-        )
+        imaADU[id_scic] += np.random.exponential(np.power(EmGain, register / n_registers))
 
         if Smearing > 0:
             # print(SmearExpDecrement)
-            smearing_kernels = VariableSmearingKernels(
-                imaADU, Smearing, SmearExpDecrement
-            )
+            smearing_kernels = variable_smearing_kernels(imaADU, Smearing, SmearExpDecrement)
             offsets = np.arange(6)
             A = dia_matrix(
-                (smearing_kernels.reshape((6, -1)), offsets),
-                shape=(imaADU.size, imaADU.size),
+                (smearing_kernels.reshape((6, -1)), offsets), shape=(imaADU.size, imaADU.size),
             )
             # print(imaADU==A.dot(imaADU.ravel()).reshape(imaADU.shape))
             imaADU = A.dot(imaADU.ravel()).reshape(imaADU.shape)
 
         imaADU += np.random.normal(Bias, RN * ConversionGain, size=im.shape)
-        n, bins = np.histogram(
-            imaADU.flatten(), range=[np.nanmin(x), np.nanmax(x)], bins=len(x)
-        )
+        n, bins = np.histogram(imaADU.flatten(), range=[np.nanmin(x), np.nanmax(x)], bins=len(x))
         if path is None:
             return n
         else:
@@ -7086,7 +6700,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
     if smearing:
         function = lambda x, Bias, RN, EmGain, flux, smearing, SmearExpDecrement, sCIC: np.log10(
-            SimulateFIREBallemCCDHist(
+            simulate_fireball_emccd_hist(
                 x=x,
                 data=im,
                 ConversionGain=0.53,
@@ -7137,9 +6751,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
     bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor="None")
 
-    button = Button(
-        plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit", color="white", hovercolor="0.975",
-    )
+    button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit", color="white", hovercolor="0.975",)
 
     for edge in "left", "right", "top", "bottom":
         bounds_box.spines[edge].set_visible(False)
@@ -7265,9 +6877,7 @@ def create_catalog(files, ext=[0], info=None):
 
     file_header = []
     files_name = []
-    for i in tqdm(
-        range(len(files)), file=sys.stdout, desc="Number of files : ", ncols=100,
-    ):
+    for i in tqdm(range(len(files)), file=sys.stdout, desc="Number of files : ", ncols=100,):
         try:
             table = create_table_from_header(files[i], exts=ext, info=info)
             if table is not None:
@@ -7282,9 +6892,7 @@ def create_catalog(files, ext=[0], info=None):
         index=0,
         rename_duplicate=True,
     )
-    table_header.add_column(
-        Column(files_name, name="Path"), index=-1, rename_duplicate=True
-    )
+    table_header.add_column(Column(files_name, name="Path"), index=-1, rename_duplicate=True)
     table_header.add_column(
         Column([os.path.basename(file) for file in files_name]),
         name="Filename",
@@ -7420,30 +7028,18 @@ def convert_image(xpapoint=None, argv=[]):
     from astropy.io import fits
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument(
         "-t",
         "--type",
         default="8,uint8",
         help="Conversion type of the image",
         type=str,
-        choices=[
-            "8,uint8",
-            "16,int16",
-            "32,int32",
-            "64,int64",
-            "-32,float32",
-            "-64,float64",
-        ],
+        choices=["8,uint8", "16,int16", "32,int32", "64,int64", "-32,float32", "-64,float64",],
         required=True,
     )
     parser.add_argument(
-        "-r",
-        "--rescale",
-        default=1,
-        help="Rescale or not the image",
-        metavar="",
-        type=int,
+        "-r", "--rescale", default=1, help="Rescale or not the image", metavar="", type=int,
     )
     args = parser.parse_args_modif(argv)
     d = DS9n(args.xpapoint)
@@ -7466,10 +7062,7 @@ def convert_image(xpapoint=None, argv=[]):
         else:
             load = False
         save_fits_images(
-            d,
-            fitsimage,
-            filename.replace(".fits", "_%s.fits" % (python_type)),
-            load=load,
+            d, fitsimage, filename.replace(".fits", "_%s.fits" % (python_type)), load=load,
         )
     return
 
@@ -7477,9 +7070,7 @@ def convert_image(xpapoint=None, argv=[]):
 def save_fits_images(d, file, filename, load=False):
     if os.path.exists(filename):
         if yesno(
-            d,
-            "%s already exists. Do you want to replace it?"
-            % (os.path.basename(filename)),
+            d, "%s already exists. Do you want to replace it?" % (os.path.basename(filename)),
         ):
             file[0].writeto(filename, overwrite=True)
             if load:
@@ -7505,17 +7096,12 @@ def fill_regions(xpapoint=None, argv=[]):
     import numpy as np
     from numpy import inf, nan
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
         "-v", "--value", help="Value to replace in the regions", type=str, metavar="",
     )
     parser.add_argument(
-        "-o",
-        "--overwrite",
-        default="1",
-        help="Overwrite the image",
-        type=str,
-        metavar="",
+        "-o", "--overwrite", default="1", help="Overwrite the image", type=str, metavar="",
     )
     args = parser.parse_args_modif(argv)
 
@@ -7591,22 +7177,12 @@ def extract_sources(xpapoint=None, argv=[]):
     """
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument(
-        "-e",
-        "--erosion",
-        default="2",
-        help="Percentile of the image to exclude in the background estimation",
-        type=str,
-        metavar="",
+        "-e", "--erosion", default="2", type=str, metavar="",
     )
     parser.add_argument(
-        "-t",
-        "--threshold",
-        default="10",
-        help="Percentile of the image to exclude in the background estimation",
-        type=str,
-        metavar="",
+        "-t", "--threshold", default="10", help="Extraction threshold", type=str, metavar="",
     )
     parser.add_argument(
         "-f",
@@ -7688,17 +7264,17 @@ def extract_sources(xpapoint=None, argv=[]):
     verboseprint(sources)
     verboseprint(sources.colnames)
     if len(path) < 2:
-        create_DS9regions(
+        create_ds9_regions(
             [sources["xcentroid"]],
             [sources["ycentroid"]],
             radius=[10],
             save=True,
-            savename="/tmp/centers",
+            savename=tmp_region,
             form=["circle"],
             color=["yellow"],
             ID=None,
         )
-        d.set("region delete all ; region {}".format("/tmp/centers.reg"))
+        d.set("region delete all ; region {}".format(tmp_region))
     return
 
 
@@ -7730,15 +7306,7 @@ def delete_doublons(sources, dist):
 
 
 def extract_sources_photutils(
-    filename,
-    fwhm=5,
-    threshold=8,
-    theta=0,
-    ratio=1,
-    n=2,
-    sigma=3,
-    iters=5,
-    deleteDoublons=3,
+    filename, fwhm=5, threshold=8, theta=0, ratio=1, n=2, sigma=3, iters=5, deleteDoublons=3,
 ):
     """Extract sources for DS9 image and create catalog
     """
@@ -7754,13 +7322,9 @@ def extract_sources_photutils(
     data = fitsfile[np.argmax(sizes)].data
     data2 = ndimage.grey_dilation(ndimage.grey_erosion(data, size=(n, n)), size=(n, n))
     mean, median, std = sigma_clipped_stats(data2, sigma=sigma, maxiters=iters)
-    daofind = DAOStarFinder(
-        fwhm=fwhm[0], threshold=threshold[0] * std, ratio=ratio, theta=theta
-    )
+    daofind = DAOStarFinder(fwhm=fwhm[0], threshold=threshold[0] * std, ratio=ratio, theta=theta)
     sources0 = daofind(data2 - median)
-    verboseprint(
-        "fwhm = {}, T = {}, len = {}".format(fwhm[0], threshold[0], len(sources0))
-    )
+    verboseprint("fwhm = {}, T = {}, len = {}".format(fwhm[0], threshold[0], len(sources0)))
     for i in fwhm[1:]:
         for j in threshold[1:]:
             daofind = DAOStarFinder(fwhm=i, threshold=j * std, ratio=ratio, theta=theta)
@@ -7791,7 +7355,7 @@ def getfilename(ds9, All=False, sort=True):
         if filename == "":
             try:
                 fits_im = ds9.get_pyfits()[0]
-                filename = backup_path + "/tmp/image.fits"
+                filename = backup_path + tmp_image
                 fitswrite(fits_im, filename)
             except TypeError:
                 return filename
@@ -7803,7 +7367,7 @@ def getfilename(ds9, All=False, sort=True):
         elif os.path.isfile(filename) is False:
             try:
                 fits_im = ds9.get_pyfits()[0]
-                filename = backup_path + "/tmp/image.fits"
+                filename = backup_path + tmp_image
                 fitswrite(fits_im, filename)
                 new_filename = filename
             except TypeError:
@@ -7812,8 +7376,7 @@ def getfilename(ds9, All=False, sort=True):
         elif filename[0] == ".":
             new_filename = backup_path + "/BackUps" + filename[1:]
             verboseprint(
-                "Filename in the DS9 backup repository, changing path to %s"
-                % (new_filename)
+                "Filename in the DS9 backup repository, changing path to %s" % (new_filename)
             )
         else:
             new_filename = filename
@@ -7855,10 +7418,8 @@ def add_field_to_header(xpapoint=None, field="", value="", argv=[]):
     """
     from astropy.io import fits
 
-    parser = CreateParser(get_name_doc(), path=True)
-    parser.add_argument(
-        "-f", "--field", default="FIELD", help="Header field to add", type=str
-    )
+    parser = create_parser(get_name_doc(), path=True)
+    parser.add_argument("-f", "--field", default="FIELD", help="Header field to add", type=str)
     parser.add_argument(
         "-v", "--value", default="VALUE", help="Value to add", metavar="", type=str,
     )
@@ -7897,14 +7458,12 @@ def add_field_to_header(xpapoint=None, field="", value="", argv=[]):
     return
 
 
-def background_estimation(
-    xpapoint=None, n=2, DS9backUp=DS9_BackUp_path, Plot=True, argv=[]
-):
+def background_estimation(xpapoint=None, n=2, DS9backUp=DS9_BackUp_path, Plot=True, argv=[]):
     """Estimate image(s) background
     """
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument("-s", "--sigma", default="3", metavar="", help="", type=str)
     parser.add_argument(
         "-b",
@@ -7929,11 +7488,7 @@ def background_estimation(
         default="StdBackgroundRMS",
         help="Different RMS estimators that can be used",
         type=str,
-        choices=[
-            "StdBackgroundRMS",
-            "MADStdBackgroundRMS",
-            "BiweightScaleBackgroundRMS",
-        ],
+        choices=["StdBackgroundRMS", "MADStdBackgroundRMS", "BiweightScaleBackgroundRMS",],
     )
     parser.add_argument(
         "-f",
@@ -7944,12 +7499,7 @@ def background_estimation(
         type=str,
     )
     parser.add_argument(
-        "-box",
-        "--box",
-        default="40,40",
-        metavar="",
-        help="Size of the box to be used",
-        type=str,
+        "-box", "--box", default="40,40", metavar="", help="Size of the box to be used", type=str,
     )
     parser.add_argument(
         "-per",
@@ -8021,7 +7571,7 @@ def background_estimation(
     box1, box2 = np.array(boxs.split(","), dtype=int)
     path = globglob(args.path, xpapoint=args.xpapoint)
     name = Parallelize(
-        function=BackgroundEstimationPhot,
+        function=background_estimation_phot,
         parameters=[
             float(sigma),
             bckd,
@@ -8045,7 +7595,7 @@ def background_estimation(
     return name
 
 
-def BackgroundEstimationPhot(
+def background_estimation_phot(
     filename,
     sigma,
     bckd,
@@ -8101,9 +7651,7 @@ def BackgroundEstimationPhot(
     }
 
     if mask:
-        mask_source = make_source_mask(
-            data, nsigma=snr, npixels=npixels, dilate_size=dilate_size
-        )
+        mask_source = make_source_mask(data, nsigma=snr, npixels=npixels, dilate_size=dilate_size)
     else:
         mask_source = np.ones(data.shape, dtype=bool)
     bkg_estimator = functions[bckd]()
@@ -8123,8 +7671,7 @@ def BackgroundEstimationPhot(
     fitsfile.data = fitsfile.data - bkg.background  # .astype('uint16')
 
     name = os.path.join(
-        os.path.dirname(filename)
-        + "/bkgd_photutils_substracted/%s" % (os.path.basename(filename))
+        os.path.dirname(filename) + "/bkgd_photutils_substracted/%s" % (os.path.basename(filename))
     )
     fitswrite(fitsfile, name)
     return name
@@ -8140,13 +7687,9 @@ def CreateImageFromCatalogObject(xpapoint=None, nb=int(1e3), argv=[]):
     from photutils.datasets import make_100gaussians_image
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
-        "-p",
-        "--path",
-        help="Path of the sextractor catalog to process",
-        metavar="",
-        default="",
+        "-p", "--path", help="Path of the sextractor catalog to process", metavar="", default="",
     )
     args = parser.parse_args_modif(argv)
 
@@ -8163,9 +7706,7 @@ def CreateImageFromCatalogObject(xpapoint=None, nb=int(1e3), argv=[]):
         lx, ly = int(catalog["X_IMAGE"].max()), int(catalog["Y_IMAGE"].max())
         background = np.median(catalog["BACKGROUND"])
         image = np.ones((lx, ly)) * background
-        for i in tqdm(
-            range(len(catalog))
-        ):  # tqdm(range(len(catalog)), file=sys.stdout):
+        for i in tqdm(range(len(catalog))):  # tqdm(range(len(catalog)), file=sys.stdout):
             x = np.linspace(0, lx - 1, lx)
             y = np.linspace(0, ly - 1, ly)
             x, y = np.meshgrid(x, y)
@@ -8213,12 +7754,7 @@ def gaussian_2dim(xy, amplitude, xo, yo, sigma_x, sigma_y, angle=0, offset=0):
     xo = float(xo)
     yo = float(yo)
     g = Gaussian2D(
-        amplitude=amplitude,
-        x_mean=xo,
-        y_mean=yo,
-        x_stddev=sigma_x,
-        y_stddev=sigma_y,
-        theta=angle,
+        amplitude=amplitude, x_mean=xo, y_mean=yo, x_stddev=sigma_x, y_stddev=sigma_y, theta=angle,
     )
     x, y = xy
     return g(x, y).ravel() + offset
@@ -8397,16 +7933,14 @@ if len(sys.argv) > 1:
                 amp = np.nanmax(ydata_i) - background
                 amp2 = np.nanmin(ydata_i) - background
                 ampm = np.nanmax([abs(amp), abs(amp2)])
-                nb_features = np.max(
-                    [self.nb_moffats, self.nb_gaussians, self.nb_voigt1D]
-                )
+                nb_features = np.max([self.nb_moffats, self.nb_gaussians, self.nb_voigt1D])
                 amps = (10 * [amp, amp2, (amp2 + amp) / 2])[:nb_features]
                 x1, x2 = (
                     xdata_i[np.argmax(ydata_i)],
                     xdata_i[np.argmin(ydata_i)],
                 )
                 centers = (10 * [x1, x2, (x1 + x2) / 2])[:nb_features]
-                xs, ys = findMaxima(x, y, conv=10, max_=True)
+                xs, ys = find_maxima(x, y, conv=10, max_=True)
                 xs, ys = (
                     np.concatenate((xs, xs, xs)),
                     np.concatenate((ys, ys, ys)),
@@ -8420,9 +7954,7 @@ if len(sys.argv) > 1:
                         Model(
                             gaussian1D,
                             Parameter(
-                                value=amps[0],
-                                bounds=(-1.5 * ampm, 1.5 * ampm),
-                                label="Amplitude",
+                                value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude",
                             ),
                             Parameter(
                                 value=center,
@@ -8445,9 +7977,7 @@ if len(sys.argv) > 1:
                         Model(
                             moffat_1d,
                             Parameter(
-                                value=amps[0],
-                                bounds=(-1.5 * ampm, 1.5 * ampm),
-                                label="Amplitude",
+                                value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude",
                             ),
                             Parameter(
                                 value=center,
@@ -8476,9 +8006,7 @@ if len(sys.argv) > 1:
                         Model(
                             voigt1D,
                             Parameter(
-                                value=amps[0],
-                                bounds=(-1.5 * ampm, 1.5 * ampm),
-                                label="Amplitude",
+                                value=amps[0], bounds=(-1.5 * ampm, 1.5 * ampm), label="Amplitude",
                             ),
                             Parameter(
                                 value=center,
@@ -8505,9 +8033,7 @@ if len(sys.argv) > 1:
                     Models.append(
                         Model(
                             blackbody_new,
-                            Parameter(
-                                value=1e4, bounds=(1e3, 1e5), label="Temperature",
-                            ),
+                            Parameter(value=1e4, bounds=(1e3, 1e5), label="Temperature",),
                             label="Backbody",
                         )
                     )
@@ -8544,31 +8070,17 @@ if len(sys.argv) > 1:
                     Models.append(
                         Model(
                             EMCCD_new,
-                            Parameter(
-                                value=3350, bounds=(2500, 4000), label="Bias [ADU]",
-                            ),
-                            Parameter(
-                                value=107, bounds=(0, 150), label="ReadNoise [$e^-$]",
-                            ),
-                            Parameter(
-                                value=600,
-                                bounds=(200, 2000),
-                                label="EmGain [ADU/$e^-$]",
-                            ),
-                            Parameter(
-                                value=0.1, bounds=(0, 10.9), label="Flux [$e^-$]",
-                            ),
+                            Parameter(value=3350, bounds=(2500, 4000), label="Bias [ADU]",),
+                            Parameter(value=107, bounds=(0, 150), label="ReadNoise [$e^-$]",),
+                            Parameter(value=600, bounds=(200, 2000), label="EmGain [ADU/$e^-$]",),
+                            Parameter(value=0.1, bounds=(0, 10.9), label="Flux [$e^-$]",),
                             label="EMCCD",
                         )
                     )
                     xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i))
-                    xsample = np.linspace(
-                        xdata_i.min(), xdata_i.max(), len(xdata_i) * 100
-                    )
+                    xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i) * 100)
                 else:
-                    xsample = np.linspace(
-                        xdata_i.min(), xdata_i.max(), len(xdata_i) * 100
-                    )
+                    xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i) * 100)
 
                 if self.schechter:
                     try:
@@ -8576,11 +8088,7 @@ if len(sys.argv) > 1:
                             Schechter,
                             xdata_i,
                             ydata_i,
-                            p0=[
-                                1e-3,
-                                (np.nanmin(xdata_i) + np.nanmax(xdata_i)) / 2,
-                                -1.4,
-                            ],
+                            p0=[1e-3, (np.nanmin(xdata_i) + np.nanmax(xdata_i)) / 2, -1.4,],
                         )
                     except Exception:
                         popt = [
@@ -8591,32 +8099,24 @@ if len(sys.argv) > 1:
                     Models.append(
                         Model(
                             Schechter,
-                            Parameter(
-                                value=popt[0], bounds=(1e-5, 1e-2), label=r"$\phi$",
-                            ),
+                            Parameter(value=popt[0], bounds=(1e-5, 1e-2), label=r"$\phi$",),
                             Parameter(
                                 value=popt[1],
                                 bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i),),
                                 label=r"$L^\star$",
                             ),
-                            Parameter(
-                                value=popt[2], bounds=(-5, 0), label=r"$\alpha$",
-                            ),
+                            Parameter(value=popt[2], bounds=(-5, 0), label=r"$\alpha$",),
                             label="Schechter function",
                         )
                     )
                 if self.double_schechter:
                     double_schechter = lambda x, phi, alpha, M, phi2, alpha2: np.log10(
-                        10 ** Schechter(x, phi, M, alpha)
-                        + 10 ** Schechter(x, phi2, M, alpha2)
+                        10 ** Schechter(x, phi, M, alpha) + 10 ** Schechter(x, phi2, M, alpha2)
                     )
 
                     try:
                         popt, pcov = curve_fit(
-                            double_schechter,
-                            xdata_i,
-                            ydata_i,
-                            p0=[2e-3, -1.5, -19, 6e-3, -0.5],
+                            double_schechter, xdata_i, ydata_i, p0=[2e-3, -1.5, -19, 6e-3, -0.5],
                         )
                     except Exception as e:
                         verboseprint(e)
@@ -8624,23 +8124,15 @@ if len(sys.argv) > 1:
                     Models.append(
                         Model(
                             double_schechter,
-                            Parameter(
-                                value=popt[0], bounds=(1e-5, 1e-2), label=r"$\phi_1$",
-                            ),
-                            Parameter(
-                                value=popt[1], bounds=(-5, 0), label=r"$\alpha_1$",
-                            ),
+                            Parameter(value=popt[0], bounds=(1e-5, 1e-2), label=r"$\phi_1$",),
+                            Parameter(value=popt[1], bounds=(-5, 0), label=r"$\alpha_1$",),
                             Parameter(
                                 value=popt[2],
                                 bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i),),
                                 label=r"$L^\star$",
                             ),
-                            Parameter(
-                                value=popt[3], bounds=(1e-5, 1e-2), label=r"$\phi_2$",
-                            ),
-                            Parameter(
-                                value=popt[4], bounds=(-5, 0), label=r"$\alpha_2$",
-                            ),
+                            Parameter(value=popt[3], bounds=(1e-5, 1e-2), label=r"$\phi_2$",),
+                            Parameter(value=popt[4], bounds=(-5, 0), label=r"$\alpha_2$",),
                             label="Double Schechter function",
                         )
                     )
@@ -8649,9 +8141,7 @@ if len(sys.argv) > 1:
                         Model(
                             exponential_1d,
                             Parameter(
-                                value=0,
-                                bounds=(0, 1.5 * np.nanmax(ydata_i)),
-                                label="amplitude",
+                                value=0, bounds=(0, 1.5 * np.nanmax(ydata_i)), label="amplitude",
                             ),
                             Parameter(
                                 value=100,
@@ -8697,34 +8187,24 @@ if len(sys.argv) > 1:
                                 bounds=(-abs(popt[0]), abs(popt[0])),
                                 label="Amplitude tot",
                             ),
-                            Parameter(
-                                value=popt[1], bounds=(0, len(y)), label="Length 1",
-                            ),
+                            Parameter(value=popt[1], bounds=(0, len(y)), label="Length 1",),
                             Parameter(
                                 value=popt[2],
                                 bounds=(-abs(popt[0]), abs(popt[0])),
                                 label="Amp2/Amp1",
                             ),
-                            Parameter(
-                                value=popt[2], bounds=(0, len(y)), label="Length 2",
-                            ),
+                            Parameter(value=popt[2], bounds=(0, len(y)), label="Length 2",),
                             label="Double Exponential",
                         )
                     )
                 if self.background == 0:
-                    ymin_ = (
-                        1.1 * np.nanmin(y) if np.nanmin(y) < 0 else 0.9 * np.nanmin(y)
-                    )
-                    ymax_ = (
-                        1.1 * np.nanmax(y) if np.nanmax(y) > 0 else 0.9 * np.nanmax(y)
-                    )
+                    ymin_ = 1.1 * np.nanmin(y) if np.nanmin(y) < 0 else 0.9 * np.nanmin(y)
+                    ymax_ = 1.1 * np.nanmax(y) if np.nanmax(y) > 0 else 0.9 * np.nanmax(y)
                     Models.append(
                         Model(
                             uniform,
                             Parameter(
-                                value=np.nanmedian(y),
-                                bounds=(ymin_, ymax_),
-                                label="Offset",
+                                value=np.nanmedian(y), bounds=(ymin_, ymax_), label="Offset",
                             ),
                             label="Background",
                         )
@@ -8833,19 +8313,15 @@ if len(sys.argv) > 1:
                 ydata_i = self.ydata
                 if ax is None:
                     if (Plot == "Polar") | (Plot == "PolarLog"):
-                        figure = plt.figure("Fitting with AutoGUI", figsize=(8, 9))
+                        figure = plt.figure(figsize=(8, 9))
                         self.figure = figure
-                        self.ax = figure.add_axes(
-                            [0.10, 0.30, 0.84, 0.66], projection="polar"
-                        )
+                        self.ax = figure.add_axes([0.10, 0.30, 0.84, 0.66], projection="polar")
                     elif Plot == "Plot3D":
-                        figure = plt.figure("Fitting with AutoGUI", figsize=(8, 9))
+                        figure = plt.figure(figsize=(8, 9))
                         self.figure = figure
-                        self.ax = figure.add_axes(
-                            [0.10, 0.30, 0.84, 0.66], projection="3d"
-                        )
+                        self.ax = figure.add_axes([0.10, 0.30, 0.84, 0.66], projection="3d")
                     else:
-                        figure = plt.figure("Fitting with AutoGUI", figsize=(11, 6))
+                        figure = plt.figure(figsize=(11, 6))
                         self.figure = figure
                         self.ax = figure.add_axes([0.10, 0.30, 0.84, 0.66])
                         self.ax.set_ylabel("y", labelpad=15)
@@ -8926,7 +8402,7 @@ if len(sys.argv) > 1:
                     pass
 
 
-def findMaxima(x, y, conv=10, max_=True):
+def find_maxima(x, y, conv=10, max_=True):
     """Find maxima in an array after convolution
     """
     import numpy as np
@@ -8942,14 +8418,7 @@ def findMaxima(x, y, conv=10, max_=True):
 
 
 def EMCCD(
-    x,
-    biais=3300,
-    RN=107,
-    EmGain=600,
-    flux=0.1,
-    bright_surf=8.3,
-    p_sCIC=0,
-    Smearing=0.7,
+    x, biais=3300, RN=107, EmGain=600, flux=0.1, bright_surf=8.3, p_sCIC=0, Smearing=0.7,
 ):
     """EMCCD model
     """
@@ -9096,7 +8565,7 @@ def fit_ds9_plot(
     import numpy as np
     from astropy.table import Table
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument(
         "-b",
         "--background",
@@ -9159,16 +8628,7 @@ def fit_ds9_plot(
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
-    (
-        axis,
-        background,
-        function,
-        nb_gaussians,
-        nb_moffats,
-        nb_voigt1D,
-        nb_sinusoid,
-        other,
-    ) = (
+    (axis, background, function, nb_gaussians, nb_moffats, nb_voigt1D, nb_sinusoid, other,) = (
         "x",
         args.background,
         "none",
@@ -9210,12 +8670,10 @@ def fit_ds9_plot(
     try:
         d.get("plot")
     except TypeError:
-        d.set(
-            "analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}"
-        )
+        raise_create_plot(d)
         sys.exit()
     if os.path.exists(args.path):
-        cat = readV(args.path)
+        cat = read_v(args.path)
         x, y = cat[cat.colnames[0]], cat[cat.colnames[1]]
     else:
         if d.get("plot") != "":
@@ -9245,9 +8703,7 @@ def fit_ds9_plot(
             x, y = x[index], y[index]
 
         else:
-            d.set(
-                "analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}"
-            )
+            raise_create_plot(d)
             sys.exit()
 
     if np.nanmean(y[-10:]) > np.nanmean(y[:10]):
@@ -9261,7 +8717,7 @@ def fit_ds9_plot(
         log = True
 
     if args.other_features == "User-defined":
-        gui = InteractivManualFitting(
+        gui = interactiv_manual_fitting(
             x,
             y,
             initial="a*median(ydata)+b*ptp(ydata)*exp(-(x-c*x[argmax(ydata)])**2/len(ydata)/d)",
@@ -9304,11 +8760,8 @@ def fit_ds9_plot(
     return
 
 
-def InteractivManualFitting(
-    xdata,
-    ydata,
-    initial="a+b*max(ydata)*exp(-(x-c*x[argmax(ydata)])**2/len(ydata)/d)",
-    dict_={},
+def interactiv_manual_fitting(
+    xdata, ydata, initial="a+b*max(ydata)*exp(-(x-c*x[argmax(ydata)])**2/len(ydata)/d)", dict_={},
 ):
     """ Creates an interactive plot to fit a model on the data
     """
@@ -9347,9 +8800,7 @@ def InteractivManualFitting(
     bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor="None")
     axbox = plt.axes([0.1, 0.025, 0.65, 0.04])
 
-    button = Button(
-        plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit", color="white", hovercolor="0.975",
-    )
+    button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit", color="white", hovercolor="0.975",)
     delete_button = Button(
         plt.axes([0.72, 0.025, 0.04, 0.04]), "x", color="white", hovercolor="0.975",
     )
@@ -9389,7 +8840,7 @@ def InteractivManualFitting(
                 ax.set_xscale("log")
         fig.canvas.draw_idle()
 
-    def loadData(label):
+    def load_data(label):
         if data_button.get_status()[0]:
             datal.set_marker(".")
         else:
@@ -9442,11 +8893,9 @@ def InteractivManualFitting(
 
     scale.on_clicked(scalefunc)
     scalex.on_clicked(scalefuncx)
-    data_button.on_clicked(loadData)
+    data_button.on_clicked(load_data)
 
-    text_box = TextBox(
-        axbox, "f(x) = ", initial=initial, color="white", hovercolor="0.975"
-    )
+    text_box = TextBox(axbox, "f(x) = ", initial=initial, color="white", hovercolor="0.975")
     text_box.on_submit(submit)
 
     b_a = Slider(
@@ -9625,13 +9074,9 @@ def manual_fitting(
     from astropy.table import Table
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
-        "-p",
-        "--path",
-        default="",
-        help="Path of the 2 columns table to fit",
-        metavar="",
+        "-p", "--path", default="", help="Path of the 2 columns table to fit", metavar="",
     )
     args = parser.parse_args_modif(argv)
     d = DS9n(args.xpapoint)
@@ -9639,9 +9084,7 @@ def manual_fitting(
         try:
             d.get("plot")
         except TypeError:
-            d.set(
-                "analysis message {Please create a plot by creating a Region->Shape->Projection or an histogram of any region!}"
-            )
+            raise_create_plot(d)
             sys.exit()
 
         if d.get("plot") != "":
@@ -9668,7 +9111,7 @@ def manual_fitting(
             y = np.nan * x
             initial = "a+b*exp(-(x-c)**2/d)"
     elif os.path.exists(args.path):
-        cat = readV(args.path)
+        cat = read_v(args.path)
         x, y = cat[cat.colnames[0]], cat[cat.colnames[1]]
         index = (np.isfinite(y)) & (np.isfinite(x))
         x, y = x[index], y[index]
@@ -9679,11 +9122,11 @@ def manual_fitting(
 
     # if np.nanmean(y[-10:]) > np.nanmean(y[:10]):
     #     y = y[::-1]
-    InteractivManualFitting(x, y, initial=initial)
+    interactiv_manual_fitting(x, y, initial=initial)
     return
 
 
-def openTable(path):
+def open_table(path):
     """ Open a table depending on its extension
     """
     from astropy.table import Table
@@ -9703,9 +9146,7 @@ def openTable(path):
     try:
         return tab
     except NameError:
-        raise SyntaxError(
-            "Could not open the table, verify it is a csv, fits or ascii table."
-        )
+        raise SyntaxError("Could not open the table, verify it is a csv, fits or ascii table.")
 
 
 def interactive_plotter(
@@ -9724,7 +9165,7 @@ def interactive_plotter(
     from matplotlib.widgets import RadioButtons
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv, required=False)
 
     y = 0
@@ -9744,15 +9185,12 @@ def interactive_plotter(
             for i in range(number):
                 answer = ds9entry(
                     args.xpapoint,
-                    "Range of a%i parameter in %s. eg: -3,5"
-                    % (i, "f(x) = " + function),
+                    "Range of a%i parameter in %s. eg: -3,5" % (i, "f(x) = " + function),
                     quit_=False,
                 )
                 ranges.append(answer)
 
-        def real_function(
-            x, *args, function_new="y = " + re.sub("[\[].*?[\]]", "", function)
-        ):  #
+        def real_function(x, *args, function_new="y = " + re.sub("[\[].*?[\]]", "", function)):  #
             y = 0
             a0, a1, a2, a3, a4, a5, a6, a7 = np.zeros(8)
             np_function = {a: getattr(np, a) for a in dir(np)}
@@ -9774,14 +9212,13 @@ def interactive_plotter(
         real_function = function
         if ranges is None:
             ranges = [
-                "%s,%s" % (default - 1, default + 1)
-                for default in real_function.__defaults__
+                "%s,%s" % (default - 1, default + 1) for default in real_function.__defaults__
             ]
         names = function.__code__.co_varnames[1:]
 
     args = [np.mean(np.array(rangei.split(","), dtype=float)) for rangei in ranges]
     if (path != "") & (path is not None):
-        cat = openTable(path)
+        cat = open_table(path)
         x, y = cat[cat.colnames[0]], cat[cat.colnames[1]]
         n = 100
     else:
@@ -9843,7 +9280,7 @@ def main_coupon(
     """
 
     sigma = [5.0, 10.0]
-    imageTmp, pix_scale, mag_zp = getData_coupon(fileInName, ext, mag_zp, sub, nomemmap)
+    imageTmp, pix_scale, mag_zp = get_data_coupon(fileInName, ext, mag_zp, sub, nomemmap)
     if type == "image" or type == "var":
         image = imageTmp
     elif type == "weight":
@@ -9855,10 +9292,10 @@ def main_coupon(
 
     seg = None
     if fileSegName is not None:
-        seg, seg_pix_scale, seg_mag_zp = getData_coupon(
+        seg, seg_pix_scale, seg_mag_zp = get_data_coupon(
             fileSegName, ext_seg, mag_zp, sub, nomemmap
         )
-    flux, n_aper_used, result = throwAper(
+    flux, n_aper_used, result = throw_apers(
         image, pix_scale, aper_size, N_aper, verbose, seg, type, sub
     )
 
@@ -9870,12 +9307,7 @@ def main_coupon(
         print_d += " {0:3.2f}".format(d[i])
         print_sigma += " {0:3.2f}".format(sigma[i])
     title = '{0}:\n Depth in {1:3.2f}" diam. apertures: {2:s} ({3:s} sigmas) +/- {4:3.2f}. flux_std = {5:3.2f}'.format(
-        os.path.basename(fileInName),
-        aper_size,
-        print_d,
-        print_sigma,
-        d_err[0],
-        flux_std,
+        os.path.basename(fileInName), aper_size, print_d, print_sigma, d_err[0], flux_std,
     )
 
     if plot:
@@ -9892,7 +9324,7 @@ def main_coupon(
     }
 
 
-def getData_coupon(fileInName, ext, mag_zp, sub, nomemmap):
+def get_data_coupon(fileInName, ext, mag_zp, sub, nomemmap):
     """
     Open a fits files and return attributes
     """
@@ -9911,7 +9343,7 @@ def getData_coupon(fileInName, ext, mag_zp, sub, nomemmap):
     try:
         w = wcs.WCS(fileIn[ext].header)
         pix_scale = wcs.utils.proj_plane_pixel_scales(w)[0] * 3600.0
-    except:
+    except Exception:
         warnings.warn(
             "Using CD1_1: {0}".format(abs(fileIn[ext].header["CD1_1"])), RuntimeWarning,
         )
@@ -9921,7 +9353,7 @@ def getData_coupon(fileInName, ext, mag_zp, sub, nomemmap):
         exit(-1)
 
     if mag_zp is None:
-        mag_zp = getMagZp(fileIn[ext].header)
+        mag_zp = get_mag_zp(fileIn[ext].header)
 
     if sub is not None:
 
@@ -9950,7 +9382,7 @@ def getData_coupon(fileInName, ext, mag_zp, sub, nomemmap):
     return image[xlim[0] : xlim[1], ylim[0] : ylim[1]], pix_scale, mag_zp
 
 
-def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
+def throw_apers(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
     """
     Takes an image + attributes and throw N_aper
     apertures with random positions
@@ -10001,10 +9433,7 @@ def throwAper(image, pix_scale, aper_size, N_aper, verbose, seg, type, sub_bkg):
                 N_aper_used,
                 N_aper,
                 aper_volume * float(N_aper_used),
-                np.shape(image)[0]
-                * np.shape(image)[1]
-                * pix_scale ** 2
-                / (60.0 * 60.0) ** 2,
+                np.shape(image)[0] * np.shape(image)[1] * pix_scale ** 2 / (60.0 * 60.0) ** 2,
             )
         )
     if False:
@@ -10026,9 +9455,7 @@ def plot_histo(flux, flux_std, aperture, title):
     flux_max = 10.0 * flux_std
 
     # compute histogram
-    hist, hist_bins = np.histogram(
-        flux, range=(flux_min, flux_max), bins=50, density=True
-    )
+    hist, hist_bins = np.histogram(flux, range=(flux_min, flux_max), bins=50, density=True)
 
     # plot histogram
     plt.fill_between(
@@ -10063,7 +9490,7 @@ def plot_histo(flux, flux_std, aperture, title):
     plt.title(title)
 
 
-def getMagZp(header):
+def get_mag_zp(header):
     """
     Method to get zero point out of a fits header
     """
@@ -10096,9 +9523,7 @@ def getMagZp(header):
 
     # no keys found, add it to keysMagZp[] or set it in the options
     if not foundKey:
-        raise KeyError(
-            "No flux or mag key found for zero point. Set --mag_zp MAG_ZEROPOINT"
-        )
+        raise KeyError("No flux or mag key found for zero point. Set --mag_zp MAG_ZEROPOINT")
 
     return mag_zp
 
@@ -10145,14 +9570,9 @@ def depth(flux, mag_zp, sigma, type):
 def get_depth_image(xpapoint=None, argv=[]):
     """Get the depth of astronomical image(s)
     """
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument(
-        "-a",
-        "--aperture",
-        default="2",
-        help="Aperture radius in pixels",
-        type=str,
-        metavar="",
+        "-a", "--aperture", default="2", help="Aperture radius in pixels", type=str, metavar="",
     )
     parser.add_argument(
         "-z",
@@ -10224,7 +9644,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
     import numpy as np
     from astropy.table import Table
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
 
     parser.add_argument(
         "-d",
@@ -10290,11 +9710,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-TT",
-        "--THRESH_TYPE",
-        default="RELATIVE",
-        type=str,
-        choices=["RELATIVE", "ABSOLUTE"],
+        "-TT", "--THRESH_TYPE", default="RELATIVE", type=str, choices=["RELATIVE", "ABSOLUTE"],
     )
     parser.add_argument(
         "-dT",
@@ -10308,11 +9724,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         "-AT", "--ANALYSIS_THRESH", default="2.0", type=str, metavar="",
     )
     parser.add_argument(
-        "-F",
-        "--FILTER",
-        help="apply filter for detection",
-        type=str,
-        choices=["1", "0"],
+        "-F", "--FILTER", help="apply filter for detection", type=str, choices=["1", "0"],
     )
     parser.add_argument(
         "-FN",
@@ -10347,12 +9759,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-CP",
-        "--CLEAN_PARAM",
-        default="1.0",
-        help="Cleaning efficiency",
-        type=str,
-        metavar="",
+        "-CP", "--CLEAN_PARAM", default="1.0", help="Cleaning efficiency", type=str, metavar="",
     )
     parser.add_argument(
         "-M",
@@ -10380,12 +9787,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-WI",
-        "--WEIGHT_IMAGE",
-        default="NONE",
-        help="weight-map filename",
-        type=str,
-        metavar="",
+        "-WI", "--WEIGHT_IMAGE", default="NONE", help="weight-map filename", type=str, metavar="",
     )
     parser.add_argument(
         "-WG",
@@ -10472,12 +9874,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         help="gamma of emulsion (for photographic scans)",
     )
     parser.add_argument(
-        "-G",
-        "--GAIN",
-        default="GAIN",
-        type=str,
-        metavar="",
-        help="detector gain in e-/ADU",
+        "-G", "--GAIN", default="GAIN", type=str, metavar="", help="detector gain in e-/ADU",
     )
     parser.add_argument(
         "-PS",
@@ -10488,12 +9885,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-SF",
-        "--SEEING_FWHM",
-        default="0.8",
-        help="stellar FWHM in arcsec",
-        type=str,
-        metavar="",
+        "-SF", "--SEEING_FWHM", default="0.8", help="stellar FWHM in arcsec", type=str, metavar="",
     )
     parser.add_argument(
         "-SN",
@@ -10524,12 +9916,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
     )
     # parser.add_argument('-SB', '--SUBTRACT_BACK',default='1', help='Subtraction sky background ?', type=str,choices=['1','0'])
     parser.add_argument(
-        "-BT",
-        "--BACK_TYPE",
-        default="AUTO",
-        type=str,
-        choices=["AUTO", "MANUAL"],
-        metavar="",
+        "-BT", "--BACK_TYPE", default="AUTO", type=str, choices=["AUTO", "MANUAL"], metavar="",
     )
     parser.add_argument(
         "-BV",
@@ -10603,9 +9990,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
         type=str,
         metavar="",
     )  # ,metavar='',
-    parser.add_argument(
-        "-N", "--NTHREADS", default=os.cpu_count() - 2, type=str, metavar=""
-    )
+    parser.add_argument("-N", "--NTHREADS", default=os.cpu_count() - 2, type=str, metavar="")
     args = parser.parse_args_modif(argv, required=True)
 
     d = DS9n(args.xpapoint)
@@ -10615,8 +10000,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
             "analysis message {Sextractor do not seem to be installed on your machine. If you know it is, please add the sextractor executable path to your $PATH variable in .bash_profile. Depending on your image, the analysis might take a few minutes}"
         )
         verboseprint(
-            "On mac run on your terminal: >brew install brewsci/science/sextractor",
-            verbose="1",
+            "On mac run on your terminal: >brew install brewsci/science/sextractor", verbose="1",
         )
         verboseprint(
             "Else, visit: https://github.com/astromatic/sextractor", verbose="1",
@@ -10691,9 +10075,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
             os.path.dirname(filename[0]), os.path.basename(filename[0]).split(".")[0],
         )
 
-    param_dict["PARAMETERS_NAME"] = os.path.join(
-        param_dir, param_dict["PARAMETERS_NAME"]
-    )
+    param_dict["PARAMETERS_NAME"] = os.path.join(param_dir, param_dict["PARAMETERS_NAME"])
     param_dict["FILTER_NAME"] = os.path.join(param_dir, param_dict["FILTER_NAME"])
     param_dict["STARNNW_NAME"] = os.path.join(param_dir, param_dict["STARNNW_NAME"])
 
@@ -10701,7 +10083,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
     verboseprint("Image used for photometry  = " + str(filename))
     verboseprint("Parameters sextractor:")
     answer = Parallelize(
-        function=RunSex,
+        function=run_sex,
         parameters=[DETECTION_IMAGE, param_dict],
         action_to_paralize=filename,
         number_of_thread=args.NTHREADS,
@@ -10731,9 +10113,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
             cat_sex = Table.read(param_dict["CATALOG_NAME"], format="ascii")
         if len(cat_sex) == 1:
             verboseprint("Reading LDAC_OBJECT")
-            cat_sex = Table.read(
-                param_dict["CATALOG_NAME"], format="fits", hdu="LDAC_OBJECTS"
-            )
+            cat_sex = Table.read(param_dict["CATALOG_NAME"], format="fits", hdu="LDAC_OBJECTS")
         verboseprint(cat_sex)
         w = WCS(filename)
         d.set("regions showtext no")
@@ -10769,6 +10149,7 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
                 except ValueError as e:
                     verboseprint(e)
             else:
+                reg_file = cat_path + ".reg"
                 if (w.is_celestial) & (
                     np.isfinite(
                         (
@@ -10780,8 +10161,8 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
                         ).data
                     ).all()
                 ):
-                    verboseprint("Using WCS header for regions :", cat_path + ".reg")
-                    create_DS9regions(
+                    verboseprint("Using WCS header for regions :", reg_file)
+                    create_ds9_regions(
                         [cat_sex["ALPHA_J2000"]],
                         [cat_sex["DELTA_J2000"]],
                         more=[
@@ -10793,17 +10174,16 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
                         save=True,
                         ID=[np.around(cat_sex[ID], 1).astype(str)],
                         color=["Yellow"] * len(cat_sex),
-                        savename=cat_path,
+                        savename=reg_file,
                         system="fk5",
                         DS9_offset=[0, 0],
                         font=10,
                     )
                 else:
                     verboseprint(
-                        "No header found,using pixel coordinates for regions :",
-                        cat_path + ".reg",
+                        "No header found,using pixel coordinates for regions :", reg_file,
                     )
-                    create_DS9regions(
+                    create_ds9_regions(
                         [cat_sex["X_IMAGE"]],
                         [cat_sex["Y_IMAGE"]],
                         more=[
@@ -10815,16 +10195,16 @@ def RunSextractor(xpapoint=None, detector=None, path=None, argv=[]):
                         save=True,
                         ID=[np.around(cat_sex[ID], 1).astype(str)],
                         color=[np.random.choice(colors)] * len(cat_sex),
-                        savename=cat_path,
+                        savename=reg_file,
                         font=10,
                     )  # ,ID=[np.array(cat_sex['MAG_AUTO'],dtype=int)])
-                d.set("regions " + cat_path + ".reg")
+                d.set("regions " + reg_file)
     else:
         verboseprint("Can not find the output sextractor catalog...")
     return
 
 
-def RunSex(path, DETECTION_IMAGE, param_dict):
+def run_sex(path, DETECTION_IMAGE, param_dict):
     if DETECTION_IMAGE == "":
         DETECTION_IMAGE = path
 
@@ -10833,19 +10213,13 @@ def RunSex(path, DETECTION_IMAGE, param_dict):
     for key in list(param_dict.keys()):
         if param_dict[key] == "":
             del param_dict[key]
-    cat_path = os.path.join(
-        os.path.dirname(path), os.path.basename(path).split(".")[0]
-    )  # .fits'
-    param_dict["CHECKIMAGE_NAME"] = cat_path + "_check_%s.fits" % (
-        param_dict["CHECKIMAGE_TYPE"]
-    )
+    cat_path = os.path.join(os.path.dirname(path), os.path.basename(path).split(".")[0])  # .fits'
+    param_dict["CHECKIMAGE_NAME"] = cat_path + "_check_%s.fits" % (param_dict["CHECKIMAGE_TYPE"])
     command = (
         "sex "
         + "%s,%s  " % (DETECTION_IMAGE, path)
         + " -WRITE_XML Y  -"
-        + " -".join(
-            [key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]]
-        )
+        + " -".join([key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]])
     )
     verboseprint(command)
     return os.system(command)
@@ -10856,12 +10230,10 @@ def sextractor_pp(xpapoint=None, detector=None, path=None, argv=[]):
     """
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument("-d", "--detection_image", type=str, metavar="", required=True)
     parser.add_argument("-f", "--output-catalog-filename", type=str, metavar="")
-    parser.add_argument(
-        "-F", "--output-catalog-format", default="FITS", type=str, metavar=""
-    )
+    parser.add_argument("-F", "--output-catalog-format", default="FITS", type=str, metavar="")
     args = parser.parse_args_modif(argv, required=False)
     d = DS9n(args.xpapoint)
     filename = getfilename(d)
@@ -10915,8 +10287,7 @@ def sextractor_pp(xpapoint=None, detector=None, path=None, argv=[]):
         )
     except KeyError:
         import_table_as_region(
-            args.xpapoint,
-            argv="-p %s -xy col1,col2" % (param_dict["output-catalog-filename"]),
+            args.xpapoint, argv="-p %s -xy col1,col2" % (param_dict["output-catalog-filename"]),
         )
     if yesno(d, "Do you want to load the sextractor catalog with PRISM?",):
         d.set("prism " + param_dict["output-catalog-filename"])
@@ -10929,7 +10300,7 @@ def DS9SWARP(xpapoint=None, argv=[]):
     """
     from shutil import which
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
         "-p",
         "--path",
@@ -10939,11 +10310,7 @@ def DS9SWARP(xpapoint=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-i",
-        "--IMAGEOUT_NAME",
-        help="Name of the output image file",
-        type=str,
-        metavar="",
+        "-i", "--IMAGEOUT_NAME", help="Name of the output image file", type=str, metavar="",
     )
     parser.add_argument(
         "-w",
@@ -10968,27 +10335,14 @@ def DS9SWARP(xpapoint=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-c",
-        "--COMBINE",
-        help="Combine resampled images ",
-        type=str,
-        choices=["1", "0"],
+        "-c", "--COMBINE", help="Combine resampled images ", type=str, choices=["1", "0"],
     )
     parser.add_argument(
         "-ct",
         "--COMBINE_TYPE",
         help="Tells SWarp how to combine resampled images",
         type=str,
-        choices=[
-            "MEDIAN",
-            "AVERAGE",
-            "MIN",
-            "MAX",
-            "WEIGHTED",
-            "CHI2",
-            "CHI-MEAN",
-            "SUM",
-        ],
+        choices=["MEDIAN", "AVERAGE", "MIN", "MAX", "WEIGHTED", "CHI2", "CHI-MEAN", "SUM",],
     )
 
     parser.add_argument(
@@ -11101,11 +10455,7 @@ def DS9SWARP(xpapoint=None, argv=[]):
     )
 
     parser.add_argument(
-        "-R",
-        "--RESAMPLE",
-        help="Resample input images ?",
-        type=str,
-        choices=["1", "0"],
+        "-R", "--RESAMPLE", help="Resample input images ?", type=str, choices=["1", "0"],
     )
     parser.add_argument(
         "-r",
@@ -11125,11 +10475,7 @@ def DS9SWARP(xpapoint=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-I",
-        "--INTERPOLATE",
-        help="Interpolate bad input pixels ?",
-        type=str,
-        choices=["1", "0"],
+        "-I", "--INTERPOLATE", help="Interpolate bad input pixels ?", type=str, choices=["1", "0"],
     )
 
     parser.add_argument(
@@ -11226,15 +10572,11 @@ def DS9SWARP(xpapoint=None, argv=[]):
         os.system("sleep 0.1")
         verboseprint(
             "swarp %s  -c default.swarp -" % (" ".join(paths))
-            + " -".join(
-                [key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]]
-            )
+            + " -".join([key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]])
         )
         answer = os.system(
             "swarp %s  -c default.swarp -" % (" ".join(paths))
-            + " -".join(
-                [key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]]
-            )
+            + " -".join([key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]])
         )
         if answer != 0:
             d = DS9n(args.xpapoint)
@@ -11254,7 +10596,7 @@ def resample(xpapoint=None, argv=[]):
     """
     from shutil import which
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument(
         "-P",
         "--PIXEL_SCALE",
@@ -11335,16 +10677,12 @@ def resample(xpapoint=None, argv=[]):
         verboseprint(
             "swarp %s  -c default.swarp -COMBINE N -RESCALE_WEIGHTS N -IMAGEOUT_NAME /tmp/coadd.fits -"
             % (" ".join(paths))
-            + " -".join(
-                [key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]]
-            )
+            + " -".join([key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]])
         )
         answer = os.system(
             "swarp %s  -c default.swarp -COMBINE N -RESCALE_WEIGHTS N -IMAGEOUT_NAME /tmp/coadd.fits -"
             % (" ".join(paths))
-            + " -".join(
-                [key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]]
-            )
+            + " -".join([key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]])
         )
         if answer != 0:
             d = DS9n(args.xpapoint)
@@ -11353,10 +10691,7 @@ def resample(xpapoint=None, argv=[]):
             )
             sys.exit()
 
-    d.set(
-        "frame new ; tile no ; file %s"
-        % (paths[0][:-5] + param_dict["RESAMPLE_SUFFIX"])
-    )
+    d.set("frame new ; tile no ; file %s" % (paths[0][:-5] + param_dict["RESAMPLE_SUFFIX"]))
     return
 
 
@@ -11368,7 +10703,7 @@ def DS9PSFEX(xpapoint=None, argv=[]):
     from shutil import which
     from astropy.io import fits
 
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-p",
         "--ENTRY_PATH",
@@ -11526,18 +10861,7 @@ def DS9PSFEX(xpapoint=None, argv=[]):
         "--CHECKPLOT_DEV",
         default="PNG",
         type=str,
-        choices=[
-            "PNG",
-            "XWIN",
-            "TK",
-            "PS",
-            "PSC",
-            "XFIG",
-            "JPEG",
-            "AQT",
-            "PDF",
-            "SVG",
-        ],
+        choices=["PNG", "XWIN", "TK", "PS", "PSC", "XFIG", "JPEG", "AQT", "PDF", "SVG",],
         metavar="",
     )
     parser.add_argument(
@@ -11545,20 +10869,10 @@ def DS9PSFEX(xpapoint=None, argv=[]):
         "--CHECKPLOT_TYPE",
         default="PNG",
         type=str,
-        choices=[
-            "NONE",
-            "FWHM",
-            "ELLIPTICITY",
-            "COUNTS",
-            "COUNT_FRACTION",
-            "CHI2",
-            "RESIDUALS",
-        ],
+        choices=["NONE", "FWHM", "ELLIPTICITY", "COUNTS", "COUNT_FRACTION", "CHI2", "RESIDUALS",],
         metavar="",
     )
-    parser.add_argument(
-        "-CN", "--CHECKPLOT_NAME", default="check-plot", type=str, metavar=""
-    )
+    parser.add_argument("-CN", "--CHECKPLOT_NAME", default="check-plot", type=str, metavar="")
 
     parser.add_argument(
         "-CIT",
@@ -11694,10 +11008,8 @@ def DS9PSFEX(xpapoint=None, argv=[]):
 
     if query != "":
         for path in param_dict["ENTRY_PATH"]:
-            a = Table.read(
-                path.rstrip()[::-1].rstrip()[::-1], format="fits", hdu="LDAC_OBJECTS",
-            )
-            a_simple = DeleteMultiDimCol(a)
+            a = Table.read(path.rstrip()[::-1].rstrip()[::-1], format="fits", hdu="LDAC_OBJECTS",)
+            a_simple = delete_multidim_columns(a)
 
             hdu1 = fits.open(path)
 
@@ -11734,10 +11046,7 @@ def DS9PSFEX(xpapoint=None, argv=[]):
             % (
                 " ".join(paths),
                 " -".join(
-                    [
-                        key + " " + str(param_dict[key])
-                        for key in list(param_dict.keys())[1:]
-                    ]
+                    [key + " " + str(param_dict[key]) for key in list(param_dict.keys())[1:]]
                 ),
                 param_dict["HOMOPSF_PARAMS"].replace(",", "-"),
             )
@@ -11747,10 +11056,7 @@ def DS9PSFEX(xpapoint=None, argv=[]):
             % (
                 " ".join(paths),
                 " -".join(
-                    [
-                        key + " " + str(param_dict[key])
-                        for key in list(param_dict.keys())[1:]
-                    ]
+                    [key + " " + str(param_dict[key]) for key in list(param_dict.keys())[1:]]
                 ),
                 param_dict["HOMOPSF_PARAMS"].replace(",", "-"),
             )
@@ -11799,7 +11105,7 @@ def exp(x, a, b, sigma, lam, alpha):
 def DS9saveColor(xpapoint=None, filename=None, argv=[]):
     """Run STIFF astromatic software
     """
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-p1",
         "--path1",
@@ -11809,18 +11115,10 @@ def DS9saveColor(xpapoint=None, filename=None, argv=[]):
         required=True,
     )
     parser.add_argument(
-        "-p2",
-        "--path2",
-        help="Path of the red image eg. ~r (620nm) band",
-        type=str,
-        metavar="",
+        "-p2", "--path2", help="Path of the red image eg. ~r (620nm) band", type=str, metavar="",
     )
     parser.add_argument(
-        "-p3",
-        "--path3",
-        help="Path of the red image eg. ~g (480nm) band",
-        type=str,
-        metavar="",
+        "-p3", "--path3", help="Path of the red image eg. ~g (480nm) band", type=str, metavar="",
     )
     parser.add_argument(
         "-o",
@@ -11877,9 +11175,7 @@ def DS9saveColor(xpapoint=None, filename=None, argv=[]):
         type=str,
         choices=["GREYLEVEL", "QUANTILE", "MANUAL"],
     )
-    parser.add_argument(
-        "-minl", "--MIN_LEVEL", default="0.001", help="", type=str, metavar=""
-    )
+    parser.add_argument("-minl", "--MIN_LEVEL", default="0.001", help="", type=str, metavar="")
     parser.add_argument(
         "-maxt",
         "--MAX_TYPE",
@@ -11888,9 +11184,7 @@ def DS9saveColor(xpapoint=None, filename=None, argv=[]):
         type=str,
         choices=["GREYLEVEL", "QUANTILE", "MANUAL"],
     )
-    parser.add_argument(
-        "-maxl", "--MAX_LEVEL", default="0.995", help="", type=str, metavar=""
-    )
+    parser.add_argument("-maxl", "--MAX_LEVEL", default="0.995", help="", type=str, metavar="")
     parser.add_argument(
         "-g",
         "--GAMMA_TYPE",
@@ -11954,12 +11248,7 @@ def DS9saveColor(xpapoint=None, filename=None, argv=[]):
     d.set("frame last")
     if path1 == "":
         files = getfilename(d, All=True)
-        if (
-            (path1 == "")
-            & (path2 == "")
-            & (path3 == "")
-            & ((len(files) == 3) | (len(files) == 1))
-        ):
+        if (path1 == "") & (path2 == "") & (path3 == "") & ((len(files) == 3) | (len(files) == 1)):
             try:
                 path1, path2, path3 = files
             except ValueError:
@@ -11985,13 +11274,8 @@ def DS9saveColor(xpapoint=None, filename=None, argv=[]):
                 )
                 sys.exit()
             d.set("frame new")
-            verboseprint(
-                os.path.join(os.path.dirname(path1), param_dict["OUTFILE_NAME"])
-            )
-            d.set(
-                "tiff %s"
-                % (os.path.join(os.path.dirname(path1), param_dict["OUTFILE_NAME"]))
-            )
+            verboseprint(os.path.join(os.path.dirname(path1), param_dict["OUTFILE_NAME"]))
+            d.set("tiff %s" % (os.path.join(os.path.dirname(path1), param_dict["OUTFILE_NAME"])))
 
         else:
             command = "stiff %s %s %s -" % (path1, path2, path3) + " -".join(
@@ -12005,10 +11289,7 @@ def DS9saveColor(xpapoint=None, filename=None, argv=[]):
                 )
                 sys.exit()
             d.set("frame delete all ; rgb")
-            d.set(
-                "tiff %s"
-                % (os.path.join(os.path.dirname(path1), param_dict["OUTFILE_NAME"]))
-            )
+            d.set("tiff %s" % (os.path.join(os.path.dirname(path1), param_dict["OUTFILE_NAME"])))
 
             for color in ["red", "green", "blue"]:
                 d.set("rgb %s ; scale minmax ; scale linear" % (color))
@@ -12022,7 +11303,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
     from dataphile.graphics.widgets import Slider
     import numpy as np
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv, required=False)
 
     cosmology, redshift, H0, Omega_m, Ode0, uncertainty = (
@@ -12097,9 +11378,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
     info["kpc_comoving_per_arcsec"] = 1 / cosmo.arcsec_per_kpc_comoving(
         redshift
     )  # .to(u.kpc/u.arcsec)
-    info["arcsec_per_proper_kpc"] = cosmo.arcsec_per_kpc_proper(
-        redshift
-    )  # .to(u.kpc/u.arcsec)
+    info["arcsec_per_proper_kpc"] = cosmo.arcsec_per_kpc_proper(redshift)  # .to(u.kpc/u.arcsec)
     info["arcsec_per_comoving_kpc"] = cosmo.arcsec_per_kpc_comoving(
         redshift
     )  # .to(u.kpc/u.arcsec)
@@ -12156,13 +11435,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         zs,
         cosmo.angular_diameter_distance(zs) / 1000,
         label="Angular diameter distance = %s"
-        % (
-            l.join(
-                np.array(
-                    cosmo.angular_diameter_distance(redshifts).value / 1000, dtype=t,
-                )
-            )
-        ),
+        % (l.join(np.array(cosmo.angular_diameter_distance(redshifts).value / 1000, dtype=t,))),
     )
     ax1[0].set_ylabel("Gpc")
     ax1[0].legend(loc="upper left")
@@ -12207,9 +11480,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         zs,
         cosmo.luminosity_distance(zs) / 1000,
         label="Luminosity distance = %s"
-        % (
-            l.join(np.array(cosmo.luminosity_distance(redshifts).value / 1000, dtype=t))
-        ),
+        % (l.join(np.array(cosmo.luminosity_distance(redshifts).value / 1000, dtype=t))),
     )
     ax1[1].set_ylabel("Gpc")
     ax1[1].legend(loc="upper left")
@@ -12325,8 +11596,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
     p22 = ax2[2].plot(
         zs,
         cosmo.distmod(zs),
-        label="Dist mod (mu) = %s"
-        % (l.join(np.array(cosmo.distmod(redshifts).value, dtype=t))),
+        label="Dist mod (mu) = %s" % (l.join(np.array(cosmo.distmod(redshifts).value, dtype=t))),
     )
     ax2[2].legend()  # ax2[2].set_ylim()[0]
     ax2[2].set_ylabel("mag")
@@ -12372,8 +11642,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
     p31 = ax3[1].plot(
         zs,
         cosmo.scale_factor(zs),
-        label="Scale factor = %s"
-        % (l.join(np.array(cosmo.scale_factor(redshifts), dtype=t))),
+        label="Scale factor = %s" % (l.join(np.array(cosmo.scale_factor(redshifts), dtype=t))),
     )
     ax3[1].legend(loc="upper left")
     ax3[1].set_xlabel("Redshift")
@@ -12419,11 +11688,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         zs,
         1 / cosmo.arcsec_per_kpc_comoving(zs),
         label="Comoving = %s"
-        % (
-            l.join(
-                np.array(1 / cosmo.arcsec_per_kpc_comoving(redshifts).value, dtype=t)
-            )
-        ),
+        % (l.join(np.array(1 / cosmo.arcsec_per_kpc_comoving(redshifts).value, dtype=t))),
     )
     ax3[2].legend(loc="upper left")
     ax3[2].set_ylabel("'/kpc")
@@ -12527,27 +11792,11 @@ def cosmology_calculator(xpapoint=None, argv=[]):
 
     verboseprint(
         "%s : H0=%s, Om0=%s, Ode0=%s, Tcmb0=%s, Neff=%s, Ob0=%s"
-        % (
-            cosmology,
-            cosmo.H0,
-            cosmo.Om0,
-            cosmo.Ode0,
-            cosmo.Tcmb0,
-            cosmo.Neff,
-            cosmo.Ob0,
-        )
+        % (cosmology, cosmo.H0, cosmo.Om0, cosmo.Ode0, cosmo.Tcmb0, cosmo.Neff, cosmo.Ob0,)
     )
     plt.suptitle(
         "%s : H0=%s, Om0=%0.3f, Ode0=%0.3f, Tcmb0=%s, Neff=%0.2f, Ob0=%s"
-        % (
-            cosmology,
-            cosmo.H0,
-            cosmo.Om0,
-            cosmo.Ode0,
-            cosmo.Tcmb0,
-            cosmo.Neff,
-            cosmo.Ob0,
-        ),
+        % (cosmology, cosmo.H0, cosmo.Om0, cosmo.Ode0, cosmo.Tcmb0, cosmo.Neff, cosmo.Ob0,),
         y=1,
     )
     plt.tight_layout()
@@ -12565,25 +11814,13 @@ def convertissor(xpapoint=None, argv=[]):
     import astropy.units as u
     from decimal import Decimal
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
-        "-v",
-        "--value",
-        default="1",
-        help="Value to convert",
-        type=str,
-        required=True,
-        metavar="",
+        "-v", "--value", default="1", help="Value to convert", type=str, required=True, metavar="",
     )
-    parser.add_argument(
-        "-u", "--unit1", default="angstrom", help="Unit1", type=str, metavar=""
-    )
-    parser.add_argument(
-        "-U", "--unit2", default="meter", help="Unit1", type=str, metavar=""
-    )
-    parser.add_argument(
-        "-z", "--redshift", default="0", help="Redshift", type=str, metavar=""
-    )
+    parser.add_argument("-u", "--unit1", default="angstrom", help="Unit1", type=str, metavar="")
+    parser.add_argument("-U", "--unit2", default="meter", help="Unit1", type=str, metavar="")
+    parser.add_argument("-z", "--redshift", default="0", help="Redshift", type=str, metavar="")
     args = parser.parse_args_modif(argv, required=False)
 
     unit_dict = u.__dict__
@@ -12604,8 +11841,7 @@ def convertissor(xpapoint=None, argv=[]):
 
     verboseprint(unit1_, unit1, unit2_, unit2)
     verboseprint(
-        "%0.2E %s = %0.2E %s"
-        % (Decimal(val), unit1, Decimal((val * unit1).to(unit2)), unit2)
+        "%0.2E %s = %0.2E %s" % (Decimal(val), unit1, Decimal((val * unit1).to(unit2)), unit2)
     )
     d = DS9n(args.xpapoint)
     d.set(
@@ -12630,7 +11866,7 @@ def wait_for_n(xpapoint=None):
     return
 
 
-def download(url, file="/tmp/test.fits"):
+def download(url, file=tmp_image):
     """
     """
     from tqdm import tqdm  # , tqdm_gui
@@ -12644,9 +11880,7 @@ def download(url, file="/tmp/test.fits"):
     else:
         total_size_in_bytes = int(response.headers.get("content-length", 0))
         block_size = 1024  # 1 Kibibyte
-        progress_bar = tqdm(
-            total=0.95 * total_size_in_bytes, unit="iB", unit_scale=True
-        )
+        progress_bar = tqdm(total=0.95 * total_size_in_bytes, unit="iB", unit_scale=True)
         with open(file, "wb") as file:
             for data in response.iter_content(block_size):
                 progress_bar.update(len(data))
@@ -12668,7 +11902,7 @@ def download(url, file="/tmp/test.fits"):
 def next_step(xpapoint=None, argv=[]):
     """Goes to next function in the test suite
     """
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv, required=False)
 
     d = DS9n(args.xpapoint)
@@ -12677,7 +11911,7 @@ def next_step(xpapoint=None, argv=[]):
     return
 
 
-def fitsconverter(fname, savefile="/tmp/test.fits"):
+def fitsconverter(fname, savefile=tmp_image):
     """Convert tiff images to fits files
     """
     from skimage import io
@@ -12697,29 +11931,15 @@ def open_file(xpapoint=None, filename=None, argv=[]):
     """Open file(s) in DS9 in an easier way [DS9 required]
     """
     #
-    parser = CreateParser(get_name_doc(), path=False)
+    parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
-        "-p",
-        "--path",
-        help="Path of the images to load, regexp accepted",
-        type=str,
-        metavar="",
+        "-p", "--path", help="Path of the images to load, regexp accepted", type=str, metavar="",
     )
     parser.add_argument(
-        "-t",
-        "--type",
-        default="Slice",
-        help="Way to open the images",
-        type=str,
-        metavar="",
+        "-t", "--type", default="Slice", help="Way to open the images", type=str, metavar="",
     )
     parser.add_argument(
-        "-c",
-        "--clip",
-        default="0",
-        help="Open screenshot image from mac",
-        type=str,
-        metavar="",
+        "-c", "--clip", default="0", help="Open screenshot image from mac", type=str, metavar="",
     )
     args = parser.parse_args_modif(argv)
 
@@ -12749,9 +11969,7 @@ def open_file(xpapoint=None, filename=None, argv=[]):
     path = 1
     while (filenames == []) & (path != ""):
         path = get(
-            d,
-            "File not found, please verify your path. You can use a regexp",
-            exit_=True,
+            d, "File not found, please verify your path. You can use a regexp", exit_=True,
         )  # (*/?/[9-16], etc)
         filenames = globglob(path, ds9_im=False)
     if path == "":
@@ -12765,16 +11983,12 @@ def open_file(xpapoint=None, filename=None, argv=[]):
 
             elif type_ == "Slice":
                 try:
-                    if (filename[-4:].lower() == ".jpg") or (
-                        filename[-4:].lower() == "jpeg"
-                    ):
+                    if (filename[-4:].lower() == ".jpg") or (filename[-4:].lower() == "jpeg"):
                         d.set("jpeg {}".format(filename))
                         print("here")
                     elif filename[-4:].lower() == ".png":
                         d.set("png {}".format(filename))  #
-                    elif (filename[-5:].lower() == ".tiff") | (
-                        filename[-4:].lower() == ".tif"
-                    ):
+                    elif (filename[-5:].lower() == ".tiff") | (filename[-4:].lower() == ".tif"):
                         d.set("tiff {}".format(filename))  #
                     elif filename[-4:].lower() == ".gif":
                         d.set("gif {}".format(filename))  #
@@ -12782,9 +11996,7 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                         d.set("fits new {}".format(filename))
                 except ValueError:
                     message(
-                        d,
-                        "Could not open %s as slice. Please verify your file."
-                        % (filename),
+                        d, "Could not open %s as slice. Please verify your file." % (filename),
                     )
                     sys.exit()
                     d.set("frame delete")
@@ -12798,15 +12010,11 @@ def open_file(xpapoint=None, filename=None, argv=[]):
 
             elif type_ == "RGB":
                 d.set("rgb")
-                if (filename[-4:].lower() == ".jpg") or (
-                    filename[-4:].lower() == "jpeg"
-                ):
+                if (filename[-4:].lower() == ".jpg") or (filename[-4:].lower() == "jpeg"):
                     d.set("jpeg {}".format(filename))
                 elif filename[-4:].lower() == ".png":
                     d.set("png {}".format(filename))  #
-                elif (filename[-5:].lower() == ".tiff") | (
-                    filename[-4:].lower() == ".tif"
-                ):
+                elif (filename[-5:].lower() == ".tiff") | (filename[-4:].lower() == ".tif"):
                     d.set("tiff {}".format(filename))  #
                 elif filename[-4:].lower() == ".gif":
                     d.set("gif {}".format(filename))  #
@@ -12815,9 +12023,7 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                     d.set("slice new {}".format(filename))
 
             elif type_ == "PRISM":
-                if (filename[-5:].lower() == ".fits") or (
-                    filename[-4:].lower() == ".fit"
-                ):
+                if (filename[-5:].lower() == ".fits") or (filename[-4:].lower() == ".fit"):
                     d.set("prism " + filename)
                 elif filename[-4:].lower() == ".csv":
                     d.set("prism import csv " + filename)
@@ -12834,14 +12040,9 @@ def open_file(xpapoint=None, filename=None, argv=[]):
 
         else:
             verboseprint(
-                bcolors.BLACK_RED
-                + "File not found, please verify your path"
-                + bcolors.END
+                bcolors.BLACK_RED + "File not found, please verify your path" + bcolors.END
             )
-            d.set(
-                "analysis message {File not found, please verify your path:%s}"
-                % (filename)
-            )
+            d.set("analysis message {File not found, please verify your path:%s}" % (filename))
             sys.exit()
     return
 
@@ -12886,8 +12087,7 @@ Centering - Aperture Photometry - SExtractor (if available)
     wait_for_n(xpapoint)
 
     verboseprint(
-        """ %i/%i - Select the algorithm you want to use and click OK.""" % (i, n),
-        verbose="1",
+        """ %i/%i - Select the algorithm you want to use and click OK.""" % (i, n), verbose="1",
     )
     i += 1
 
@@ -12938,9 +12138,7 @@ Centering - Aperture Photometry - SExtractor (if available)
     wait_for_n(xpapoint)
 
     if which("sex") is not None:
-        d.set(
-            "analysis message {Now let us use sextractor as it seems to be installed!}"
-        )
+        d.set("analysis message {Now let us use sextractor as it seems to be installed!}")
         verboseprint(
             """Well done!\n
 ********************************************************************************
@@ -12970,9 +12168,7 @@ Centering - Aperture Photometry - SExtractor (if available)
             % (
                 i,
                 n,
-                os.path.join(
-                    resource_filename("pyds9plugin", "Images"), "stack_cat.fits",
-                ),
+                os.path.join(resource_filename("pyds9plugin", "Images"), "stack_cat.fits",),
                 i + 1,
                 n,
                 i + 2,
@@ -13108,13 +12304,7 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
 %i/%i - You can use regular expression to open several files! Copy this path:
    %s
 %i/%i - Hit [Next] to run the function"""
-        % (
-            i,
-            n,
-            resource_filename("pyds9plugin", "Images/stack????????.fits"),
-            i + 1,
-            n,
-        ),
+        % (i, n, resource_filename("pyds9plugin", "Images/stack????????.fits"), i + 1, n,),
         verbose="1",
     )
     i += 2
@@ -13547,7 +12737,7 @@ def test_suite(xpapoint=None, argv=[]):
     """
     from subprocess import Popen
 
-    parser = CreateParser(get_name_doc())
+    parser = create_parser(get_name_doc())
     parser.add_argument(
         "-t",
         "--tutorial",
@@ -13588,9 +12778,7 @@ def test_suite(xpapoint=None, argv=[]):
         tutorial_number += "4"
     if tutorial == "5-All-In-One":
         tutorial_number = "1234"
-    d.set(
-        "nan black"
-    )  # sexagesimal#[Type Shift+V to  Enter VERBOSE mode. Only for debugging.]
+    d.set("nan black")  # sexagesimal#[Type Shift+V to  Enter VERBOSE mode. Only for debugging.]
     message(
         d,
         """Test suite for beginners: This help will go through most of
@@ -13664,7 +12852,7 @@ def python_command(xpapoint=None, argv=[]):
     """Interpret a python command and applies it to given image(s)
     """
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument(
         "-e",
         "--exp",
@@ -13676,14 +12864,12 @@ def python_command(xpapoint=None, argv=[]):
     parser.add_argument(
         "-i",
         "--other_image",
-        default="/tmp/test.fits",
+        default=tmp_image,
         help="Path of a second image to use with",
         metavar="",
         type=str,
     )
-    parser.add_argument(
-        "-o", "--overwrite", default="0", help="Overwrite image", metavar=""
-    )
+    parser.add_argument("-o", "--overwrite", default="0", help="Overwrite image", metavar="")
     parser.add_argument(
         "-N",
         "--number_processors",
@@ -13710,20 +12896,20 @@ def python_command(xpapoint=None, argv=[]):
         if answer == "y":
             try:
                 fitsimage = d.get_pyfits()[0]
-                path = ["/tmp/image.fits"]
-                fitswrite(fitsimage, "/tmp/image.fits")
+                path = [tmp_image]
+                fitswrite(fitsimage, tmp_image)
             except TypeError:
                 pass
 
     if (".fit" not in path[0]) & (len(path) == 1):
         try:
             fitsimage = d.get_pyfits()[0]
-            path = ["/tmp/image.fits"]
-            fitswrite(fitsimage, "/tmp/image.fits")
+            path = [tmp_image]
+            fitswrite(fitsimage, tmp_image)
         except TypeError:
             pass
     result, name = Parallelize(
-        function=ExecCommand,
+        function=execute_command,
         parameters=[path2remove, exp, xpapoint, bool(int(eval_)), overwrite, d,],
         action_to_paralize=path,
         number_of_thread=args.number_processors,
@@ -13775,9 +12961,7 @@ def Button(xpapoint=None):
 
     app = QApplication(sys.argv)
     app.setWindowIcon(
-        QIcon(
-            QPixmap(resource_filename("pyds9plugin", "doc/ref/features_files/sun.gif"))
-        )
+        QIcon(QPixmap(resource_filename("pyds9plugin", "doc/ref/features_files/sun.gif")))
     )
     window = Window()
     window.show()
@@ -13790,7 +12974,7 @@ def maxi_mask(xpapoint=None, argv=[]):
     from astropy.io import fits
     import numpy as np
 
-    parser = CreateParser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=True)
     parser.add_argument(
         "-t",
         "--proba_threshold",
@@ -13799,9 +12983,7 @@ def maxi_mask(xpapoint=None, argv=[]):
         type=str,
         choices=["0", "1"],
     )
-    parser.add_argument(
-        "-b", "--batch_size", default="8", help="Size of the batch", metavar=""
-    )
+    parser.add_argument("-b", "--batch_size", default="8", help="Size of the batch", metavar="")
     parser.add_argument(
         "-m", "--mask", default="0", help="Single mask with power of two", metavar="",
     )
@@ -13935,9 +13117,7 @@ BG  %0.7f""" % (
         a = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
-            "command '{}' return with error (code {}): {}".format(
-                e.cmd, e.returncode, e.output
-            )
+            "command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output)
         )
     for file in path:
         print(a)
@@ -13978,9 +13158,7 @@ def maxi_mask_cc(path=None, xpapoint=None):
         a = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
-            "command '{}' return with error (code {}): {}".format(
-                e.cmd, e.returncode, e.output
-            )
+            "command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output)
         )
     print(a)
     try:
@@ -14005,10 +13183,7 @@ def kill_long_process(function="DS9Utils.*"):
     import subprocess
 
     subprocess.Popen(
-        [
-            "ps -eaf|grep '%s' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' "
-            % (function)
-        ],
+        ["ps -eaf|grep '%s' |awk '{ print $2}'|xargs -IAA sh -c 'kill -kill AA' " % (function)],
         shell=True,
         stdin=None,
         stdout=None,
@@ -14018,7 +13193,7 @@ def kill_long_process(function="DS9Utils.*"):
     return
 
 
-def DivideCatalog(path, tmpFOlder="/tmp", id_="ID", n=10):
+def divide_catalog(path, tmpFOlder="/tmp", id_="ID", n=10):
     """ Divide an ascii catalog to read it more rapidly
     """
 
@@ -14048,7 +13223,7 @@ def DivideCatalog(path, tmpFOlder="/tmp", id_="ID", n=10):
     return  # len(cat),np.sum(lens)
 
 
-def ReadBigAsciiTable(path, tmpFOlder="/tmp", n=10):
+def read_big_ascii_table(path, tmpFOlder="/tmp", n=10):
     """ Read a big ascii catalog by dividing it to earn time
     """
     import glob
@@ -14056,7 +13231,7 @@ def ReadBigAsciiTable(path, tmpFOlder="/tmp", n=10):
     from astropy.io import ascii
     import os
 
-    DivideCatalog(path, tmpFOlder=tmpFOlder, id_="ID", n=n)
+    divide_catalog(path, tmpFOlder=tmpFOlder, id_="ID", n=n)
     a = []
     files = glob.glob(
         os.path.join(
@@ -14073,17 +13248,13 @@ def ReadBigAsciiTable(path, tmpFOlder="/tmp", n=10):
     cols = list(filter(("").__ne__, first_line.split(" ")))
     if ["\n"] in cols:
         cols.remove("\n")
-    tab = ascii.read(
-        files[0], fast_reader={"parallel": True, "use_fast_converter": True}
-    )
+    tab = ascii.read(files[0], fast_reader={"parallel": True, "use_fast_converter": True})
     print(tab.colnames, cols)
     print(len(tab.colnames), len(cols))
     print("The new %i tables have %i rows" % (n, len(tab)))
     for pathi in files:
         verboseprint(pathi)
-        tab = ascii.read(
-            pathi, fast_reader={"parallel": True, "use_fast_converter": True}
-        )
+        tab = ascii.read(pathi, fast_reader={"parallel": True, "use_fast_converter": True})
         verboseprint(tab.colnames)
         verboseprint(len(tab.colnames))
         if len(tab.colnames) == len(cols):
@@ -14159,8 +13330,21 @@ def main():
     """Main function where the arguments are defined and the other
     functions called
     """
+    # "PlotSpectraDataCube": PlotSpectraDataCube,#
+    # "StackDataDubeSpectrally": StackDataDubeSpectrally,#
+    # "stack_images": stack_images,#stack
+    # ,'NextButton':NextButton
+    # "build_wcs_header": build_wcs_header,#build_wcs_header
+    # "check_file": check_file,#
+    # "create_contour_regions": create_contour_regions,
+    # "interpolate_nans": interpolate_nans,
+    # "ComputeEmGain": compute_gain,#compute_gain
+    # "FFT": FFT,#FFT
+    # "autocorrelation": autocorrelation,#autocorrelation
+    # "analyze_fwhm": analyze_fwhm,#analyze_fwhm
+    # "PlotSpectraFilters": PlotSpectraFilters,
 
-    dict_function_Generic = {
+    dict_function_generic = {
         "setup": setup,
         "guidance": guidance,
         "fit_gaussian_2d": fit_gaussian_2d,
@@ -14169,9 +13353,6 @@ def main():
         "add_field_to_header": add_field_to_header,
         "fit_ds9_plot": fit_ds9_plot,
         "test_suite": test_suite,
-        # "PlotSpectraDataCube": PlotSpectraDataCube,#
-        # "StackDataDubeSpectrally": StackDataDubeSpectrally,#
-        # "stack_images": stack_images,#stack
         "lock": lock,
         "create_header_catalog": create_header_catalog,
         "python_command": python_command,
@@ -14183,18 +13364,14 @@ def main():
         "next_step": next_step,  #
         "background_estimation": background_estimation,
         "verbose": verbose,
-        # "build_wcs_header": build_wcs_header,#build_wcs_header
         "open_file": open_file,
-        # "checkFile": checkFile,#
         "Button": Button,  #
         "throw_apertures": throw_apertures,
-        # "create_contour_regions": create_contour_regions,
         "convert_image": convert_image,
         "manual_fitting": manual_fitting,
         "compute_gain": compute_gain,
         "LoadDS9QuickLookPlugin": LoadDS9QuickLookPlugin,
-    }  # ,'NextButton':NextButton
-
+    }
     dict_function_ait = {
         "center_region": center_region,
         "radial_profile": radial_profile,
@@ -14203,18 +13380,13 @@ def main():
         "light_curve": light_curve,
         "explore_throughfocus": explore_throughfocus,
         "fill_regions": fill_regions,
-        # "interpolate_nans": interpolate_nans,
         "trim": trim,
         "column_line_correlation": column_line_correlation,
-        # "ComputeEmGain": compute_gain,#compute_gain
-        # "FFT": FFT,#FFT
-        # "autocorrelation": autocorrelation,#autocorrelation
         "get_depth_image": get_depth_image,
         "emccd_model": emccd_model,
-        # "analyze_fwhm": analyze_fwhm,#analyze_fwhm
     }
 
-    dict_function_SOFT = {
+    dict_function_soft = {
         "DS9SWARP": DS9SWARP,
         "DS9PSFEX": DS9PSFEX,
         "RunSextractor": RunSextractor,
@@ -14226,22 +13398,21 @@ def main():
         "astrometry_net": astrometry_net,
         "resample": resample,
         "interactive_plotter": interactive_plotter,
-        # "PlotSpectraFilters": PlotSpectraFilters,
         "sextractor_pp": sextractor_pp,
         "maxi_mask": maxi_mask,
     }
 
     dict_function = {}
     for d in (
-        dict_function_Generic,
+        dict_function_generic,
         dict_function_ait,
-        dict_function_SOFT,
+        dict_function_soft,
     ):
         dict_function.update(d)
     if (len(sys.argv) == 1) | (len(sys.argv) == 2) & (
         sys.argv[-1] in ["help", "h", "-h", "--help"]
     ):
-        create_folders(DS9_BackUp_path=os.environ["HOME"] + "/DS9QuickLookPlugIn/")
+        create_folders()
         present_plugIn()
         print(
             "{0}{1:30}\033[0;0m{2} {3}".format(
@@ -14252,7 +13423,7 @@ def main():
             )
         )
         for dict_, color in zip(
-            [dict_function_Generic, dict_function_ait, dict_function_SOFT],
+            [dict_function_generic, dict_function_ait, dict_function_soft],
             [bcolors.OKBLUE, bcolors.FAIL, bcolors.OKGREEN],
         ):
             dict_ = dict(sorted(dict_.items(), key=lambda x: x[0].lower()))
@@ -14264,7 +13435,7 @@ def main():
                     "verbose",
                     "next_step",
                     "Quit",
-                    "checkFile",
+                    "check_file",
                     "Button",
                     "create_contour_regions",
                     "mask_regions",
