@@ -81,3 +81,5 @@ pyds9plugin/Macros/Create_contour_regions.oy
 pyds9plugin/Macros/EMCCD.py
 
 report/
+
+pyds9plugin/Macros/Fitting_Functions/EMCCD.py
