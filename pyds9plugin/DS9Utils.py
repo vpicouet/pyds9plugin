@@ -110,7 +110,7 @@ def create_parser(namedoc, path=False):
         + bcolors.END,
         formatter_class=formatter,
     )
-    parser.add_argument("function", help="Function to perform [here: %s]" % (n))
+    parser.add_argument("function", help="Function to perform [here %s]" % (n))
     parser.add_argument(
         "-x",
         "--xpapoint",
@@ -156,18 +156,18 @@ def verbose(xpapoint=None, verbose=None, argv=[]):
 
     parser = create_parser(get_name_doc())
     args = parser.parse_args_modif(argv)
-
+    verbose_path = os.path.join(DS9_BackUp_path, ".verbose.txt")
     d = DS9n(args.xpapoint)
     if verbose is None:
-        v = bool(int(os.popen("cat %s.verbose.txt" % (DS9_BackUp_path)).read()))
+        v = bool(int(os.popen("cat %s" % (verbose_path)).read()))
         if v:
             if yesno(d, "Are you sur you want to enter QUIET mode?"):
-                os.system("echo 0 > %s" % (DS9_BackUp_path + ".verbose.txt"))
+                os.system("echo 0 > %s" % (verbose_path))
         else:
             if yesno(d, "Are you sur you want to enter VERBOSE mode?"):
-                os.system("echo 1 > %s" % (DS9_BackUp_path + ".verbose.txt"))
+                os.system("echo 1 > %s" % (verbose_path))
     else:
-        os.system("echo %s > %s" % (verbose, DS9_BackUp_path + ".verbose.txt"))
+        os.system("echo %s > %s" % (verbose, verbose_path))
     return
 
 
@@ -253,7 +253,7 @@ message_ = bool(int(os.popen("cat %s/.message.txt" % (DS9_BackUp_path)).read()))
 verbose_ = bool(int(os.popen("cat %s/.verbose.txt" % (DS9_BackUp_path)).read()))
 
 
-def Log(v=None):
+def log(v=None):
     """Logger of all pyds9plugin activity on pyds9plugin_activity.log"""
     import logging
     from logging.handlers import RotatingFileHandler
@@ -274,7 +274,7 @@ def Log(v=None):
     return logger
 
 
-logger = Log()
+logger = log()
 
 
 def yesno(d, question="", verbose=message_):
@@ -348,7 +348,7 @@ def get(d, sentence, exit_=True):
 
 def compute_fluctuation(
     xpapoint=None,
-    fileOutName=None,
+    file_out_name=None,
     ext=1,
     ext_seg=1,
     sub=None,
@@ -376,7 +376,7 @@ def compute_fluctuation(
     )
     args = parser.parse_args_modif(argv)
     d = DS9n(args.xpapoint)
-    fileInName = getfilename(d)
+    file_in_name = getfilename(d)
 
     mag_zp = 30
     image, header, area, filename, offset = get_image(xpapoint)
@@ -384,10 +384,7 @@ def compute_fluctuation(
     pix_scale = 1
     mag_zp = 30
     sigma = [5.0, 10.0]
-    N_aper, aper_size = (
-        args.number_apertures,
-        args.aperture,
-    )  # np.array(sys.argv[-2:], dtype=int)
+    N_aper, aper_size = args.number_apertures, args.aperture
     flux, n_aper_used, results = throw_apers(
         image,
         pix_scale,
@@ -436,7 +433,7 @@ def compute_fluctuation(
         print_d += " {0:3.2f}".format(d[i])
         print_sigma += " {0:3.2f}".format(sigma[i])
     title = '{0}:\n Depth in {1:3.2f}" diam. apertures: {2:s} ({3:s} sigmas) +/- {4:3.2f}. flux_std = {5:3.2f}'.format(
-        os.path.basename(fileInName),
+        os.path.basename(file_in_name),
         aper_size,
         print_d,
         print_sigma,
@@ -448,7 +445,7 @@ def compute_fluctuation(
         import matplotlib.pyplot as plt
 
         plot_histo(flux, flux_std, aper_size, title)
-        plt.savefig(fileInName[:-5] + "_depth.png")
+        plt.savefig(file_in_name[:-5] + "_depth.png")
         plt.show()
     #        plt.close()del
     return {
@@ -1136,7 +1133,6 @@ def PlotFit1D(
             popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds, sigma=sigma)
         except RuntimeError as e:
             logger.warning(e)
-            # ax1.plot(x, law(x,*P0))
             print(law)
             print(type(law))
             print(e)
@@ -1223,7 +1219,7 @@ def PlotFit1D(
                 labelbottom=False,
             )
             ax2.set_ylabel("Error")
-            l = ax1.plot(xp, zp, **kwargs)  # ls, label=name, c=c)
+            line = ax1.plot(xp, zp, **kwargs)  # ls, label=name, c=c)
             ax2.plot(x, y - zz, fmt, **kwargs)  # label=name, c=c)
             ax2.set_xlim(ax1.get_xlim())
             ax2.plot([-1e100, 1e100], [0, 0], **kwargs)  # ls, c=c)
@@ -1238,14 +1234,9 @@ def PlotFit1D(
                 5 * len(xp),
             )
             try:
-                line = ax.plot(
-                    xp, np.poly1d(z)(xp), **kwargs
-                )  # ls=ls, c=c, label=name,
+                line = ax.plot(xp, np.poly1d(z)(xp), **kwargs)
             except UnboundLocalError:
-                line = ax.plot(
-                    xp, law(xp, *popt), **kwargs
-                )  # ls=ls, c=c, label=name,
-            # l = ax.plot(xp, zp,ls='dotted',c=c,label=name)
+                line = ax.plot(xp, law(xp, *popt), **kwargs)
             ax1, ax2 = ax, ax
         return {
             "popt": popt,
@@ -9595,8 +9586,8 @@ def interactive_plotter(
 
 
 def main_coupon(
-    fileInName,
-    fileOutName,
+    file_in_name,
+    file_out_name,
     ext,
     ext_seg,
     mag_zp,
@@ -9614,7 +9605,7 @@ def main_coupon(
 
     sigma = [5.0, 10.0]
     imageTmp, pix_scale, mag_zp = get_data_coupon(
-        fileInName, ext, mag_zp, sub, nomemmap
+        file_in_name, ext, mag_zp, sub, nomemmap
     )
     if type == "image" or type == "var":
         image = imageTmp
@@ -9642,7 +9633,7 @@ def main_coupon(
         print_d += " {0:3.2f}".format(d[i])
         print_sigma += " {0:3.2f}".format(sigma[i])
     title = '{0}:\n Depth in {1:3.2f}" diam. apertures: {2:s} ({3:s} sigmas) +/- {4:3.2f}. flux_std = {5:3.2f}'.format(
-        os.path.basename(fileInName),
+        os.path.basename(file_in_name),
         aper_size,
         print_d,
         print_sigma,
@@ -9654,7 +9645,7 @@ def main_coupon(
         import matplotlib.pyplot as plt
 
         plot_histo(flux, flux_std, aper_size, title)
-        plt.savefig(fileInName[:-5] + "_depth.png")
+        plt.savefig(file_in_name[:-5] + "_depth.png")
         plt.show()
     return {
         "depth": d,
@@ -9664,7 +9655,7 @@ def main_coupon(
     }
 
 
-def get_data_coupon(fileInName, ext, mag_zp, sub, nomemmap):
+def get_data_coupon(file_in_name, ext, mag_zp, sub, nomemmap):
     """
     Open a fits files and return attributes
     """
@@ -9674,9 +9665,9 @@ def get_data_coupon(fileInName, ext, mag_zp, sub, nomemmap):
     import numpy as np
 
     if nomemmap:
-        fileIn = fits.open(fileInName, memmap=False)
+        fileIn = fits.open(file_in_name, memmap=False)
     else:
-        fileIn = fits.open(fileInName, memmap=True)
+        fileIn = fits.open(file_in_name, memmap=True)
 
     image = fileIn[ext].data
 
@@ -9720,7 +9711,7 @@ def get_data_coupon(fileInName, ext, mag_zp, sub, nomemmap):
             image[xlim[0] : xlim[1], ylim[0] : ylim[1]],
             header=fileIn[ext].header,
         )
-        fileOut.writeto(fileInName + ".sub", clobber=True)
+        fileOut.writeto(file_in_name + ".sub", clobber=True)
     return image[xlim[0] : xlim[1], ylim[0] : ylim[1]], pix_scale, mag_zp
 
 
@@ -9974,8 +9965,8 @@ def get_depth_image(xpapoint=None, argv=[]):
         verboseprint(filename)
         verboseprint("Zero point magnitude =", mag_zp)
         main_coupon(
-            fileInName=filename,
-            fileOutName=None,
+            file_in_name=filename,
+            file_out_name=None,
             ext=1,
             ext_seg=1,
             mag_zp=mag_zp,
