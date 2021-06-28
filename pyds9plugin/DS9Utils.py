@@ -1014,7 +1014,7 @@ def PlotFit1D(
         )
         std = np.nanstd(y[index])
 
-    ifplot_& (ax is None):
+    if plot_ & (ax is None):
         fig = plt.figure()  # figsize=(10,6))
         gs = gridspec.GridSpec(2, 1, height_ratios=(4, 1))
         ax1 = fig.add_subplot(gs[0])
