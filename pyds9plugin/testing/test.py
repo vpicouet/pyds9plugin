@@ -111,7 +111,7 @@ def main():
 
     print('\n    Astronomical software     \n' )
     os.system('DS9Utils %s open  "%s/stack.fits" Slice  0 '%( name, files_folder))
-    os.system('DS9Utils %s RunSextractor   NUMBER - - FITS_1.0 sex_vignet.param CCD 10 0 RELATIVE 0.8 2.0 1 gauss_4.0_7x7.conv 64 0.0003 1 1.0 CORRECT NONE 1 - 1 NONE OR 6,12,18 2.5,4.0 2.0,4.0 0.3,0.5,0.9 50000.0 SATURATE 0.0 4.0 GAIN 0 0.8 default.nnw NONE AUTO 0.0 64 3 LOCAL 24 0.0 3000 300000 1024 1 '%(name))
+    os.system('DS9Utils %s run_sextractor   NUMBER - - FITS_1.0 sex_vignet.param CCD 10 0 RELATIVE 0.8 2.0 1 gauss_4.0_7x7.conv 64 0.0003 1 1.0 CORRECT NONE 1 - 1 NONE OR 6,12,18 2.5,4.0 2.0,4.0 0.3,0.5,0.9 50000.0 SATURATE 0.0 4.0 GAIN 0 0.8 default.nnw NONE AUTO 0.0 64 3 LOCAL 24 0.0 3000 300000 1024 1 '%(name))
     print('\n    TEST COMPLETED 100%     \n' )
     os.system('echo 1 > %s'%(DS9_BackUp_path + '.verbose.txt'))
     return

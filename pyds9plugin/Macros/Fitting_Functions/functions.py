@@ -1,24 +1,39 @@
 # Function used to fit some DS9 plots
-# Please be sure to define default parameters for each functino arguments
-# as they will be used for the plot. The lower and upper bounds of each widget
-# will be defined as (0 -> 10 x default)
-# You should then keep positive default parameters and put the minus sign in
-# the function definition if needed.
+# Please be sure to define a list as default parameters for each arguments
+# as they will be used to define the lower and upper bounds of each widget.
 
 import numpy as np
 
 
-def gaussian(x, amplitude=10, xo=10, sigma2=2, offset=10):
+def gaussian(x, a=[0, 100], xo=[0, 100], sigma=[0, 10]):
     """Defines a gaussian function with offset
     """
     import numpy as np
 
     xo = float(xo)
-    g = offset + amplitude * np.exp(-0.5 * (np.square(x - xo) / sigma2))
+    g = a * np.exp(-0.5 * (np.square(x - xo) / sigma ** 2))
     return g.ravel()
 
 
-def schechter(x, phi=3.6e-3, m=19.8, alpha=-1.6):
+def defocused_gaussian(
+    x,
+    amp=[0, 1000],
+    amp_2=[0, 1000],
+    xo=[0, 100],
+    sigma=[0, 10],
+    sigma_2=[0, 10],
+):
+    """Defines a gaussian function with offset
+    """
+    import numpy as np
+
+    xo = float(xo)
+    g = amp * np.exp(-0.5 * (np.square(x - xo) / sigma ** 2))
+    g2 = amp_2 * np.exp(-0.5 * (np.square(x - xo) / sigma_2 ** 2))
+    return (g - g2).ravel()
+
+
+def schechter(x, phi=[1e-3, 1e-2], m=[16, 22], alpha=[-2, -1]):
     """ Schecter function for luminosity type function
     """
     import numpy as np
@@ -33,12 +48,19 @@ def schechter(x, phi=3.6e-3, m=19.8, alpha=-1.6):
     return y[::-1]
 
 
-def double_schechter(x, phi, alpha, M, phi2, alpha2):
+def double_schechter(
+    x,
+    phi=[1e-3, 1e-2],
+    alpha=[-2, -1],
+    M=[16, 22],
+    phi2=[1e-3, 1e-2],
+    alpha2=[-2, -1],
+):
     return np.log10(
         10 ** schechter(x, phi, M, alpha)
         + +(10 ** schechter(x, phi2, M, alpha2))
     )
 
 
-def sincos(x, a=1, b=2, theta=np.pi):
-    return a * np.sin(x) + b * np.cos(x + theta)
+def sincos(x, a=[0, 10], w1=[0, 2], w2=[0, 2], theta=[0, np.pi]):
+    return a * np.sin(w1 * x) + np.cos(w2 * x + theta)

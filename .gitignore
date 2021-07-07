@@ -83,3 +83,7 @@ pyds9plugin/Macros/EMCCD.py
 report/
 
 pyds9plugin/Macros/Fitting_Functions/EMCCD.py
+
+pyds9plugin/DS9Utils.c
+
+pyds9plugin/photometry.py
