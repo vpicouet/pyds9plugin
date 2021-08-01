@@ -2365,9 +2365,7 @@ def throughfocus_(
     varpix = []
     xo = []
     yo = []
-    sec = []
     images = []
-    ENCa = []
     ext = fits_ext(fits.open(files[0]))
     x = offsets
     for file in files:
@@ -2375,18 +2373,7 @@ def throughfocus_(
         with fits.open(filename) as f:
             fitsfile = f[ext]
             image = fitsfile.data
-        time = 0  # fitsfile.header["DATE"]
-        # if Type == "guider":
-        #     ENCa.append(fitsfile.header["LINAENC"])
-        # else:
         nombre = 5
-        if ENCa_center is not None:
-            ENCa = np.linspace(
-                ENCa_center - nombre * pas,
-                ENCa_center + nombre * pas,
-                2 * nombre + 1,
-            )[::-1]
-
         background = 1 * estimate_background(image, center)
         n = 25
         subimage = (image - background)[
@@ -2465,24 +2452,12 @@ def throughfocus_(
             "Flux",
             "Var pix",
         ),
-        dtype=(
-            "S15",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-        ),  # , "f4", "f4", "f4", "f4", "f4"
+        dtype=("S15", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4",),
     )
     t.add_row(
         (
             os.path.basename(filename),
             1,
-            # t2s(h=h, m=m, s=s, d=day),
             d["Center"][0],
             d["Center"][1],
             min(fwhm),
@@ -2491,11 +2466,6 @@ def throughfocus_(
             min(maxpix),
             min(sumpix),
             max(varpix),
-            # enc(bestx1, ENCa),
-            # enc(bestx2, ENCa),
-            # enc(bestx3, ENCa),
-            # enc(bestx4, ENCa),
-            # enc(bestx6, ENCa),
         )
     )
 
@@ -3190,12 +3160,14 @@ def pyvista_throughfocus(a):
     """Explore throughfocus using pyvista in 3d
     """
     from pyvista import Plotter, set_plot_theme  # StructuredGrid, PolyData,
+
+    # from pyvistaqt import BackgroundPlotter
     import numpy as np
 
     set_plot_theme("document")
     p = Plotter(
         notebook=False,
-        window_size=[1500, 1600],
+        window_size=(1500, 1600),
         line_smoothing=True,
         point_smoothing=True,
         polygon_smoothing=True,
@@ -3232,7 +3204,6 @@ def pyvista_throughfocus(a):
         p.update_scalars(scalar, render=False)
         p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
         dict_["number"] = val
-
         return
 
     def create_gif(val):
@@ -3240,10 +3211,10 @@ def pyvista_throughfocus(a):
         points = mesh.points.copy()
         p.open_gif("/tmp/throughfocus.gif")
         p.add_text("Image: 0", name="mylabel")
-        n = 1
-        images = a + a[::-1]
+        # n = 1
+        images = np.vstack([a, a[::-1]])
         for i, (data, lab) in enumerate(
-            zip(images * n, (labels + labels[::-1]) * n)
+            zip(images, (labels + labels[::-1]))
         ):  # +datas+datas+datas+datas+datas+datas:
             points[:, -1] = value * (data - np.nanmin(data)).reshape(-1)
             p.update_coordinates(points)  # , render=False)
@@ -3282,6 +3253,7 @@ def pyvista_throughfocus(a):
     p.add_checkbox_button_widget(smooth_callback, position=(10, 80), value=False)
     p.add_text("Smooth", name="buttonSmooth", position=(70, 80))
     p.show()
+    # p.app.exec_()
 
 
 def radial_profile(xpapoint=None, plot_=True, fibersize=None, argv=[]):
@@ -4121,6 +4093,8 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
     """Plots the DS9 region selected in 3D [DS9 required]
     """
     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
+
+    # from pyvistaqt import BackgroundPlotter
     import numpy as np
     from astropy.convolution import convolve, Gaussian2DKernel
     from astropy.io import fits
@@ -4149,7 +4123,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
         size = [int(0.8 * 1024), int(2.5 * 768)]
         d.set("rgb channel green")
     else:
-        size = [2 * 1024, 2 * 768]
+        size = (2 * 1024, 2 * 768)
     if isinstance(d, FakeDS9):
         sys.exit()  # data = fits.open(filename[0])[0].data.T
     else:
@@ -4331,33 +4305,26 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
                 event_type="always",
                 style=None,
             )
-            p.add_checkbox_button_widget(
-                log_callback
-            )  # ,position=(200,10))#,position='upper_left')
+            p.add_checkbox_button_widget(log_callback)
             p.add_checkbox_button_widget(
                 contour_callback, position=(10, 80), value=True
-            )  # ,position='upper_left')
-            p.add_checkbox_button_widget(
-                gif_callback, position=(10, 70 + 80)
-            )  # ,position='upper_left')
-            p.add_text(
-                "Log scale", name="log", position=(70, 10)
-            )  #'lower_left')
-            p.add_text(
-                "Contour", name="contour", position=(70, 80)
-            )  #'lower_left')
-            p.add_text(
-                "Create a GIF", name="gif", position=(70, 70 + 80)
-            )  #'lower_left')
+            )
+            p.add_checkbox_button_widget(gif_callback, position=(10, 70 + 80))
+            p.add_text("Log scale", name="log", position=(70, 10))
+            p.add_text("Contour", name="contour", position=(70, 80))
+            p.add_text("Create a GIF", name="gif", position=(70, 70 + 80))
             p.add_checkbox_button_widget(
                 smooth_callback, position=(10, 80 + 70 + 70), value=False
-            )  # ,position='upper_left')
+            )
             p.add_text(
                 "Smooth", name="buttonSmooth", position=(70, 80 + 70 + 70)
-            )  #'lower_left')
+            )
             p.clear_box_widgets()
             p.add_axes()  # interactive=True)
-            p.show()
+            if isinstance(p, Plotter):
+                p.show()
+            else:
+                p.app.exec_()
 
         else:
             create_cube(d, data)
@@ -4395,6 +4362,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             )
             p.link_views()
             p.add_axes()
+        verboseprint(p)
         p.show()
 
 
@@ -12025,6 +11993,7 @@ def convertissor(xpapoint=None, argv=[]):
     """Converts an astropy unit in another one
     """
     import astropy.units as u
+
     from decimal import Decimal
 
     parser = create_parser(get_name_doc())
@@ -12057,17 +12026,17 @@ def convertissor(xpapoint=None, argv=[]):
         unit2 = unit_dict[unit2_]
     except KeyError:
         unit2 = u.imperial.__dict__[unit2_]
-
+    try:
+        val2 = (val * unit1).to(unit2)
+    except Exception as e:
+        verboseprint(e)
+        val2 = (val * unit1).to(unit2, equivalencies=u.spectral())
+        # TODO add u.parallax(),u.dimensionless_angles(),u.temperature_energy()
+        # u.temperature(),u.mass_energy()
     verboseprint(unit1_, unit1, unit2_, unit2)
-    verboseprint(
-        "%0.2E %s = %0.2E %s"
-        % (Decimal(val), unit1, Decimal((val * unit1).to(unit2)), unit2)
-    )
     d = DS9n(args.xpapoint)
     message(
-        d,
-        "%0.2E %s = %0.2E %s"
-        % (Decimal(val), unit1, Decimal((val * unit1).to(unit2)), unit2),
+        d, "%0.2E %s = %0.2E %s" % (Decimal(val), unit1, Decimal(val2), unit2),
     )
     return
 
@@ -12088,7 +12057,7 @@ def wait_for_n(xpapoint=None):
 
 
 def download(url, file=tmp_image):
-    """
+    """Download a file
     """
     from tqdm import tqdm  # , tqdm_gui
     import requests

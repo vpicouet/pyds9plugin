@@ -100,7 +100,7 @@ def setup_package():
         long_description="A python DS9 extension for quicklook processing of astronomical images. This highly interactive extension can be generalized automatically to a set of images to turn the plug-in into a real multi-processing pipeline.",
         url="https://people.lam.fr/picouet.vincent/index.html",
         platforms=["Linux", "Mac OS-X", "Unix"],
-        cmdclass={"install": PostInstallCommand, "develop": PostDevelopCommand},
+        # cmdclass={"install": PostInstallCommand, "develop": PostDevelopCommand},
         packages=find_packages(),
         package_data=data,
         include_package_data=True,
@@ -115,6 +115,4 @@ def setup_package():
 
 if __name__ == "__main__":
     setup_package()
-    print(
-        "\033[32mPackage installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.\x1b[0m"
-    )
+    # print("\033[32mPackage installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.\x1b[0m")
