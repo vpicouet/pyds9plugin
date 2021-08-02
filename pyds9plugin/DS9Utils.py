@@ -12128,7 +12128,7 @@ region after creating it and hit n""",
         )
     if a:
         d.set("frame delete ; file " + os.path.join(reg, "m33_hi.fits"))
-        d.set('scale 99.5')
+        d.set("scale 99.5")
         wait_for_n(xpapoint)
         while getregion(d, selected=True) is None:
             message(
