@@ -16,6 +16,7 @@ from pyds9plugin.DS9Utils import *
 from shutil import copyfile, rmtree
 from pyds9 import DS9
 from pkg_resources import resource_filename
+from astropy.io import fits
 from IPython import get_ipython
 
 ipython = get_ipython()
@@ -41,7 +42,8 @@ def main():
     # d.set("frame 5")
     # d.set('regions command "circle 35 35 20"')
     # d.set("regions select all")
-    throughfocus(argv="-x %s" % (name))
+    # throughfocus(argv="-x %s" % (name))
+    ## analyze_fwhm(argv="-x %s " % (name))#-p /Users/Vincent/Desktop/stack_ldac.fits
     # light_curve(argv="-x %s" % (name))
     # explore_throughfocus(argv="-x %s -p /Users/Vincent/Desktop/stack_ldac.fits" % (name))
     # d.set("frame delete all")
@@ -60,6 +62,14 @@ def main():
     # ds9_psfex(
     #     argv="-x %s -p %s " % (name, "/Users/Vincent/Desktop/stack_ldac.fits")
     # )
+    # a = fits.open('/Users/Vincent/Desktop/stack.fits')[0]
+    # fitswrite(a.data, '/tmp/test.fits', verbose=True, header=None)
+    # fitswrite(a, '/tmp/test.fits', verbose=True, header=a.header)
+    # check_file()
+    # globglob('/Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/2_Visualization-TF-TS/TF/TF_WCS/stack8100093_pa-161_2018-06-11T0*.fits')
+    # return_path('/Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/stack18447179.fits')
+    # compute_gain()
+    # throw_apertures(argv="-x %s" % (name))
     # ds9_stiff(argv="-x %s -p1" % (name, "/Users/Vincent/Desktop/stack.fits"))
     # cosmology_calculator()
     # PlotFit1D(np.arange(10), np.arange(10), deg=2)
@@ -73,7 +83,7 @@ def main():
     # #fit_gaussian_2d(argv="-x %s -p 1" % (name))
     # open_file(argv="-p /Users/Vincent/Desktop/filters_guillaume.jpg")
     ##astrometry_net(argv="-x %s " % (name))
-    # column_line_correlation(argv="-x %s " % (name))
+    column_line_correlation(argv="-x %s " % (name))
     # trim(argv="-x %s " % (name))
     # fit_ds9_plot(argv="-x %s -o User-defined-interactively -p /Users/Vincent/Github/pyds9plugin/pyds9plugin/testing/test.dat" % (name))
     # manual_fitting(argv="-x %s -p /Users/Vincent/Github/pyds9plugin/pyds9plugin/testing/test.dat" % (name))
@@ -118,10 +128,18 @@ def main():
     #         "/Users/Vincent/DS9QuickLookPlugIn/HeaderDataBase",
     #     )
     # )
+    # cosmology_calculator(argv="-x %s" % (name))
+    # convertissor(argv="-x %s -v 1" % (name))
+    # fitsconverter('/Users/Vincent/Downloads/Safari/human_brain_from_itk_example.tif')
+    # interactive_plotter(argv="-x %s " % (name))
     # convert_image(argv="-x %s -t 8,uint8" % (name))
     # python_command(argv="-x %s -e ds9+=1" % (name))
+    # maxi_mask(argv="-x %s" % (name))
+    # kill_long_process(function="DS9Utils.*")
+    # divide_catalog('/Users/Vincent/Catalogs/SextractorBase/COSMOS_UDD_ZSPEC_v2_Sept2020_only_mag.txt')
+    read_big_ascii_table('/Users/Vincent/Catalogs/SextractorBase/COSMOS_UDD_ZSPEC_v2_Sept2020_only_mag.txt')
     # ds9_plot(d, path="%s/test.dat" % (test_folder))
-    # fit_ds9_plot(argv="-x %s -g 1" % (name))
+    # fit_ds9_plot(argv="-x %s -g 1 -m 1 -v 1 -b Exponential" % (name))
     # d.set("regions delete all")
     # d.set('regions command "circle 477 472 20"')
     # d.set("regions select all")

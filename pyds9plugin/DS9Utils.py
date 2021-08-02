@@ -456,7 +456,7 @@ def compute_fluctuation(
     nomemmap=False,
     argv=[],
 ):
-    """Compute image(s) gain by fluctuation method"""
+    """Compute image(s) depth by apertures method"""
     import numpy as np
 
     parser = create_parser(get_name_doc())
@@ -3639,210 +3639,212 @@ def plot_area_3d_color(d):
     return blue, red
 
 
-def analyze_fwhm(xpapoint, argv=[]):
-    """Analyze PSFex output in 3D??
-    """
-    from scipy.optimize import curve_fit
-    import numpy as np
-    from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
-    from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
+#
+# def analyze_fwhm(xpapoint=None, argv=[]):
+#     """Analyze PSF through field not optimal
+#     """
+#     from scipy.optimize import curve_fit
+#     import numpy as np
+#     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
+#     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
+#
+#     parser = create_parser(get_name_doc())
+#     args_ = parser.parse_args_modif(argv)
+#
+#     fwhm = 0
+#     center = 0
+#     test = 0  # sys.argv[-3:]
+#     d = DS9n(args_.xpapoint)
+#     region = getregion(d, selected=True, message=True)
+#
+#     x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
+#     data = d.get_pyfits()[0].data
+#     images = [
+#         data[y_inf:y_sup, x_inf:x_sup]
+#         - np.nanpercentile(data[y_inf:y_sup, x_inf:x_sup], 30)
+#     ]
+#     fluxes = []
+#     image = (
+#         images[0].shape[0] * (images[0] - np.nanmin(images[0])) / images[0].ptp()
+#     )
+#     while np.isfinite(image).all() == False:
+#         kernel = Gaussian2DKernel(x_stddev=2, y_stddev=2)
+#         image = interpolate_replace_nans(image, kernel)
+#
+#     lx, ly = image.shape
+#     lx, ly = ly, lx
+#     x = np.linspace(0, lx - 1, lx)
+#     y = np.linspace(0, ly - 1, ly)
+#     x, y = np.meshgrid(x, y)
+#
+#     xo, yo = (
+#         np.where(image == np.nanmax(image))[1][0],
+#         np.where(image == np.nanmax(image))[0][0],
+#     )
+#     param = (
+#         np.nanmax(image),
+#         int(xo),
+#         int(yo),
+#         2,
+#         2,
+#         np.percentile(image, 15),
+#     )
+#     bounds = (
+#         [-np.inf, xo - 10, yo - 10, 0.5, 0.5, -np.inf],
+#         [np.inf, xo + 10, yo + 10, 10, 10, np.inf],
+#     )  # (-np.inf, np.inf)#
+#     # verboseprint("bounds = %s" % (bounds))
+#     # verboseprint("\nParam = %s" % (param))
+#     try:
+#         popt, pcov = curve_fit(gaussian_2dim, (x, y), image.flat, param)
+#     except RuntimeError as e:
+#         logger.warning(e)
+#         popt = [0, 0, 0, 0, 0, 0]
+#     else:
+#         verboseprint("\npopt = %s" % (popt))
+#     fluxes.append(2 * np.pi * popt[3] * popt[4] * popt[0])
+#     z = gaussian_2dim((x, y), *popt).reshape(x.shape)
+#     xx, yy = np.indices(image.shape)
+#     set_plot_theme("document")
+#     p = Plotter(
+#         notebook=False,
+#         window_size=[1500, 1500],
+#         line_smoothing=True,
+#         point_smoothing=True,
+#         polygon_smoothing=True,
+#         splitting_position=None,
+#         title="3D plot, FLUX = %0.1f" % (fluxes[0])
+#         + "amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id "
+#         % (popt[0], popt[3], popt[4], (180 * popt[5] / np.pi) % 180),
+#     )
+#
+#     fit = StructuredGrid()
+#     data_mesh = StructuredGrid()
+#     data_mesh.points = PolyData(
+#         np.c_[
+#             xx.reshape(-1),
+#             yy.reshape(-1),
+#             (image - np.nanmin(image)).reshape(-1),
+#         ]
+#     ).points
+#     data_mesh["Intensity"] = image.ravel()
+#     data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
+#
+#     points = np.c_[
+#         xx.reshape(-1), yy.reshape(-1), (z - np.nanmin(z)).reshape(-1)
+#     ]
+#     data_points = PolyData(points)
+#     fit.points = data_points.points
+#     fit["z"] = z.ravel()
+#     fit.dimensions = [image.shape[1], image.shape[0], 1]
+#     p2 = p.add_mesh(
+#         data_mesh,
+#         opacity=1 - 0.7,
+#         nan_opacity=0,
+#         use_transparency=False,
+#         flip_scalars=True,
+#         scalar_bar_args={"title": "Value"},
+#         show_scalar_bar=False,
+#     )
+#     p1 = p.add_mesh(
+#         fit,
+#         cmap="Greys_r",
+#         scalars=image.ravel() + z.ravel(),
+#         opacity=0.7,
+#         nan_opacity=0,
+#         use_transparency=False,
+#         name="3D plot, FLUX = %0.1f" % (fluxes[0]),
+#         flip_scalars=True,
+#         scalar_bar_args={"title": "Value"},
+#         show_scalar_bar=False,
+#     )
+#     global args
+#     args = popt
+#
+#     def update_text(text):
+#         p.add_text(text, name="mylabel", position=(70, 10))
+#
+#     def callback2(value):
+#         args[1] = value
+#         points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
+#         p.update_coordinates(points, mesh=fit)
+#         p.update_scalars(points[:, -1] + image.ravel(), render=False)
+#         return
+#
+#     def callback3(value):
+#         args[2] = value
+#         points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
+#         p.update_coordinates(points, mesh=fit)
+#         p.update_scalars(points[:, -1] + image.ravel(), render=False)
+#         return
+#
+#     def callback(value):
+#         args = globals()["args"]
+#         print("ok")
+#         print("value", value)
+#         if value is True:
+#             verboseprint(param)
+#             args, cov = curve_fit(gaussian_2dim, (x, y), image.flat, p0=args)
+#         else:
+#             args, cov = curve_fit(gaussian_2dim, (x, y), image.flat, p0=args)
+#
+#         points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
+#         p.update_coordinates(points, mesh=fit)
+#         update_text("Gaussian fit: FWHMs = %0.1f, %0.1f" % (args[3], args[4]))
+#         return
+#
+#     def opcacity(value):
+#         p1.GetProperty().SetOpacity(value)
+#         p2.GetProperty().SetOpacity(1 - value)
+#         return
+#
+#     p.add_slider_widget(
+#         opcacity,
+#         rng=[0, 1],
+#         value=0.7,
+#         title="Transparency ratio",
+#         color=None,
+#         pass_widget=False,
+#         event_type="always",
+#         style=None,
+#         pointa=(0.2, 0.1),
+#         pointb=(0.9, 0.1),
+#     )  # ,event_type='always')
+#     p.add_slider_widget(
+#         callback2,
+#         rng=[0, xx.shape[0]],
+#         value=param[1],
+#         title="x",
+#         color=None,
+#         pass_widget=False,
+#         event_type="always",
+#         style=None,
+#         pointa=(0.1, 0.1),
+#         pointb=(0.1, 0.9),
+#     )
+#     p.add_slider_widget(
+#         callback3,
+#         rng=[0, xx.shape[1]],
+#         value=param[2],
+#         title="y",
+#         color=None,
+#         pass_widget=False,
+#         event_type="always",
+#         style=None,
+#         pointa=(0.15, 0.93),
+#         pointb=(0.9, 0.93),
+#     )
+#
+#     p.view_xy()  # [1,0,0]
+#     p.add_checkbox_button_widget(
+#         callback
+#     )  # ,position=(200,10))#,position='upper_left')
+#     p.add_text("Gaussian fit", name="mylabel", position=(70, 10))
+#     p.clear_box_widgets()
+#     p.show()
+#     return
 
-    parser = create_parser(get_name_doc())
-    args_ = parser.parse_args_modif(argv)
 
-    fwhm, center, test = sys.argv[-3:]
-    d = DS9n(args_.xpapoint)
-    region = getregion(d, selected=True, message=True)
-
-    x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
-    data = d.get_pyfits()[0].data
-    images = [
-        data[y_inf:y_sup, x_inf:x_sup]
-        - np.nanpercentile(data[y_inf:y_sup, x_inf:x_sup], 30)
-    ]
-    fluxes = []
-    image = (
-        images[0].shape[0] * (images[0] - np.nanmin(images[0])) / images[0].ptp()
-    )
-    while np.isfinite(image).all() == False:
-        kernel = Gaussian2DKernel(x_stddev=2, y_stddev=2)
-        image = interpolate_replace_nans(image, kernel)
-
-    lx, ly = image.shape
-    lx, ly = ly, lx
-    x = np.linspace(0, lx - 1, lx)
-    y = np.linspace(0, ly - 1, ly)
-    x, y = np.meshgrid(x, y)
-
-    xo, yo = (
-        np.where(image == np.nanmax(image))[1][0],
-        np.where(image == np.nanmax(image))[0][0],
-    )
-    param = (
-        np.nanmax(image),
-        int(xo),
-        int(yo),
-        2,
-        2,
-        np.percentile(image, 15),
-    )
-    bounds = (
-        [-np.inf, xo - 10, yo - 10, 0.5, 0.5, -np.inf],
-        [np.inf, xo + 10, yo + 10, 10, 10, np.inf],
-    )  # (-np.inf, np.inf)#
-    verboseprint("bounds = %s" % (bounds))
-    verboseprint("\nParam = %s" % (param))
-    try:
-        popt, pcov = curve_fit(gaussian_2dim, (x, y), image.flat, param)
-    except RuntimeError as e:
-        logger.warning(e)
-        popt = [0, 0, 0, 0, 0, 0]
-    else:
-        verboseprint("\npopt = %s" % (popt))
-    fluxes.append(2 * np.pi * popt[3] * popt[4] * popt[0])
-    z = gaussian_2dim((x, y), *popt).reshape(x.shape)
-    xx, yy = np.indices(image.shape)
-    set_plot_theme("document")
-    p = Plotter(
-        notebook=False,
-        window_size=[1500, 1500],
-        line_smoothing=True,
-        point_smoothing=True,
-        polygon_smoothing=True,
-        splitting_position=None,
-        title="3D plot, FLUX = %0.1f" % (fluxes[0])
-        + "amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id "
-        % (popt[0], popt[3], popt[4], (180 * popt[5] / np.pi) % 180),
-    )
-
-    fit = StructuredGrid()
-    data_mesh = StructuredGrid()
-    data_mesh.points = PolyData(
-        np.c_[
-            xx.reshape(-1),
-            yy.reshape(-1),
-            (image - np.nanmin(image)).reshape(-1),
-        ]
-    ).points
-    data_mesh["Intensity"] = image.ravel()
-    data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
-
-    points = np.c_[
-        xx.reshape(-1), yy.reshape(-1), (z - np.nanmin(z)).reshape(-1)
-    ]
-    data_points = PolyData(points)
-    fit.points = data_points.points
-    fit["z"] = z.ravel()
-    fit.dimensions = [image.shape[1], image.shape[0], 1]
-    p2 = p.add_mesh(
-        data_mesh,
-        opacity=1 - 0.7,
-        nan_opacity=0,
-        use_transparency=False,
-        flip_scalars=True,
-        scalar_bar_args={"title": "Value"},
-        show_scalar_bar=False,
-    )
-    p1 = p.add_mesh(
-        fit,
-        cmap="Greys_r",
-        scalars=image.ravel() + z.ravel(),
-        opacity=0.7,
-        nan_opacity=0,
-        use_transparency=False,
-        name="3D plot, FLUX = %0.1f" % (fluxes[0]),
-        flip_scalars=True,
-        scalar_bar_args={"title": "Value"},
-        show_scalar_bar=False,
-    )
-    global args
-    args = popt
-
-    def update_text(text):
-        p.add_text(text, name="mylabel", position=(70, 10))
-
-    def callback2(value):
-        args[1] = value
-        points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
-        p.update_coordinates(points, mesh=fit)
-        p.update_scalars(points[:, -1] + image.ravel(), render=False)
-        return
-
-    def callback3(value):
-        args[2] = value
-        points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
-        p.update_coordinates(points, mesh=fit)
-        p.update_scalars(points[:, -1] + image.ravel(), render=False)
-        return
-
-    def callback(value):
-        args = globals()["args"]
-        print("ok")
-        print("value", value)
-        if value is True:
-            verboseprint(param)
-            args, cov = curve_fit(gaussian_2dim, (x, y), image.flat, p0=args)
-        else:
-            args, cov = curve_fit(gaussian_2dim, (x, y), image.flat, p0=args)
-
-        points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
-        p.update_coordinates(points, mesh=fit)
-        update_text("Gaussian fit: FWHMs = %0.1f, %0.1f" % (args[3], args[4]))
-        return
-
-    def opcacity(value):
-        p1.GetProperty().SetOpacity(value)
-        p2.GetProperty().SetOpacity(1 - value)
-        return
-
-    p.add_slider_widget(
-        opcacity,
-        rng=[0, 1],
-        value=0.7,
-        title="Transparency ratio",
-        color=None,
-        pass_widget=False,
-        event_type="always",
-        style=None,
-        pointa=(0.2, 0.1),
-        pointb=(0.9, 0.1),
-    )  # ,event_type='always')
-    p.add_slider_widget(
-        callback2,
-        rng=[0, xx.shape[0]],
-        value=param[1],
-        title="x",
-        color=None,
-        pass_widget=False,
-        event_type="always",
-        style=None,
-        pointa=(0.1, 0.1),
-        pointb=(0.1, 0.9),
-    )
-    p.add_slider_widget(
-        callback3,
-        rng=[0, xx.shape[1]],
-        value=param[2],
-        title="y",
-        color=None,
-        pass_widget=False,
-        event_type="always",
-        style=None,
-        pointa=(0.15, 0.93),
-        pointb=(0.9, 0.93),
-    )
-
-    p.view_xy()  # [1,0,0]
-    p.add_checkbox_button_widget(
-        callback
-    )  # ,position=(200,10))#,position='upper_left')
-    p.add_text("Gaussian fit", name="mylabel", position=(70, 10))
-    p.clear_box_widgets()
-    p.show()
-    return
-
-
-# @profile
 def plot_3d(xpapoint=None, color=False, argv=[]):
     """Plots the DS9 region selected in 3D [DS9 required]
     """
@@ -4265,7 +4267,7 @@ def throw_apertures(xpapoint=None, argv=[]):
     parser.add_argument(
         "-f",
         "--form",
-        default="0",
+        default="circle",
         help="Aperture form",
         type=str,
         choices=["box", "circle"],
@@ -4324,7 +4326,7 @@ def throw_apertures(xpapoint=None, argv=[]):
     create_ds9_regions(
         [np.array(areas)[:, 2] + float(r1) / 2],
         [np.array(areas)[:, 0] + float(r2) / 2],
-        radius=[radius],
+        radius=[r1, r2] * len(areas),
         save=True,
         savename=tmp_region,
         form=[args.form],
@@ -4607,7 +4609,7 @@ def Gaussian(x, amplitude, xo, sigma2, offset):
     return g.ravel()
 
 
-def check_file(xpapoint):
+def check_file(xpapoint=None):
     """Check the properties of the DS9 file
     """
     from astropy.io import fits
@@ -5982,8 +5984,16 @@ def compute_gain(xpapoint=None, verbose=False):
     filename = get_filename(d)
     if len(d.get("regions").split("\n")) != 5:
         d.set("region delete all")
-    path = globglob(sys.argv[-1])
-    subtract, number, size, overscan, limits = sys.argv[3:8]
+    path = globglob(
+        "/Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/image-000075-000084-Zinc-with_dark-121-stack.fits"
+    )
+    subtract, number, size, overscan, limits = (
+        0,
+        0,
+        "30,30",
+        1,
+        "50,400,2200,2400",
+    )
     overscan = int(overscan)
     limits = np.array(limits.split(","), dtype=int)
     radius = np.array(size.split(","), dtype=int)
@@ -6121,10 +6131,7 @@ def compute_emgain(
 ):
     """Compute EMgain with the variance intensity method
     """
-    import matplotlib
     import numpy as np
-
-    matplotlib.use("TkAgg")
     import matplotlib.pyplot as plt
     from astropy.io import fits
 
@@ -6167,7 +6174,7 @@ def compute_emgain(
         create_ds9_regions(
             [areas[:, 2] + float(r1) / 2],
             [areas[:, 0] + float(r2) / 2],
-            radius=[radius],
+            radius=[r1, r2],
             save=True,
             savename=tmp_region,
             form=["box"],
@@ -12981,7 +12988,7 @@ def maxi_mask(xpapoint=None, argv=[]):
         help="Single mask with power of two",
         metavar="",
     )
-    parser.add_argument("-n", "--net_path", default="_mask", metavar="")
+    parser.add_argument("-n", "--net_path", default="0", metavar="")
     parser.add_argument(
         "-F",
         "--flags",
@@ -13074,30 +13081,34 @@ BG  %0.7f""" % (
     os.system('echo "%s" > classes.priors' % (priors))
 
     if len(path) == 1:
-        command = """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s
-               --prior_modif  True  %s""" % (
-            "/Users/Vincent/opt/anaconda3/bin/python",
-            resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),
-            bool(int(single)),
-            size,
-            bool(int(prob)),
-            path[0],
+        command = (
+            """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
+            % (
+                "/Users/Vincent/opt/anaconda3/bin/python",
+                resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),
+                bool(int(single)),
+                size,
+                bool(int(prob)),
+                path[0],
+            )
         )
     else:
         outfile = open("/tmp/files_maxi_mask.list", "w")
         print >> outfile, "\n".join(str(i) for i in path)
         outfile.close()
-        command = """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s
-               --prior_modif  True  %s""" % (
-            "/Users/Vincent/opt/anaconda3/bin/python",
-            resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),
-            bool(int(single)),
-            size,
-            bool(int(prob)),
-            "/tmp/files_maxi_mask.list",
+        command = (
+            """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
+            % (
+                "/Users/Vincent/opt/anaconda3/bin/python",
+                resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),
+                bool(int(single)),
+                size,
+                bool(int(prob)),
+                "/tmp/files_maxi_mask.list",
+            )
         )
 
-    print(command)
+    print(f_string(command))
     import subprocess
 
     try:
