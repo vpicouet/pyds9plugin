@@ -36,11 +36,17 @@ def main():
     name = d.get("xpa").split("\t")[-1]
     print("\n    Setup    \n")
 
-    d.set("frame delete all")
-    present_plugIn()
+    # d.set("frame delete all")
+    # present_plugIn()
     # open_file(
     #     argv="-p /Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/stack1*.fits"
     # )
+    open_file(argv="-p /Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/m33_hi.fits -t Multi-Frames-As-Cube")
+    open_file(argv="-p /Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/m33_hi.fits -t Multi-Frames")
+    open_file(argv="-p /Users/Vincent/Downloads/Safari/human_brain_from_itk_example.tif -t IMPORT-3D")
+    open_file(argv="-p /Users/Vincent/Desktop/mail.jpg -t RGB")
+    open_file(argv="-p /Users/Vincent/Desktop/test_cat.fits -t PRISM")
+
     # d.set("frame 5")
     # d.set('regions command "circle 35 35 20"')
     # d.set("regions select all")
@@ -57,11 +63,11 @@ def main():
     # d.set('regions command "circle 35 35 20"')
     # d.set("regions select all")
     # plot_area_3d_color(d)
-    open_file(argv="-p /Users/Vincent/Desktop/stack.fits")
-    d.set('regions command "circle 35 35 20"')
-    d.set("regions select all")
-    ds9entry(message="test")
-    get_image()
+    # open_file(argv="-p /Users/Vincent/Desktop/stack.fits")
+    # d.set('regions command "circle 35 35 20"')
+    # d.set("regions select all")
+    # ds9entry(message="test")
+    # get_image()
 
     # fit_gaussian_2d(argv="-x %s" % (name))
     # verbose(argv="-x %s" % (name))
@@ -96,7 +102,7 @@ def main():
     # astrometry_net(argv="-x %s" % (name))
     # open_file(argv="-p /Users/Vincent/Desktop/stack.fits")
     # fit_ds9_plot(argv="-x %s -g 1 -m 1 -v 1 -b Exponential" % (name))
-    # interactive_plotter(argv="-x %s " % (name))
+    # interactive_plotter(argv="-x %s " % (name), function=lambda x, A=1, s=2, B=3: A * x ** 3 + s * x + B)
 
     
     
@@ -163,7 +169,12 @@ def main():
     # # 
     # convert_image(argv="-x %s -t 8,uint8" % (name))
     # python_command(argv="-x %s -e ds9+=1" % (name))
-    # kill_long_process(function="DS9Utils.*")
+    # python_command(argv="-x %s -e header['test']=1" % (name))
+    # globglob('/Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/stack[18-20]446850.fits')
+    # apply_query(cat=None, query='NUMBER>10', path='/Users/Vincent/Desktop/test_cat.fits', new_path=None, delete=True)
+    # print(get_columns('/Users/Vincent/Desktop/test_cat.fits'))
+    # number_ds9_frames()
+    # save_region_as_catalog(argv="-x %s -p /tmp/test.csv" % (name))
     # divide_catalog('/Users/Vincent/Catalogs/SextractorBase/test/COSMOS_UDD_v2_Sept2020_only_mag_z_ml_test_outside.txt')
     # read_big_ascii_table('/Users/Vincent/Catalogs/SextractorBase/test/COSMOS_UDD_v2_Sept2020_only_mag_z_ml_test_outside.txt')
     # ds9_plot(d, path="%s/test.dat" % (test_folder))
@@ -187,8 +198,13 @@ def main():
     # d.set("regions select all")
     # plot_3d(argv="-x %s" % (name))
     # open_file(argv="-p /Users/Vincent/Desktop/filters_guillaume.jpg")
+    # create_image_from_catalog(argv="-x %s" % (name))
+    # create_image_from_catalog(argv="-x %s -p /Users/Vincent/Desktop/test_cat.fits" % (name))
+    # open_table("/Users/Vincent/Desktop/test_cat.fits")
+    # test_suite(argv="-x %s -t 5-All-In-One" % (name))
     print("\n    TEST COMPLETED 100%     \n")
     os.system("echo 1 > %s" % (DS9_BackUp_path + ".verbose.txt"))
+    # kill_long_process(function="*test.py*")
     return#    
 
 

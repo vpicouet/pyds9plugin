@@ -3642,7 +3642,6 @@ def plot_area_3d_color(d):
     return blue, red
 
 
-
 def plot_3d(xpapoint=None, color=False, argv=[]):
     """Plots the DS9 region selected in 3D [DS9 required]
     """
@@ -6693,7 +6692,7 @@ def get_filename(ds9, All=False, sort=True):
     return new_filename
 
 
-def number_ds9_frames(xpapoint):
+def number_ds9_frames(xpapoint=None):
     """Returns number of frame used in DS9
     """
     d = DS9n(xpapoint)
@@ -7835,7 +7834,7 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             xmin = float(xmin) if xmin != "" else -np.inf
             xmax = float(xmax) if xmax != "" else np.inf
             ymin = float(ymin) if ymin != "" else -np.inf
-            ymax = float(ymax) if ymax != "" else np.inf
+            ymax = float(ymax) if ymax != "" else np.inf  # TODO delete duplicate
             mask = (x > xmin) & (x < xmax) & (y > ymin) & (y < ymax)
             x, y = x[mask], y[mask]
             if x_scale == "yes":
