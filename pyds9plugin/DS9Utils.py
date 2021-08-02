@@ -5380,9 +5380,8 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
                 ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]],
             )
             d.set("regions %s" % (tmp_region))
-            import matplotlib
-
-            matplotlib.use("TkAgg")
+            # import matplotlib
+            # matplotlib.use("TkAgg")
             import matplotlib.pyplot as plt
 
             fig, axes = plt.subplots(2, 1, sharex=True)
@@ -5980,6 +5979,8 @@ def return_path(filename, number=None, all_images=False):
 def compute_gain(xpapoint=None, verbose=False):
     """Compute EMgain with the variance intensity method
     """
+    import numpy as np
+
     d = DS9n(xpapoint)
     filename = get_filename(d)
     if len(d.get("regions").split("\n")) != 5:
@@ -7011,7 +7012,6 @@ def extract_sources(xpapoint=None, argv=[]):
         number_of_thread=args.number_processors,
     )
     verboseprint(sources)
-    verboseprint(sources.colnames)
     if len(path) < 2:
         create_ds9_regions(
             [sources["xcentroid"]],
@@ -10547,7 +10547,7 @@ def ds9_psfex(xpapoint=None, argv=[]):
     parser.add_argument(
         "-PK",
         "--PHOTFLUX_KEY",
-        default="FLUX_APER(2)",
+        default="'FLUX_APER(2)'",
         help="Catalogue parameter for photometric norm.",
         type=str,
         metavar="",
@@ -10555,7 +10555,7 @@ def ds9_psfex(xpapoint=None, argv=[]):
     parser.add_argument(
         "-PEK",
         "--PHOTFLUXERR_KEY",
-        default="FLUXERR_APER(2)",
+        default="'FLUXERR_APER(2)'",
         help="Catalogue parameter for photometric error.",
         type=str,
         metavar="",
@@ -10599,7 +10599,7 @@ def ds9_psfex(xpapoint=None, argv=[]):
     parser.add_argument(
         "-ST",
         "--SAMPLEVAR_TYPE",
-        default="0",
+        default="NONE",
         type=str,
         choices=["SEEING", "NONE"],
         metavar="",
@@ -10661,7 +10661,7 @@ def ds9_psfex(xpapoint=None, argv=[]):
     parser.add_argument(
         "-CT",
         "--CHECKPLOT_TYPE",
-        default="PNG",
+        default="RESIDUALS",
         type=str,
         choices=[
             "NONE",
@@ -10715,7 +10715,7 @@ def ds9_psfex(xpapoint=None, argv=[]):
     parser.add_argument(
         "-HT",
         "--HOMOBASIS_TYPE",
-        default="CHI",
+        default="GAUSS-LAGUERRE",
         type=str,
         choices=["GAUSS-LAGUERRE", "NONE"],
         metavar="",
@@ -10938,6 +10938,7 @@ def ds9_stiff(xpapoint=None, filename=None, argv=[]):
     parser.add_argument(
         "-p2",
         "--path2",
+        default="",
         help="Path of the red image eg. ~r (620nm) band",
         type=str,
         metavar="",
@@ -10945,6 +10946,7 @@ def ds9_stiff(xpapoint=None, filename=None, argv=[]):
     parser.add_argument(
         "-p3",
         "--path3",
+        default="",
         help="Path of the red image eg. ~g (480nm) band",
         metavar="",
     )
