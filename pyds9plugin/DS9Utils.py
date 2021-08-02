@@ -353,109 +353,6 @@ def get(d, sentence, exit_=True):
         return path
 
 
-def compute_fluctuation(
-    xpapoint=None,
-    file_out_name=None,
-    ext=1,
-    ext_seg=1,
-    sub=None,
-    verbose=False,
-    plot=False,
-    seg=None,
-    type="image",
-    nomemmap=False,
-    argv=[],
-):
-    """Compute image(s) gain by fluctuation method"""
-    import numpy as np
-
-    parser = create_parser(get_name_doc())
-    parser.add_argument(
-        "-a", "--aperture", default="5,10", help="Aperture radius in pixels"
-    )
-    parser.add_argument(
-        "-n",
-        "--number_apertures",
-        default="1000",
-        help="Number of apertures to throw in the image",
-        type=str,
-        metavar="",
-    )
-    args = parser.parse_args_modif(argv)
-    d = DS9n(args.xpapoint)
-    file_in_name = get_filename(d)
-
-    mag_zp = 30
-    image, header, area, filename, offset = get_image(xpapoint)
-
-    pix_scale = 1
-    mag_zp = 30
-    sigma = [5.0, 10.0]
-    n_aper, aper_size = args.number_apertures, args.aperture
-    flux, n_aper_used, results = throw_apers(
-        image, pix_scale, 2 * aper_size, n_aper, seg=seg, type=type, sub_bkg=sub,
-    )
-    result = results[np.isfinite(results["aperture_sum"])]
-    fresult = results[~np.isfinite(results["aperture_sum"])]
-
-    create_ds9_regions(
-        [np.array(fresult["xcenter"]) + offset[0]],
-        [np.array(fresult["ycenter"]) + offset[1]],
-        radius=np.ones(len(fresult)) * aper_size,
-        form=["circle"] * len(fresult),
-        save=True,
-        ID=[np.array(fresult["aperture_sum"], dtype=int)],
-        color=["Yellow"] * len(fresult),
-        savename=tmp_region,
-        system="image",
-        font=1,
-    )
-    d.set("regions %s" % (tmp_region))
-
-    create_ds9_regions(
-        [np.array(result["xcenter"]) + offset[0]],
-        [np.array(result["ycenter"]) + offset[1]],
-        radius=np.ones(len(fresult)) * aper_size,
-        form=["circle"] * len(result),
-        save=True,
-        ID=[np.array(result["aperture_sum"], dtype=int)],
-        color=["green"] * len(result),
-        savename=tmp_region,
-        system="image",
-        font=1,
-    )
-    d.set("regions %s" % (tmp_region))
-
-    d, d_err, flux_std = depth(flux, mag_zp, sigma, type)
-    print_d = "{0:3.2f}".format(d[0])
-    print_sigma = "{0:3.2f}".format(sigma[0])
-    for i in range(1, len(sigma)):
-        print_d += " {0:3.2f}".format(d[i])
-        print_sigma += " {0:3.2f}".format(sigma[i])
-    title = '{0}:\n Depth in {1:3.2f}" diam. apertures: {2:s} ({3:s} sigmas) +/- {4:3.2f}. flux_std = {5:3.2f}'.format(
-        os.path.basename(file_in_name),
-        aper_size,
-        print_d,
-        print_sigma,
-        d_err[0],
-        flux_std,
-    )
-
-    if plot:
-        import matplotlib.pyplot as plt
-
-        plot_histo(flux, flux_std, aper_size, title)
-        plt.savefig(file_in_name[:-5] + "_depth.png")
-        plt.show()
-    #        plt.close()del
-    return {
-        "depth": d,
-        "depth_eroor": d_err,
-        "flux_std": flux_std,
-        "n_aper_used": n_aper_used,
-    }
-
-
 def lock(xpapoint=None, argv=[]):
     """Lock all the images in DS9 in frame/limits/colorbar [DS9 required]
     """
@@ -541,6 +438,118 @@ def display_arguments(function):
         verboseprint(function.__name__ + "(%s, %s)" % (args_, opt_args_))
 
     return display_and_call
+
+
+@fn_timer
+@fn_memory_load
+@display_arguments
+def compute_fluctuation(
+    xpapoint=None,
+    file_out_name=None,
+    ext=1,
+    ext_seg=1,
+    sub=None,
+    verbose=False,
+    plot=False,
+    seg=None,
+    type="image",
+    nomemmap=False,
+    argv=[],
+):
+    """Compute image(s) gain by fluctuation method"""
+    import numpy as np
+
+    parser = create_parser(get_name_doc())
+    parser.add_argument(
+        "-a", "--aperture", default="5", help="Aperture radius in pixels"
+    )
+    parser.add_argument(
+        "-n",
+        "--number_apertures",
+        default="1000",
+        help="Number of apertures to throw in the image",
+        type=str,
+        metavar="",
+    )
+    args = parser.parse_args_modif(argv)
+    d = DS9n(args.xpapoint)
+    file_in_name = get_filename(d)
+
+    mag_zp = 30
+    image, header, area, filename, offset = get_image(xpapoint)
+
+    pix_scale = 1
+    mag_zp = 30
+    sigma = [5.0, 10.0]
+    n_aper, aper_size = int(args.number_apertures), float(args.aperture)
+    flux, n_aper_used, results = throw_apers(
+        image,
+        pix_scale,
+        2 * float(aper_size),
+        n_aper,
+        seg=seg,
+        type=type,
+        sub_bkg=sub,
+    )
+    result = results[np.isfinite(results["aperture_sum"])]
+    fresult = results[~np.isfinite(results["aperture_sum"])]
+
+    # create_ds9_regions(
+    #     [np.array(fresult["xcenter"]) + offset[0]],
+    #     [np.array(fresult["ycenter"]) + offset[1]],
+    #     radius=np.ones(len(fresult)) * float(aper_size),
+    #     form=["circle"] * len(fresult),
+    #     save=True,
+    #     ID=[np.array(fresult["aperture_sum"], dtype=int)],
+    #     color=["Yellow"] * len(fresult),
+    #     savename=tmp_region,
+    #     system="image",
+    #     font=1,
+    # )
+    # d.set("regions %s" % (tmp_region))
+
+    create_ds9_regions(
+        [np.array(result["xcenter"]) + offset[0]],
+        [np.array(result["ycenter"]) + offset[1]],
+        radius=np.ones(len(result)) * float(aper_size),
+        form=["circle"] * len(result),
+        save=True,
+        ID=[np.array(result["aperture_sum"], dtype=int)],
+        color=["green"] * len(result),
+        savename=tmp_region,
+        system="image",
+        font=1,
+    )
+    d.set("regions %s" % (tmp_region))
+
+    d, d_err, flux_std = depth(flux, mag_zp, sigma, type)
+    print_d = "{0:3.2f}".format(d[0])
+    print_sigma = "{0:3.2f}".format(sigma[0])
+    for i in range(1, len(sigma)):
+        print_d += " {0:3.2f}".format(d[i])
+        print_sigma += " {0:3.2f}".format(sigma[i])
+    title = '{0}:\n Depth in {1:3.2f}" diam. apertures: {2:s} ({3:s} sigmas) +/- {4:3.2f}. flux_std = {5:3.2f}'.format(
+        os.path.basename(file_in_name),
+        aper_size,
+        print_d,
+        print_sigma,
+        d_err[0],
+        flux_std,
+    )
+
+    if plot:
+        import matplotlib.pyplot as plt
+
+        plot_histo(flux, flux_std, aper_size, title)
+        plt.savefig(file_in_name[:-5] + "_depth.png")
+        plt.show()
+    #        plt.close()del
+    return {
+        "depth": d,
+        "depth_eroor": d_err,
+        "flux_std": flux_std,
+        "n_aper_used": n_aper_used,
+    }
 
 
 def fits_ext(fitsimage):
@@ -1604,20 +1613,22 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
     )
     args = parser.parse_args_modif(argv, required=False)
     fluxes = []
-    fwhm, center, test = "-", 0, 0
+    fwhm, center, test = "-", 0, 1
     plot_ = bool(int(args.plot))
     d = DS9n(args.xpapoint)
     region = getregion(d, selected=True, message=True)  # [0]
     if bool(int(test)):
-        plot_ = False
-        # filename = get_filename(d)
-        image = d.get_pyfits()[0]
+        plot_ = True
+        image = d.get_pyfits()[0].data
         try:
             x_inf, x_sup, y_inf, y_sup = lims_from_region(None, coords=region)
         except Exception:
             raise_create_region(d)
             sys.exit()
-        while np.isfinite(image).all() == False:
+        image = image[y_inf:y_sup, x_inf:x_sup]
+        print(image)
+        print(x_inf, x_sup, y_inf, y_sup)
+        while np.isfinite(image).all() == False:  # keep == since array
             kernel = Gaussian2DKernel(x_stddev=2, y_stddev=2)
             image = interpolate_replace_nans(image, kernel)
             verboseprint(np.isfinite(image).all())
@@ -1722,26 +1733,26 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
             popt = [0, 0, 0, 0, 0, 0]
         verboseprint("popt = %s" % (popt))
         fluxes.append(2 * np.pi * popt[3] * popt[4] * popt[0])
-    xn, yn = popt[1], popt[2]
-    verboseprint("New center = %s %s " % (popt[1], popt[2]))
-    verboseprint("New center = %s %s " % (x_inf, y_inf))
-    verboseprint(
-        x_inf + xn + 1,
-        y_inf + yn + 1,
-        2.35 * popt[3],
-        2.35 * popt[4],
-        180 * popt[5] / np.pi,
-    )
-    d.set(
-        'regions format ds9 ; regions system detector ; regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "'
-        % (
+        xn, yn = popt[1], popt[2]
+        verboseprint("New center = %s %s " % (popt[1], popt[2]))
+        verboseprint("New center = %s %s " % (x_inf, y_inf))
+        verboseprint(
             x_inf + xn + 1,
             y_inf + yn + 1,
             2.35 * popt[3],
             2.35 * popt[4],
             180 * popt[5] / np.pi,
         )
-    )
+        d.set(
+            'regions format ds9 ; regions system detector ; regions command "ellipse %0.1f %0.1f %0.1f %0.1f %0.1f # color=yellow "'
+            % (
+                x_inf + xn + 1,
+                y_inf + yn + 1,
+                2.35 * popt[3],
+                2.35 * popt[4],
+                180 * popt[5] / np.pi,
+            )
+        )
 
     if plot_:
         from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
@@ -1927,7 +1938,10 @@ def astrometry_net(xpapoint=None, argv=[]):
     parser = create_parser(get_name_doc(), path=True)
     parser.add_argument("--type", choices=("Image", "XY-catalog"), metavar="")
     parser.add_argument(
-        "--scale-units", default="", help="Units for scale estimate", metavar="",
+        "--scale-units",
+        default="arcsecperpix",
+        help="Units for scale estimate",
+        metavar="",
     )  # choices=('arcsecperpix', 'arcminwidth', 'degwidth', 'focalmm'),
     parser.add_argument(
         "--scale-lower",
@@ -2334,228 +2348,6 @@ def gaussian(x, amp, x0, sigma):
     return amp * np.exp(-((x - x0) ** 2) / (2 * sigma ** 2))
 
 
-def throughfocus_(
-    center,
-    files,
-    datas=None,
-    # x=None,
-    fibersize=0,
-    center_type="barycentre",
-    SigmaMax=4,
-    plot_=True,
-    Type=None,
-    ENCa_center=None,
-    pas=None,
-    WCS=False,
-    DS9backUp=DS9_BackUp_path,
-    offsets=10,
-):
-    """Perform a throughfocus analysis and return the best focused image
-    """
-    from astropy.io import fits
-    from astropy.table import Table, vstack
-    from scipy.optimize import curve_fit
-    import numpy as np
-
-    fwhm = []
-    EE50 = []
-    EE80 = []
-    maxpix = []
-    sumpix = []
-    varpix = []
-    xo = []
-    yo = []
-    images = []
-    ext = fits_ext(fits.open(files[0]))
-    x = offsets
-    for file in files:
-        filename = file
-        with fits.open(filename) as f:
-            fitsfile = f[ext]
-            image = fitsfile.data
-        nombre = 5
-        background = 1 * estimate_background(image, center)
-        n = 25
-        subimage = (image - background)[
-            int(center[1]) - n : int(center[1]) + n,
-            int(center[0]) - n : int(center[0]) + n,
-        ]
-        images.append(subimage)
-        d = analyze_spot(
-            image,
-            center=center,
-            fibersize=fibersize,
-            center_type=center_type,
-            SigmaMax=SigmaMax,
-        )
-        max20 = subimage.flatten()
-        max20.sort()
-        fwhm.append(d["Sigma"])
-        EE50.append(d["EE50"])
-        EE80.append(d["EE80"])
-        xo.append(d["Center"][0])
-        yo.append(d["Center"][1])
-        maxpix.append(max20[-20:].mean())
-        sumpix.append(d["Flux"])
-        varpix.append(subimage.var())
-    f = lambda x, a, b, c: a * (x - b) ** 2 + c
-    xtot = np.linspace(x.min(), x.max(), 200)
-    try:
-        opt1, cov1 = curve_fit(f, x, fwhm)
-        bestx1 = xtot[np.argmin(f(xtot, *opt1))]
-        np.savetxt("/tmp/fwhm_fit.dat", np.array([xtot, f(xtot, *opt1)]).T)
-    except RuntimeError as e:
-        logger.warning(e)
-        opt1 = [np.nan, np.nan, np.nan]  # [0,0,0]
-        bestx1 = np.nan
-        pass
-    try:
-        opt2, cov2 = curve_fit(f, x, EE50)
-        bestx2 = xtot[np.argmin(f(xtot, *opt2))]
-        np.savetxt("/tmp/EE50_fit.dat", np.array([xtot, f(xtot, *opt2)]).T)
-    except RuntimeError as e:
-        logger.warning(e)
-        opt2 = [np.nan, np.nan, np.nan]  # [0,0,0]
-        bestx2 = np.nan
-        pass
-    try:
-        opt3, cov3 = curve_fit(f, x, EE80)
-        bestx3 = xtot[np.argmin(f(xtot, *opt3))]
-        np.savetxt("/tmp/EE80_fit.dat", np.array([xtot, f(xtot, *opt3)]).T)
-    except RuntimeError as e:
-        logger.warning(e)
-        opt3 = [np.nan, np.nan, np.nan]  # [0,0,0]
-        bestx3 = np.nan
-        pass
-    try:
-        maxpix /= np.nanmax(maxpix)
-        opt4, cov4 = curve_fit(f, x, maxpix)
-        bestx4 = xtot[np.argmax(f(xtot, *opt4))]
-        np.savetxt("/tmp/maxpix_fit.dat", np.array([xtot, f(xtot, *opt4)]).T)
-    except RuntimeError as e:
-        logger.warning(e)
-        opt4 = [np.nan, np.nan, np.nan]  # [0,0,0]
-        bestx4 = np.nan
-        pass
-
-    bestx6, bestx6 = np.nan, np.nan
-    t = Table(
-        names=(
-            "name",
-            "number",
-            "x",
-            "y",
-            "Sigma",
-            "EE50",
-            "EE80",
-            "Max pix",
-            "Flux",
-            "Var pix",
-        ),
-        dtype=("S15", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4",),
-    )
-    t.add_row(
-        (
-            os.path.basename(filename),
-            1,
-            d["Center"][0],
-            d["Center"][1],
-            min(fwhm),
-            min(EE50),
-            min(EE80),
-            min(maxpix),
-            min(sumpix),
-            max(varpix),
-        )
-    )
-
-    np.savetxt("/tmp/fwhm.dat", np.array([x, fwhm]).T)
-    np.savetxt("/tmp/EE50.dat", np.array([x, EE50]).T)
-    np.savetxt("/tmp/EE80.dat", np.array([x, EE80]).T)
-    np.savetxt("/tmp/maxpix.dat", np.array([x, maxpix]).T)
-    try:
-        OldTable = Table.read(os.path.dirname(filename) + "/Throughfocus.csv")
-    except IOError as e:
-        logger.warning(e)
-        t.write(os.path.dirname(filename) + "/Throughfocus.csv")
-    else:
-        t = vstack((OldTable, t))
-        t.write(os.path.dirname(filename) + "/Throughfocus.csv", overwrite=True)
-
-    d = []
-    d.append("plot line open")
-    d.append("plot axis y grid no ")
-    d.append(
-        "plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "
-        % (np.nanmin(f(xtot, *opt1)), xtot[np.argmin(f(xtot, *opt1))])
-    )
-    d.append("plot title y 'FWHM' ")
-    d.append("plot load /tmp/fwhm.dat xy")
-    d.append("plot line shape circle ")
-    d.append("plot line width 0 ")
-    d.append("plot line shape color black")
-    d.append("plot legend position right ")
-    d.append("plot load /tmp/fwhm_fit.dat xy")
-    d.append("plot line dash yes ")
-    d.append("plot title legend ''")
-    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' " % (1, 1))
-    d.append("plot add graph ")
-    d.append("plot axis y grid no ")
-    d.append(
-        "plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "
-        % (np.nanmax(f(xtot, *opt4)), xtot[np.argmax(f(xtot, *opt4))])
-    )
-    d.append("plot load /tmp/maxpix.dat xy")
-    d.append("plot title y 'Max pix' ")
-    d.append("plot line shape circle ")
-    d.append("plot line width 0 ")
-    d.append("plot line shape color black")
-    d.append("plot legend position right ")
-    d.append("plot load /tmp/maxpix_fit.dat xy")
-    d.append("plot line dash yes ")
-    d.append("plot title legend ''")
-    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' " % (1, 1))
-    d.append("plot add graph ")
-    d.append("plot axis y grid no ")
-    d.append(
-        "plot title 'Fit: Best EE50 = %0.2f - Position = %0.2f' "
-        % (np.nanmin(f(xtot, *opt2)), xtot[np.argmin(f(xtot, *opt2))])
-    )
-    d.append("plot load /tmp/EE50.dat xy")
-    d.append("plot title y 'Radial profile' ")
-    d.append("plot line shape circle ")
-    d.append("plot line width 0 ")
-    d.append("plot line shape color black")
-    d.append("plot legend position right ")
-    d.append("plot load /tmp/EE50_fit.dat xy")
-    d.append("plot line dash yes ")
-    d.append("plot title legend ''")
-    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' " % (1, 1))
-    d.append("plot add graph ")
-    d.append("plot axis y grid no ")
-    d.append(
-        "plot title 'Fit: Best EE80 = %0.2f - Position = %0.2f' "
-        % (np.nanmin(f(xtot, *opt3)), xtot[np.argmin(f(xtot, *opt3))])
-    )
-    d.append("plot load /tmp/EE80.dat xy")
-    d.append("plot title y 'Radial profile' ")
-    d.append("plot line shape circle ")
-    d.append("plot line width 0 ")
-    d.append("plot line shape color black")
-    d.append("plot legend position right ")
-    d.append("plot load /tmp/EE80_fit.dat xy")
-    d.append("plot line dash yes ")
-    d.append("plot title legend ''")
-    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' " % (1, 1))
-    d.append("plot layout GRID ; plot layout STRIP scale 100")
-    d.append("plot font legend size 9 ")
-    d.append("plot font labels size 13 ")
-    ds9 = DS9n()
-    ds9.set(" ; ".join(d))
-
-    return images  # fwhm, EE50, EE80
-
-
 def throughfocus_wcs(
     center,
     files,
@@ -2581,8 +2373,6 @@ def throughfocus_wcs(
 
     from scipy.optimize import curve_fit
 
-    x = offsets
-
     fwhm = []
     EE50 = []
     EE80 = []
@@ -2591,18 +2381,16 @@ def throughfocus_wcs(
     varpix = []
     xo = []
     yo = []
-    # sec = []
     images = []
     ENCa = []
     ext = fits_ext(fits.open(files[0]))
+    x = offsets
     for file in files:
         filename = file
         with fits.open(filename) as f:
-            # stack[:,:,i] = f[0].data
             fitsfile = f[ext]
             image = fitsfile.data
         header = fitsfile.header
-        time = 0
         nombre = 5
         if ENCa_center is not None:
             ENCa = np.linspace(
@@ -2617,7 +2405,7 @@ def throughfocus_wcs(
             w = wcs.WCS(header)
             center_wcs = center
             center_pix = w.all_world2pix(
-                center_wcs[0] * u.deg, center_wcs[1] * u.deg, 0,
+                center_wcs[0] * u.deg, center_wcs[1] * u.deg, 0
             )
             center_pix = [int(center_pix[0]), int(center_pix[1])]
         else:
@@ -2648,19 +2436,20 @@ def throughfocus_wcs(
         sumpix.append(d["Flux"])
         varpix.append(subimage.var())
     f = lambda x, a, b, c: a * (x - b) ** 2 + c
-    if Type == "guider":
-        x = np.array(ENCa)
-        xtot = np.linspace(x.min(), x.max(), 200)
-        ENC = lambda x, a: x
-    if Type == "detector":
-        x = np.arange(len(files))
-        xtot = np.linspace(x.min(), x.max(), 200)
-        if len(ENCa) == 0:
-            ENC = lambda x, a: 0
-        else:
-            ENC = (
-                lambda x, a: (ENCa[-1] - ENCa[0]) / (len(ENCa) - 1) * x + ENCa[0]
-            )
+    xtot = np.linspace(x.min(), x.max(), 200)
+    # if Type == "guider":
+    #     x = np.array(ENCa)
+    #     xtot = np.linspace(x.min(), x.max(), 200)
+    #     ENC = lambda x, a: x
+    # if Type == "detector":
+    #     x = np.arange(len(files))
+    #     xtot = np.linspace(x.min(), x.max(), 200)
+    #     if len(ENCa) == 0:
+    #         ENC = lambda x, a: 0
+    #     else:
+    #         ENC = (
+    #             lambda x, a: (ENCa[-1] - ENCa[0]) / (len(ENCa) - 1) * x + ENCa[0]
+    #         )
     try:
         opt1, cov1 = curve_fit(f, x, fwhm)
         bestx1 = xtot[np.argmin(f(xtot, *opt1))]
@@ -2702,23 +2491,22 @@ def throughfocus_wcs(
         opt6 = [0, 0, 0]
         bestx6 = np.nan
         pass
-    mean = np.nanmean(
-        np.array(
-            [
-                enc(bestx1, ENCa),
-                enc(bestx2, ENCa),
-                enc(bestx3, ENCa),
-                enc(bestx4, ENCa),
-                enc(bestx6, ENCa),
-            ]
-        )
-    )
-    name = "%s - %i - %i - %s - %0.3f" % (
+    # mean = np.nanmean(
+    #     np.array(
+    #         [
+    #             enc(bestx1, ENCa),
+    #             enc(bestx2, ENCa),
+    #             enc(bestx3, ENCa),
+    #             enc(bestx4, ENCa),
+    #             enc(bestx6, ENCa),
+    #         ]
+    #     )
+    # )
+    name = "%s - %i - %i - %s " % (
         os.path.basename(filename),
         int(center_pix[0]),
         int(center_pix[1]),
         0,
-        mean,
     )
     # verboseprint(name)
     t = Table(
@@ -2733,29 +2521,8 @@ def throughfocus_wcs(
             "Max pix",
             "Flux",
             "Var pix",
-            "Best sigma",
-            "Best EE50",
-            "Best EE80",
-            "Best Maxpix",
-            "Best Varpix",
         ),
-        dtype=(
-            "S15",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-            "f4",
-        ),
+        dtype=("S15", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4",),
     )
     t.add_row(
         (
@@ -2770,11 +2537,6 @@ def throughfocus_wcs(
             min(maxpix),
             min(sumpix),
             max(varpix),
-            enc(bestx1, ENCa),
-            enc(bestx2, ENCa),
-            enc(bestx3, ENCa),
-            enc(bestx4, ENCa),
-            enc(bestx6, ENCa),
         )
     )
     np.savetxt("/tmp/fwhm.dat", np.array([x, fwhm]).T)
@@ -2949,6 +2711,7 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
     parser.add_argument(
         "-p",
         "--path",
+        default="",
         help="Paths of the images you want to analyse. Use regexp ",
         type=str,
         metavar="",
@@ -3054,38 +2817,27 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
         from astropy import wcs
 
         w = wcs.WCS(image.header)
+
         center_wcs = w.all_pix2world(x, y, 0)
         # d.set('crosshair {} {} physical'.format(x,y))
         alpha, delta = float(center_wcs[0]), float(center_wcs[1])
         verboseprint("alpha, delta = %s %s" % (alpha, delta))
-
-        throughfocus_wcs(
-            center=[alpha, delta],
-            files=path,
-            fibersize=0,
-            center_type="user",
-            SigmaMax=6,
-            plot_=plot_,
-            Type=Type,
-            ENCa_center=ENCa_center,
-            pas=pas,
-            WCS=True,
-            offsets=offsets,
-        )
-
+        center = [alpha, delta]
     else:
-        datas = throughfocus_(
-            center=rp["Center"],
-            files=path,
-            fibersize=0,
-            center_type="user",
-            SigmaMax=6,
-            plot_=plot_,
-            Type=Type,
-            ENCa_center=ENCa_center,
-            pas=pas,
-            offsets=offsets,
-        )
+        center = [x, y]
+    datas = throughfocus_wcs(
+        center=center,
+        files=path,
+        fibersize=0,
+        center_type="user",
+        SigmaMax=6,
+        plot_=plot_,
+        Type=Type,
+        ENCa_center=ENCa_center,
+        pas=pas,
+        WCS=WCS,
+        offsets=offsets,
+    )
 
     from astropy.convolution import convolve, Gaussian2DKernel
 
@@ -3117,7 +2869,7 @@ def explore_throughfocus(xpapoint=None, argv=[]):
     parser.add_argument(
         "-s",
         "--sort",
-        default="",
+        default="MAG_AUTO",
         help="Column to use to sort the PSFs",
         metavar="",
         choices=[
@@ -3133,6 +2885,8 @@ def explore_throughfocus(xpapoint=None, argv=[]):
     args = parser.parse_args_modif(argv)
     d = DS9n(args.xpapoint)
     a = Table.read(args.path)
+    if len(a.colnames):
+        a = Table.read(args.path, format="fits", hdu="LDAC_OBJECTS")
     if "VIGNET" not in a.colnames:
         message(
             d,
@@ -4112,11 +3866,11 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
     d = DS9n(args.xpapoint)
     filename = globglob(args.path, xpapoint=args.xpapoint)
     if (
-        (".tif" in filename)
-        | (".tiff" in filename)
-        | (".png" in filename)
-        | (".jpeg" in filename)
-        | (".jpg" in filename)
+        (".tif" in filename[0])
+        | (".tiff" in filename[0])
+        | (".png" in filename[0])
+        | (".jpeg" in filename[0])
+        | (".jpg" in filename[0])
     ):
         color = True
     if color:
@@ -4146,9 +3900,8 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             )
             # if d.get("scale") == "log":
             #     data = data  # np.log10(data - np.nanmin(data))
-            value = data.shape[0] / (
-                np.nanmax(data) - np.nanmin(data)
-            )  # np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
+            value = data.shape[0] / (np.nanmax(data) - np.nanmin(data))
+            # np.min([1,data.shape[0]/(np.nanmax(data) - np.nanmin(data)) ])
             # value_= data.shape[0]#value
             mesh = StructuredGrid()
             data_points = ((data - np.nanmin(data[np.isfinite(data)]))) / (
@@ -4194,7 +3947,6 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             p.add_mesh(contours, color="white", line_width=5)
             p.add_mesh(contours_c, color="white", line_width=5)
             p.update_coordinates(np.nan * mesh.contour().points, mesh=contours_c)
-
             d = {
                 "log": False,
                 "value": value,
@@ -4321,10 +4073,11 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
             )
             p.clear_box_widgets()
             p.add_axes()  # interactive=True)
-            if isinstance(p, Plotter):
-                p.show()
-            else:
-                p.app.exec_()
+            p.show()
+            # if isinstance(p, Plotter):
+            #     p.show()
+            # else:
+            #     p.app.exec_()
 
         else:
             create_cube(d, data)
@@ -4979,35 +4732,37 @@ def stack_images(
     """
     import numpy as np
 
-    parser = create_parser(get_name_doc())
+    parser = create_parser(get_name_doc(), path=True)
+    parser.add_argument(
+        "-t",
+        "--type",
+        default="median",
+        help="Type of the merge",
+        type=str,
+        choices=["mean", "median", "std"],
+    )
+    parser.add_argument(
+        "-c", "--clip", default="100", help="Clip the images", type=str,
+    )
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
-    if Type is None:
-        Type = sys.argv[4]
-        clipping = sys.argv[5]
-        name = sys.argv[6]
-    paths = globglob(sys.argv[3])
+    paths = globglob(args.path)
 
-    if "int" in Type:
-        dtype = "uint16"
-    if "float" in Type:
-        dtype = "float"
-    if "std" in Type:
+    dtype = "float"
+    if "std" in args.type:
         std = True
-    if "median" in Type:
+    if "median" in args.type:
         Type = np.nanmedian
     else:
         Type = np.nanmean
-    if clipping == "-":
-        clipping = 1e5
     image, name = stack_images_path(
         paths,
         Type=Type,
-        clipping=float(clipping),
+        clipping=float(args.clip),
         dtype=dtype,
         std=std,
-        name=name,
+        name=os.path.dirname(paths[0]) + "stack_image.fits",
     )
     d.set("tile yes ; frame new ; file {}".format(name))
     try:
@@ -5124,11 +4879,22 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
     from scipy.optimize import curve_fit
     import numpy as np
 
-    parser = create_parser(get_name_doc(), path=True)
+    parser = create_parser(get_name_doc(), path=False)
+    parser.add_argument(
+        "-p",
+        "--path",
+        default="",
+        help="Paths of the images you want to analyse. Use regexp ",
+        type=str,
+        metavar="",
+    )
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
-    path = globglob(args.path, xpapoint=args.xpapoint)
+    if args.path == "":
+        path = get_filename(d, All=True, sort=False)
+    else:
+        path = globglob(args.path, xpapoint=args.xpapoint)
     path.sort()
     x = np.arange(len(path))
     a = getregion(d)[0]
@@ -7076,7 +6842,7 @@ def fill_regions(xpapoint=None, argv=[]):
     parser.add_argument(
         "-o",
         "--overwrite",
-        default="1",
+        default="0",
         help="Overwrite the image",
         type=str,
         metavar="",
@@ -7196,7 +6962,7 @@ def extract_sources(xpapoint=None, argv=[]):
     parser.add_argument(
         "-r",
         "--ratio",
-        default="5",
+        default="1",
         help="The ratio of the minor to major axis standard deviations of the Gaussian kernel",
         type=str,
         metavar="",
@@ -7290,7 +7056,7 @@ def extract_sources_photutils(
     n=2,
     sigma=3,
     iters=5,
-    delete_doublons=3,
+    distance_doublons=3,
 ):
     """Extract sources for DS9 image and create catalog
     """
@@ -7333,7 +7099,7 @@ def extract_sources_photutils(
                 verboseprint("catalog empty")
                 if len(sources0) == 0:
                     sources0 = sources1
-    sources = delete_doublons(sources0, dist=delete_doublons)
+    sources = delete_doublons(sources0, dist=distance_doublons)
     csvwrite(sources, filename[:-5] + ".csv")
     return sources
 
@@ -7493,7 +7259,6 @@ def background_estimation(
             "SExtractorBackground",
             "BiweightLocationBackground",
         ],
-        required=True,
     )
     parser.add_argument(
         "-r",
@@ -7796,92 +7561,517 @@ def gaussian_2dim(xy, amplitude, xo, yo, sigma_x, sigma_y, angle=0, offset=0):
     return g(x, y).ravel() + offset
 
 
-if len(sys.argv) > 1:
-    if sys.argv[1] in ["interactive_plotter", "Function", "fit_ds9_plot"]:
-        from dataphile.demos.auto_gui import Demo
-        import numpy as np
+functions = ["interactive_plotter", "Function", "fit_ds9_plot"]
+if bool(set(functions) & set(sys.argv)) | len(sys.argv) == 1:
 
-        class GeneralFitNew(Demo):
+    from dataphile.demos.auto_gui import Demo
+    import numpy as np
 
-            """Multiple Gaussian Features over a Polynomial Background."""
+    class GeneralFitNew(Demo):
 
-            def __init__(
-                self,
-                x,
-                y,
-                ax=None,
-                linewidth=2,
-                marker=None,
-                EMCCD_=False,
-                nb_sinusoid1D=0,
-                nb_gaussians=0,
-                nb_moffats=0,
-                nb_voigt1D=0,
-                background=True,
-                exp=False,
-                log=False,
-                double_exp=False,
-                linestyle="dotted",
-                function=None,
-                sigma=None,
-            ):
-                """Create synthetic dataset, plots, and AutoGUI."""
-                from dataphile.statistics.regression.modeling import (
-                    Parameter,
-                    Model,
-                    CompositeModel,
-                    AutoGUI,
+        """Multiple Gaussian Features over a Polynomial Background."""
+
+        def __init__(
+            self,
+            x,
+            y,
+            ax=None,
+            linewidth=2,
+            marker=None,
+            EMCCD_=False,
+            nb_sinusoid1D=0,
+            nb_gaussians=0,
+            nb_moffats=0,
+            nb_voigt1D=0,
+            background=True,
+            exp=False,
+            log=False,
+            double_exp=False,
+            linestyle="dotted",
+            function=None,
+            sigma=None,
+        ):
+            """Create synthetic dataset, plots, and AutoGUI."""
+            from dataphile.statistics.regression.modeling import (
+                Parameter,
+                Model,
+                CompositeModel,
+                AutoGUI,
+            )
+            from dataphile.statistics.distributions import (
+                linear1D,
+                polynomial1D,
+                gaussian1D,
+                voigt1D,
+                sinusoid1D,
+            )
+            from dataphile.statistics.distributions import uniform
+            from scipy.optimize import curve_fit
+            import matplotlib.pyplot as plt
+
+            verboseprint(
+                "nb_gaussians,  nb_moffats ,nb_voigt1D,nb_sinusoid = ",
+                nb_gaussians,
+                nb_moffats,
+                nb_voigt1D,
+                nb_sinusoid1D,
+            )
+            super().__init__(
+                polynomial1D,
+                [100, -0.01, -1e-5],
+                (0, 2400),
+                linspace=True,
+                noise=0,
+                samples=2400,
+            )
+            self.xdata = x[np.argsort(x)]
+            self.ydata = y[np.argsort(x)]
+            self.linestyle = linestyle
+            self.marker = marker
+            self.nb_gaussians = nb_gaussians
+            self.nb_moffats = nb_moffats
+            self.nb_voigt1D = nb_voigt1D
+            self.log = log
+            self.nb_sinusoid1D = nb_sinusoid1D
+            self.background = background
+            self.exp = exp
+            self.double_exp = double_exp
+            xdata_i = self.xdata
+            ydata_i = self.ydata
+
+            if ax is None:
+                figure = plt.figure("Interactive fitting", figsize=(11, 6))
+                self.figure = figure
+
+                # create main plot
+                self.ax = figure.add_axes([0.10, 0.30, 0.84, 0.66])
+            else:
+                self.ax = ax
+            # if linestyle is not None:
+            self.ax.scatter(
+                xdata_i,
+                ydata_i,
+                color="black",
+                marker=marker,
+                label="data",
+                lw=linewidth,
+                alpha=0.8,
+            )
+            if linewidth > 0:
+                self.ax.plot(
+                    xdata_i, ydata_i, linestyle=linestyle, linewidth=linewidth,
                 )
-                from dataphile.statistics.distributions import (
-                    linear1D,
-                    polynomial1D,
-                    gaussian1D,
-                    voigt1D,
-                    sinusoid1D,
-                )
-                from dataphile.statistics.distributions import uniform
-                from scipy.optimize import curve_fit
-                import matplotlib.pyplot as plt
-
-                verboseprint(
-                    "nb_gaussians,  nb_moffats ,nb_voigt1D,nb_sinusoid = ",
-                    nb_gaussians,
-                    nb_moffats,
-                    nb_voigt1D,
-                    nb_sinusoid1D,
-                )
-                super().__init__(
-                    polynomial1D,
-                    [100, -0.01, -1e-5],
-                    (0, 2400),
-                    linspace=True,
-                    noise=0,
-                    samples=2400,
-                )
-                self.xdata = x[np.argsort(x)]
-                self.ydata = y[np.argsort(x)]
-                self.linestyle = linestyle
-                self.marker = marker
-                self.nb_gaussians = nb_gaussians
-                self.nb_moffats = nb_moffats
-                self.nb_voigt1D = nb_voigt1D
-                self.log = log
-                self.nb_sinusoid1D = nb_sinusoid1D
-                self.background = background
-                self.exp = exp
-                self.double_exp = double_exp
-                xdata_i = self.xdata
-                ydata_i = self.ydata
-
-                if ax is None:
-                    figure = plt.figure("Interactive fitting", figsize=(11, 6))
-                    self.figure = figure
-
-                    # create main plot
-                    self.ax = figure.add_axes([0.10, 0.30, 0.84, 0.66])
+            x_inf, x_sup = self.ax.get_xlim()
+            y_inf, y_sup = self.ax.get_ylim()
+            self.ax.set_ylabel("y", labelpad=15)
+            z = np.polyfit(x, y, deg=1)
+            popt = np.poly1d(z)
+            a = popt.coef[::-1][0]
+            b = popt.coef[::-1][1]
+            if self.background == 2:
+                c, b, a = np.poly1d(np.polyfit(x, y, deg=2))
+                fb, fa, fc = 10, 10, 5
+                if b > 0:
+                    boundsb = (b / fb - 1, fb * b + 1)
                 else:
-                    self.ax = ax
-                # if linestyle is not None:
+                    boundsb = (fb * b - 1, b / fb + 1)
+                if a > 0:
+                    boundsa = (a / fa, fa * a)
+                else:
+                    boundsa = (a * fa, a / fa)
+                if c > 0:
+                    boundsc = (-1 * fc * c, fc * c)
+                else:
+                    boundsc = (fc * c, -1 * fc * c)
+            else:
+                c = 0
+                fb, fa, fc = 10, 10, 2
+                if b > 0:
+                    boundsb = (b / fb, fb * b)
+                else:
+                    boundsb = (fb * b, b / fb)
+            boundsa = (a - (y.max() - y.min()), a + (y.max() - y.min()))
+            boundsb = ((y.min() - a) / x.max(), (y.max() - a) / x.min())
+            if boundsb[1] < boundsb[0]:
+                boundsb = boundsb[::-1]
+            Models = []
+            background = np.nanmean(
+                ydata_i[
+                    (ydata_i < np.nanmean(ydata_i) + 1 * np.nanstd(ydata_i))
+                    & (ydata_i > np.nanmean(ydata_i) - 1 * np.nanstd(ydata_i))
+                ]
+            )
+            amp = np.nanmax(ydata_i) - background
+            amp2 = np.nanmin(ydata_i) - background
+            ampm = np.nanmax([abs(amp), abs(amp2)])
+            nb_features = np.max(
+                [self.nb_moffats, self.nb_gaussians, self.nb_voigt1D]
+            )
+            amps = (10 * [amp, amp2, (amp2 + amp) / 2])[:nb_features]
+            x1, x2 = (
+                xdata_i[np.argmax(ydata_i)],
+                xdata_i[np.argmin(ydata_i)],
+            )
+            centers = (10 * [x1, x2, (x1 + x2) / 2])[:nb_features]
+            xs, ys = find_maxima(x, y, conv=10, max_=True)
+            xs, ys = (
+                np.concatenate((xs, xs, xs)),
+                np.concatenate((ys, ys, ys)),
+            )
+            amps, centers = (
+                ys[:nb_features] - np.median(y),
+                xs[:nb_features],
+            )
+            for i, amp, center in zip(range(self.nb_gaussians), amps, centers):
+                Models.append(
+                    Model(
+                        gaussian1D,
+                        Parameter(
+                            value=amps[0],
+                            bounds=(-1.5 * ampm, 1.5 * ampm),
+                            label="Amplitude",
+                        ),
+                        Parameter(
+                            value=center,
+                            bounds=(
+                                np.nanmin(xdata_i) - 2 * 2.35 * 2,
+                                np.nanmax(xdata_i) + 2 * 2.35 * 2,
+                            ),
+                            label="Center",
+                        ),
+                        Parameter(
+                            value=np.min([2, np.max(x) / 10]),
+                            bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2,),
+                            label="Sigma",
+                        ),
+                        label="Gaussian%i" % (i),
+                    )
+                )
+            for i, amp, center in zip(range(self.nb_moffats), amps, centers):
+                Models.append(
+                    Model(
+                        moffat_1d,
+                        Parameter(
+                            value=amps[0],
+                            bounds=(-1.5 * ampm, 1.5 * ampm),
+                            label="Amplitude",
+                        ),
+                        Parameter(
+                            value=center,
+                            bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)),
+                            label="Alpha",
+                        ),
+                        Parameter(
+                            value=np.min([2, np.max(x) / 10]),
+                            bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2,),
+                            label="Width",
+                        ),
+                        Parameter(
+                            value=center,
+                            bounds=(
+                                np.nanmin(xdata_i) - 2 * 2.35 * 2,
+                                np.nanmax(xdata_i) + 2 * 2.35 * 2,
+                            ),
+                            label="Center",
+                        ),
+                        label="Moffat%i" % (i),
+                    )
+                )
+
+            for i, amp, center in zip(range(self.nb_voigt1D), amps, centers):
+                Models.append(
+                    Model(
+                        voigt1D,
+                        Parameter(
+                            value=amps[0],
+                            bounds=(-1.5 * ampm, 1.5 * ampm),
+                            label="Amplitude",
+                        ),
+                        Parameter(
+                            value=center,
+                            bounds=(
+                                np.nanmin(xdata_i) - 2 * 2.35 * 2,
+                                np.nanmax(xdata_i) + 2 * 2.35 * 2,
+                            ),
+                            label="Center",
+                        ),
+                        Parameter(
+                            value=np.min([2, np.max(x) / 10]),
+                            bounds=(1e-5, (np.nanmax(x) - np.nanmin(x)) / 2,),
+                            label="Sigma",
+                        ),
+                        Parameter(
+                            value=np.min([2, np.max(x) / 10]),
+                            bounds=(0, np.nanmax(xdata_i)),
+                            label="Gamma",
+                        ),
+                        label="Voigt%i" % (i),
+                    )
+                )
+
+            if (function != None) & (function != "None") & (function != "none"):
+                from pyds9plugin.Macros.Fitting_Functions import functions
+                from inspect import signature
+
+                function_ = getattr(functions, function)
+                names = list(signature(function_).parameters.keys())[1:]
+                p_ = signature(function_).parameters
+                params = [
+                    Parameter(
+                        value=np.mean(p_[p].default),
+                        bounds=(p_[p].default[0], p_[p].default[-1]),
+                        label=p,
+                    )
+                    for p in names
+                ]
+                Models.append(Model(function_, *params, label=function,))
+
+                xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i))
+                xsample = np.linspace(
+                    xdata_i.min(), xdata_i.max(), len(xdata_i) * 100
+                )
+            else:
+                xsample = np.linspace(
+                    xdata_i.min(), xdata_i.max(), len(xdata_i) * 100
+                )
+            if self.exp:
+                Models.append(
+                    Model(
+                        exponential_1d,
+                        Parameter(
+                            value=0,
+                            bounds=(0, 1.5 * np.nanmax(ydata_i)),
+                            label="amplitude",
+                        ),
+                        Parameter(
+                            value=100,
+                            bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i),),
+                            label="Length",
+                        ),
+                        label="Exponential decay",
+                    )
+                )
+            if self.log:
+                Models.append(
+                    Model(
+                        lambda x, b, c: b * np.log(x - c),
+                        Parameter(
+                            value=1,
+                            bounds=(-np.nanmax(ydata_i), np.nanmax(ydata_i),),
+                            label="factor",
+                        ),
+                        Parameter(
+                            value=-1,
+                            bounds=(-np.nanmax(xdata_i), np.nanmin(xdata_i),),
+                            label="Length",
+                        ),
+                        label="Logarithmic background",
+                    )
+                )
+
+            if self.double_exp:
+                end = 10000
+                p0 = [ydata_i.max() - ydata_i.min(), 10, 0.5, 5]
+                try:
+                    popt, pcov = curve_fit(
+                        double_exponential, ydata_i[:end], ydata_i[:end], p0=p0,
+                    )
+                except (RuntimeError, TypeError) as e:
+                    verboseprint(e)
+                    popt = p0
+                Models.append(
+                    Model(
+                        double_exponential,
+                        Parameter(
+                            value=popt[0],
+                            bounds=(-abs(popt[0]), abs(popt[0])),
+                            label="Amplitude tot",
+                        ),
+                        Parameter(
+                            value=popt[1], bounds=(0, len(y)), label="Length 1",
+                        ),
+                        Parameter(
+                            value=popt[2],
+                            bounds=(-abs(popt[0]), abs(popt[0])),
+                            label="Amp2/Amp1",
+                        ),
+                        Parameter(
+                            value=popt[2], bounds=(0, len(y)), label="Length 2",
+                        ),
+                        label="Double Exponential",
+                    )
+                )
+            if self.background == 0:
+                ymin_ = (
+                    1.1 * np.nanmin(y)
+                    if np.nanmin(y) < 0
+                    else 0.9 * np.nanmin(y)
+                )
+                ymax_ = (
+                    1.1 * np.nanmax(y)
+                    if np.nanmax(y) > 0
+                    else 0.9 * np.nanmax(y)
+                )
+                Models.append(
+                    Model(
+                        uniform,
+                        Parameter(
+                            value=np.nanmedian(y),
+                            bounds=(ymin_, ymax_),
+                            label="Offset",
+                        ),
+                        label="Background",
+                    )
+                )
+            if self.background == 1:
+                Models.append(
+                    Model(
+                        linear1D,
+                        Parameter(value=a, bounds=boundsa, label="scale"),
+                        Parameter(value=b, bounds=boundsb, label="slope"),
+                        label="Background",
+                    )
+                )
+            # A GARDER
+            #        if self.background==1:
+            #            Models.append(Model(linear1d_centered,
+            #                  Parameter(value=a, bounds=boundsa, label='scale'),
+            #                  Parameter(value=b, bounds=boundsb, label='slope'),
+            #                  Parameter(value=(x.min()+x.max())/2,
+            # bounds=((x.min()+x.max())/2-1e-10,(x.min()+x.max())/2+1e-10), label='center'),
+            # ,uncertainty=1 # bounds=((x.min()+x.max())/2-1,(x.min()+x.max())/2+1)
+            #                  label='Background'))
+            if self.background == 2:
+                Models.append(
+                    Model(
+                        polynomial1D,
+                        Parameter(
+                            value=np.nanmean(y),
+                            bounds=(np.nanmin(y), np.nanmax(y)),
+                            label="scale",
+                        ),
+                        Parameter(value=0, bounds=(-0.5, 0.5), label="slope"),
+                        Parameter(
+                            value=0, bounds=(-5e-5, 5e-5), label="gradient"
+                        ),
+                        label="Background",
+                    )
+                )
+            model = CompositeModel(*Models, label="General fit")
+            curves = []
+            for modeli in Models:
+                curves.append(a)
+            # print(model)
+            # print(Models)
+            # print(model(xsample))
+            (model_curve,) = self.ax.plot(
+                xsample, model(xsample), color="steelblue", label="model"
+            )
+            self.ax.legend(loc="upper right")
+            self.ax.set_xlim((x_inf, x_sup))
+            self.ax.set_ylim((y_inf, y_sup))
+            verboseprint("autogui")
+            verboseprint([model_curve] + curves)
+            gui = AutoGUI(
+                model,
+                [model_curve],
+                bbox=[0.20, 0.07, 0.75, 0.17],
+                slider_options={"color": "steelblue"},
+                data=(xdata_i, ydata_i),
+            )
+            verboseprint("model")
+            self.model = Models
+            verboseprint("gui")
+            self.gui = gui
+
+    class GeneralFitFunction(Demo):
+
+        """Multiple Gaussian Features over a Polynomial Background."""
+
+        def __init__(
+            self,
+            x,
+            y,
+            function,
+            ranges,
+            zdata_i=None,
+            ax=None,
+            plot_="Linear",
+            linewidth=2,
+            marker=None,
+            linestyle="dotted",
+            n=100,
+            names=None,
+        ):
+            """Create synthetic dataset, plots, and AutoGUI."""
+            from dataphile.statistics.regression.modeling import (
+                Parameter,
+                Model,
+                AutoGUI,
+            )
+            from dataphile.statistics.distributions import polynomial1D
+            import matplotlib.pyplot as plt
+
+            super().__init__(
+                polynomial1D,
+                [100, -0.01, -1e-5],
+                (0, 2400),
+                linspace=True,
+                noise=0,
+                samples=2400,
+            )
+            self.xdata = x
+            self.ydata = y
+            self.linestyle = linestyle
+            self.marker = marker
+            self.ranges = ranges
+            self.function = function
+
+            xdata_i = self.xdata
+            ydata_i = self.ydata
+            if ax is None:
+                if (plot_ == "Polar") | (plot_ == "PolarLog"):
+                    figure = plt.figure(figsize=(8, 9))
+                    self.figure = figure
+                    self.ax = figure.add_axes(
+                        [0.10, 0.30, 0.84, 0.66], projection="polar"
+                    )
+                elif plot_ == "Plot3D":
+                    figure = plt.figure(figsize=(8, 9))
+                    self.figure = figure
+                    self.ax = figure.add_axes(
+                        [0.10, 0.30, 0.84, 0.66], projection="3d"
+                    )
+                else:
+                    figure = plt.figure(figsize=(11, 6))
+                    self.figure = figure
+                    self.ax = figure.add_axes([0.10, 0.30, 0.84, 0.66])
+                    self.ax.set_ylabel("y", labelpad=15)
+            else:
+                self.ax = ax
+            if plot_ == "Plot3D":
+                self.ax.scatter3D(
+                    xdata_i,
+                    ydata_i,
+                    zdata_i,
+                    c=zdata_i,
+                    color="black",
+                    marker=marker,
+                    label="data",
+                    lw=linewidth,
+                    alpha=0.8,
+                    cmap="Greens",
+                )
+            elif plot_ == "LinLog":
+                self.ax.set_yscale("log")
+            elif plot_ == "LogLog":
+                self.ax.set_xscale("log")
+                self.ax.set_yscale("log")
+            elif plot_ == "PolarLog":
+                self.ax.set_ylim((1, np.log10(y.max())))
+                self.ax.set_yscale("log")
+
+            else:
                 self.ax.scatter(
                     xdata_i,
                     ydata_i,
@@ -7891,355 +8081,36 @@ if len(sys.argv) > 1:
                     lw=linewidth,
                     alpha=0.8,
                 )
-                if linewidth > 0:
-                    self.ax.plot(
-                        xdata_i,
-                        ydata_i,
-                        linestyle=linestyle,
-                        linewidth=linewidth,
-                    )
-                x_inf, x_sup = self.ax.get_xlim()
-                y_inf, y_sup = self.ax.get_ylim()
-                self.ax.set_ylabel("y", labelpad=15)
-                z = np.polyfit(x, y, deg=1)
-                popt = np.poly1d(z)
-                a = popt.coef[::-1][0]
-                b = popt.coef[::-1][1]
-                if self.background == 2:
-                    c, b, a = np.poly1d(np.polyfit(x, y, deg=2))
-                    fb, fa, fc = 10, 10, 5
-                    if b > 0:
-                        boundsb = (b / fb - 1, fb * b + 1)
-                    else:
-                        boundsb = (fb * b - 1, b / fb + 1)
-                    if a > 0:
-                        boundsa = (a / fa, fa * a)
-                    else:
-                        boundsa = (a * fa, a / fa)
-                    if c > 0:
-                        boundsc = (-1 * fc * c, fc * c)
-                    else:
-                        boundsc = (fc * c, -1 * fc * c)
-                else:
-                    c = 0
-                    fb, fa, fc = 10, 10, 2
-                    if b > 0:
-                        boundsb = (b / fb, fb * b)
-                    else:
-                        boundsb = (fb * b, b / fb)
-                boundsa = (a - (y.max() - y.min()), a + (y.max() - y.min()))
-                boundsb = ((y.min() - a) / x.max(), (y.max() - a) / x.min())
-                if boundsb[1] < boundsb[0]:
-                    boundsb = boundsb[::-1]
-                Models = []
-                background = np.nanmean(
-                    ydata_i[
-                        (ydata_i < np.nanmean(ydata_i) + 1 * np.nanstd(ydata_i))
-                        & (
-                            ydata_i
-                            > np.nanmean(ydata_i) - 1 * np.nanstd(ydata_i)
-                        )
-                    ]
-                )
-                amp = np.nanmax(ydata_i) - background
-                amp2 = np.nanmin(ydata_i) - background
-                ampm = np.nanmax([abs(amp), abs(amp2)])
-                nb_features = np.max(
-                    [self.nb_moffats, self.nb_gaussians, self.nb_voigt1D]
-                )
-                amps = (10 * [amp, amp2, (amp2 + amp) / 2])[:nb_features]
-                x1, x2 = (
-                    xdata_i[np.argmax(ydata_i)],
-                    xdata_i[np.argmin(ydata_i)],
-                )
-                centers = (10 * [x1, x2, (x1 + x2) / 2])[:nb_features]
-                xs, ys = find_maxima(x, y, conv=10, max_=True)
-                xs, ys = (
-                    np.concatenate((xs, xs, xs)),
-                    np.concatenate((ys, ys, ys)),
-                )
-                amps, centers = (
-                    ys[:nb_features] - np.median(y),
-                    xs[:nb_features],
-                )
-                for i, amp, center in zip(
-                    range(self.nb_gaussians), amps, centers
-                ):
-                    Models.append(
-                        Model(
-                            gaussian1D,
-                            Parameter(
-                                value=amps[0],
-                                bounds=(-1.5 * ampm, 1.5 * ampm),
-                                label="Amplitude",
-                            ),
-                            Parameter(
-                                value=center,
-                                bounds=(
-                                    np.nanmin(xdata_i) - 2 * 2.35 * 2,
-                                    np.nanmax(xdata_i) + 2 * 2.35 * 2,
-                                ),
-                                label="Center",
-                            ),
-                            Parameter(
-                                value=np.min([2, np.max(x) / 10]),
-                                bounds=(
-                                    1e-5,
-                                    (np.nanmax(x) - np.nanmin(x)) / 2,
-                                ),
-                                label="Sigma",
-                            ),
-                            label="Gaussian%i" % (i),
-                        )
-                    )
-                for i, amp, center in zip(range(self.nb_moffats), amps, centers):
-                    Models.append(
-                        Model(
-                            moffat_1d,
-                            Parameter(
-                                value=amps[0],
-                                bounds=(-1.5 * ampm, 1.5 * ampm),
-                                label="Amplitude",
-                            ),
-                            Parameter(
-                                value=center,
-                                bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i)),
-                                label="Alpha",
-                            ),
-                            Parameter(
-                                value=np.min([2, np.max(x) / 10]),
-                                bounds=(
-                                    1e-5,
-                                    (np.nanmax(x) - np.nanmin(x)) / 2,
-                                ),
-                                label="Width",
-                            ),
-                            Parameter(
-                                value=center,
-                                bounds=(
-                                    np.nanmin(xdata_i) - 2 * 2.35 * 2,
-                                    np.nanmax(xdata_i) + 2 * 2.35 * 2,
-                                ),
-                                label="Center",
-                            ),
-                            label="Moffat%i" % (i),
-                        )
-                    )
+            if plot_ == "Polar":
+                self.ax.set_rticks(self.ax.get_yticks()[1::2])
 
-                for i, amp, center in zip(range(self.nb_voigt1D), amps, centers):
-                    Models.append(
-                        Model(
-                            voigt1D,
-                            Parameter(
-                                value=amps[0],
-                                bounds=(-1.5 * ampm, 1.5 * ampm),
-                                label="Amplitude",
-                            ),
-                            Parameter(
-                                value=center,
-                                bounds=(
-                                    np.nanmin(xdata_i) - 2 * 2.35 * 2,
-                                    np.nanmax(xdata_i) + 2 * 2.35 * 2,
-                                ),
-                                label="Center",
-                            ),
-                            Parameter(
-                                value=np.min([2, np.max(x) / 10]),
-                                bounds=(
-                                    1e-5,
-                                    (np.nanmax(x) - np.nanmin(x)) / 2,
-                                ),
-                                label="Sigma",
-                            ),
-                            Parameter(
-                                value=np.min([2, np.max(x) / 10]),
-                                bounds=(0, np.nanmax(xdata_i)),
-                                label="Gamma",
-                            ),
-                            label="Voigt%i" % (i),
-                        )
-                    )
-
-                if function is not None:
-                    from pyds9plugin.Macros.Fitting_Functions import functions
-                    from inspect import signature
-
-                    function_ = getattr(functions, function)
-                    names = list(signature(function_).parameters.keys())[1:]
-                    p_ = signature(function_).parameters
-                    params = [
-                        Parameter(
-                            value=np.mean(p_[p].default),
-                            bounds=(p_[p].default[0], p_[p].default[-1]),
-                            label=p,
-                        )
-                        for p in names
-                    ]
-                    Models.append(Model(function_, *params, label=function,))
-
-                    xsample = np.linspace(
-                        xdata_i.min(), xdata_i.max(), len(xdata_i)
-                    )
-                    xsample = np.linspace(
-                        xdata_i.min(), xdata_i.max(), len(xdata_i) * 100
-                    )
-                else:
-                    xsample = np.linspace(
-                        xdata_i.min(), xdata_i.max(), len(xdata_i) * 100
-                    )
-                if self.exp:
-                    Models.append(
-                        Model(
-                            exponential_1d,
-                            Parameter(
-                                value=0,
-                                bounds=(0, 1.5 * np.nanmax(ydata_i)),
-                                label="amplitude",
-                            ),
-                            Parameter(
-                                value=100,
-                                bounds=(np.nanmin(xdata_i), np.nanmax(xdata_i),),
-                                label="Length",
-                            ),
-                            label="Exponential decay",
-                        )
-                    )
-                if self.log:
-                    Models.append(
-                        Model(
-                            lambda x, b, c: b * np.log(x - c),
-                            Parameter(
-                                value=1,
-                                bounds=(
-                                    -np.nanmax(ydata_i),
-                                    np.nanmax(ydata_i),
-                                ),
-                                label="factor",
-                            ),
-                            Parameter(
-                                value=-1,
-                                bounds=(
-                                    -np.nanmax(xdata_i),
-                                    np.nanmin(xdata_i),
-                                ),
-                                label="Length",
-                            ),
-                            label="Logarithmic background",
-                        )
-                    )
-
-                if self.double_exp:
-                    end = 10000
-                    p0 = [ydata_i.max() - ydata_i.min(), 10, 0.5, 5]
-                    try:
-                        popt, pcov = curve_fit(
-                            double_exponential,
-                            ydata_i[:end],
-                            ydata_i[:end],
-                            p0=p0,
-                        )
-                    except (RuntimeError, TypeError) as e:
-                        verboseprint(e)
-                        popt = p0
-                    Models.append(
-                        Model(
-                            double_exponential,
-                            Parameter(
-                                value=popt[0],
-                                bounds=(-abs(popt[0]), abs(popt[0])),
-                                label="Amplitude tot",
-                            ),
-                            Parameter(
-                                value=popt[1],
-                                bounds=(0, len(y)),
-                                label="Length 1",
-                            ),
-                            Parameter(
-                                value=popt[2],
-                                bounds=(-abs(popt[0]), abs(popt[0])),
-                                label="Amp2/Amp1",
-                            ),
-                            Parameter(
-                                value=popt[2],
-                                bounds=(0, len(y)),
-                                label="Length 2",
-                            ),
-                            label="Double Exponential",
-                        )
-                    )
-                if self.background == 0:
-                    ymin_ = (
-                        1.1 * np.nanmin(y)
-                        if np.nanmin(y) < 0
-                        else 0.9 * np.nanmin(y)
-                    )
-                    ymax_ = (
-                        1.1 * np.nanmax(y)
-                        if np.nanmax(y) > 0
-                        else 0.9 * np.nanmax(y)
-                    )
-                    Models.append(
-                        Model(
-                            uniform,
-                            Parameter(
-                                value=np.nanmedian(y),
-                                bounds=(ymin_, ymax_),
-                                label="Offset",
-                            ),
-                            label="Background",
-                        )
-                    )
-                if self.background == 1:
-                    Models.append(
-                        Model(
-                            linear1D,
-                            Parameter(value=a, bounds=boundsa, label="scale"),
-                            Parameter(value=b, bounds=boundsb, label="slope"),
-                            label="Background",
-                        )
-                    )
-                # A GARDER
-                #        if self.background==1:
-                #            Models.append(Model(linear1d_centered,
-                #                  Parameter(value=a, bounds=boundsa, label='scale'),
-                #                  Parameter(value=b, bounds=boundsb, label='slope'),
-                #                  Parameter(value=(x.min()+x.max())/2,
-                # bounds=((x.min()+x.max())/2-1e-10,(x.min()+x.max())/2+1e-10), label='center'),
-                # ,uncertainty=1 # bounds=((x.min()+x.max())/2-1,(x.min()+x.max())/2+1)
-                #                  label='Background'))
-                if self.background == 2:
-                    Models.append(
-                        Model(
-                            polynomial1D,
-                            Parameter(
-                                value=np.nanmean(y),
-                                bounds=(np.nanmin(y), np.nanmax(y)),
-                                label="scale",
-                            ),
-                            Parameter(
-                                value=0, bounds=(-0.5, 0.5), label="slope"
-                            ),
-                            Parameter(
-                                value=0, bounds=(-5e-5, 5e-5), label="gradient"
-                            ),
-                            label="Background",
-                        )
-                    )
-                model = CompositeModel(*Models, label="General fit")
-                curves = []
-                for modeli in Models:
-                    curves.append(a)
-                # print(model)
-                # print(Models)
-                # print(model(xsample))
-                (model_curve,) = self.ax.plot(
-                    xsample, model(xsample), color="steelblue", label="model"
+            if linewidth > 0:
+                self.ax.plot(
+                    xdata_i, ydata_i, linestyle=linestyle, linewidth=linewidth,
                 )
-                self.ax.legend(loc="upper right")
-                self.ax.set_xlim((x_inf, x_sup))
-                self.ax.set_ylim((y_inf, y_sup))
-                verboseprint("autogui")
-                verboseprint([model_curve] + curves)
+            x_inf, x_sup = self.ax.get_xlim()
+            y_inf, y_sup = self.ax.get_ylim()
+            xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i) * n)
+            parameters = []
+            if names is None:
+                names = ["a%i" % (i) for i in range(len(self.ranges))]
+            for i, rangei in enumerate(self.ranges):
+                xmin, xmax = np.array(rangei.split(","), dtype=float)
+                parameters.append(
+                    Parameter(
+                        value=(xmax + xmin) / 2,
+                        bounds=(min(xmin, xmax), max(xmin, xmax)),
+                        label=names[i],
+                    )
+                )
+            model = Model(self.function, *parameters, label="Function")
+            (model_curve,) = self.ax.plot(
+                xsample, model(xsample), color="steelblue", label="model"
+            )
+            self.ax.legend(loc="upper right")
+            self.ax.set_xlim((x_inf, x_sup))
+            self.ax.set_ylim((y_inf, y_sup))
+            try:
                 gui = AutoGUI(
                     model,
                     [model_curve],
@@ -8247,154 +8118,10 @@ if len(sys.argv) > 1:
                     slider_options={"color": "steelblue"},
                     data=(xdata_i, ydata_i),
                 )
-                verboseprint("model")
-                self.model = Models
-                verboseprint("gui")
+                self.model = model
                 self.gui = gui
-
-        class GeneralFitFunction(Demo):
-
-            """Multiple Gaussian Features over a Polynomial Background."""
-
-            def __init__(
-                self,
-                x,
-                y,
-                function,
-                ranges,
-                zdata_i=None,
-                ax=None,
-                plot_="Linear",
-                linewidth=2,
-                marker=None,
-                linestyle="dotted",
-                n=100,
-                names=None,
-            ):
-                """Create synthetic dataset, plots, and AutoGUI."""
-                from dataphile.statistics.regression.modeling import (
-                    Parameter,
-                    Model,
-                    AutoGUI,
-                )
-                from dataphile.statistics.distributions import polynomial1D
-                import matplotlib.pyplot as plt
-
-                super().__init__(
-                    polynomial1D,
-                    [100, -0.01, -1e-5],
-                    (0, 2400),
-                    linspace=True,
-                    noise=0,
-                    samples=2400,
-                )
-                self.xdata = x
-                self.ydata = y
-                self.linestyle = linestyle
-                self.marker = marker
-                self.ranges = ranges
-                self.function = function
-
-                xdata_i = self.xdata
-                ydata_i = self.ydata
-                if ax is None:
-                    if (plot_ == "Polar") | (plot_ == "PolarLog"):
-                        figure = plt.figure(figsize=(8, 9))
-                        self.figure = figure
-                        self.ax = figure.add_axes(
-                            [0.10, 0.30, 0.84, 0.66], projection="polar"
-                        )
-                    elif plot_ == "Plot3D":
-                        figure = plt.figure(figsize=(8, 9))
-                        self.figure = figure
-                        self.ax = figure.add_axes(
-                            [0.10, 0.30, 0.84, 0.66], projection="3d"
-                        )
-                    else:
-                        figure = plt.figure(figsize=(11, 6))
-                        self.figure = figure
-                        self.ax = figure.add_axes([0.10, 0.30, 0.84, 0.66])
-                        self.ax.set_ylabel("y", labelpad=15)
-                else:
-                    self.ax = ax
-                if plot_ == "Plot3D":
-                    self.ax.scatter3D(
-                        xdata_i,
-                        ydata_i,
-                        zdata_i,
-                        c=zdata_i,
-                        color="black",
-                        marker=marker,
-                        label="data",
-                        lw=linewidth,
-                        alpha=0.8,
-                        cmap="Greens",
-                    )
-                elif plot_ == "LinLog":
-                    self.ax.set_yscale("log")
-                elif plot_ == "LogLog":
-                    self.ax.set_xscale("log")
-                    self.ax.set_yscale("log")
-                elif plot_ == "PolarLog":
-                    self.ax.set_ylim((1, np.log10(y.max())))
-                    self.ax.set_yscale("log")
-
-                else:
-                    self.ax.scatter(
-                        xdata_i,
-                        ydata_i,
-                        color="black",
-                        marker=marker,
-                        label="data",
-                        lw=linewidth,
-                        alpha=0.8,
-                    )
-                if plot_ == "Polar":
-                    self.ax.set_rticks(self.ax.get_yticks()[1::2])
-
-                if linewidth > 0:
-                    self.ax.plot(
-                        xdata_i,
-                        ydata_i,
-                        linestyle=linestyle,
-                        linewidth=linewidth,
-                    )
-                x_inf, x_sup = self.ax.get_xlim()
-                y_inf, y_sup = self.ax.get_ylim()
-                xsample = np.linspace(
-                    xdata_i.min(), xdata_i.max(), len(xdata_i) * n
-                )
-                parameters = []
-                if names is None:
-                    names = ["a%i" % (i) for i in range(len(self.ranges))]
-                for i, rangei in enumerate(self.ranges):
-                    xmin, xmax = np.array(rangei.split(","), dtype=float)
-                    parameters.append(
-                        Parameter(
-                            value=(xmax + xmin) / 2,
-                            bounds=(min(xmin, xmax), max(xmin, xmax)),
-                            label=names[i],
-                        )
-                    )
-                model = Model(self.function, *parameters, label="Function")
-                (model_curve,) = self.ax.plot(
-                    xsample, model(xsample), color="steelblue", label="model"
-                )
-                self.ax.legend(loc="upper right")
-                self.ax.set_xlim((x_inf, x_sup))
-                self.ax.set_ylim((y_inf, y_sup))
-                try:
-                    gui = AutoGUI(
-                        model,
-                        [model_curve],
-                        bbox=[0.20, 0.07, 0.75, 0.17],
-                        slider_options={"color": "steelblue"},
-                        data=(xdata_i, ydata_i),
-                    )
-                    self.model = model
-                    self.gui = gui
-                except ZeroDivisionError:
-                    pass
+            except ZeroDivisionError:
+                pass
 
 
 def find_maxima(x, y, conv=10, max_=True):
@@ -8646,7 +8373,7 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
         gui.figure.canvas.draw_idle()
 
     scale.on_clicked(scalefunc)
-    gui.ax.set_title(os.path.basename(get_filename(d)))
+    # gui.ax.set_title(os.path.basename(get_filename(d)))
     plt.show()
     return
 
@@ -9328,8 +9055,8 @@ def throw_apers(image, pix_scale, aper_size, n_aper, seg, type, sub_bkg):
     if sub_bkg:
         image -= np.mean(image)
 
-    y_ran = (np.shape(image)[0] - 1.0 - 0.0) * np.random.random(n_aper) + 0.0
-    x_ran = (np.shape(image)[1] - 1.0 - 0.0) * np.random.random(n_aper) + 0.0
+    y_ran = (np.shape(image)[0] - 1.0 - 0.0) * np.random.random(int(n_aper))
+    x_ran = (np.shape(image)[1] - 1.0 - 0.0) * np.random.random(int(n_aper))
 
     aperture = CircularAperture(np.array([x_ran, y_ran]), r=aper_size / 2)
     var = [
@@ -9358,18 +9085,18 @@ def throw_apers(image, pix_scale, aper_size, n_aper, seg, type, sub_bkg):
 
         aper_volume = aper_size ** 2 * np.pi / (60.0 * 60.0) ** 2
         n_aper_used = len(flux[select])
-        verboseprint(
-            """{0:d} / {1:d} apertures used. {2:3.4f} /
-                        {3:3.4f} (deg2) surface used""".format(
-                n_aper_used,
-                n_aper,
-                aper_volume * float(n_aper_used),
-                np.shape(image)[0]
-                * np.shape(image)[1]
-                * pix_scale ** 2
-                / (60.0 * 60.0) ** 2,
-            )
-        )
+        # verboseprint(
+        #     """{0:d} / {1:d} apertures used. {2:3.4f} /
+        #                 {3:3.4f} (deg2) surface used""".format(
+        #         int(n_aper_used),
+        #         int(n_aper),
+        #         aper_volume * float(n_aper_used),
+        #         np.shape(image)[0]
+        #         * np.shape(image)[1]
+        #         * pix_scale ** 2
+        #         / (60.0 * 60.0) ** 2,
+        #     )
+        # )
     if False:
         np.savetxt(
             "apertures.txt",
@@ -9555,11 +9282,14 @@ def get_depth_image(xpapoint=None, argv=[]):
                 mag_zp = 30
         verboseprint(filename)
         verboseprint("Zero point magnitude =", mag_zp)
+        from astropy.io import fits
+
+        ext = fits_ext(fits.open(filename))
         main_coupon(
             file_in_name=filename,
             file_out_name=None,
-            ext=1,
-            ext_seg=1,
+            ext=ext,
+            ext_seg=ext,
             mag_zp=mag_zp,
             sub=None,
             aper_size=aper_size,
@@ -10308,7 +10038,11 @@ def ds9_swarp(xpapoint=None, argv=[]):
         metavar="",
     )
     parser.add_argument(
-        "-i", "--IMAGEOUT_NAME", help="Name of the output image", metavar="",
+        "-i",
+        "--IMAGEOUT_NAME",
+        default="/tmp/test.fits",
+        help="Name of the output image",
+        metavar="",
     )
     parser.add_argument(
         "-w",
@@ -10327,7 +10061,7 @@ def ds9_swarp(xpapoint=None, argv=[]):
     parser.add_argument(
         "-W",
         "--WEIGHT_IMAGE",
-        default="",
+        default="None",
         help="Name of the input weight image file",
         type=str,
         metavar="",
@@ -10335,6 +10069,7 @@ def ds9_swarp(xpapoint=None, argv=[]):
     parser.add_argument(
         "-c",
         "--COMBINE",
+        default="1",
         help="Combine resampled images ",
         type=str,
         choices=["1", "0"],
@@ -10344,6 +10079,7 @@ def ds9_swarp(xpapoint=None, argv=[]):
         "--COMBINE_TYPE",
         help="Tells SWarp how to combine resampled images",
         type=str,
+        default="MEDIAN",
         choices=[
             "MEDIAN",
             "AVERAGE",
@@ -10384,7 +10120,7 @@ def ds9_swarp(xpapoint=None, argv=[]):
     parser.add_argument(
         "-PT",
         "--PROJECTION_TYPE",
-        default="NATIVE",
+        default="TAN",
         help="Projection system used in output, in standard WCS notation",
         type=str,
         choices=[
@@ -10471,7 +10207,7 @@ def ds9_swarp(xpapoint=None, argv=[]):
     parser.add_argument(
         "-r",
         "--RESAMPLING_TYPE",
-        default="2",
+        default="LANCZOS3",
         help="Image resampling method",
         type=str,
         choices=["LANCZOS3", "NEAREST", "BILINEAR", "LANCZOS2", "LANCZOS4"],
@@ -10588,7 +10324,7 @@ def ds9_swarp(xpapoint=None, argv=[]):
     else:
         os.chdir(os.path.dirname(paths[0]))
         os.system("sleep 0.1")
-        verboseprint(
+        print(
             "swarp %s  -c default.swarp -" % (" ".join(paths))
             + " -".join(
                 [

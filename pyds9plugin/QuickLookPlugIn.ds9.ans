@@ -95,7 +95,7 @@ hmenu 1. Generic Functions
 		Reset Display Parameters Key
 		*
 		bind B
-		DS9Utils -x $xpa_method original_settings   | $text
+		DS9Utils original_settings -x $xpa_method  | $text
 
 		Lock/Unlock Frames (L)
 		*

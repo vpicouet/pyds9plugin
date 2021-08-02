@@ -7,114 +7,138 @@ Created on Mon Dec  7 20:30:33 2020
 """
 import numpy as np
 import os, glob, sys
+
+DS9_BackUp_path = os.environ["HOME"] + "/DS9QuickLookPlugIn"
+os.system("echo 0 > %s" % (DS9_BackUp_path + "/.verbose.txt"))
+os.system("echo 0 > %s" % (DS9_BackUp_path + "/.message.txt"))
+
 from pyds9plugin.DS9Utils import *
 from shutil import copyfile, rmtree
-from  pkg_resources  import resource_filename
+from pyds9 import DS9
+from pkg_resources import resource_filename
 from IPython import get_ipython
+
 ipython = get_ipython()
 
-DS9_BackUp_path = os.environ['HOME'] + '/DS9QuickLookPlugIn'
-test_folder = '/Users/Vincent/Github/pyds9plugin/pyds9plugin/testing'#resource_filename('pyds9plugin', 'testing')
-im  = '/Users/Vincent/Github/pyds9plugin/pyds9plugin/images/stack.fits'#resource_filename('pyds9plugin', 'images/stack.fits')
+DS9_BackUp_path = os.environ["HOME"] + "/DS9QuickLookPlugIn"
+test_folder = "/Users/Vincent/Github/pyds9plugin/pyds9plugin/testing"  # resource_filename('pyds9plugin', 'testing')
+im = "/Users/Vincent/Github/pyds9plugin/pyds9plugin/images/stack.fits"  # resource_filename('pyds9plugin', 'images/stack.fits')
 if os.path.exists(test_folder) is False:
     os.mkdir(test_folder)
-files_folder = test_folder + '/files'
+files_folder = test_folder + "/files"
 if os.path.exists(files_folder) is False:
     os.mkdir(files_folder)
+
+
 def main():
-    d=DS9n()
-    name = d.get('xpa').split('\t')[-1]
-    print('\n    Setup    \n' )
-    os.system('DS9Utils open_file -x %s   -p " %s/stack.fits" -t Slice  -c 0 '%(name,files_folder))
-    # ipython.magic("lprun -u 1e-1  -T /tmp/prun_open.py -s -r -f DS9open -f get DS9open('%s','%s/stack.fits')  "%(name,files_folder))
-    # ipython.magic("lprun -u 1e-1  -T /tmp/prun_get.py -s -r -f d.get  d.get('file')" )
+    d = DS9n()
+    name = d.get("xpa").split("\t")[-1]
+    print("\n    Setup    \n")
 
-    lock(xpapoint=name, argv='-x %s  -f image -c  image -l 1 -l  1 -m 1')
-    os.system('DS9Utils lock -x %s  -f image -c  image -l 0 -l  0 -m 0    '%(name))
-    os.system('DS9Utils lock -x %s  -f wcs  -c   wcs -l 1  -s 1  -m 1    '%(name))
-    os.system('DS9Utils lock -x %s  -f none -c none  -l 1  -m 0  -m 1    '%(name))
+    # open_file(
+    #     argv="-p /Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/stack1*.fits"
+    # )
+    # d.set("frame 5")
+    # d.set('regions command "circle 35 35 20"')
+    # d.set("regions select all")
+    throughfocus(argv="-x %s" % (name))
+    # light_curve(argv="-x %s" % (name))
+    # explore_throughfocus(argv="-x %s -p /Users/Vincent/Desktop/stack_ldac.fits" % (name))
+    # d.set("frame delete all")
+    # open_file(argv="-p /Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/m33_hi.fits")
+    # d.set('regions command "circle 100 100 100"')
+    # d.set("regions select all")
+    # plot_3d(argv="-x %s" % (name))
+    # open_file(argv="-p /Users/Vincent/Desktop/filters_guillaume.jpg -t RGB")
+    # d.set('regions command "circle 35 35 20"')
+    # d.set("regions select all")
+    # plot_area_3d_color(d)
 
-    sys.exit()
-    os.system('DS9Utils %s setup  "Log"  50-99.9  0 cool 0 0 '%(name))
-    d.set('regions command "circle 100 100 20"')
-    d.set('regions select all')
-    os.system('DS9Utils %s setup  "Log"  50-99.9  0 cool 0 0 '%(name))
-    os.system('DS9Utils %s OriginalSettings'%(name))
-    d.set('regions delete all')
-    d.set('regions command "circle 100 100 200"')
-    d.set('regions select all')
-    os.system('DS9Utils %s setup  "Log"  50-99.9  0 cool 0 0 '%(name))
+    # open_file(argv="-p /Users/Vincent/Desktop/stack.fits")
+    # verbose(argv="-x %s" % (name))
+    # LoadDS9QuickLookPlugin()
+    # ds9_psfex(
+    #     argv="-x %s -p %s " % (name, "/Users/Vincent/Desktop/stack_ldac.fits")
+    # )
+    # ds9_stiff(argv="-x %s -p1" % (name, "/Users/Vincent/Desktop/stack.fits"))
+    # cosmology_calculator()
+    # PlotFit1D(np.arange(10), np.arange(10), deg=2)
+    # original_settings(argv="-x %s" % (name))
+    # getregion(d,all=False)
+    # getregion(d,all=False,selected=False)
+    # astrometry_net(argv="-x %s" % (name))
+    # extract_sources(argv="-x %s" % (name))
+    # background_estimation(argv="-x %s" % (name))
+    # stack_images(argv="-x %s -p /Users/Vincent/Documents/shared/pyds9plugin/pyds9plugin/Images/stack18448*.fits" % (name))
+    # #fit_gaussian_2d(argv="-x %s -p 1" % (name))
+    # open_file(argv="-p /Users/Vincent/Desktop/filters_guillaume.jpg")
+    ##astrometry_net(argv="-x %s " % (name))
+    # column_line_correlation(argv="-x %s " % (name))
+    # trim(argv="-x %s " % (name))
+    # fit_ds9_plot(argv="-x %s -o User-defined-interactively -p /Users/Vincent/Github/pyds9plugin/pyds9plugin/testing/test.dat" % (name))
+    # manual_fitting(argv="-x %s -p /Users/Vincent/Github/pyds9plugin/pyds9plugin/testing/test.dat" % (name))
+    # import_table_as_region(argv="-x %s -p /Users/Vincent/Desktop/stack_modified_uint8_uint8_uint8_cat.fits -xy X_IMAGE,Y_IMAGE" % (name))
+    # open_file(argv="-p /Users/Vincent/Nextcloud/LAM/Work/Keynotes/DS9Presentation/image-000025-000034-Zinc-with_dark-161-stack.fits")
+    # d.set('regions delete all')
+    # d.set('regions command "box 1820 982 15 30"')
+    # d.set('regions select all')
+    # center_region(argv="-x %s" % (name))
+    # d.set('regions command "box 1820 982 15 30"')
+    # d.set('regions select all')
+    # fill_regions(argv="-x %s -v 5" % (name))
+    
+    # fit_gaussian_2d
+    # astrometry_net
+    # create_wcs
+    # execute_command
+    # guidance
+    # center_flux_std
+    # apply_query
+    # compute_gain
+    
+    # get_depth_image(argv="-x %s" % (name))
+    # compute_fluctuation(argv="-x %s" % (name))
+    
+    # lock(argv="-x %s  -f image -c  image -l 1 -l  1 -m 1" % (name))
+    # setup(argv="-x %s" % (name))
+    # d.set('regions command "circle 100 100 20"')
+    # d.set("regions select all")
+    # setup(argv="-x %s" % (name))
+    # original_settings(argv="-x %s" % (name))
+    # path = "/Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/*.fits"
+    # create_header_catalog(argv="-x %s -p %s" % (name, path))
+    # print("\n    Header    \n")
+    # print(1)
+    # organize_files(
+    #     argv="-x %s -s %s -a %s -p %s"
+    #     % (
+    #         name,
+    #         "NAXIS>1",
+    #         "Directory,BITPIX",
+    #         "/Users/Vincent/DS9QuickLookPlugIn/HeaderDataBase",
+    #     )
+    # )
+    # convert_image(argv="-x %s -t 8,uint8" % (name))
+    # python_command(argv="-x %s -e ds9+=1" % (name))
+    # ds9_plot(d, path="%s/test.dat" % (test_folder))
+    # fit_ds9_plot(argv="-x %s -g 1" % (name))
+    # d.set("regions delete all")
+    # d.set('regions command "circle 477 472 20"')
+    # d.set("regions select all")
+    # radial_profile(argv="-x %s -d 5" % (name))
+    # aperture_photometry(argv="-x %s" % (name))
+    # fit_gaussian_2d(argv="-x %s" % (name))
+    # plot_3d(argv="-x %s" % (name))
+    # radial_profile(argv="-x %s" % (name))
 
-    print('\n    Header    \n' )
-    os.system('DS9Utils %s CreateHeaderCatalog "%s"  0 - '%(name,  resource_filename('pyds9plugin', 'Images/*.fits')))
-    os.system('DS9Utils %s DS9createSubset %s all Directory,BITPIX "NAXIS>1 & FileSize_Mo>10"  &'%(name,glob.glob('/Users/Vincent/DS9QuickLookPlugIn/HeaderDataBase/*.csv')[0]))
-    os.system('DS9Utils %s AddHeaderField test 1 no_comment "%s/Desktop/*.fits"  '%( os.environ['HOME'], name))
+    # center_region(argv="-x %s" % (name))
+    # run_sextractor(argv="-x %s" % (name))
+    # ds9_swarp(argv="-x %s -p %s" % (name, "/Users/Vincent/Desktop/stack.fits"))
 
-
-    print('\n    Regions    \n' )
-
-
-    os.system('DS9Utils %s DS9Region2Catalog  "%s/test.csv" '%( name, files_folder))
-    d.set('regions delete all')
-    os.system('DS9Utils %s DS9Region2Catalog  "%s/test.csv" '%( name, files_folder))
-    os.system('DS9Utils %s DS9Catalog2Region    "%s/test.csv"  x,y - circle 10 0 "-"  '%( name, files_folder))
-    d.set('regions select all')
-    os.system('DS9Utils %s ReplaceWithNans nan 0 '%(name))
-
-    print('\n    Image Processing     \n' )
-
-    os.system('DS9Utils %s SubstractImage  -  "ds9+=np.random.normal(0,0.5*np.nanstd(ds9),size=ds9.shape)"  0  - 0 '%(name))
-    os.system('DS9Utils %s SubstractImage  -  "ds9+=np.random.normal(0,0.5*np.nanstd(ds9),size=ds9.shape)"  0  "%s/Desktop/stack*.fits" 0 '%( name, os.environ['HOME']))
-
-    DS9Plot(d,path='%s/test.dat'%(test_folder))
-    os.system('DS9Utils %s BackgroundFit1D  x none none 1 1 1 0 none'%(name))
-    d.set('regions delete all')
-    d.set('regions command "circle 477 472 20"')
-    d.set('regions select all')
-    os.system('DS9Utils %s fitsgaussian2D 0 '%(name))
-
-
-    os.system('DS9Utils %s InterpolateNaNs %s '%(name, d.get('file')))
-    d.set('regions delete all')
-    d.set('regions command "box 477 472 100 99"')
-    d.set('regions select all')
-
-    os.system('DS9Utils %s Trimming Image  - '%(name))
-
-
-    print('\n    Other     \n' )
-
-
-    d.set('regions command "circle 50 50 50"')
-    d.set('regions select all')
-    os.system('DS9Utils %s PlotArea3D & '%(name))
-
-
-    print('\n    INSTRUMENTATION AIT     \n' )
-    d.set('regions command "circle 50 50 50"');d.set('regions select all')
-    # os.system('DS9Utils %s radial_profile Maximum 0 0  & '%(name))
-    ipython.magic("lprun -T /tmp/prun_radial_profile.py -s -r -f DS9rp -f DS9plot_rp_convolved -f radial_profile_normalized DS9rp(%s,center_type='Maximum',fibersize=0)  "%(xpapoint))
-
-    d.set('regions command "circle 50 50 50"');d.set('regions select all')
-    os.system('DS9Utils %s radial_profile 2D-Gaussian-fitting 10 0 &  '%(name))
-
-    d.set('regions command "circle 50 50 50"');d.set('regions select all')
-    os.system('DS9Utils %s centering Maximum 0  '%(name))
-    d.set('regions command "circle 50 50 50"');d.set('regions select all')
-    os.system('DS9Utils %s centering 2D-Gaussian-fitting 0  '%(name))
-    d.set('regions command "circle 50 50 50"');d.set('regions select all')
-    os.system('DS9Utils %s centering 2x1D-Gaussian-fitting 0  '%(name))
-    d.set('regions command "circle 50 50 50"');d.set('regions select all')
-    os.system('DS9Utils %s centering Center-of-mass 0  '%(name))
-
-
-
-    print('\n    Astronomical software     \n' )
-    os.system('DS9Utils %s open  "%s/stack.fits" Slice  0 '%( name, files_folder))
-    os.system('DS9Utils %s run_sextractor   NUMBER - - FITS_1.0 sex_vignet.param CCD 10 0 RELATIVE 0.8 2.0 1 gauss_4.0_7x7.conv 64 0.0003 1 1.0 CORRECT NONE 1 - 1 NONE OR 6,12,18 2.5,4.0 2.0,4.0 0.3,0.5,0.9 50000.0 SATURATE 0.0 4.0 GAIN 0 0.8 default.nnw NONE AUTO 0.0 64 3 LOCAL 24 0.0 3000 300000 1024 1 '%(name))
-    print('\n    TEST COMPLETED 100%     \n' )
-    os.system('echo 1 > %s'%(DS9_BackUp_path + '.verbose.txt'))
+    print("\n    TEST COMPLETED 100%     \n")
+    os.system("echo 1 > %s" % (DS9_BackUp_path + ".verbose.txt"))
     return
+
 
 # d.set('plot current add ')#line|bar|scatter
 # d.set('plot load %s %s'%('/Users/Vincent/Github/DS9functions/pyds9plugin/testing/test.dat', 'xy'))
@@ -124,17 +148,23 @@ def main():
 # d.set("plot title x {%s}"%(xlabel))
 # d.set("plot title y {%s}"%(ylabel))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
-        os.system('echo 0 > %s'%(DS9_BackUp_path + '/.verbose.txt'))
-        os.system('echo 0 > %s'%(DS9_BackUp_path + '/.message.txt'))
-        copyfile(im, test_folder + '/files/' + os.path.basename(im))
+        os.system("echo 0 > %s" % (DS9_BackUp_path + "/.verbose.txt"))
+        os.system("echo 0 > %s" % (DS9_BackUp_path + "/.message.txt"))
+        copyfile(im, test_folder + "/files/" + os.path.basename(im))
         a = main()
-        [os.remove(file) for file in glob.glob(os.environ['HOME'] +  '/Github/DS9functions/pyds9plugin/testing/files/*')]
+        [
+            os.remove(file)
+            for file in glob.glob(
+                os.environ["HOME"]
+                + "/Github/DS9functions/pyds9plugin/testing/files/*"
+            )
+        ]
 
     finally:
-        os.system('echo 1 > %s'%(DS9_BackUp_path + '/.verbose.txt'))
-        os.system('echo 1 > %s'%(DS9_BackUp_path + '/.message.txt'))
+        os.system("echo 1 > %s" % (DS9_BackUp_path + "/.verbose.txt"))
+        os.system("echo 1 > %s" % (DS9_BackUp_path + "/.message.txt"))
 
 
 # os.system('DS9Utils %s '%(name))
