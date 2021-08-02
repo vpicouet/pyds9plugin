@@ -37,6 +37,7 @@ def main():
     print("\n    Setup    \n")
 
     d.set("frame delete all")
+    present_plugIn()
     # open_file(
     #     argv="-p /Users/Vincent/Github/pyds9plugin/pyds9plugin/Images/stack1*.fits"
     # )
@@ -56,8 +57,13 @@ def main():
     # d.set('regions command "circle 35 35 20"')
     # d.set("regions select all")
     # plot_area_3d_color(d)
+    open_file(argv="-p /Users/Vincent/Desktop/stack.fits")
+    d.set('regions command "circle 35 35 20"')
+    d.set("regions select all")
+    ds9entry(message="test")
+    get_image()
 
-    # open_file(argv="-p /Users/Vincent/Desktop/stack.fits")
+    # fit_gaussian_2d(argv="-x %s" % (name))
     # verbose(argv="-x %s" % (name))
     # LoadDS9QuickLookPlugin()
     # ds9_psfex(
@@ -75,6 +81,8 @@ def main():
     # throw_apertures(argv="-x %s" % (name))
     # ds9_stiff(argv="-x %s -p1 %s" % (name, "/Users/Vincent/Desktop/stack.fits"))
     # cosmology_calculator(argv="-x %s" % (name))
+    # PlotFit1D(np.arange(10), np.arange(10), deg=2)
+    # PlotFit1D(np.arange(10), np.arange(10), deg='gaus')
     # PlotFit1D(np.arange(10), np.arange(10), deg=2)
     # original_settings(argv="-x %s" % (name))
     # d.set('regions command "circle 35 35 20"')
@@ -127,6 +135,8 @@ def main():
     
     # get_depth_image(argv="-x %s" % (name))
     # compute_fluctuation(argv="-x %s" % (name))
+    # get(d, "bla")
+    # replace_string_in_file("/Users/Vincent/Documents/these.csv", "Match", "MATCH", path2=None)
     
     # lock(argv="-x %s  -f image -c  image -l 1 -l  1 -m 1" % (name))
     # setup(argv="-x %s" % (name))

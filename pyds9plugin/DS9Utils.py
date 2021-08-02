@@ -995,16 +995,17 @@ def PlotFit1D(
     import numpy as np
 
     x, y = np.array(x), np.array(y)
+
     if x is None:
         x = np.arange(len(y))
+
     if sigma is not None:
-        x, y, sigma = (
-            x[np.isfinite(y)],
-            y[np.isfinite(y)],
-            sigma[np.isfinite(y)],
-        )
+        x = x[np.isfinite(y)]
+        y = y[np.isfinite(y)]
+        sigma = sigma[np.isfinite(y)]
     else:
-        x, y = x[np.isfinite(y)], y[np.isfinite(y)]
+        x = x[np.isfinite(y)]
+        y = y[np.isfinite(y)]
 
     x = np.array(x)
     y = np.array(y)
@@ -1616,18 +1617,20 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
     fwhm, center, test = "-", 0, 1
     plot_ = bool(int(args.plot))
     d = DS9n(args.xpapoint)
-    region = getregion(d, selected=True, message=True)  # [0]
+    region = getregion(d, selected=True, message=True, quick=True)  # [0]
     if bool(int(test)):
         plot_ = True
         image = d.get_pyfits()[0].data
         try:
+            # print(region)
             x_inf, x_sup, y_inf, y_sup = lims_from_region(None, coords=region)
+            # print(x_inf, x_sup, y_inf, y_sup)
         except Exception:
             raise_create_region(d)
             sys.exit()
         image = image[y_inf:y_sup, x_inf:x_sup]
-        print(image)
-        print(x_inf, x_sup, y_inf, y_sup)
+        # print(image)
+        # print(x_inf, x_sup, y_inf, y_sup)
         while np.isfinite(image).all() == False:  # keep == since array
             kernel = Gaussian2DKernel(x_stddev=2, y_stddev=2)
             image = interpolate_replace_nans(image, kernel)
@@ -2144,7 +2147,7 @@ def original_settings(xpapoint=None, argv=[]):
     return d
 
 
-def ds9entry(xpapoint, message, quit_=False):
+def ds9entry(xpapoint=None, message="", quit_=False):
     """Opens DS9 native entry dialog box
     """
     d = DS9n(xpapoint)
@@ -3440,7 +3443,7 @@ def ds9_plot_radial_profile(
     return d_
 
 
-def get_image(xpapoint):
+def get_image(xpapoint=None):
     """Get image encircled by a region in DS9.
     """
     import numpy as np
@@ -3638,211 +3641,6 @@ def plot_area_3d_color(d):
     )
     return blue, red
 
-
-#
-# def analyze_fwhm(xpapoint=None, argv=[]):
-#     """Analyze PSF through field not optimal
-#     """
-#     from scipy.optimize import curve_fit
-#     import numpy as np
-#     from pyvista import Plotter, StructuredGrid, PolyData, set_plot_theme
-#     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
-#
-#     parser = create_parser(get_name_doc())
-#     args_ = parser.parse_args_modif(argv)
-#
-#     fwhm = 0
-#     center = 0
-#     test = 0  # sys.argv[-3:]
-#     d = DS9n(args_.xpapoint)
-#     region = getregion(d, selected=True, message=True)
-#
-#     x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
-#     data = d.get_pyfits()[0].data
-#     images = [
-#         data[y_inf:y_sup, x_inf:x_sup]
-#         - np.nanpercentile(data[y_inf:y_sup, x_inf:x_sup], 30)
-#     ]
-#     fluxes = []
-#     image = (
-#         images[0].shape[0] * (images[0] - np.nanmin(images[0])) / images[0].ptp()
-#     )
-#     while np.isfinite(image).all() == False:
-#         kernel = Gaussian2DKernel(x_stddev=2, y_stddev=2)
-#         image = interpolate_replace_nans(image, kernel)
-#
-#     lx, ly = image.shape
-#     lx, ly = ly, lx
-#     x = np.linspace(0, lx - 1, lx)
-#     y = np.linspace(0, ly - 1, ly)
-#     x, y = np.meshgrid(x, y)
-#
-#     xo, yo = (
-#         np.where(image == np.nanmax(image))[1][0],
-#         np.where(image == np.nanmax(image))[0][0],
-#     )
-#     param = (
-#         np.nanmax(image),
-#         int(xo),
-#         int(yo),
-#         2,
-#         2,
-#         np.percentile(image, 15),
-#     )
-#     bounds = (
-#         [-np.inf, xo - 10, yo - 10, 0.5, 0.5, -np.inf],
-#         [np.inf, xo + 10, yo + 10, 10, 10, np.inf],
-#     )  # (-np.inf, np.inf)#
-#     # verboseprint("bounds = %s" % (bounds))
-#     # verboseprint("\nParam = %s" % (param))
-#     try:
-#         popt, pcov = curve_fit(gaussian_2dim, (x, y), image.flat, param)
-#     except RuntimeError as e:
-#         logger.warning(e)
-#         popt = [0, 0, 0, 0, 0, 0]
-#     else:
-#         verboseprint("\npopt = %s" % (popt))
-#     fluxes.append(2 * np.pi * popt[3] * popt[4] * popt[0])
-#     z = gaussian_2dim((x, y), *popt).reshape(x.shape)
-#     xx, yy = np.indices(image.shape)
-#     set_plot_theme("document")
-#     p = Plotter(
-#         notebook=False,
-#         window_size=[1500, 1500],
-#         line_smoothing=True,
-#         point_smoothing=True,
-#         polygon_smoothing=True,
-#         splitting_position=None,
-#         title="3D plot, FLUX = %0.1f" % (fluxes[0])
-#         + "amp = %0.3f, sigx = %0.3f, sigy = %0.3f, angle = %id "
-#         % (popt[0], popt[3], popt[4], (180 * popt[5] / np.pi) % 180),
-#     )
-#
-#     fit = StructuredGrid()
-#     data_mesh = StructuredGrid()
-#     data_mesh.points = PolyData(
-#         np.c_[
-#             xx.reshape(-1),
-#             yy.reshape(-1),
-#             (image - np.nanmin(image)).reshape(-1),
-#         ]
-#     ).points
-#     data_mesh["Intensity"] = image.ravel()
-#     data_mesh.dimensions = [z.shape[1], z.shape[0], 1]
-#
-#     points = np.c_[
-#         xx.reshape(-1), yy.reshape(-1), (z - np.nanmin(z)).reshape(-1)
-#     ]
-#     data_points = PolyData(points)
-#     fit.points = data_points.points
-#     fit["z"] = z.ravel()
-#     fit.dimensions = [image.shape[1], image.shape[0], 1]
-#     p2 = p.add_mesh(
-#         data_mesh,
-#         opacity=1 - 0.7,
-#         nan_opacity=0,
-#         use_transparency=False,
-#         flip_scalars=True,
-#         scalar_bar_args={"title": "Value"},
-#         show_scalar_bar=False,
-#     )
-#     p1 = p.add_mesh(
-#         fit,
-#         cmap="Greys_r",
-#         scalars=image.ravel() + z.ravel(),
-#         opacity=0.7,
-#         nan_opacity=0,
-#         use_transparency=False,
-#         name="3D plot, FLUX = %0.1f" % (fluxes[0]),
-#         flip_scalars=True,
-#         scalar_bar_args={"title": "Value"},
-#         show_scalar_bar=False,
-#     )
-#     global args
-#     args = popt
-#
-#     def update_text(text):
-#         p.add_text(text, name="mylabel", position=(70, 10))
-#
-#     def callback2(value):
-#         args[1] = value
-#         points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
-#         p.update_coordinates(points, mesh=fit)
-#         p.update_scalars(points[:, -1] + image.ravel(), render=False)
-#         return
-#
-#     def callback3(value):
-#         args[2] = value
-#         points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
-#         p.update_coordinates(points, mesh=fit)
-#         p.update_scalars(points[:, -1] + image.ravel(), render=False)
-#         return
-#
-#     def callback(value):
-#         args = globals()["args"]
-#         print("ok")
-#         print("value", value)
-#         if value is True:
-#             verboseprint(param)
-#             args, cov = curve_fit(gaussian_2dim, (x, y), image.flat, p0=args)
-#         else:
-#             args, cov = curve_fit(gaussian_2dim, (x, y), image.flat, p0=args)
-#
-#         points[:, -1] = gaussian_2dim((x, y), *args).reshape(x.shape).reshape(-1)
-#         p.update_coordinates(points, mesh=fit)
-#         update_text("Gaussian fit: FWHMs = %0.1f, %0.1f" % (args[3], args[4]))
-#         return
-#
-#     def opcacity(value):
-#         p1.GetProperty().SetOpacity(value)
-#         p2.GetProperty().SetOpacity(1 - value)
-#         return
-#
-#     p.add_slider_widget(
-#         opcacity,
-#         rng=[0, 1],
-#         value=0.7,
-#         title="Transparency ratio",
-#         color=None,
-#         pass_widget=False,
-#         event_type="always",
-#         style=None,
-#         pointa=(0.2, 0.1),
-#         pointb=(0.9, 0.1),
-#     )  # ,event_type='always')
-#     p.add_slider_widget(
-#         callback2,
-#         rng=[0, xx.shape[0]],
-#         value=param[1],
-#         title="x",
-#         color=None,
-#         pass_widget=False,
-#         event_type="always",
-#         style=None,
-#         pointa=(0.1, 0.1),
-#         pointb=(0.1, 0.9),
-#     )
-#     p.add_slider_widget(
-#         callback3,
-#         rng=[0, xx.shape[1]],
-#         value=param[2],
-#         title="y",
-#         color=None,
-#         pass_widget=False,
-#         event_type="always",
-#         style=None,
-#         pointa=(0.15, 0.93),
-#         pointb=(0.9, 0.93),
-#     )
-#
-#     p.view_xy()  # [1,0,0]
-#     p.add_checkbox_button_widget(
-#         callback
-#     )  # ,position=(200,10))#,position='upper_left')
-#     p.add_text("Gaussian fit", name="mylabel", position=(70, 10))
-#     p.clear_box_widgets()
-#     p.show()
-#     return
 
 
 def plot_3d(xpapoint=None, color=False, argv=[]):
@@ -5175,18 +4973,20 @@ def lims_from_region(region=None, coords=None, dtype=int):
     import numpy as np
 
     if coords is not None:
+        # print(coords, coords[0][:3])
         if len(coords) == 1:
             if len(coords[0]) > 3:
                 xc, yc, w, h = coords[0][:4]
             else:
                 xc, yc, w = coords[0][:3]
-                h, w = 2 * coords[0][-1], 2 * coords[0][-1]
+                h = w  # = 2 * coords[0][-1], 2 * coords[0][-1]
         else:
             if len(coords) > 3:
                 xc, yc, w, h = coords[:4]
             else:
                 xc, yc, w = coords[:3]
                 h, w = 2 * coords[-1], 2 * coords[-1]
+        print(xc, yc, w, h)
     else:
         if hasattr(region, "xc"):
             if hasattr(region, "h"):
@@ -5242,7 +5042,6 @@ def lims_from_region(region=None, coords=None, dtype=int):
     # except AttributeError as e:
     #     verboseprint(e)
     #     pass
-
     if dtype == float:
         return (
             np.max([0, xc - w / 2]),
@@ -13112,7 +12911,7 @@ def main():
         "throw_apertures": throw_apertures,
         "convert_image": convert_image,
         "manual_fitting": manual_fitting,
-        "compute_gain": compute_gain,
+        # "compute_gain": compute_gain,
         "LoadDS9QuickLookPlugin": LoadDS9QuickLookPlugin,
     }
     dict_function_ait = {
