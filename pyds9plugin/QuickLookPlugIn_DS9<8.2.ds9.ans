@@ -163,6 +163,10 @@ hmenu 1. Generic Functions
 
 
 
+	Open Image (O)
+	*
+	menu
+	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
 
 	Open Image Key

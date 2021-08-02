@@ -4524,9 +4524,7 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
     return paths
 
 
-def stack_images(
-    xpapoint=None, dtype=float, std=False, Type=None, clipping=None, argv=[]
-):
+def stack_images(xpapoint=None, std=False, clipping=None, argv=[]):
     """Stack same size images
     """
     import numpy as np
@@ -4972,7 +4970,6 @@ def lims_from_region(region=None, coords=None, dtype=int):
     import numpy as np
 
     if coords is not None:
-        # print(coords, coords[0][:3])
         if len(coords) == 1:
             if len(coords[0]) > 3:
                 xc, yc, w, h = coords[0][:4]
@@ -4985,7 +4982,6 @@ def lims_from_region(region=None, coords=None, dtype=int):
             else:
                 xc, yc, w = coords[:3]
                 h, w = 2 * coords[-1], 2 * coords[-1]
-        print(xc, yc, w, h)
     else:
         if hasattr(region, "xc"):
             if hasattr(region, "h"):
@@ -7094,8 +7090,7 @@ def gaussian_2dim(xy, amplitude, xo, yo, sigma_x, sigma_y, angle=0, offset=0):
 
 
 functions = ["interactive_plotter", "Function", "fit_ds9_plot"]
-print(sys.argv)
-if bool(set(functions) & set(sys.argv)) | len(sys.argv) <= 2:
+if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
 
     from dataphile.demos.auto_gui import Demo
     import numpy as np
@@ -11798,8 +11793,8 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
                                 Open Image (O)
               Generic functions -> Setups -> Open Image [or O]
 ********************************************************************************
-%i/%i - You can use regular expression to open several files! Copy this path:
-   %s
+%i/%i - You can use regular expression to open several files bit hitting Shift+O
+ Copy this path: %s
 %i/%i - Hit [Next] to run the function"""
         % (
             i,
@@ -11942,7 +11937,7 @@ def image_processing_tutorial(xpapoint=None, i=0, n=1):
                           Region->Shape->Projection to run this function.
                           Hit n when it is done.""",
         )
-    wait_for_n(xpapoint)
+        wait_for_n(xpapoint)
     verboseprint(
         """%i/%i - Choose the background and the number of gaussians you want
          to fit the data with.
@@ -12133,6 +12128,7 @@ region after creating it and hit n""",
         )
     if a:
         d.set("frame delete ; file " + os.path.join(reg, "m33_hi.fits"))
+        d.set('scale 99.5')
         wait_for_n(xpapoint)
         while getregion(d, selected=True) is None:
             message(
@@ -12308,19 +12304,14 @@ Next Button (or hit N on the  DS9 window) so that you go to the next function.
         verbose="1",
     )
     wait_for_n(xpapoint)
-
-    d.set(
-        "frame new ; tile no ; file %s ; zoom to fit"
-        % (
-            os.path.join(
-                resource_filename("pyds9plugin", "Images"), "stack.fits"
-            )
-        )
-    )
+    im = os.path.join(resource_filename("pyds9plugin", "Images"), "stack.fits")
+    d.set("frame new ; tile no ; file %s ; zoom to fit" % (im))
     i = 1
     if "1" in tutorial_number:
         generic_tools_tutorial(xpapoint, i=i, n=13)
     if "2" in tutorial_number:
+        if "1" in tutorial_number:
+            d.set("frame new ; tile no ; file %s ; zoom to fit" % (im))
         photometric_analysis_tutorial(xpapoint, i=i, n=13)
     if "3" in tutorial_number:
         imag_quality_assesment(xpapoint, i=i, n=12)
@@ -12843,7 +12834,6 @@ fk5
             region = region[:: int(region.shape[0] / 50)]
         if region.shape[0] > 99:
             region = region[:: int(region.shape[0] / 50)]
-            print(region.shape[0])
         new_line = (
             "polygon("
             + ",".join(
