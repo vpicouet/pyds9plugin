@@ -1061,6 +1061,8 @@ def PlotFit1D(
             popt = np.poly1d(out.beta)
             law = np.poly1d(out.beta)
         zp = popt(xp)
+        if P0 is not None:
+            z0 = np.poly1d(P0)(xp)
         zz = popt(x)
         degs = [" %0.2f * x^%i" % (a, i) for i, a in enumerate(popt.coef[::-1])]
         # name = "Fit: " + "+".join(degs) + ", R=%0.2E" % (Decimal(res[0]))
@@ -1095,6 +1097,8 @@ def PlotFit1D(
             P0 = None
         elif callable(deg):
             law = deg
+        if P0 is not None:
+            z0 = law(xp, *P0)
 
         if interactive:
             print("Interactive Fit")
@@ -1230,10 +1234,12 @@ def PlotFit1D(
                 labelbottom=False,
             )
             ax2.set_ylabel("Error")
-            line = ax1.plot(xp, zp, **kwargs)  # ls, label=name, c=c)
-            ax2.plot(x, y - zz, fmt, **kwargs)  # label=name, c=c)
+            line = ax1.plot(xp, zp, **kwargs)
+            if P0 is not None:
+                ax1.plot(xp, z0, ":")
+            ax2.plot(x, y - zz, fmt, **kwargs)
             ax2.set_xlim(ax1.get_xlim())
-            ax2.plot([-1e100, 1e100], [0, 0], **kwargs)  # ls, c=c)
+            ax2.plot([-1e100, 1e100], [0, 0], **kwargs)
             ax1.grid(linestyle="dotted")
             ax2.grid(linestyle="dotted")
             ax1.legend()
