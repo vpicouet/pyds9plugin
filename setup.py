@@ -24,6 +24,7 @@ requires = [
     "argparse",
     "PyQt5",
     "dataphile",
+    "sep",
 ]
 
 entry_points = {}
