@@ -5,11 +5,9 @@ build/
 pyds9plugin/old_to_delete
 __pycache__
 
-pyds9plugin/images/*.png
-pyds9plugin/images/*.xml
+pyds9plugin/Images/*.png
+pyds9plugin/Images/*.xml
 pyds9plugin/test/*
-pyds9plugin/doc/ref/old_high_quality/
-
 pyds9plugin.egg-info/
 
 pyds9plugin/Images/*.reg
@@ -17,75 +15,33 @@ pyds9plugin/Images/*.csv
 
 pyds9plugin/Images/stack_big.fits
 pyds9plugin/Images/*modified*
-
-pyds9plugin/Images/m33_hi2.fits
-pyds9plugin/Images/HorseHead.fits
-
-pyds9plugin/Images/G_Trimm.fits
+pyds9plugin/Images/m33_hi*.fits
 pyds9plugin/Images/*modified*.fits
-
-pyds9plugin/doc/ref/old_only_ok/
+pyds9plugin/Images/stack_cat.fits
+pyds9plugin/Images/stack18446197_cat.fits
 
 pyds9plugin/.remote-sync.json
-
 pyds9plugin/Images/stack copie.fits
-
-pyds9plugin/command_line.mov
-
-pyds9plugin/parameters/
-
-*.mov
-
-run
-
-copy_from_svn.sh
-
 pyds9plugin/__init__.py
-
 pyds9plugin/__init__.pyc
 
 pyds9plugin/DS9Utils_.cpython-36m-darwin.so
-
 pyds9plugin/config/verbose.npy
-
-pyds9plugin/MaxiMask-1.1/old/
-
-pyds9plugin/doc/ref/old/
-
 setup_cython.py
-
-pyds9plugin/Images/stack_cat.fits
-
-pyds9plugin/Images/stack18446197_cat.fits
-
-*.xsl
-
-pyds9plugin/Macros/Plot_filters.py
-
-.coverage
-
-*.dat
-
-sex.xml
-
-htmlcov/
-
-pyds9plugin/testing/profiles/
-
-pyds9plugin/testing/files/
-
-
-pyds9plugin/Macros/Create_contour_regions.oy
-
-pyds9plugin/Macros/EMCCD.py
-
-report/*
-!*/coverage.xml
-
-pyds9plugin/Macros/Fitting_Functions/EMCCD.py
-
 pyds9plugin/DS9Utils.c
 
-pyds9plugin/photometry.py
 
-*.gif
+*.xsl
+pyds9plugin/Macros/Plot_filters.py
+.coverage
+*.dat
+sex.xml
+htmlcov/
+pyds9plugin/testing/profiles/
+pyds9plugin/testing/files/
+pyds9plugin/Macros/Create_contour_regions.oy
+pyds9plugin/Macros/EMCCD.py
+report/*
+!*/coverage.xml
+pyds9plugin/Macros/Fitting_Functions/EMCCD.py
+pyds9plugin/photometry.py
