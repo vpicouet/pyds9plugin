@@ -11,9 +11,8 @@ hmenu Quick Look Plugin
 	Quick Look Plugin Help
 	*
 	web
-	#file:$env(DS9Function)
-	file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-	#file:/Users/Vincent/Github/DS9functions/DS9FireBall/doc/ref/index.html
+	https://vpicouet.github.io/pyds9plugin-doc/
+#	file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
 
 
 	Give it a go !

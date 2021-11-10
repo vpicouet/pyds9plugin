@@ -9605,7 +9605,7 @@ def run_sex(path, DETECTION_IMAGE, param_dict):
     param_dict["CHECKIMAGE_NAME"] = cat_path + "_check_%s.fits" % (
         param_dict["CHECKIMAGE_TYPE"]
     )
-    if which("sex") is not None:  # None
+    if which("sex") is None:  # None
         command = "Running sep"
         run_sep(path, DETECTION_IMAGE, param_dict)
         return 0
