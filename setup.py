@@ -35,6 +35,7 @@ entry_points["console_scripts"] = ["DS9Utils = pyds9plugin.DS9Utils:main"]
 data = {
     "pyds9plugin": [
         "pyds9plugin/QuickLookPlugIn.ds9.ans",
+        "pyds9plugin/*",#?test
         "Macros/*",
         "Macros/Macros_Header_catalog/*",
         "Images/stack????????.fits",
@@ -108,7 +109,7 @@ def setup_package():
         entry_points=entry_points,
         author="Vincent Picouet",
         maintainer="Vincent Picouet",
-        author_email="vincent.picouet@lam.fr",
+        author_email="vincent@picouet.fr",
         description="DS9 Quick-Look plug-in",
     )
     return
