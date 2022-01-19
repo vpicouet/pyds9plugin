@@ -40,7 +40,9 @@ The fact that you are presently reading this means that you have had
 knowledge of the CeCILL-B license and that you accept its terms.
 """
  
-
+from pyds9plugin.DS9Utils import verboseprint
+import numpy as np
+from astropy.table import Table
 
 def AddFieldAftermatching(FinalCat=None, ColumnCat=None, path1=None, path2=None, radec1=["RA", "DEC"], radec2=["RA", "DEC"], distance=0.5, field="Z_ML", new_field=None, query=None):
     """
@@ -62,10 +64,10 @@ def AddFieldAftermatching(FinalCat=None, ColumnCat=None, path1=None, path2=None,
     verboseprint("cat 1 : %i lines" % (len(FinalCat)))
     verboseprint("cat 2 : %i lines" % (len(ColumnCat)))
     # print(ColumnCat['ZFLAG'])
-    print(ColumnCat)
+    verboseprint(ColumnCat)
     if query is not None:
         ColumnCat = apply_query(cat=ColumnCat, query=query, path=None, new_path=None, delete=True)
-        print(ColumnCat)
+        verboseprint(ColumnCat)
         mask = np.isfinite(ColumnCat[radec2[0]]) & np.isfinite(ColumnCat[radec2[1]])
         ColumnCat = ColumnCat[mask]
     # print(ColumnCat['ZFLAG'])
@@ -80,11 +82,11 @@ def AddFieldAftermatching(FinalCat=None, ColumnCat=None, path1=None, path2=None,
         except Exception:
             catalog = SkyCoord(ra=FinalCat[radec1[0]], dec=FinalCat[radec1[1]])
         #        idx, d2d, d3d = catalog.match_to_catalog_sky(c[mask])
-        print(catalog)
-        print(c)
+        verboseprint(catalog)
+        verboseprint(c)
         idx, d2d, d3d = catalog.match_to_catalog_sky(c)
         mask = 3600 * np.array(d2d) < distance
-        print("Number of matches < %0.2f arcsec :  %i " % (distance, mask.sum()))
+        verboseprint("Number of matches < %0.2f arcsec :  %i " % (distance, mask.sum()))
 
     elif len(radec1) == 1:
         import pandas as pd
@@ -105,13 +107,13 @@ def AddFieldAftermatching(FinalCat=None, ColumnCat=None, path1=None, path2=None,
         new_field = field
     idx_ = idx[mask]
     for fieldi, new_field in zip(field, new_field):
-        print("Adding field " + fieldi + " " + new_field)
+        verboseprint("Adding field " + fieldi + " " + new_field)
         if new_field not in FinalCat.colnames:
             if type(ColumnCat[fieldi][0])==np.ndarray:
                 FinalCat[new_field] = np.ones((len(FinalCat),len(ColumnCat[fieldi][0])))*-99.00
             else:
                 FinalCat[new_field] = -99.00
-        print(FinalCat[new_field])
+        verboseprint(FinalCat[new_field])
         FinalCat[new_field][mask] = ColumnCat[fieldi][idx_]
         # verboseprint(FinalCat[new_field])
     return FinalCat
