@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 
 requires = [
-    "numpy >=1.8",  #'PyQt5','Pillow',
+    "numpy >=1.8",  # 'PyQt5','Pillow',
     "scipy >=0.14",
     "matplotlib>=3.1.1",
     "astropy >=1.3",
@@ -116,4 +116,4 @@ def setup_package():
 
 if __name__ == "__main__":
     setup_package()
-    # print("\033[32mPackage installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.\x1b[0m")
+    print("\033[32mPackage installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.\x1b[0m")

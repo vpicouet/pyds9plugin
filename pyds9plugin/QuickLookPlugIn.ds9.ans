@@ -35,6 +35,11 @@ hmenu Quick Look Plugin
 	DS9Utils verbose -x $xpa_method
 
 
+	Import Regions From Catalog
+ 	*
+ 	bind @
+ 	DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); -p "$path"  -xy "$fields" -n "$name" -f "$form" -r $size -w $wcs -s "$Selection" | $text
+
 
 endhmenu
 
@@ -136,15 +141,13 @@ hmenu 1. Generic Functions
 	endhmenu
 
 
+
+
 	# hmenu Regions
 	#
 	#
 	#
-	# 	Import Regions From Catalog
-	# 	*
-	# 	menu
-	# 	DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); -p "$path"  -xy "$fields" -n "$name" -f "$form" -r $size -w $wcs -s "$Selection" | $text
-	#
+
 	#
 	# 	Export DS9 Regions To Catalog
 	# 	*

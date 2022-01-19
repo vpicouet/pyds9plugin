@@ -187,7 +187,7 @@ def PlotSpectraFilters(xpapoint=None, argv=[]):
     mags = []
     filters = []
     rax = plt.axes([0.0, -0.01, 0.10, 0.15], facecolor="None")
-    radio = RadioButtons(rax, ("Star", "COSMOS", "Dale", "QSO", "COUPON"))
+    radio = RadioButtons(rax, ("Star", "COSMOS", "Dale", "QSO", "COUPON","UV-to-FIR"))
     redshift_ = Slider(
         figure=fig,
         location=[0.1, 0.05, 0.8, 0.03],
@@ -246,20 +246,22 @@ def PlotSpectraFilters(xpapoint=None, argv=[]):
         plt.draw()
         d["z"] = val
         return
-
+    i=0
+    # def number(i):
     def hzfunc(label):
         if label == "Dale":
             filename = random.choice(glob.glob(path_seds + "/DALE/*.sed"))
         if label == "COSMOS":
-            filename = random.choice(
-                glob.glob(path_seds + "/COSMOS_MODIF/*.sed")
-            )
+            filename = random.choice(glob.glob(path_seds + "/COSMOS_MODIF/*.sed"))
+            # filename = glob.glob(path_seds + "/COSMOS_MODIF/*.sed")[i]
         if label == "QSO":
             filename = random.choice(glob.glob(path_seds + "/SALVATO2015/*.sed"))
         if label == "Star":
             filename = random.choice(glob.glob(path_seds + "/PICKLES/*.sed"))
         if label == "COUPON":
             filename = random.choice(glob.glob(path_seds + "/COUPON2015/*.out"))
+        if label == "UV-to-FIR":
+            filename = random.choice(glob.glob(path_seds + "/UV-to-FIR/*.txt"))
         tab = Table.read(filename, format="ascii")
         lam = m * tab["col1"]
         spectrum = fnu(
@@ -286,10 +288,12 @@ def PlotSpectraFilters(xpapoint=None, argv=[]):
                 FieldInterp(wavelength / (1 + d["z"])).dot(filter_) / size
             )
         plt.draw()
-        return
-
+        # i+=1
+        return 
+        # return hzfunc
     radio.on_clicked(hzfunc)
-    redshift_.on_changed(update)
+    # radio.on_clicked(number(i=i))
+    i=redshift_.on_changed(update)
     # ax1.set_xlim(3000, 24000)
     ax2.legend(loc="upper right")
     ax2.set_ylim(0, 1.06)
