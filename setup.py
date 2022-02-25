@@ -114,7 +114,6 @@ def setup_package():
     )
     return
 
-
 if __name__ == "__main__":
     setup_package()
     print("\033[32mPackage installed. \nRun 'DS9Utils' to  see the different functions and 'DS9Utils LoadDS9QuickLookPlugin' to load the analysis file in DS9! \nThen open DS9 and use the different functions.\x1b[0m")

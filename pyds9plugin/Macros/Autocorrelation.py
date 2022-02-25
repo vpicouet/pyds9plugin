@@ -1,19 +1,37 @@
 from scipy import signal  # from scipy import misc
+region = getregion(d, quick=True,message=False,selected=True)
+if region is not None:
+    Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
+    area = [Yinf, Ysup, Xinf, Xsup]
+else:
+    area = [0, -1, 0, -1]
+
+ds9 = ds9[area[0] : area[1], area[2] : area[3]]
+
 image1 = np.copy(ds9 - ds9.mean()).astype('float64')
-image2 = np.copy(image - image.mean()).astype('float64')
-Type = "2d-xy"
-#Type = "x"
+image2 = np.copy(ds9 - ds9.mean()).astype('float64')
+
+image1 = np.copy(ds9 - ds9.min()).astype('float64')/100
+image2 = np.copy(ds9 - ds9.min()).astype('float64')/100
+
+# Type = "2d-xy"
+Type = "x"
 # Type = "y"
-if Type == "2d-xy":
+# Type="fft"
+if Type.lower() == "2d-xy":
     ds9 = signal.correlate2d(image1,image2,boundary='symm',mode='same')
-elif Type == "x":
+elif Type.lower() == "x":
     ds9 = np.zeros(image1.shape)
     for i in range(image1.shape[0]):
         ds9[i, :] = signal.correlate(image1[i, :], image2[i, :], mode="same")  # / 128
-elif Type == "y":
+elif Type.lower() == "y":
     ds9 = np.zeros(image1.shape)
     for i in range(image1.shape[1]):
         ds9[:, i] = signal.correlate(image1[:, i], image2[:, i], mode="same")  # / 128
+elif Type.lower() == "fft":
+    # ds9 = np.abs(fftpack.fftshift(fftpack.fft2(ds9)))**2
+    ds9 = np.fft.irfft2(np.fft.rfft2(ds9) * np.conj(np.fft.rfft2(ds9)))
+
 #ds9=correlate2d(image.astype('float64'),image,boundary='symm',mode='same')
 
 

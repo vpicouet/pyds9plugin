@@ -1,7 +1,8 @@
+# from pyds9plugin.DS9Utils import  lims_from_region
 DS9_BackUp_path = os.environ["HOME"] + "/DS9QuickLookPlugIn/"
 region = getregion(d, quick=True,message=False,selected=True)
 if region is not None:
-    Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region)
+    Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
     area = [Yinf, Ysup, Xinf, Xsup]
 else:
     area = [0, -1, 0, -1]
@@ -34,7 +35,7 @@ commands.append("plot axis x grid no ")
 commands.append("plot axis y grid no ")
 commands.append("plot title y 'Lines' ")
 commands.append("plot load %s/CSVs/1.dat xy  " % (DS9_BackUp_path))
-commands.append("plot add graph ")
+commands.append("plot add graph bar")
 commands.append("plot axis x grid no")
 commands.append("plot axis y grid no ")
 commands.append("plot load %s/CSVs/3.dat xy  " % (DS9_BackUp_path))
@@ -45,7 +46,7 @@ commands.append("plot title y 'Columns' ")
 commands.append("plot axis x grid no ")
 commands.append("plot axis y grid no ")
 commands.append("plot title x 'Column/Line average difference' ")
-commands.append("plot add graph ")
+commands.append("plot add graph bar")
 commands.append("plot load %s/CSVs/4.dat xy " % (DS9_BackUp_path))
 commands.append("plot title x 'Pixel value difference' ")
 commands.append("plot axis x grid no ")

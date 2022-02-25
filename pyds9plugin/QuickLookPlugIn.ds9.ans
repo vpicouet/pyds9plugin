@@ -1472,7 +1472,7 @@ exp open {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image)
 #im_path entry {image} "" {Optional path of a second image to use}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
 #path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
-overwrite checkbox {Overwrite} 0 {Overwrite the modification on the original file.}#USE WITH CAUTION!
+overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
 
 
