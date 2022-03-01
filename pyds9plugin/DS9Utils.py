@@ -7168,7 +7168,12 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 from pyds9plugin.Macros.Fitting_Functions import functions
                 from inspect import signature
 
-                function_ = getattr(functions, function)
+                if type(function) == str:
+                    function_ = getattr(functions, function)
+                else:
+                    function_ = function
+                    function = function_.__name__
+
                 names = list(signature(function_).parameters.keys())[1:]
                 p_ = signature(function_).parameters
                 values = [
@@ -7275,15 +7280,6 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                         label="Background",
                     )
                 )
-            # A GARDER
-            #        if self.background==1:
-            #            Models.append(Model(linear1d_centered,
-            #                  Parameter(value=a, bounds=boundsa, label='scale'),
-            #                  Parameter(value=b, bounds=boundsb, label='slope'),
-            #                  Parameter(value=(x.min()+x.max())/2,
-            # bounds=((x.min()+x.max())/2-1e-10,(x.min()+x.max())/2+1e-10), label='center'),
-            # ,uncertainty=1 # bounds=((x.min()+x.max())/2-1,(x.min()+x.max())/2+1)
-            #                  label='Background'))
             if self.background == 2:
                 Models.append(
                     Model(

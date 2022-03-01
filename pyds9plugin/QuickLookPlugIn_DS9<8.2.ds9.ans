@@ -326,7 +326,6 @@ hmenu 2. Instrumentation - AIT
 	Light curve
 	*
 	menu
-	#DS9Utils light_curve -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    | $text
 	DS9Utils light_curve -x $xpa_method  $param(Images-to-analyze); "$path"    | $text
 
 
@@ -1010,13 +1009,7 @@ WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting 
 offsets entry {Steps} "" {If throughfocus images not taken uniformely, provide the offset of each image separated by a coma, eg: 0,0.5,2,3}
 endparam
 
-param Click-Enter-For-Only-DS9-Image
-all checkbox {All images} 0 {Check this box to run the analysis on all the images of the repository}
-b entry {First image} - {Number of the first image to process}
-e entry {Last image} - {Number of the last image to process}
-list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
-path entry {RegExp Path} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/[1-13].fits}
-endparam
+
 
 
 
@@ -1209,17 +1202,6 @@ noise checkbox {Noise measurement} 0 {To do the measurement on 100 random positi
 endparam
 
 
-param -Click-Enter-For-Only-DS9-Image-
-log checkbox {Log 10} 1 {Plot the histogram in log}
-range entry {Range} 2500-10000 {Range of the histogram, write - for automatic plot}
-all checkbox {All images} 0 {Check this box to run the analysis on all the images of the repository}
-b entry {First image} - {Number of the first image to process}
-e entry {Last image} - {Number of the last image to process}
-list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
-path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/[1-13].fits}
-stack checkbox {Only on stacked} 0 {Run analysis only on stacked images }
-endparam
-
 
 param Convolution
 type menu {Type} Gaussian|Box|Image {Shape of the convolution kernel}
@@ -1383,12 +1365,15 @@ endparam
 
 
 param Python-Command
-exp open {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image)}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp menu {Expression} ds9|ds9=ds9[:100,:100]|ds9+=np.random.normal(0,0.1,size=ds9.shape)|ds9+=30*(ds9-gaussian_filter(ds9, 1))|ds9=np.hypot(sobel(ds9,axis=0,mode='constant'),sobel(ds9,axis=1,mode='constant'))|ds9=np.abs(fftshift(fft2(ds9)))**2|ds9=correlate2d(ds9.astype('uint64'),ds9,boundary='symm',mode='same')|ds9=interpolate_replace_nans(ds9, Gaussian2DKernel(x_stddev=5, y_stddev=5))|/Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_hist.py|/Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall//Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_hist.py {Python expression for exec method (eg. ds9=ds9-image)}
+exp2 open {Expression} ds9 {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+
+overwrite checkbox {Overwrite} 0 {Overwrite the modification on the original file.}#USE WITH CAUTION!
+endparam
+
 #im_path entry {image} "" {Optional path of a second image to use}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
 #path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
-overwrite checkbox {Overwrite} 0 {Overwrite the modification on the original file.}#USE WITH CAUTION!
-endparam
 
 
 param Conversion
@@ -1437,17 +1422,19 @@ endparam
 
 
 
-param -Click-Enter-For-Only-DS9-Image-
-log checkbox {Log 10} 1 {Plot the histogram in log}
-range entry {Range} 2500-10000 {Range of the histogram, write - for automatic plot}
-all checkbox {All images} 0 {Check this box to run the analysis on all the images of the repository}
-b entry {First image} - {Number of the first image to process}
-e entry {Last image} - {Number of the last image to process}
-list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
-path entry {RegExp Path} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/.fits}
-stack checkbox {Only on stacked} 0 {Run analysis only on stacked images }
-endparam
 
+
+
+#param -Click-Enter-For-Only-DS9-Image-
+#log checkbox {Log 10} 1 {Plot the histogram in log}
+#range entry {Range} 2500-10000 {Range of the histogram, write - for automatic plot}
+#all checkbox {All images} 0 {Check this box to run the analysis on all the images of the repository}
+#b entry {First image} - {Number of the first image to process}
+#e entry {Last image} - {Number of the last image to process}
+#list entry {List of images number} - {List of all the images to process. Eg: 5-12-23}
+#path entry {Path of a folder} - {Linux like path of the the images to process. eg: /tmp/foler_??-??-??/[1-13].fits}
+#stack checkbox {Only on stacked} 0 {Run analysis only on stacked images }
+#endparam
 
 
 

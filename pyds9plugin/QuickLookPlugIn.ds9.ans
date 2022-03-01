@@ -1468,12 +1468,14 @@ endparam
 
 
 param Python-Command
-exp open {Expression} ds9 {Python expression for exec method (eg. ds9=ds9-image)}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp open {Expression} ds9 {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 #im_path entry {image} "" {Optional path of a second image to use}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
 #path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
+
+#exp menu {Expression} ds9|ds9=ds9[:100,:100]|ds9+=np.random.normal(0,0.1,size=ds9.shape)|ds9+=30*(ds9-gaussian_filter(ds9, 1))|ds9=np.hypot(sobel(ds9,axis=0,mode='constant'),sobel(ds9,axis=1,mode='constant'))|ds9=np.abs(fftshift(fft2(ds9)))**2|ds9=correlate2d(ds9.astype('uint64'),ds9,boundary='symm',mode='same')|ds9=interpolate_replace_nans(ds9, Gaussian2DKernel(x_stddev=5, y_stddev=5))|/Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_hist.py|/Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall//Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_hist.py {Python expression for exec method (eg. ds9=ds9-image)}
 
 
 param Conversion
