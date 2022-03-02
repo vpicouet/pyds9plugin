@@ -40,7 +40,11 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         verboseprint("Taking nominal center region")
         im = d.get_pyfits()[0].data[1300:2000, 1172:2145]  # ,:800]#
     # val, bins = np.histogram(im.flatten(), bins=np.linspace(2000, 7000, 500))
-    val, bins = np.histogram(im.flatten(), bins=np.linspace(1000, 3000, 500))
+    bias = np.median(im)
+    min = bias - 500
+    max = bias + 2000
+    n=700
+    val, bins = np.histogram(im.flatten(), bins=np.linspace(min, max, n))
     bins = (bins[1:] + bins[:-1]) / 2
     val = np.array(val, dtype=float)
     val *= im.size / len(im[np.isfinite(im)])
@@ -56,69 +60,10 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         bins[np.isfinite(np.log10(val))],
         np.log10(val)[np.isfinite(np.log10(val))],
     )
+    np.savetxt("/tmp/xy.txt", np.array([xdata, ydata]).T)
+
     n = np.log10(np.sum([10 ** yi for yi in ydata]))
     lims = np.array([0, 2])
-    # print(n)
-
-    # def simulate_fireball_emccd_hist(
-    #     x,
-    #     data,
-    #     ConversionGain,
-    #     EmGain,
-    #     Bias,
-    #     RN,
-    #     p_pCIC,
-    #     p_sCIC,
-    #     Dark,
-    #     Smearing,
-    #     SmearExpDecrement,
-    #     exposure,
-    #     n_registers,
-    #     flux,
-    #     sCIC=0,
-    # ):
-    #     """Silumate EMCCD histogram
-    #     """
-    #     import numpy as np
-
-    #     imaADU = np.random.gamma(flux, EmGain, size=im.shape)
-
-    #     # prob_pCIC = np.random.rand(size[1],size[0])    #Draw a number prob in [0,1]
-    #     # image[prob_pCIC <  p_pCIC] += 1
-    #     # np.ones((im.shape[0], im.shape[1]))
-    #     prob_sCIC = np.random.rand(im.shape[0], im.shape[1])
-    #     # Draw a number prob in [0,1]
-    #     id_scic = prob_sCIC < sCIC  # sCIC positions
-    #     # partial amplification of sCIC
-    #     register = np.random.randint(1, n_registers, size=id_scic.sum())
-    #     # Draw at which stage of the EM register the electorn is created
-    #     imaADU[id_scic] += np.random.exponential(
-    #         np.power(EmGain, register / n_registers)
-    #     )
-    #     imaADU *= ConversionGain
-    #     if Smearing > 0:
-    #         # print(SmearExpDecrement)
-    #         smearing_kernels = variable_smearing_kernels(
-    #             imaADU, Smearing, SmearExpDecrement
-    #         )
-    #         offsets = np.arange(6)
-    #         A = dia_matrix(
-    #             (smearing_kernels.reshape((6, -1)), offsets),
-    #             shape=(imaADU.size, imaADU.size),
-    #         )
-    #         # print(imaADU==A.dot(imaADU.ravel()).reshape(imaADU.shape))
-    #         imaADU = A.dot(imaADU.ravel()).reshape(imaADU.shape)
-
-    #     imaADU += np.random.normal(Bias, RN * ConversionGain, size=im.shape)
-    #     n, bins = np.histogram(
-    #         imaADU.flatten(), range=[np.nanmin(x), np.nanmax(x)], bins=len(x)
-    #     )
-    #     if path is None:
-    #         return n
-    #     else:
-    #         return n * np.sum(10 ** ydata) / np.sum(n)
-
-    # print((10 ** ydata).sum())
 
     x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), len(ydata))
 
@@ -140,12 +85,15 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         (100, 2200),
         (0.001, 1),
         (0, 3),
-        (0, 1),
+        (0, 0.3),
+        # (1.5e3,1.5e5),
     ]  # ,(0,1)]
-    centers = [1191, 50, 1200, 0.03, 0, 0,]
-    
+    centers = [xdata[np.argmax(ydata)], 50, 1200, 0.01, 0, 0.01,]#, 1.5e4
+    # centers = [xdata[np.argmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
+
     f0 = EMCCDhist(x,*centers)
-    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCDhist(x, bias=Bias, RN=RN, EmGain=EmGain, flux=flux, smearing=smearing, sCIC=sCIC) +(ydata.max()-f0.max())
+    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCDhist(x, bias=Bias, RN=RN, EmGain=EmGain, flux=flux, smearing=smearing, sCIC=sCIC) #+(ydata.max()-f0.max())
+    # function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC, smear_dec: EMCCDhist(x, bias=Bias, RN=RN, EmGain=EmGain, flux=flux, smearing=smearing, sCIC=sCIC,SmearExpDecrement=smear_dec) #+(ydata.max()-f0.max())
 
     # function = lambda x, Bias, RN, EmGain, flux, smearing, SmearExpDecrement, sCIC: np.log10(
     #     simulate_fireball_emccd_hist(
@@ -238,26 +186,17 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
             slider.reset()
 
     def fit(event):
-        vals = [bins[np.nanargmax(val)]]
-        bias, sigma, emgain = list(calc_emccdParameters(xdata, ydata))
-        vals = [bias, sigma, emgain]
-        # print(args_number)
-        if args_number == 4:
-            new_function = lambda x, a: function(x, bias, sigma, emgain, a)
-        else:
-            new_function = lambda x, a: function(
-                x, bias, sigma, emgain, a, smearing=0, SmearExpDecrement=50000
-            )
-        popt, pcov = curve_fit(
-            new_function,
-            xdata[(xdata < 5000) & (ydata > 1)],
-            ydata[(xdata < 5000) & (ydata > 1)],
-            p0=0.1,
-        )  #
-        # print(popt, pcov)
-        vals.append(popt)
-        vals.append(0)
-        vals.append(50000)
+        conversion_gain=1/4.5
+        bins,value = xdata, ydata
+        RN=50
+        mask_RN = (bins>bins[np.argmax(value)]-1*RN) & (bins<bins[np.argmax(value)]+0.8*RN)  &(value>0)
+        bias =   xdata[np.argmax(ydata)]#PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][1]
+        ron =   np.abs(PlotFit1D(bins[mask_RN],10**value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][2]/conversion_gain)
+        mask_gain1 = (bins>bins[np.argmax(value)]+4*RN) & (bins<bins[np.argmax(value)]+10*RN)  
+        gain =   -1 /np.log(10)/conversion_gain/ PlotFit1D(bins[mask_gain1 & (value>0)],value[mask_gain1 & (value>0)],deg=1, plot_=False)['popt'][1]
+        flux =  (np.mean(im)-bias)/ (gain *conversion_gain)
+        vals = [bias,ron ,gain,flux,0,0]
+        print(vals)
         n = 6
         try:
             for slid in sliders[n:]:

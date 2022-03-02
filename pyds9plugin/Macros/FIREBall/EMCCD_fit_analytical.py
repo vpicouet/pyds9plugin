@@ -8,15 +8,11 @@ from dataphile.graphics.widgets import Slider
 from astropy.io import fits
 from scipy.optimize import curve_fit
 
-# from pyds9fb.DS9FB import calc_emccdParameters
-# from Fitting_Functions import EMCCD
-# from pyds9 import DS9
-# d=DS9('7f000001:53722')
-# sys.path.append("../../../pyds9plugin")
-# sys.path.append("../../pyds9plugin")
+
 import sys
 sys.path.append("../../../../pyds9plugin")
 from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD
+
 def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     """Plot EMCCD simulation
     """
@@ -26,7 +22,13 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     else:
         im = d.get_pyfits()[0].data[1300:2000, 1172:2145]  # ,:800]#
     # val, bins = np.histogram(im.flatten(), bins=np.linspace(2000, 7000, 500))
-    val, bins = np.histogram(im.flatten(), bins=np.linspace(1000, 3000, 500))
+    # min = np.nanpercentile(im,0.01)
+    # max = np.nanpercentile(im,99.999)
+    bias = np.median(im)
+    min = bias - 500
+    max = bias + 2000
+    n=800#500
+    val, bins = np.histogram(im.flatten(), bins=np.linspace(min, max, n))
     bins = (bins[1:] + bins[:-1]) / 2
     val = np.array(val, dtype=float)
     val *= im.size / len(im[np.isfinite(im)])
@@ -42,6 +44,8 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         bins[np.isfinite(np.log10(val))],
         np.log10(val)[np.isfinite(np.log10(val))],
     )
+    np.savetxt("/tmp/xy.txt", np.array([xdata, ydata]).T)
+
     n = np.log10(np.sum([10 ** yi for yi in ydata]))
     lims = np.array([0, 2])
     x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), len(ydata))
@@ -59,11 +63,12 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         (0, 200),
         (100, 2200),
         (0.001, 1),
-        (0, 3),
+        (0, 3),#Can not go higher because we only take the first 6 pixels
         # (1e4, 9e4),
-        (0, 1),
+        (0, 0.3),
     ]  # ,(0,1)]
-    centers = [1191, 50, 800, 0.01, 0, 0,]#, 1.5e4
+    centers = [xdata[np.argmax(ydata)], 50, 1200, 0.01, 0, 0.01,]#, 1.5e4
+    centers = [xdata[np.argmax(ydata)], 1, 1200, 0.01, 0, 0.,]#, 1.5e4
     # from pyds9plugin.Macros.Fitting_Functions import functions
     # from inspect import signature
     # function_ = getattr(functions, "EMCCD")
@@ -79,7 +84,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
 
     f0 = EMCCD(x,*centers)
-    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCD(x,Bias,RN,EmGain,flux,smearing,sCIC) +(ydata.max()-f0.max())
+    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCD(x,Bias,RN,EmGain,flux,smearing,sCIC) #+(ydata.max()-f0.max())
         
 
         # [np.mean(np.array(lim)) for lim in lims]
@@ -144,26 +149,17 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
             slider.reset()
 
     def fit(event):
-        vals = [bins[np.nanargmax(val)]]
-        bias, sigma, emgain = list(calc_emccdParameters(xdata, ydata))
-        vals = [bias, sigma, emgain]
-        # print(args_number)
-        if args_number == 4:
-            new_function = lambda x, a: function(x, bias, sigma, emgain, a)
-        else:
-            new_function = lambda x, a: function(
-                x, bias, sigma, emgain, a, smearing=0, SmearExpDecrement=50000
-            )
-        popt, pcov = curve_fit(
-            new_function,
-            xdata[(xdata < 5000) & (ydata > 1)],
-            ydata[(xdata < 5000) & (ydata > 1)],
-            p0=0.1,
-        )  #
-        # print(popt, pcov)
-        vals.append(popt)
-        vals.append(0)
-        vals.append(50000)
+        conversion_gain=1/4.5
+        bins,value = xdata, ydata
+        RN=50
+        mask_RN = (bins>bins[np.argmax(value)]-1*RN) & (bins<bins[np.argmax(value)]+0.8*RN)  &(value>0)
+        bias =   xdata[np.argmax(ydata)]#PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][1]
+        ron =   np.abs(PlotFit1D(bins[mask_RN],10**value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][2]/conversion_gain)
+        mask_gain1 = (bins>bins[np.argmax(value)]+4*RN) & (bins<bins[np.argmax(value)]+10*RN)  
+        gain =   -1 /np.log(10)/conversion_gain/ PlotFit1D(bins[mask_gain1 & (value>0)],value[mask_gain1 & (value>0)],deg=1, plot_=False)['popt'][1]
+        flux =  (np.mean(im)-bias)/ (gain *conversion_gain)
+        vals = [bias,ron ,gain,flux,0,0]
+        print(vals)
         n = 6
         try:
             for slid in sliders[n:]:

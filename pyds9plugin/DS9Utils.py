@@ -1187,10 +1187,10 @@ def PlotFit1D(
         )
     if plot_:
         if ax is None:
-            if deg == "gaus":
-                ax1.text(
-                    popt[1], popt[0] ** 2, "Max = %0.1f std" % (popt[0] ** 2 / std),
-                )
+            # if deg == "gaus":
+                # ax1.text(
+                #     popt[1], popt[0] ** 2, "Max = %0.1f std" % (popt[0] ** 2 / std),
+                # )
             if title:
                 fig.suptitle(title, y=1)
             if xlabel:

@@ -8,30 +8,44 @@ import matplotlib
 
 np.seterr(divide = 'ignore') 
 
-matplotlib.use('Agg')
 
 #TODO define fucntions
 #3216*2069
 #OS 1053 ... 2133
 #Backside: -2133: -1053
 
-# from astropy.table import Table
-# d=DS9n()
-# fitsfile=d.get_pyfits()
-# table=Table(data=[[1]],names=['test'])
-# filename=get_filename(d)
+if 'FIREBall.py' in __file__:
+    matplotlib.use('MacOSX')#Agg #MacOSX
+    %load_ext autoreload
+    %autoreload 2
+    from astropy.table import Table
+    d=DS9n()
+    fitsfile=d.get_pyfits()
+    table=Table(data=[[1]],names=['test'])
+    filename=get_filename(d)
+else:
+    matplotlib.use('Agg')#Agg #MacOSX
+    
+
+
 
 full_analysis = True
 Plot = True
 data = fitsfile[0].data
 header = fitsfile[0].header
-conversion_gain =  1 / 4.5# ADU/e-  0.53  
+if float(header['DATE'][:4])<2020:
+    conversion_gain = 0.53# ADU/e-  0.53  
+    RN=100
+else:
+    conversion_gain =  0.22#1 / 4.5# ADU/e-  0.53 
+    RN=50
+
 
 
 
 analysis_path = os.path.join(os.path.dirname(filename),'analysis/')
-# os.mkdir(analysis_path) #kills the jobs return none!!
-
+if not os.path.isdir(analysis_path):
+    os.mkdir(analysis_path) #kills the jobs return none!!
 
 
 def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conversion_gain,analysis_path=analysis_path):
@@ -39,16 +53,21 @@ def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conve
     from matplotlib import pyplot as plt
     import numpy as np
     from scipy.optimize import curve_fit
-    limit = 2000 #After 2000 it is getting very bad
     f=1.1
     n_conv = 4
     # table['Gain1'] *=1.2
     bias, ron, gain, flux = table['bias_fit'],  table['RON'], table['Gain1'],table["TopImage"]/table['Gain1']/conversion_gain
+    if bias ==0.0:
+        bias = table['bias']
+    limit = bias+1000 #After 2000 it is getting very bad
     fig, ax = plt.subplots(figsize=(9,5))  
     # ax = fig.add_subplot(111)
     ax.set_xlabel("Pixel Value [ADU]", fontsize=12)
     ax.set_ylabel("Log(\# Pixels)", fontsize=12)
-    l_data = "%s-%s\nExposure = %i sec\nGain = %i \n" "T det = %0.1f C" % (header['TEMPDATE'],header['TEMPTIME'],header['EXPTIME'], header['EMGAIN'], float(header['TEMPA']))
+    try:
+        l_data = "%s-%s\nExposure = %i sec\nGain = %i \n" "T det = %0.1f C" % (header['TEMPDATE'],header['TEMPTIME'],header['EXPTIME'], header['EMGAIN'], float(header['TEMPA']))
+    except KeyError:
+        l_data = ""
     l_model = "Bias = %0.1f DN\n$\sigma$ = %0.1f e-\nEMg = %0.1f e/e\nF=%0.3fe-$\pm$10" % (bias,ron, gain, flux )
     threshold = table['bias_fit']+ 5.5* (table['RON']*conversion_gain)
     # ax.semilogy([threshold,threshold],[0,1e6],'k:')
@@ -62,12 +81,17 @@ def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conve
     constant_stochastic  = np.nanmax(n)/np.nanmax(model_stochastic)
     model_to_fit =            lambda bin_center,EmGain,flux : EMCCD(    bin_center,bias,ron,EmGain,flux,0,0)+np.log10(constant)
     model_to_fit_cic =            lambda bin_center,EmGain,flux, cic : EMCCD(    bin_center,bias,ron,EmGain,flux,0,cic)+np.log10(constant)
+    model_to_fit_all =            lambda  bin_center,b,  EmGain,flux, cic : EMCCD(    bin_center,b,ron,EmGain,flux,0,cic)+np.log10(constant)
     model_to_fit_stochastic = lambda bin_center,EmGain,flux : EMCCDhist(bin_center,bias,ron,EmGain,flux,0,0)+np.log10(constant_stochastic)
     ax.semilogy(bin_center, model * constant, ":", label="Model (from slope):\n"+l_model,color='k')
     ax.semilogy(bin_center[masks[0]], 10*np.ones(len(bin_center[masks[0]])), "k-")#, label="Mask %i"%(i+1))
-    mask = (bin_center>1100)&(bin_center<limit)&(n>0)
-    p0=np.array([float(table['Gain1']),float(table["TopImage"]/table['Gain1']/conversion_gain),0.005])
+    ax.semilogy(bin_center[masks[1]], 5*np.ones(len(bin_center[masks[1]])), "k-")#, label="Mask %i"%(i+1))
+    mask = (bin_center>bias-ron)&(bin_center<limit)&(n>0)
+    
+    p0=np.array([float(table['Gain1']),float(table["TopImage"]/table['Gain1']/conversion_gain),0.01])
+    p0_all=[float(bias),  float(table['Gain1']),float(table["TopImage"]/table['Gain1']/conversion_gain),0.01]
     popt, pcov = curve_fit(model_to_fit_cic,bin_center[mask],np.log10(n[mask]),p0=p0)
+    popt_all, pcov = curve_fit(model_to_fit_all,bin_center[mask],np.log10(n[mask]),p0=p0_all)
     l_fit = "$\sigma$ = %0.1f e-\nEMg = %0.1f e/e\nF=%0.3fe-$\pm$10%%\nCIC=%0.4fe-/pix" % (ron,popt[0],popt[1],popt[2])
     # ax.semilogy(bin_center[mask], 10**model_to_fit(bin_center[mask],*popt), "b", label="Fit:\n"+l_fit)
 
@@ -81,7 +105,8 @@ def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conve
     # fit_stochastic_low = 10**model_to_fit_stochastic(bin_center[mask],*change_gain_flux(popt,f))
     fit_stochastic_low = 10**model_to_fit_cic(bin_center[mask],*change_gain_flux(popt,f))
     fit_stochastic_high = 10**model_to_fit_cic(bin_center[mask],*change_gain_flux(popt,1/f))
-    ax.semilogy(bin_center[mask], 10**model_to_fit_cic(bin_center[mask],*popt), "blue", label="Least square fit:\n"+l_fit,lw=1)
+    ax.semilogy(bin_center[mask], 10**model_to_fit_cic(bin_center[mask],*popt), "blue", label=None,lw=1)
+    ax.semilogy(bin_center[mask], 10**model_to_fit_all(bin_center[mask],*popt_all), "red", label="Least square fit:\n"+l_fit,lw=1)
     # ax.semilogy(bin_center[mask], 10**model_to_fit_stochastic(bin_center[mask],*popt), "blue", label="Least square fit:\n"+l_fit,lw=1)
     # ax.semilogy(bin_center[mask], 10**model_to_fit_stochastic(bin_center[mask],*popt), "blue", label="Least square fit:\n"+l_fit,lw=1)
     ax.fill_between(bin_center[mask],fit_stochastic_low,fit_stochastic_high,alpha=0.15,color='blue')
@@ -110,7 +135,7 @@ def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conve
     ax.set_title(os.path.basename(filename).replace(".fits",""))
     fig.savefig(analysis_path + os.path.basename(filename).replace(".fits","_hist.png"))
     plt.show()
-    plt.close(fig)
+    # plt.close(fig)
     # return
 
 
@@ -147,7 +172,10 @@ try:
 except IndexError:
     table["stdX"] = np.nanstd(data[int(lx / 2), :])
     table["stdY"] = np.nanstd(data[:, int(ly / 2)])
-value, b = np.histogram(data[Yinf+1000:Ysup, Xinf:Xsup].flatten(),range=(1000,5000),bins=1000)
+# value, b = np.histogram(data[Yinf+1000:Ysup, Xinf:Xsup].flatten(),range=(1000,5000),bins=1000)
+range_=(np.median(physical_region)-500,np.median(physical_region)+2000)
+range_=(1000,5000)
+value, b = np.histogram(data[Yinf+1000:Ysup, Xinf:Xsup].flatten(),range=range_,bins=1000)
 bins = (b[1:]+b[:-1])/2
 
 if full_analysis:
@@ -156,16 +184,21 @@ if full_analysis:
 
 # bins,value = bins[value>0],value[value>0]
 table['bias'] = bins[np.argmax(value)]
-RN=50
-mask_RN = (bins>bins[np.argmax(value)]-1*50) & (bins<bins[np.argmax(value)]+0.8*50)  &(value>0)
+mask_RN = (bins>bins[np.argmax(value)]-1*RN) & (bins<bins[np.argmax(value)]+0.8*RN)  &(value>0)
 table['Amp'] =   PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][0]
 table['bias_fit'] =   PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][1]
 table['RON'] =   np.abs(PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][2]/conversion_gain)
+if table['RON'] == 0.0:
+    table['RON'] =   np.abs(PlotFit1D(bins[mask_RN][:-1],(value[mask_RN][1:]+value[mask_RN][:-1])/2,deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][2]/conversion_gain)
+if table['bias_fit'] == 0.0:
+    table['bias_fit'] =   PlotFit1D(bins[mask_RN][:-1],(value[mask_RN][1:]+value[mask_RN][:-1])/2,deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][1]
+    
 mask_gain1 = (bins>bins[np.argmax(value)]+4*RN) & (bins<bins[np.argmax(value)]+10*RN)  
-mask_gain2 = (bins>bins[np.argmax(value)]+10*RN) & (bins<bins[np.argmax(value)]+30*RN)
+mask_gain2 = (bins>bins[np.argmax(value)]+10*RN) & (bins<bins[np.argmax(value)]+20*RN)
 try:
     table['Gain1'] =   -1/np.log(10) / conversion_gain / PlotFit1D(bins[mask_gain1 & (value>0)],np.log10(value[mask_gain1 & (value>0)]),deg=1, plot_=False)['popt'][1]
     table['Gain2'] =   -1 / conversion_gain / PlotFit1D(bins[mask_gain2 & (value>0)],np.log(value[mask_gain2 & (value>0)]),deg=1, plot_=False)['popt'][1]
+    # print(table['Gain1'], table['Gain2'])
     table['Flux1'] =  table["TopImage"]/ table['Gain1'] /conversion_gain
     table['Flux2'] =   table["TopImage"]/ table['Gain2'] /conversion_gain
 except (ValueError,RuntimeWarning):
@@ -182,7 +215,7 @@ if Plot :
         table['flux_ls']=0
         table['sCIC_ls']=0
 
-table['sCIC_OS'] = (table['post_scan'] - table['pre_scan'] )/ table['gain_ls'] /conversion_gain
+table['sCIC_OS'] = (table['post_scan'] - table['pre_scan'] )/ table['Gain1'] /conversion_gain
 
 n=20
 image_center = data[int(lx/2-n):int(lx/2+n)+1,int(ly/2-n):int(ly/2+n)+1]
