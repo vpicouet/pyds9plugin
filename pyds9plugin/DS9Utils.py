@@ -1188,9 +1188,9 @@ def PlotFit1D(
     if plot_:
         if ax is None:
             # if deg == "gaus":
-                # ax1.text(
-                #     popt[1], popt[0] ** 2, "Max = %0.1f std" % (popt[0] ** 2 / std),
-                # )
+            # ax1.text(
+            #     popt[1], popt[0] ** 2, "Max = %0.1f std" % (popt[0] ** 2 / std),
+            # )
             if title:
                 fig.suptitle(title, y=1)
             if xlabel:
@@ -4098,8 +4098,10 @@ def execute_command(
 
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        verboseprint(exc_type, fname, exc_tb.tb_lineno)
+        print(exc_type, fname, exc_tb.tb_lineno)
         d = DS9n(xpapoint)
+        sys.exit()
+
         if yesno(
             d,
             "Could not execute the command. Do you wish to see examples of one line python commands?",
@@ -4137,7 +4139,6 @@ def execute_command(
             * which you want to sun the command! """,
                 verbose="1",
             )
-        sys.exit()
     ds9 = new_dict["ds9"]
     same = fitsimage.data == ds9
     if type(same) is not bool:

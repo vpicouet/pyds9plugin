@@ -8,7 +8,6 @@ try:
 except OSError:
     x,y = [0,1],[0,1]
 
-
 def gaussian(x, a=[0, 100], xo=[0, 100], sigma=[0, 10]):
     """Defines a gaussian function with offset
     """
@@ -72,7 +71,7 @@ def EMCCD(
     RN=[20,150,44],
     EmGain=[300,10000,1900],
     flux=[0,0.2,0.01],
-    smearing=[0,1.5,0],
+    smearing=[0,1,0.01],
     sCIC=[0,1,0],
 ):
     """EMCCD model based on convolution of distributions: Gamma(poison)xNormal
@@ -84,9 +83,12 @@ def EMCCD(
     from scipy.stats import poisson
 
     try:
-        n_pix = np.sum(10**globals()['y'])
+        y = globals()['y']
+        n_pix = np.sum(10**y)
+        # print('global',np.sum(10**y),n_pix)
     except TypeError:
         n_pix=10**6.3   
+        # print('fixed',np.sum(10**y),n_pix)
     n_registers = 604
     if bias>1500:
         ConversionGain = 0.53#1/4.5 #ADU/e-  0.53 in 2018 
@@ -101,58 +103,82 @@ def EMCCD(
 
     # denominator = (sps.gamma(flux) * (EmGain*ConversionGain) ** flux)
     # gamma_distribution = (bin_size* bins ** (flux - 1) * (np.exp(-bins / (EmGain*ConversionGain)) / denominator))
-    gamma_distribution = 0
-    for f in np.arange(1,10) :
-        v = poisson.pmf(k=f, mu=np.max([flux,0]))
-        denominator = (sps.gamma(f) * (EmGain*ConversionGain) ** f)
-        # print(1, denominator)
-        # denominator[~np.isfinite(denominator)]=1
-        # print(bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain))))
-        distribution = (bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain)) / denominator))
-        gamma_distribution += distribution*v
-    gamma_distribution[0] = 1 - np.nansum(gamma_distribution[np.isfinite(gamma_distribution)])
-    if sCIC>0:
-        #changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
-        p_sCIC =  sCIC/ np.mean([(1/ np.power(EmGain * ConversionGain, reg / 604))  for reg in np.arange(604)])
-        gain_ = np.power(EmGain*ConversionGain, np.linspace(1,n_registers,100) / n_registers)
-        cic_disdribution = n_pix*np.sum([(1/gaini) * np.exp(-bins/gaini) for gaini in gain_],axis=0)/len(gain_)
-        cic_disdribution /= cic_disdribution.sum()
 
-        cic_disdribution *= p_sCIC
-        cic_disdribution[0] = 1 -np.sum(cic_disdribution[1:])
-        cic_disdribution = np.hstack((np.zeros(len(cic_disdribution)-1),cic_disdribution))
-        gamma_distribution = np.convolve(gamma_distribution,cic_disdribution,mode='valid')
+    distributions=[]
+    n=np.arange(10)
+    fluxes = flux *np.power(smearing,n)/ np.sum(np.power(smearing,n)) #[flux*smearing**i for i in range(n)] / np.sum([flux*smearing**i for i in range(n)])
+    emgains = [EmGain] + [EmGain/(1.7*i) for i in n[1:]]
+    for i,(flux_,EmGain) in enumerate(zip(fluxes,emgains)):
+    # for i,(flux,EmGain) in enumerate(zip([(1-smearing)*flux, smearing*flux],[EmGain,EmGain/2])):
+        gamma_distribution = 0
+        # gamma_distribution_up = 0
+        for f in np.arange(1,10) :
+            v = poisson.pmf(k=f, mu=np.max([flux_,0]))
+            denominator = (sps.gamma(f) * (EmGain*ConversionGain) ** f)
+            # print(1, denominator)
+            # denominator[~np.isfinite(denominator)]=1
+            # print(bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain))))
+            distribution = (bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain)) / denominator))
+            # distribution_up = (bin_size* (bins+bins.ptp()) ** (f - 1) * (np.exp(-(bins+bins.ptp()) / (EmGain*ConversionGain)) / denominator))
+            # disminush the number of pixels by the number of ones that are above the threshold:
+            # factor = np.sum(distribution[np.isfinite(distribution)]) / np.sum(distribution_up[np.isfinite(distribution_up)])
+            #no need for the factor, just recale here
+            distribution[0] = (1 - np.nansum(distribution[np.isfinite(distribution)]))
+            gamma_distribution += distribution*v
+
+
+        gamma_distribution[0] = (1 - np.nansum(gamma_distribution[np.isfinite(gamma_distribution)]))
+        if sCIC>0:
+            #changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
+            p_sCIC =  sCIC/4#/ np.mean(1/ np.power(EmGain * ConversionGain, np.arange(604) / 604))
+            gain_ = np.power(EmGain*ConversionGain, np.linspace(1,n_registers,100) / n_registers)
+            cic_disdribution = np.sum([(1/gaini) * np.exp(-bins/gaini) for gaini in gain_],axis=0)#*n_pix/len(gain_)
+            cic_disdribution /= cic_disdribution.sum()
+
+            cic_disdribution *= p_sCIC
+            cic_disdribution[0] = 1 -np.sum(cic_disdribution[1:])
+            cic_disdribution = np.hstack((np.zeros(len(cic_disdribution)-1),cic_disdribution))
+            gamma_distribution = np.convolve(gamma_distribution,cic_disdribution,mode='valid')
+        distributions.append(gamma_distribution)
+        if i>0:
+            smeared_distribution = np.hstack((np.zeros(len(distributions[i])-1),distributions[i]))
+            gamma_distribution  = np.convolve(distributions[i-1],smeared_distribution,mode='valid')
+            distributions[i] = gamma_distribution
+    # gamma_distribution = 0
+    # for f in np.arange(1,10) :
+    #     v = poisson.pmf(k=f, mu=np.max([flux,0]))
+    #     denominator = (sps.gamma(f) * (EmGain*ConversionGain) ** f)
+    #     # print(1, denominator)
+    #     # denominator[~np.isfinite(denominator)]=1
+    #     # print(bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain))))
+    #     distribution = (bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain)) / denominator))
+    #     gamma_distribution += distribution*v
+    # gamma_distribution[0] = 1 - np.nansum(gamma_distribution[np.isfinite(gamma_distribution)])
+    # if sCIC>0:
+    #     #changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
+    #     p_sCIC =  sCIC/ np.mean([(1/ np.power(EmGain * ConversionGain, reg / 604))  for reg in np.arange(604)])
+    #     gain_ = np.power(EmGain*ConversionGain, np.linspace(1,n_registers,100) / n_registers)
+    #     cic_disdribution = n_pix*np.sum([(1/gaini) * np.exp(-bins/gaini) for gaini in gain_],axis=0)/len(gain_)
+    #     cic_disdribution /= cic_disdribution.sum()
+
+    #     cic_disdribution *= p_sCIC
+    #     cic_disdribution[0] = 1 -np.sum(cic_disdribution[1:])
+    #     cic_disdribution = np.hstack((np.zeros(len(cic_disdribution)-1),cic_disdribution))
+    #     gamma_distribution = np.convolve(gamma_distribution,cic_disdribution,mode='valid')
     #Renormalization of the gamma distribution to one #I might doing it wrong here!
+    # print(factor)
+    # gamma_distribution[0]*/(1+factor)
+
     # Addition of the bias
-    if smearing>0:
-        # smearing_distribution = (1/smearing) * np.exp(-bins/smearing)
-        # smearing_distribution = (smearing) * np.exp(-bins*smearing)
-        smearing *=10
-        smearing_distribution = (1/smearing) * np.exp(-bins/smearing)
-        smearing_distribution /=smearing_distribution.sum()
-        # smearing_distribution -= np.sum(smearing_distribution[1:])
-        # smearing_distribution[0]=1
-        # print('smear : ', np.sum(smearing_distribution))
-        # print('smear : ', smearing_distribution)
-        smearing_distribution = np.hstack((np.zeros(len(smearing_distribution)-1),smearing_distribution))
-        gamma_distribution = np.convolve(gamma_distribution,smearing_distribution,mode='valid')
-        # gamma_distribution = [gamma_distribution[0]] + list(np.convolve(gamma_distribution[1:],smearing_distribution,mode='valid'))
     if bias > x[0]:
         gamma_distribution[(x > bias)] = gamma_distribution[: -np.sum(x <= bias)]
         gamma_distribution[x < bias] = 0
     read_noise = Gaussian1DKernel(stddev= RN * ConversionGain / bin_size, x_size=int(301.1*10))
-    # Not implemented yet
-    y = convolve(gamma_distribution, read_noise)*n_pix
+    y = convolve(gamma_distribution, read_noise)*n_pix#
     return np.log10(y) 
-    # Not implemented yet
-    # scic_distribution = [np.exp(-x / np.power(EmGain, reg / n_reg)) / np.power(EmGain, reg / n_reg)   for reg in np.arange(n_reg)]
-    # scic_distribution = np.sum(scic_distribution, axis=0)
-    # if bias > x[0]:
-    #    scic_distribution[x>biais] = scic_distribution[:-np.sum(x<=biais)]
-    #    scic_distribution[x<biais] = 0
 
 
-def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000], flux=[0.001, 1,0.04], smearing=[0, 3,0.31], sCIC=[0,1,0]):
+def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000], flux=[0.001, 1,0.04], smearing=[0, 1,0.01], sCIC=[0,1,0]):
 # def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000], flux=[0.001, 1,0.04], smearing=[0, 3,0.31], sCIC=[0,1,0],SmearExpDecrement=[1.5e3,1.5e5,15e4]):
     from scipy.sparse import dia_matrix
     import inspect
@@ -164,16 +190,28 @@ def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000]
     else: 
         ConversionGain = 1/4.5 #ADU/e-  0.53 in 2018 
 
-    def variable_smearing_kernels(image, Smearing=1.5, SmearExpDecrement=50000):
+    # def variable_smearing_kernels(image, Smearing=1.5, SmearExpDecrement=50000):
+    #     """Creates variable smearing kernels for inversion
+    #     """
+    #     import numpy as np
+    #     n=6
+    #     smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+    #     smearing_kernels = np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length)
+    #     smearing_kernels /= smearing_kernels.sum(axis=0)
+    #     return smearing_kernels
+    def variable_smearing_kernels(image, Smearing=0.7, SmearExpDecrement=50000,type_='expw'):
         """Creates variable smearing kernels for inversion
         """
         import numpy as np
-        n=6
+        n=15
         smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-        smearing_kernels = np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length)
+        if type_=='exp':       
+            smearing_kernels = np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length)
+        else:
+            assert 0<=Smearing<=1
+            smearing_kernels = np.power(Smearing,np.arange(n))[:, np.newaxis, np.newaxis] / np.ones(smearing_length.shape)
         smearing_kernels /= smearing_kernels.sum(axis=0)
         return smearing_kernels
-
 
     def simulate_fireball_emccd_hist(
         x,
@@ -195,10 +233,12 @@ def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000]
         try:
             y = globals()['y']
             n_pix = np.sum(10**y)
+            # print('global',np.sum(10**y),n_pix)
         except TypeError:
             n_pix=10**6.3   
+            # print('fixed',np.sum(10**y),n_pix)
         n=1
-        im = np.zeros((1000,int(n_pix/1000)))
+        im = np.zeros((1000,int(n_pix/1000)+1))
         # factor = 1#np.log(2)
         # EmGain *= factor
         # imaADU = np.random.gamma(flux, EmGain, size=im.shape)
@@ -224,21 +264,10 @@ def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000]
         imaADU += read_noise
         range = [np.nanmin(x), np.nanmax(x)]
         n, bins = np.histogram(imaADU.flatten(), range=range, bins=len(x))
-        # return np.convolve(n,np.ones(3)/3,mode='same')
         return n
 
 
-        # fig, ax1=plt.subplots(1,1,sharex=True)
-        # sig,_,_= ax1.hist(imaADU.flatten(),log=False,bins=10000,range=(0,1e4),histtype='step')
-        # noise,b,_=ax1.hist(read_noise.flatten(),log=False,bins=10000,range=(0,1e4),histtype='step')
-        # th = 5.5*RN* ConversionGain
-        # ax1.plot([th,th],[0,1e5])
-        # bins = (b[1:]+b[:-1])/2
-        # ax1.set_title('fraction kept = %0.1f'%(np.sum(sig[bins>th])/np.sum(sig)))
-        # ax1.set_xlim((0,500))
-        # ax1.set_ylim((0,1e5))
-        # ax2.plot(bins,np.array([np.sum(sig[bins>xi]) for xi in bins])/np.array([np.sum(noise[bins>xi]) for xi in bins]))
-        # ax2.plot(bins,np.array([np.sum(sig[bins>xi]) for xi in bins])/noise)
+
     y = simulate_fireball_emccd_hist(
         x=x,
         ConversionGain=ConversionGain,  # 0.53,

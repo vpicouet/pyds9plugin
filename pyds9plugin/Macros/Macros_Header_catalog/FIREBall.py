@@ -36,9 +36,11 @@ header = fitsfile[0].header
 if float(header['DATE'][:4])<2020:
     conversion_gain = 0.53# ADU/e-  0.53  
     RN=100
+    l1,l2 = 1053, 2133
 else:
     conversion_gain =  0.22#1 / 4.5# ADU/e-  0.53 
     RN=50
+    l1,l2 = -2133, -1053
 
 
 
@@ -49,6 +51,96 @@ if not os.path.isdir(analysis_path):
 
 
 def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conversion_gain,analysis_path=analysis_path):
+    from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD, EMCCDhist
+    from matplotlib import pyplot as plt
+    import numpy as np
+    from scipy.optimize import curve_fit
+    f=1.1
+    n_conv = 4
+    # table['Gain1'] *=1.2
+    bias, ron, gain, flux = table['bias_fit'],  table['RON'], table['Gain1'],table["TopImage"]/table['Gain1']/conversion_gain
+    if bias ==0.0:
+        bias = table['bias']
+    limit = bias+1000 #After 2000 it is getting very bad
+    fig, ax = plt.subplots(figsize=(9,5))  
+    # ax = fig.add_subplot(111)
+    ax.set_xlabel("Pixel Value [ADU]", fontsize=12)
+    ax.set_ylabel("Log(\# Pixels)", fontsize=12)
+    try:
+        l_data = "%s-%s\nExposure = %i sec\nGain = %i \n" "T det = %0.1f C" % (header['TEMPDATE'],header['TEMPTIME'],header['EXPTIME'], header['EMGAIN'], float(header['TEMPA']))
+    except KeyError:
+        l_data = ""
+    l_model = "Bias = %0.1f DN\n$\sigma$ = %0.1f e-\nEMg = %0.1f e/e\nF=%0.3fe-$\pm$10" % (bias,ron, gain, flux )
+    threshold = table['bias_fit']+ 5.5* (table['RON']*conversion_gain)
+    # ax.semilogy([threshold,threshold],[0,1e6],'k:')
+    # model_to_fit = lambda bin_center,biais\,RN,EmGain,flux,p_sCIC,Smearing
+    ax.semilogy(bin_center, np.convolve(n,np.ones(n_conv)/n_conv,mode='same'),  label="Data:\n"+l_data,c='k')
+    model =            10**EMCCD(    bin_center,bias, ron, gain, flux, sCIC=0,smearing=0)
+    model_stochastic = 10**EMCCDhist(bin_center,bias, ron, gain, flux,sCIC=0,smearing=0)
+    model_low = 10**EMCCD(bin_center,bias, ron, f*gain, flux/f,sCIC=0,smearing=0)
+    model_high = 10**EMCCD(bin_center,bias, ron, gain/f, flux*f,sCIC=0,smearing=0)
+    constant = np.nanmax(n)/np.nanmax(model)
+    constant_stochastic  = np.nanmax(n)/np.nanmax(model_stochastic)
+    model_to_fit =            lambda bin_center,EmGain,flux : EMCCD(    bin_center,bias,ron,EmGain,flux,0,0)+np.log10(constant)
+    model_to_fit_cic =            lambda bin_center,EmGain,flux, cic : EMCCD(    bin_center,bias,ron,EmGain,flux,0,cic)+np.log10(constant)
+    model_to_fit_all =            lambda  bin_center,b,  EmGain,flux, cic : EMCCD(    bin_center,b,ron,EmGain,flux,0,cic)+np.log10(constant)
+    model_to_fit_stochastic = lambda bin_center,EmGain,flux : EMCCDhist(bin_center,bias,ron,EmGain,flux,0,0)+np.log10(constant_stochastic)
+    ax.semilogy(bin_center, model * constant, ":", label="Model (from slope):\n"+l_model,color='k')
+    ax.semilogy(bin_center[masks[0]], 10*np.ones(len(bin_center[masks[0]])), "k-")#, label="Mask %i"%(i+1))
+    ax.semilogy(bin_center[masks[1]], 5*np.ones(len(bin_center[masks[1]])), "k-")#, label="Mask %i"%(i+1))
+    mask = (bin_center>bias-ron)&(bin_center<limit)&(n>0)
+    
+    p0=np.array([float(table['Gain1']),float(table["TopImage"]/table['Gain1']/conversion_gain),0.01])
+    p0_all=[float(bias),  float(table['Gain1']),float(table["TopImage"]/table['Gain1']/conversion_gain),0.01]
+    popt, pcov = curve_fit(model_to_fit_cic,bin_center[mask],np.log10(n[mask]),p0=p0)
+    popt_all, pcov = curve_fit(model_to_fit_all,bin_center[mask],np.log10(n[mask]),p0=p0_all)
+    l_fit = "$\sigma$ = %0.1f e-\nEMg = %0.1f e/e\nF=%0.3fe-$\pm$10%%\nCIC=%0.4fe-/pix" % (ron,popt[0],popt[1],popt[2])
+    # ax.semilogy(bin_center[mask], 10**model_to_fit(bin_center[mask],*popt), "b", label="Fit:\n"+l_fit)
+
+    def change_gain_flux(popt,factor):
+        popt1 = list(map(lambda item: popt[1]*factor if item==popt[1] else item, popt))
+        popt2 = list(map(lambda item: popt1[0]/factor if item==popt1[0] else item, popt1))
+        return popt2
+
+    # fit_stochastic_high = 10**model_to_fit_stochastic(bin_center[mask],*change_gain_flux(popt,1/f))
+    # ax.semilogy(bin_center[mask], 10**model_to_fit_stochastic(bin_center[mask],*popt), "blue", label="Fit:\n"+l_fit,lw=1)
+    # fit_stochastic_low = 10**model_to_fit_stochastic(bin_center[mask],*change_gain_flux(popt,f))
+    fit_stochastic_low = 10**model_to_fit_cic(bin_center[mask],*change_gain_flux(popt,f))
+    fit_stochastic_high = 10**model_to_fit_cic(bin_center[mask],*change_gain_flux(popt,1/f))
+    ax.semilogy(bin_center[mask], 10**model_to_fit_cic(bin_center[mask],*popt), "blue", label=None,lw=1)
+    ax.semilogy(bin_center[mask], 10**model_to_fit_all(bin_center[mask],*popt_all), "red", label="Least square fit:\n"+l_fit,lw=1)
+    # ax.semilogy(bin_center[mask], 10**model_to_fit_stochastic(bin_center[mask],*popt), "blue", label="Least square fit:\n"+l_fit,lw=1)
+    # ax.semilogy(bin_center[mask], 10**model_to_fit_stochastic(bin_center[mask],*popt), "blue", label="Least square fit:\n"+l_fit,lw=1)
+    ax.fill_between(bin_center[mask],fit_stochastic_low,fit_stochastic_high,alpha=0.15,color='blue')
+    table['gain_ls']=popt[0]
+    table['flux_ls']=popt[1]
+    table['sCIC_ls']=popt[1]
+    # def model_to_fit_stochastic_smearing_cic(bin_center, smearing,cic):
+    #     return EMCCDhist(bin_center,bias,ron,table['gain_ls'],table['flux_ls'],smearing,cic )+np.log10(constant_stochastic)
+    # # model_to_fit_stochastic_smearing_cic = lambda bin_center, smearing,cic : EMCCDhist(bin_center,bias,ron,table['gain_ls'],table['flux_ls'],smearing,cic )+np.log10(constant_stochastic)
+    # # ax.semilogy(bin_center[mask], 10**model_to_fit_stochastic_smearing_cic(bin_center[mask],0.01,0.01), "r", label=None,lw=1)
+    # # ax.semilogy(bin_center[mask], 10**model_to_fit_stochastic_smearing_cic(bin_center[mask],0.01,0.01), "blue", label=None,lw=1)
+    # mask_smearing_CIC = (bin_center>1100)&(bin_center<1350)&(np.log10(n)>0)
+    # p0=[0.01,0.01,]
+    # # popt2, pcov2 = curve_fit(model_to_fit_stochastic_smearing_cic,bin_center[mask_smearing_CIC],np.log10(n[mask_smearing_CIC]),p0=p0)
+    # plt.plot(bin_center[mask_smearing_CIC],10**np.log10(n[mask_smearing_CIC]))
+    # plt.plot(bin_center[mask_smearing_CIC],10**model_to_fit_stochastic_smearing_cic(bin_center[mask_smearing_CIC],*p0))
+    # popt2, pcov2 = curve_fit( model_to_fit_stochastic_smearing_cic,bin_center[mask_smearing_CIC],np.log10(n[mask_smearing_CIC]),p0=p0)
+    # print(popt2)
+    # plt.plot(bin_center[mask_smearing_CIC],10**model_to_fit_stochastic_smearing_cic(bin_center[mask_smearing_CIC],*popt2))
+
+    ax.legend(loc="upper right", fontsize=10,ncol=3)
+    ax.set_ylim(ymin=1e0,ymax=2.1*n.max())
+    # ax.set_xlim(xmin=bias-ron,xmax=limit+500)
+    ax.set_xlim(xmin=bin_center.min(),xmax=limit+500)
+    ax.tick_params(axis="x", labelsize=13)
+    ax.tick_params(axis="y", labelsize=13)
+    ax.set_title(os.path.basename(filename).replace(".fits",""))
+    fig.savefig(analysis_path + os.path.basename(filename).replace(".fits","_hist.png"))
+    plt.show()
+
+
+def plot_hist_old(bin_center, n,filename, header, table,masks, conversion_gain=conversion_gain,analysis_path=analysis_path):
     from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD, EMCCDhist
     from matplotlib import pyplot as plt
     import numpy as np
@@ -144,7 +236,7 @@ if data is None:
     data = np.nan * np.ones((10,10))
 lx, ly = data.shape
 Xinf, Xsup, Yinf, Ysup = 1, -1, 1, -1
-Xinf, Xsup, Yinf, Ysup = -2133, -1053, 1, -1
+Xinf, Xsup, Yinf, Ysup = l1, l2, 1, -1
 physical_region = data[Yinf:Ysup, Xinf:Xsup]
 pre_scan = data[:, 600:1000]
 post_scan = data[:, 2500:3000]
@@ -173,8 +265,8 @@ except IndexError:
     table["stdX"] = np.nanstd(data[int(lx / 2), :])
     table["stdY"] = np.nanstd(data[:, int(ly / 2)])
 # value, b = np.histogram(data[Yinf+1000:Ysup, Xinf:Xsup].flatten(),range=(1000,5000),bins=1000)
-range_=(np.median(physical_region)-500,np.median(physical_region)+2000)
-range_=(1000,5000)
+range_=(np.nanmedian(physical_region)-500,np.nanmedian(physical_region)+2000)
+# range_=(1000,5000)
 value, b = np.histogram(data[Yinf+1000:Ysup, Xinf:Xsup].flatten(),range=range_,bins=1000)
 bins = (b[1:]+b[:-1])/2
 

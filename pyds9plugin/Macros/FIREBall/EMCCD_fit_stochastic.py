@@ -11,9 +11,6 @@ from scipy.optimize import curve_fit
 # from pyds9fb.DS9FB import calc_emccdParameters
 # from pyds9plugin.DS9Utils import variable_smearing_kernels  # , EMCCD
 
-import sys
-sys.path.append("../../../../pyds9plugin")
-from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist
 
 # def variable_smearing_kernels(image, Smearing=1.5, SmearExpDecrement=50000):
 #     """Creates variable smearing kernels for inversion
@@ -40,7 +37,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         verboseprint("Taking nominal center region")
         im = d.get_pyfits()[0].data[1300:2000, 1172:2145]  # ,:800]#
     # val, bins = np.histogram(im.flatten(), bins=np.linspace(2000, 7000, 500))
-    bias = np.median(im)
+    bias = np.nanmedian(im)
     min = bias - 500
     max = bias + 2000
     n=700
@@ -61,11 +58,21 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         np.log10(val)[np.isfinite(np.log10(val))],
     )
     np.savetxt("/tmp/xy.txt", np.array([xdata, ydata]).T)
+    import sys
+    sys.path.append("../../../../pyds9plugin")
+    from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist, EMCCD
 
     n = np.log10(np.sum([10 ** yi for yi in ydata]))
     lims = np.array([0, 2])
 
     x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), len(ydata))
+    bias =   xdata[np.argmax(ydata)]#PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][1]
+    if bias>1500:
+        ConversionGain = 0.53#1/4.5 #ADU/e-  0.53 in 2018 
+        RN=45
+    else: 
+        ConversionGain = 1/4.5 #ADU/e-  0.53 in 2018 
+        RN=10
 
     dict_values = {
         "a": 1,
@@ -80,15 +87,15 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     #     x, biais, RN, EmGain, flux, bright_surf=ydata
     # )  # -2
     lims = [
-        (1e3, 4.5e3),
-        (0, 200),
+        (-1e3, 4.5e3),
+        (0, 300),
         (100, 2200),
-        (0.001, 1),
+        (0.001, 3),
         (0, 3),
         (0, 0.3),
         # (1.5e3,1.5e5),
     ]  # ,(0,1)]
-    centers = [xdata[np.argmax(ydata)], 50, 1200, 0.01, 0, 0.01,]#, 1.5e4
+    centers = [xdata[np.argmax(ydata)], RN/ConversionGain, 1200, 0.01, 0, 0.01,]#, 1.5e4
     # centers = [xdata[np.argmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
 
     f0 = EMCCDhist(x,*centers)
@@ -181,21 +188,26 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     for slider in sliders:
         slider.on_changed(update)
 
-    def reset(event):
-        for slider in sliders:
-            slider.reset()
+
 
     def fit(event):
-        conversion_gain=1/4.5
         bins,value = xdata, ydata
-        RN=50
         mask_RN = (bins>bins[np.argmax(value)]-1*RN) & (bins<bins[np.argmax(value)]+0.8*RN)  &(value>0)
-        bias =   xdata[np.argmax(ydata)]#PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][1]
-        ron =   np.abs(PlotFit1D(bins[mask_RN],10**value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][2]/conversion_gain)
+        ron =   np.abs(PlotFit1D(bins[mask_RN],10**value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.argmax(value)],50,0])['popt'][2]/ConversionGain)
         mask_gain1 = (bins>bins[np.argmax(value)]+4*RN) & (bins<bins[np.argmax(value)]+10*RN)  
-        gain =   -1 /np.log(10)/conversion_gain/ PlotFit1D(bins[mask_gain1 & (value>0)],value[mask_gain1 & (value>0)],deg=1, plot_=False)['popt'][1]
-        flux =  (np.mean(im)-bias)/ (gain *conversion_gain)
-        vals = [bias,ron ,gain,flux,0,0]
+        gain =   -1 /np.log(10)/ConversionGain/ PlotFit1D(bins[mask_gain1 & (value>0)],value[mask_gain1 & (value>0)],deg=1, plot_=False)['popt'][1]
+        flux =  np.nanmax([0.01]+[(np.nanmean(im)-bias)/ (gain *ConversionGain)])
+        ron =  np.nanmax([RN/ConversionGain]+[ron])
+        vals = [bias,ron ,gain,flux,0.01,0.01,]
+        bounds = ([bias-10,ron/10,gain/10,flux/10,0,0],[bias+10,10*ron,gain*10,flux*10,0.2,0.1])
+        bounds = ([bias-10,ron/10,0,flux/10,0,0],[bias+10,200,gain*10,flux*10,0.1,0.1])
+        print(vals)
+        print(bounds[0])
+        print(bounds[1])
+        upper_limit = bias+20*RN/ConversionGain
+        print(upper_limit)
+
+        vals, pcov = curve_fit(EMCCD, xdata[xdata<upper_limit], ydata[xdata<upper_limit],p0=vals,bounds=bounds)#np.array(lims).T
         print(vals)
         n = 6
         try:
@@ -211,21 +223,6 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
             slid.widget.set_val(vali)
 
     button.on_clicked(fit)
-
-    def onclick(event):
-        xmin, xmax = ax.get_xlim()
-        x = np.linspace(xmin, xmax, n)
-        a = dict_values["a"]
-        b = dict_values["b"]
-        c = dict_values["c"]
-        d = dict_values["d"]
-        dict_values["x"] = x
-        y = EMCCD_new(x, a, b, c, d)
-        dict_values["y"] = y
-        l.set_xdata(x)
-        l.set_ydata(y)
-        return
-
     name = get_filename(d)
     plt.draw()
     ax.legend(loc="upper right", fontsize=15)
