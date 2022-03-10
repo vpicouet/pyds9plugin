@@ -228,6 +228,14 @@ hmenu 1. Generic Functions
 	#		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
 	DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
 
+	Python Command/Macro
+	*
+	bind P
+	#		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
+	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $env(HOME)/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/$exp   -o 0 -p  "$path"| $text
+
+
+
 	Interactive 1D Fitting On Plot
 	*
 	menu
@@ -870,12 +878,12 @@ IMAGE_SIZE entry {IMAGE_SIZE} 0.0 {Dimensions of the output image in PIXELSCALE 
 endtab
 
 tab {RESAMP. & BACKGROUND}
-RE-SAMPLING checkbox {RE-SAMPLING} 1 {Resample input images ?}
+RE-SAMPLING checkbox {RE-SAMPLING} 0 {Resample input images ?}
 RESAMPLING_TYPE menu {RESAMPLING_TYPE} LANCZOS3|NEAREST|BILINEAR|LANCZOS2|LANCZOS4 {Image resampling method}
 OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0 means automatic.}
 INTERPOLATE checkbox {INTERPOLATE} 0 {Interpolate bad input pixels ?}
 
-SUBTRACT_BACK checkbox {SUBTRACT_BACK} 1 {Subtraction sky background ?}
+SUBTRACT_BACK checkbox {SUBTRACT_BACK} 0 {Subtraction sky background ?}
 BACK_SIZE entry {BACK_SIZE} 128 {Size in pixels of a background mesh.}
 BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Size in background meshes of the background-filtering mask.}
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Difference threshold (in ADUs) for the background-filtering}
@@ -1466,6 +1474,12 @@ method menu {Method} Maximum|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fi
 endparam
 
 
+
+param Python-Command-P
+exp menu {Expression} EMCCD_fit_analytical.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
+#overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
+endparam
 
 param Python-Command
 exp open {Expression} ds9 {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).

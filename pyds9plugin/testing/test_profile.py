@@ -32,7 +32,7 @@ im = "/Users/Vincent/Github/pyds9plugin/pyds9plugin/images/stack.fits"  # resour
 if os.path.exists(test_folder) is False:
     os.mkdir(test_folder)
 files_folder = test_folder + "/files"
-profiles_folder = test_folder + "/profiles"
+profiles_folder = test_folder + "/files"
 if os.path.exists(files_folder) is False:
     os.mkdir(files_folder)
 
@@ -229,6 +229,17 @@ def main():
     # Profile(command="ReplaceWithNans('%s')"%(xpapoint),argv=['nan','0'],functions='-f InterpolateNaNs -f fitswrite')
 
     print("\n    Image Processing     \n")
+    Profile(
+        command="python_command(argv = '-x %s -e /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_analytical.py')"
+        % (name),
+        functions=[python_command,parallelize],)
+    from pyds9plugin.Macros.FIREBall.EMCCD_fit_analytical import emccd_model
+    Profile_new(
+        command=python_command,
+        args=(None, "  -x None -e /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_analytical.py"),
+        functions=[python_command,parallelize,emccd_model,],
+        file="test",
+    )
 
     Profile(
         command="python_command(argv = '-x %s -e ds9+=np.random.normal(0,0.5*np.nanstd(ds9),size=ds9.shape)')"

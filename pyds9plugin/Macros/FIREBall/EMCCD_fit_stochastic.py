@@ -30,18 +30,23 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     """
 
     xpapoint = d.get("xpa").split("\t")[-1]
+    region = getregion (d, quick=True, message=False, selected=True)
+    if region is not None:
+        Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
+    else:
+        Xinf, Xsup, Yinf, Ysup = [1120, 2100, 1300, 1900]
+
     if len(d.get("regions selected").split("\n")) > 3:
-        verboseprint("Taking region")
         im = getdata(xpapoint)
     else:
-        verboseprint("Taking nominal center region")
-        im = d.get_pyfits()[0].data[1300:2000, 1172:2145]  # ,:800]#
+        im = d.get_pyfits()[0].data[Yinf:Ysup, Xinf:Xsup] 
     # val, bins = np.histogram(im.flatten(), bins=np.linspace(2000, 7000, 500))
     bias = np.nanmedian(im)
-    min = bias - 500
-    max = bias + 2000
-    n=700
-    val, bins = np.histogram(im.flatten(), bins=np.linspace(min, max, n))
+    # min_, max_ = bias - 500
+    # max = bias + 2000
+    min_, max_=(np.nanpercentile(im,0.1),np.nanpercentile(im,99.9))
+    # n=700
+    val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1))
     bins = (bins[1:] + bins[:-1]) / 2
     val = np.array(val, dtype=float)
     val *= im.size / len(im[np.isfinite(im)])
@@ -90,7 +95,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         (-1e3, 4.5e3),
         (0, 300),
         (100, 2200),
-        (0.001, 3),
+        (0.001, 6),
         (0, 3),
         (0, 0.3),
         # (1.5e3,1.5e5),
@@ -140,9 +145,9 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
     bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor="None")
 
-    button = Button(
-        plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit", color="white", hovercolor="0.975",
-    )
+    button = Button(plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit", color="white", hovercolor="0.975",)
+    button0 = Button(plt.axes([0.63, 0.025, 0.1, 0.04]), "Fit0", color="white", hovercolor="0.975",)
+    simplified_least_square = Button(plt.axes([0.49, 0.025, 0.1, 0.04]), "Simp. Least Sq", color="white", hovercolor="0.975",)
 
     for edge in "left", "right", "top", "bottom":
         bounds_box.spines[edge].set_visible(False)
@@ -201,14 +206,14 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         vals = [bias,ron ,gain,flux,0.01,0.01,]
         bounds = ([bias-10,ron/10,gain/10,flux/10,0,0],[bias+10,10*ron,gain*10,flux*10,0.2,0.1])
         bounds = ([bias-10,ron/10,0,flux/10,0,0],[bias+10,200,gain*10,flux*10,0.1,0.1])
-        print(vals)
-        print(bounds[0])
-        print(bounds[1])
+        # print(vals)
+        # print(bounds[0])
+        # print(bounds[1])
         upper_limit = bias+20*RN/ConversionGain
-        print(upper_limit)
+        # print(upper_limit)
 
         vals, pcov = curve_fit(EMCCD, xdata[xdata<upper_limit], ydata[xdata<upper_limit],p0=vals,bounds=bounds)#np.array(lims).T
-        print(vals)
+        # print(vals)
         n = 6
         try:
             for slid in sliders[n:]:
@@ -226,9 +231,81 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     name = get_filename(d)
     plt.draw()
     ax.legend(loc="upper right", fontsize=15)
-    ax.set_title(name)
+    ax.set_title(name,fontsize=11)
     plt.show()
     return
 
 
+    def fit0(event):
+        bins,value = xdata, ydata
+        vals = [dict_values[slid.label] for slid in sliders]
+        bounds = ([0.1*val for val in vals],[10*val for fal in vals])
+        bounds = ([vals[0]-100,vals[1]-10,vals[2]/2,vals[3]/3,vals[4]-0.01,vals[5]-0.01],[vals[0]+100,vals[1]+10,vals[2]*2,vals[3]*3,vals[4]+0.01,vals[5]+0.1])
+        bounds = (-np.inf*vals,np.inf*vals)
+        # print(vals)
+        # print(bounds)
+        # vals = [bias,ron ,gain,flux,0.01,0.01,]
+        # bounds = ([bias-10,ron/10,gain/10,flux/10,0,0],[bias+10,10*ron,gain*10,flux*10,0.2,0.1])
+        # upper_limit = bias+20*RN/ConversionGain
+        # vals, pcov = curve_fit(EMCCD, xdata[xdata<upper_limit], ydata[xdata<upper_limit],p0=vals,bounds=bounds)#np.array(lims).T
+        vals, pcov = curve_fit(EMCCD, xdata,ydata,p0=vals,bounds=bounds)#np.array(lims).T
+        n = 6
+        try:
+            for slid in sliders[n:]:
+                vals.append(slid.value)
+        except AttributeError:
+            for slid in sliders[n:]:
+                vals.append(slid.val)
+        l.set_ydata(function(x, *vals[:args_number]))
+        plt.draw()
+
+        for slid, vali in zip(sliders, vals):
+            slid.widget.set_val(vali)
+
+
+    def simplified_least_square_fit(event):
+        bins,value = xdata, ydata
+        vals = [dict_values[slid.label] for slid in sliders[:4]]
+        bounds = ([0.1*val for val in vals],[10*val for fal in vals])
+        bounds = ([vals[0]-100,vals[1]-10,vals[2]/2,vals[3]/3],[vals[0]+100,vals[1]+10,vals[2]*2,vals[3]*3])
+        # bounds = np.array(lims).T#(-np.inf*np.array(vals),np.inf*np.array(vals))
+        # print(vals)
+        # print(bounds)
+        # vals = [bias,ron ,gain,flux,0.01,0.01,]
+        # bounds = ([bias-10,ron/10,gain/10,flux/10,0,0],[bias+10,10*ron,gain*10,flux*10,0.2,0.1])
+        # upper_limit = bias+20*RN/ConversionGain
+        # vals, pcov = curve_fit(EMCCD, xdata[xdata<upper_limit], ydata[xdata<upper_limit],p0=vals,bounds=bounds)#np.array(lims).T
+        model_to_fit =  lambda  bin_center,bias,ron,EmGain,flux : EMCCD(bin_center,bias,ron,EmGain,flux,0,0)
+        model_to_fit_stoch =  lambda  bin_center,bias,ron,EmGain,flux : function(bin_center,bias,ron,EmGain,flux,0,0)
+        print('ok')
+        # vals, pcov = curve_fit(model_to_fit, xdata,ydata,p0=vals,bounds=bounds)#np.array(lims).T
+        vals, pcov = curve_fit(model_to_fit, xdata,ydata,p0=vals)#,bounds=bounds)#np.array(lims).T
+        print('ok')
+        n = 6
+        try:
+            for slid in sliders[n:]:
+                vals.append(slid.value)
+        except AttributeError:
+            for slid in sliders[n:]:
+                vals.append(slid.val)
+        l.set_ydata(model_to_fit_stoch(x, *vals[:args_number]))
+        plt.draw()
+
+        for slid, vali in zip(sliders, vals):
+            slid.widget.set_val(vali)            
+    button0.on_clicked(fit0)
+    button.on_clicked(fit)
+    simplified_least_square.on_clicked(simplified_least_square_fit)
+
+
+
+    name = get_filename(d)
+    plt.draw()
+    ax.legend(loc="upper right", fontsize=15)
+    ax.set_title(name, fontsize=11)
+    plt.show()
+    return 1, 1
+
+
+# if __name__ == "__main__":
 emccd_model(xpapoint=None, path=None, smearing=1, argv=[])

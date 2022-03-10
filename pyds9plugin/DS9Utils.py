@@ -935,6 +935,55 @@ def create_repositories(path, field, values):
     return paths
 
 
+def SigmaClipBinned(x, y, sig=1, Plot=True, ax=None, log=False):
+    """Perform sigma clipped binning on a x, y dataset
+    """
+    import numpy as np
+
+    x, y = np.array(x), np.array(y)
+    ob, bins = np.histogram(
+        x,
+        bins=[np.percentile(x, i) for i in np.linspace(0, 100, int(2 + len(x) / 100))],
+    )
+    index = []
+    xn, yn = [], []
+    offset = 0
+    for i in range(len(ob) - offset):
+        mask = (x >= bins[i]) & (x <= bins[i + 1])  # .astype(int)
+        xi, yi = np.array(x)[mask], np.array(y)[mask]
+        indexi = (
+            (yi < np.nanmedian(yi) + sig * np.nanstd(yi))
+            & (yi > np.nanmedian(yi) - sig * np.nanstd(yi))
+            & (xi < np.nanmedian(xi) + 3 * sig * np.nanstd(xi))
+            & (xi > np.nanmedian(xi) - 3 * sig * np.nanstd(xi))
+        )
+        index.append(indexi)
+        xn.append(xi)
+        yn.append(yi)
+        if Plot:
+            import matplotlib.pyplot as plt
+
+            if ax is None:
+                fig = plt.figure()  # figsize=(12,4.5))
+                ax = fig.add_subplot(111)
+            if log:
+                p = ax.plot(np.log10(xi), np.log10(yi), ".", alpha=0.15)
+                ax.plot(
+                    np.log10(xi[indexi]),
+                    np.log10(yi[indexi]),
+                    ".",
+                    alpha=0.9,
+                    c=p[0].get_color(),
+                )
+            else:
+                p = ax.plot(xi, yi, ".", alpha=0.15)
+                ax.plot(xi[indexi], yi[indexi], ".", alpha=0.9, c=p[0].get_color())
+
+    all_index = np.hstack(index)
+    xx, yy = np.hstack(xn), np.hstack(yn)
+    return xx[all_index], yy[all_index]
+
+
 def PlotFit1D(
     x=None,
     y=[709, 1206, 1330],
@@ -953,7 +1002,7 @@ def PlotFit1D(
     sigma=None,
     # ls=":",
     interactive=False,
-    **kwargs
+    **kwargs,
 ):
     """ PlotFit1D(np.arange(100),np.arange(100)**2
     + 1000*np.random.poisson(1,size=100),2)
@@ -2068,6 +2117,7 @@ def ds9entry(xpapoint=None, message="", quit_=False):
     """Opens DS9 native entry dialog box
     """
     d = DS9n(xpapoint)
+    message = f_string(message)
     if isinstance(d, FakeDS9):
         answer = input("%s" % (message))
     else:
@@ -2807,10 +2857,9 @@ def explore_throughfocus(xpapoint=None, argv=[]):
         sys.exit()
     mask = np.nanmin(a["VIGNET"], axis=(1, 2)) > -1e30
     a = a[mask]
-    a["VIGNET1"] = [
-        (data - np.nanmin(data)) / (data - np.nanmin(data)).ptp()
-        for data in a["VIGNET"]
-    ]  #
+    a["VIGNET1"] = [(data - np.nanmin(data)) / data.ptp() for data in a["VIGNET"]]
+    a["VIGNET1"] = [(data - np.nanmin(data)) for data in a["VIGNET"]]
+
     a["VIGNET2"] = [
         convolve(data, Gaussian2DKernel(x_stddev=1)) for data in a["VIGNET1"]
     ]
@@ -2840,7 +2889,7 @@ def pyvista_throughfocus(a):
         title="Throughfocus",
     )
     value = a["VIGNET1"][0].shape[0]
-    mesh = create_mesh(a["VIGNET1"][0], value=value)
+    mesh = create_mesh(a["VIGNET1"][0] / a["VIGNET1"][0].ptp(), value=value)
     p.add_mesh(
         mesh,
         scalars=a["VIGNET1"][0],
@@ -2851,42 +2900,58 @@ def pyvista_throughfocus(a):
         flip_scalars=True,
         scalar_bar_args={"title": "Value"},
         show_scalar_bar=True,
-    )  # , cmap='jet')
+    )
+    # , cmap='jet')
     dict_ = {"smooth": "VIGNET1", "number": 0}
     # p.show()
-    labels = list(np.arange(len(a)) + 1)
+    # labels = list(np.arange(len(a)) + 1)
+    fields = ["X_IMAGE", "Y_IMAGE", "SNR_WIN", "AMPLITUDE"]
+    labels = ["\n".join(["%s=%i" % (c, _[c]) for c in fields]) for _ in a]
 
     def update_text(text):
-        text = int(text)
-        p.add_text("Image: %i" % (text), name="mylabel")
+        # text = int(text)
+        p.add_text("%s" % (text), name="mylabel")
 
     def throughfocus_callback(val):
         points = mesh.points.copy()
-        data = a[dict_["smooth"]][int(val)]
+        data = a[dict_["smooth"]][int(val)] / a[dict_["smooth"]][int(val)].ptp()
         points[:, -1] = value * (data - np.nanmin(data)).reshape(-1)
         p.update_coordinates(points, render=False)
         scalar = a[dict_["smooth"]][int(val)].ravel()
         p.update_scalars(scalar, render=False)
         p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
+        update_text(labels[int(val)])
         dict_["number"] = val
         return
 
     def create_gif(val):
-
+        if val:
+            name = "VIGNET2"
+        else:
+            name = "VIGNET1"
         points = mesh.points.copy()
-        p.open_gif("/tmp/throughfocus.gif")
-        p.add_text("Image: 0", name="mylabel")
-        # n = 1
-        images = np.vstack([a, a[::-1]])
-        for i, (data, lab) in enumerate(
-            zip(images, (labels + labels[::-1]))
-        ):  # +datas+datas+datas+datas+datas+datas:
+        file_name = "/tmp/throughfocus.mp4"
+        if ".mp4" in file_name:
+            p.open_movie(file_name)
+        else:
+            p.open_gif(file_name)
+        p.add_text(labels[0], name="mylabel")
+
+        images = a[name]
+        for i, (data, lab) in enumerate(zip(images, (labels + labels[::-1]))):
+            # +datas+datas+datas+datas+datas+datas:
             points[:, -1] = value * (data - np.nanmin(data)).reshape(-1)
             p.update_coordinates(points)  # , render=False)
             p.update_scalars(data.ravel())  # , render=False)
-            update_text("Image: %i" % (lab))
+            update_text(lab)
             p.write_frame()
-
+            if ".mp4" in file_name:
+                p.write_frame()
+                p.write_frame()
+                p.write_frame()
+                p.write_frame()
+                p.write_frame()
+                p.write_frame()
         return
 
     def smooth_callback(val):
@@ -4042,21 +4107,22 @@ def execute_command(
         )[0]
     ds9 = fitsimage.data
     header = fitsimage.header
-    if os.path.isfile(path2remove) is False:
-        if "image" in exp:
-            d = DS9n()
-            message(d, "{Image not found, please verify your path!")
-        else:
-            image = 0
-    else:
-        fitsimage2 = fits.open(path2remove)[ext]
-        image = fitsimage2.data
+    # if os.path.isfile(path2remove) is False:
+    #     if "image" in exp:
+    #         d = DS9n()
+    #         message(d, "{Image not found, please verify your path!")
+    #     else:
+    #         image = 0
+    # else:
+    #     fitsimage2 = fits.open(path2remove)[ext]
+    #     image = fitsimage2.data
     ds9 = np.array(ds9, dtype=float)
 
     ldict = {
         "ds9": ds9,
         "header": header,
-        "image": image,
+        "fits": fits,
+        # "image": image,
         "convolve": convolve,
         "filename": filename,
         "grey_dilation": grey_dilation,
@@ -4076,11 +4142,11 @@ def execute_command(
         "interpolate_replace_nans": interpolate_replace_nans,
         "Gaussian2DKernel": Gaussian2DKernel,
         "d": d,
+        "function": "execute_command",
     }
     new_dict = {}
     new_dict.update(ldict)
     new_dict.update(globals())
-
     try:
         if os.path.isfile(exp):
             verboseprint("Executing file %s" % (exp))
@@ -4090,7 +4156,7 @@ def execute_command(
         else:
             verboseprint("Executing expression : %s" % (exp))
             exec(exp, new_dict)  # globals(), ldict)  # , locals(),locals())
-    except (SyntaxError, NameError) as e:
+    except (TabError) as e:  # NameError,IndexError
         import traceback
 
         verboseprint(e)
@@ -4143,17 +4209,21 @@ def execute_command(
     same = fitsimage.data == ds9
     if type(same) is not bool:
         same = same.all()
+
     if same & (fitsimage.header == header):
         verboseprint("ds9 did not change")
         return None, filename
-    elif write:
+    else:
         fitsimage.data = ds9
         fitsimage.header = header
         if (ds9.astype(int) == ds9).all():
             fitsimage.data = np.int16(fitsimage.data)
             fitsimage.header["BITPIX"] = 16
         # if overwrite is False:
-        name = filename[:-5] + "_modified.fits"
+        if write:
+            name = filename[:-5] + "_modified.fits"
+        else:
+            name = "/tmp/" + os.path.basename(filename)[:-5] + "_modified.fits"
         # else:
         #     name = filename
         fitsimage.header["DS9"] = filename
@@ -4227,14 +4297,17 @@ def csvwrite(table, filename, verbose=True):
     from astropy.table import Table
     import numpy as np
 
-    masked_values = "N/A"  # np.nan  # "N/A"
+    masked_values = np.nan  # "N/A"  # np.nan  # "N/A"
     if ".ecsv" in filename:
         format = "ascii.ecsv"
         for col in table.colnames:
             if type(table[col][0]) == str:
                 try:
                     table[col] = table[col].astype("float")
-                except (ValueError):  # type_error if stacking different headers
+                except (ValueError, TypeError) as e:
+                    # print(table[col])
+                    # type_error if stacking different headers, or string type
+                    print(e)
                     pass
     elif ".csv" in filename:
         format = "csv"
@@ -4447,7 +4520,7 @@ def stack_images(xpapoint=None, std=False, clipping=None, argv=[]):
 
 
 def stack_images_path(
-    paths, Type="np.nanmean", clipping=3, dtype=float, fname="", std=False, name=None,
+    paths, Type="nanmean", clipping=3, dtype=float, fname="", std=False, name=None,
 ):
     """Stack images of the files given in the path
     """
@@ -4487,13 +4560,15 @@ def stack_images_path(
                 verboseprint(e)
                 n -= 1
         stack = stack / n
-    elif Type == np.nanmedian:
+    elif Type == "nanmedian":
         stack = np.array(
-            Type(np.array([fits.open(file)[i].data for file in paths[index]]), axis=0,),
+            getattr(np, Type)(
+                np.array([fits.open(file)[i].data for file in paths[index]]), axis=0,
+            ),
             dtype=dtype,
         )
     else:
-        stack = Type(
+        stack = getattr(np, Type)(
             np.array([fits.open(file)[i].data for file in paths[index]]),
             dtype=dtype,
             axis=0,
@@ -5978,6 +6053,7 @@ def create_catalog(files, ext=[0], info=None):
         except OSError:
             verboseprint("Empty or corrupt FITS file :", files[i])
             pass
+    # print([file.info for file in file_header])
     table_header = vstack(file_header)
     table_header.add_column(
         Column(np.arange(len(table_header)), name="Index", dtype=np.int8),
@@ -5986,6 +6062,12 @@ def create_catalog(files, ext=[0], info=None):
     )
     table_header.add_column(
         Column(files_name, name="Path"), index=-1, rename_duplicate=True
+    )
+    table_header.add_column(
+        Column([os.path.dirname(file) for file in files_name]),
+        name="dir_path",
+        index=1,
+        rename_duplicate=True,
     )
     table_header.add_column(
         Column([os.path.basename(file) for file in files_name]),
@@ -6041,8 +6123,11 @@ def create_catalog(files, ext=[0], info=None):
     ).any():
         f = ".ecsv"
     else:
-        f = ".csv"
-    csvwrite(table_header, os.path.dirname(path) + "/HeaderCatalog" + f)
+        f = ".csv"  # os.path.dirname(path)
+    info_name = os.path.basename(info).replace(".py", "")
+    name = os.path.commonpath(files) + "/HeaderCatalog" + info_name + f
+    print(name)
+    csvwrite(table_header, name)
     # .filled("")
     return table_header
 
@@ -6060,7 +6145,7 @@ def remove_duplicates(hdr):
     return hdr
 
 
-def create_table_from_header(path, exts=[0], info=None):
+def create_table_from_header(path, exts=[0], info=""):
     """Create table from fits header
     """
     from astropy.table import Table, hstack
@@ -6095,11 +6180,12 @@ def create_table_from_header(path, exts=[0], info=None):
                 "filename": path,
                 "np": np,
                 "table": table,
+                "function": "create_table_from_header",
             }
             verboseprint("Executing file %s" % (exp))
             try:
                 exec(open(info).read(), globals(), ldict)
-            except (SyntaxError, NameError) as e:
+            except (SyntaxError) as e:
                 print(e)
         return table
 
@@ -6845,6 +6931,13 @@ def create_image_from_catalog(xpapoint=None, nb=int(1e3), argv=[]):
         metavar="",
         default="",
     )
+    parser.add_argument(
+        "-s",
+        "--size",
+        help="Size of the output image",
+        metavar="",
+        default=" 3216,2069",
+    )
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
@@ -6856,9 +6949,12 @@ def create_image_from_catalog(xpapoint=None, nb=int(1e3), argv=[]):
             catalog = Table.read(catfile)
         except astropy.io.registry.IORegistryError:
             catalog = Table.read(catfile, format="ascii")
-
-        lx, ly = int(catalog["X_IMAGE"].max()), int(catalog["Y_IMAGE"].max())
+        if args.size == "None":
+            lx, ly = int(catalog["X_IMAGE"].max()), int(catalog["Y_IMAGE"].max())
+        else:
+            lx, ly = np.array(args.size.split(","), dtype=int)
         background = np.median(catalog["BACKGROUND"])
+        # TODO add an interpolated background!
         image = np.ones((lx, ly)) * background
         for i in tqdm(range(len(catalog))):
             x = np.linspace(0, lx - 1, lx)
@@ -6887,7 +6983,7 @@ def create_image_from_catalog(xpapoint=None, nb=int(1e3), argv=[]):
                     catalog[i]["theta"],
                 )
         try:
-            image_real = np.random.poisson(image).T
+            image_real = image.T  # np.random.poisson(image).T
         except ValueError:
             image_real = image.T
 
@@ -7675,7 +7771,6 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
                 % (possible_functions),
             )
             bckgd = -1
-    print(1, len(x))
 
     if args.other_features == "User-defined-interactively":
         gui = interactiv_manual_fitting(
@@ -9864,10 +9959,33 @@ def resample(xpapoint=None, argv=[]):
     return
 
 
+def blockshaped(arr, nrows, ncols, cut=True):
+    """
+    Return an array of shape (n, nrows, ncols) where
+    n * nrows * ncols = arr.size
+
+    If arr is a 2D array, the returned array should look like n subblocks with
+    each subblock preserving the "physical" layout of arr.
+    """
+    h, w = arr.shape
+    if cut:
+        max1 = -(h % nrows) if (h % nrows) != 0 else h
+        max2 = -(w % ncols) if (w % ncols) != 0 else w
+        arr = arr[:max1, :max2]
+        h, w = arr.shape
+    else:
+        assert h % nrows == 0, f"{h} rows is not evenly divisible by {nrows}"
+        assert w % ncols == 0, f"{w} cols is not evenly divisible by {ncols}"
+    return (
+        arr.reshape(h // nrows, nrows, -1, ncols)
+        .swapaxes(1, 2)
+        .reshape(-1, nrows, ncols)
+    )
+
+
 def ds9_psfex(xpapoint=None, argv=[]):
     """Run PSFex astromatic software
     """
-    # print(1)
     from astropy.table import Table
     from shutil import which
     from astropy.io import fits
@@ -12190,14 +12308,14 @@ def python_command(xpapoint=None, argv=[]):
     write = bool(int(args.overwrite))
 
     if ((int(d.get("block")) > 1) | (d.get("smooth") == "yes")) & (len(path) == 1):
-        answer = ds9entry(
-            args.xpapoint,
+        if yesno(
+            d,
             """It seems that your loaded image is modified (smoothed or
                blocked). Do you want to run the analysis on this modified
-               image? [y/n]""",
-            quit_=False,
-        )
-        if answer == "y":
+               image?""",
+        ):
+
+            # if answer == "y":
             try:
                 fitsimage = d.get_pyfits()[0]
                 path = [tmp_image]
@@ -12212,14 +12330,27 @@ def python_command(xpapoint=None, argv=[]):
             fitswrite(fitsimage, tmp_image)
         except TypeError:
             pass
-    result, name = parallelize(
-        function=execute_command,
-        parameters=[path2remove, exp, xpapoint, bool(int(eval_)), write, d,],
-        action_to_paralize=path,
-        number_of_thread=args.number_processors,
-    )
-    if (len(path) < 2) & (result is not None):
-        d.set("frame new ; tile yes ; file " + name)
+    # result, name = parallelize(
+    #     function=execute_command,
+    #     parameters=[path2remove, exp, xpapoint, bool(int(eval_)), write, d,],
+    #     action_to_paralize=path,
+    #     number_of_thread=args.number_processors,
+    # )
+    # if (len(path) < 2) & (result is not None):
+    #     d.set("frame new ; tile yes ; file " + name)
+    if len(path) < 2:
+        result, name = execute_command(
+            path[0], path2remove, exp, xpapoint, bool(int(eval_)), write, d,
+        )
+        if result is not None:
+            d.set("frame new ; tile yes ; file " + name)
+    else:
+        result, name = parallelize(
+            function=execute_command,
+            parameters=[path2remove, exp, xpapoint, bool(int(eval_)), write, d,],
+            action_to_paralize=path,
+            number_of_thread=args.number_processors,
+        )
     return
 
 
