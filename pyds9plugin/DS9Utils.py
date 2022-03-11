@@ -2848,29 +2848,31 @@ def explore_throughfocus(xpapoint=None, argv=[]):
     a = Table.read(args.path)
     if len(a.colnames):
         a = Table.read(args.path, format="fits", hdu="LDAC_OBJECTS")
-    if "VIGNET" not in a.colnames:
+    names = [name for name in a.colnames if len(a[name].shape) > 2] * 2
+    if len(names) == 0:
         message(
             d,
-            """There is no VIGNET in the input catalog. Please make sure to use
+            """There is no vignets in the input catalog. Please make sure to use
                the parameter file sex_vignet.param when using SExtractor.""",
         )
         sys.exit()
-    mask = np.nanmin(a["VIGNET"], axis=(1, 2)) > -1e30
+
+    mask = (np.nanmin(a[names[0]], axis=(1, 2)) > -1e30) & (
+        np.nanmin(a[names[1]], axis=(1, 2)) > -1e30
+    )
     a = a[mask]
-    a["VIGNET1"] = [(data - np.nanmin(data)) / data.ptp() for data in a["VIGNET"]]
-    a["VIGNET1"] = [(data - np.nanmin(data)) for data in a["VIGNET"]]
-
-    a["VIGNET2"] = [
-        convolve(data, Gaussian2DKernel(x_stddev=1)) for data in a["VIGNET1"]
-    ]
-
-    a["AMPLITUDE"] = [data.ptp() for data in a["VIGNET"]]
+    for name in names:
+        a[name] = [(data - np.nanmin(data)) for data in a[name]]
+        a[name + " smoothed"] = [
+            convolve(data, Gaussian2DKernel(x_stddev=1)) for data in a[name]
+        ]
+    a["AMPLITUDE"] = [data.ptp() for data in a[names[0]]]
     a.sort(args.sort)
-    pyvista_throughfocus(a)
+    pyvista_throughfocus(a, names)
     return
 
 
-def pyvista_throughfocus(a):
+def pyvista_throughfocus(a, names):
     """Explore throughfocus using pyvista in 3d
     """
     from pyvista import Plotter, set_plot_theme  # StructuredGrid, PolyData,
@@ -2888,11 +2890,11 @@ def pyvista_throughfocus(a):
         splitting_position=None,
         title="Throughfocus",
     )
-    value = a["VIGNET1"][0].shape[0]
-    mesh = create_mesh(a["VIGNET1"][0] / a["VIGNET1"][0].ptp(), value=value)
+    value = a[names[0]][0].shape[0]
+    mesh = create_mesh(a[names[0]][0] / a[names[0]][0].ptp(), value=value)
     p.add_mesh(
         mesh,
-        scalars=a["VIGNET1"][0],
+        scalars=a[names[0]][0],
         opacity=0.9,
         nan_opacity=0,
         use_transparency=False,
@@ -2901,23 +2903,22 @@ def pyvista_throughfocus(a):
         scalar_bar_args={"title": "Value"},
         show_scalar_bar=True,
     )
-    # , cmap='jet')
-    dict_ = {"smooth": "VIGNET1", "number": 0}
-    # p.show()
-    # labels = list(np.arange(len(a)) + 1)
-    fields = ["X_IMAGE", "Y_IMAGE", "SNR_WIN", "AMPLITUDE"]
+
+    dict_ = {"smooth": "", "number": 0, "field": names[0]}
+    fields = [c for c in a.colnames if (("SNR" in c) | ("X_IM" in c) | ("Y_IM" in c))]
+    # ["X_IMAGE", "Y_IMAGE", "SNR_WIN", "AMPLITUDE"]
     labels = ["\n".join(["%s=%i" % (c, _[c]) for c in fields]) for _ in a]
 
     def update_text(text):
-        # text = int(text)
         p.add_text("%s" % (text), name="mylabel")
 
     def throughfocus_callback(val):
         points = mesh.points.copy()
-        data = a[dict_["smooth"]][int(val)] / a[dict_["smooth"]][int(val)].ptp()
+        name = dict_["field"] + dict_["smooth"]
+        data = a[name][int(val)] / a[name][int(val)].ptp()
         points[:, -1] = value * (data - np.nanmin(data)).reshape(-1)
         p.update_coordinates(points, render=False)
-        scalar = a[dict_["smooth"]][int(val)].ravel()
+        scalar = a[name][int(val)].ravel()
         p.update_scalars(scalar, render=False)
         p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
         update_text(labels[int(val)])
@@ -2925,10 +2926,8 @@ def pyvista_throughfocus(a):
         return
 
     def create_gif(val):
-        if val:
-            name = "VIGNET2"
-        else:
-            name = "VIGNET1"
+        name = dict_["smooth"]
+        name = dict_["field"] + dict_["smooth"]
         points = mesh.points.copy()
         file_name = "/tmp/throughfocus.mp4"
         if ".mp4" in file_name:
@@ -2939,7 +2938,7 @@ def pyvista_throughfocus(a):
 
         images = a[name]
         for i, (data, lab) in enumerate(zip(images, (labels + labels[::-1]))):
-            # +datas+datas+datas+datas+datas+datas:
+            data /= data.ptp()
             points[:, -1] = value * (data - np.nanmin(data)).reshape(-1)
             p.update_coordinates(points)  # , render=False)
             p.update_scalars(data.ravel())  # , render=False)
@@ -2955,20 +2954,34 @@ def pyvista_throughfocus(a):
         return
 
     def smooth_callback(val):
-        if val:
-            name = "VIGNET2"
+        if dict_["smooth"] == "":
+            dict_["smooth"] = " smoothed"
         else:
-            name = "VIGNET1"
-
+            dict_["smooth"] = ""
+        name = dict_["field"] + dict_["smooth"]
         points = mesh.points.copy()
-        data = a[name][int(dict_["number"])]
+        data = a[name][int(dict_["number"])] / a[name][int(dict_["number"])].ptp()
         points[:, -1] = value * (data - np.nanmin(data)).reshape(-1)
         p.update_coordinates(points, render=False)
         scalar = a[name][int(dict_["number"])].ravel()
+        p.update_coordinates(points)
         p.update_scalars(scalar, render=False)
+        p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
+
+    def change_field(val):
+        print(dict_["field"])
+        index = names.index(dict_["field"])
+        name = names[index + 1]
+        dict_["field"] = name
+        print(dict_["field"])
+        points = mesh.points.copy()
+        data = a[name][int(dict_["number"])] / a[name][int(dict_["number"])].ptp()
+        points[:, -1] = value * (data - np.nanmin(data)).reshape(-1)
+        p.update_coordinates(points, render=False)
+        scalar = a[name][int(dict_["number"])].ravel()
         p.update_coordinates(points)  # , render=False)
-        p.update_scalars(data.ravel())  # , render=False)
-        dict_["smooth"] = name
+        p.update_scalars(scalar, render=False)
+        p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
 
     p.add_text_slider_widget(
         throughfocus_callback,
@@ -2976,6 +2989,8 @@ def pyvista_throughfocus(a):
         value=0,
         event_type="always",
     )
+    p.add_checkbox_button_widget(change_field, position=(10, 150))
+    p.add_text("Change field", name="fieldbutton", position=(70, 150))
     p.add_checkbox_button_widget(create_gif)
     p.add_text("Create GIF in /tmp/thoughfocus.gif", name="button", position=(70, 10))
     p.add_checkbox_button_widget(smooth_callback, position=(10, 80), value=False)
@@ -6964,7 +6979,8 @@ def create_image_from_catalog(xpapoint=None, nb=int(1e3), argv=[]):
                 image += Gaussian2D.evaluate(
                     x,
                     y,
-                    catalog[i]["FLUX_AUTO"],
+                    # catalog[i]["FLUX_AUTO"],
+                    catalog[i]["VIGNET"].max() - np.median(catalog[i]["VIGNET"]),
                     catalog[i]["X_IMAGE"],
                     catalog[i]["Y_IMAGE"],
                     catalog[i]["A_IMAGE"],
