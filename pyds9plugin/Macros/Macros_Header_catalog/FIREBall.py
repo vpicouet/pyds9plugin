@@ -32,7 +32,8 @@ else:
 
 # colors= ['#E24A33','#348ABD','#988ED5','#777777','#FBC15E','#8EBA42','#FFB5B8'] + ['#E24A33','#348ABD','#988ED5','#777777','#FBC15E','#8EBA42','#FFB5B8']
 full_analysis = True
-Plot = True
+Plot = False
+# write_files = True
 data = fitsfile[0].data
 header = fitsfile[0].header
 try:
@@ -76,7 +77,7 @@ def Create_label_header(header,L):
     else:
         return None
     
-def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conversion_gain,analysis_path=analysis_path,ax=None,im=None):
+def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conversion_gain,analysis_path=analysis_path,ax=None,im=None):
     from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD, EMCCDhist
     from matplotlib import pyplot as plt
     import numpy as np
@@ -107,7 +108,9 @@ def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conve
     threshold = table['bias_fit']+ 5.5* (table['RON']*conversion_gain)
     # ax.semilogy([threshold,threshold],[0,1e6],'k:')
     # model_to_fit = lambda bin_center,biais\,RN,EmGain,flux,p_sCIC,Smearing
-    ax.semilogy(bin_center, np.convolve(n,np.ones(n_conv)/n_conv,mode='same'),'k:',alpha=0.3,  label="Data:\n"+l_data)
+    for n,alpha in zip(ns,[0.5,0.2]):
+        ax.semilogy(bin_center, np.convolve(n,np.ones(n_conv)/n_conv,mode='same'),'k:',alpha=alpha,  label="Data:\n"+l_data)
+    n=ns[0]
     model =            10**EMCCD(    bin_center,bias, ron, gain, flux, sCIC=0,smearing=0)
     # model2 =            10**EMCCD(    bin_center,bias, ron, table['Gain2'], table['Flux2'], sCIC=0,smearing=0)
     model_stochastic = 10**EMCCDhist(bin_center,bias, ron, gain, flux,sCIC=0,smearing=0)
@@ -158,8 +161,8 @@ def plot_hist(bin_center, n,filename, header, table,masks, conversion_gain=conve
     table['sCIC_ls']=popt[1]
 
     ax.legend(loc="upper right", fontsize=10,ncol=2)
-    ax.set_ylim(ymin=1e-1,ymax=2.1*n.max())
-    ax.set_xlim(xmin=bin_center[n>1].min(),xmax=np.nanpercentile(im,99.999))#limit+500)
+    ax.set_ylim(ymin=1e0,ymax=2.1*n.max())
+    ax.set_xlim(xmin=bin_center[n>1].min(),xmax=np.nanpercentile(im,99.9))#limit+500)
     ax.tick_params(axis="x", labelsize=13)
     ax.tick_params(axis="y", labelsize=13)
     ax.set_title(os.path.basename(filename).replace(".fits","") )#+ 'Counts image:%0.2f'%())
@@ -218,7 +221,7 @@ range_=(np.nanpercentile(physical_region,0.1),np.nanpercentile(physical_region,9
 # value, b = np.histogram(data[Yinf+1000:Ysup, Xinf:Xsup].flatten(),range=(1000,5000),bins=1000)
 # value, b = np.histogram(data[Yinf+1000:Ysup, Xinf:Xsup].flatten(),bins=np.arange(range_[0],range_[1],1))
 value, b = np.histogram(data[Yinf:Ysup, Xinf:Xsup].flatten(),bins=np.arange(1000,8000,1))
-value_os, b_os = np.histogram(pre_scan.flatten(),bins=np.arange(np.nanpercentile(pre_scan,0.1),np.nanpercentile(pre_scan,99.9),1))
+value_os, b_os = np.histogram(pre_scan.flatten(),bins=np.arange(1000,8000,1))
 bins = (b[1:]+b[:-1])/2
 bins_os = (b_os[1:]+b_os[:-1])/2
 
@@ -259,8 +262,9 @@ table['RON_os'] =   np.abs(PlotFit1D(bins_os[mask_RN_os],value_os[mask_RN_os],de
 # np.min([bias,3200])
 ron_fixed = table['RON']#np.max([30,np.min([table['RON'],120])])
 # mask_gain1 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<np.min([bias,3200])+30*ron_fixed)
-mask_gain0 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==0))[0][0]])
-mask_gain1 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<bins[np.where((bins>bias) & ( np.convolve(value,np.ones(2),mode='same')==0))[0][0]])
+limit_max = bins[np.where((bins>bias) & ( np.convolve(value,np.ones(2),mode='same')==0))[0][0]]
+# mask_gain0 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==0))[0][0]])
+mask_gain1 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<limit_max)
 mask_gain2 = (bins>bias+6*ron_fixed) & (bins<bias+50*ron_fixed) #too dangerous, no values
 mask_gain3 = (bins>bias+6*ron_fixed) & (bins<bias+30*ron_fixed) #too dangerous, no values
 masks = [mask_gain1,mask_gain3,mask_gain2]#mask_gain0,
@@ -331,7 +335,7 @@ if Plot :
     # ax2.set_xlabel('Intensity')
     # ax2.set_ylabel('Variance')
     if (header['EMGAIN']>0):
-        plot_hist(bins,value,filename, header, table,masks=masks,ax=None,im=physical_region)
+        plot_hist(bins,[value,value_os],filename, header, table,masks=masks,ax=None,im=physical_region)
     else:
         table['gain_ls']=0
         table['flux_ls']=0
@@ -376,8 +380,19 @@ try:
 except ValueError:
     table['smearing_autocorr'] = -99
 
+table['hot_pixel_value'] = data[330,1332]
+table['hot_pixel_value_prior'] = data[330,1331]
+table['hot_pixel_value_next'] = data[330,1333]
+
+for i in range(3):
+    region = data[100 + 600*i:100+600*(i+1), 1120:2100]
+    table["hot_pixels_fraction_%i"%(i)] = 100 * float(np.sum(region> limit_max)) / np.sum(region > 0)
+
 if full_analysis:
     table['overscan_decrease'] = Column([np.nanmedian(data[:, 2143:2143+200],axis=0)], name="overscan_decrease")    
+    table['hot_pixel_profile'] = Column([data[330,1332:1332+5]], name="hot_pixel")
+    values = 100 * np.sum(data[:, 1120:2100]> limit_max,axis=1) / np.sum(data[:, 1120:2100] > 0,axis=1) 
+    table["hot_pixels_fraction"] = Column([values[:-1].reshape(47,-1).mean(axis=1)], name="hot_pixels_fraction")
 
 
 
@@ -385,6 +400,12 @@ if full_analysis:
 if ('FIREBall.py' in __file__) or (function=='execute_command'):
     print(table)
 
+
+
+# if write_files:
+    # fitsfile[0].data = fitsfile[0].data.astype(float)
+    # fitsfile[0].data[fitsfile[0].data>limit_max]=np.nan
+    # fitsfile.writeto(filename.replace('.fits','_hot.fits'))
 
 # fig, ax = plt.subplots()
 # ax.plot(bins[mask_RN],value[mask_RN])
@@ -459,5 +480,24 @@ if ('FIREBall.py' in __file__) or (function=='execute_command'):
 
 #         cat[field + "_%i" % (j)] = output[:, j]
 #     csvwrite(cat, path)
-#     return cat
+#     return ca
+# data=fits.open('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/7000/StackedImage_136-140.fits')[0].data
+# plt.imshow(data)
+# x = 235
+# y = 1230
+# n=100
+# n2=10
+# plt.imshow(np.log10(data[x:x+n2,y:y+n]-data[x:x+n2,y:y+n].min()+1))
+# plt.colorbar()
+# n2=5
+# for i in range(5):
+#     plt.plot(np.log10(data[x+i,y:y+n].T - data[x+i,y:y+n].min() +1)+3*i)
 
+# for file  in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/7000/image0001?5.fits'):
+#     data=fits.open(file)[0].data
+#     # plt.plot(np.log10(data[235,y:y+n].T - data[235,y:y+n].min() +1)+3*i)
+#     n=15
+#     y=1332
+#     x=330
+#     plt.plot(data[x,y:y+n])
+#     plt.plot(data[330,1332:1332+10])

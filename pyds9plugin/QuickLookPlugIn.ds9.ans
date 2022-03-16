@@ -6,6 +6,13 @@
 #echo "$width $height $depth $bitpix $data $filename $x $y $xcen $ycen" | $text
 
 
+verbose
+*
+bind B
+DS9Utils BackgroundMeasurement
+
+
+
 hmenu Quick Look Plugin
 
 	Quick Look Plugin Help
@@ -98,7 +105,7 @@ hmenu 1. Generic Functions
 
 		Reset Display Parameters Key
 		*
-		bind B
+		bind b
 		DS9Utils original_settings -x $xpa_method  | $text
 
 		Lock/Unlock Frames (L)
@@ -294,7 +301,7 @@ hmenu 2. Instrumentation - AIT
 		Explore PSFs/Vignettes #24
 		*
 		menu
-		DS9Utils explore_throughfocus -x $xpa_method  $param(SExtractor-Vignets-Path); -p "$Path" -s $sort | $text  #$steps
+		DS9Utils explore_throughfocus -x $xpa_method  $param(SExtractor-Vignets-Path); -p "$Path" -s "$sort" | $text  #$steps
 
 
 #		Throughfocus Image Key
@@ -802,7 +809,7 @@ endparam
 
 param SExtractor-Vignets-Path
 Path open {Path} "" {SExtractor catalog with VIGNETS}
-sort menu {Sorting-type} MAG_AUTO|FWHM_IMAGE|THETA_IMAGE|ELLIPTICITY|X_IMAGE|Y_IMAGE|AMPLITUDE {Column to use to sort the PSFs}
+sort menu {Sorting-type} |MAG_AUTO|FWHM_IMAGE|THETA_IMAGE|ELLIPTICITY|X_IMAGE|Y_IMAGE|AMPLITUDE {Column to use to sort the PSFs}
 endparam
 
 param Setup
@@ -1331,7 +1338,7 @@ endtab
 tab {Filter Params}
 
 FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
-FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|NONE|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
+FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/}
 
 DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 64 {Number of deblending sub-thresholds}
 DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.0003 {Minimum contrast parameter for deblending}
@@ -1476,7 +1483,7 @@ endparam
 
 
 param Python-Command-P
-exp menu {Expression} EMCCD_fit_analytical.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp menu {Expression} EMCCD_fit_analytical.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 #overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam

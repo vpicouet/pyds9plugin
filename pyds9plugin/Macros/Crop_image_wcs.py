@@ -1,11 +1,16 @@
+# from pyds9plugin.DS9Utils import lims_from_region, getregion
 
-def cropCLAUDS(path, position=[0, 0], size=[10, 10], all_ext=False):  # ,area=[0,100,0,100]
+
+def cropCLAUDS(
+    path, position=[0, 0], size=[10, 10], all_ext=False
+):  # ,area=[0,100,0,100]
     """Cropping/Trimming function that keeps WCS header information
     """
     from astropy.io import fits
     from astropy.nddata import Cutout2D
     from astropy.wcs import WCS
     from astropy.io.fits import ImageHDU
+
     a = fits.open(path)
     b = a.copy()
     for i in range(1):
@@ -23,12 +28,21 @@ def cropCLAUDS(path, position=[0, 0], size=[10, 10], all_ext=False):  # ,area=[0
     a.writeto(path[:-5] + "_trim.fits", overwrite=True)
     return a, path[:-5] + "_trim.fits"
 
-system = 'Image'
+
+system = "Image"
 region = getregion(d, quick=True, selected=True, system=system, dtype=float)
-Xinf, Xsup, Yinf, Ysup = Lims_from_region(None, coords=region[0], dtype=float)
+Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region[0], dtype=float)
 if (len(region[0]) != 5) & (len(region[0]) != 4):
-    message(d, "Trimming only works on box regions. Create and select a box region an d re-run the analysis.")
+    message(
+        d,
+        "Trimming only works on box regions. Create and select a box region an d re-run the analysis.",
+    )
     sys.exit()
 else:
-    ds9_2, name = cropCLAUDS(path=getfilename(d), position=[region[0][0] - 1, region[0][1] - 1], size=np.array([region[0][3], region[0][2]], dtype=int), all_ext=False)
+    ds9_2, name = cropCLAUDS(
+        path=get_filename(d),
+        position=[region[0][0] - 1, region[0][1] - 1],
+        size=np.array([region[0][3], region[0][2]], dtype=int),
+        all_ext=False,
+    )
 d.set("frame new ; tile yes ; file %s" % (name))

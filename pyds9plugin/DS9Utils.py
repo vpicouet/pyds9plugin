@@ -2260,8 +2260,10 @@ def getregion(
             try:
                 rows = win.get("regions all")
             except TypeError:
-                raise_create_region(win)
-                sys.exit()
+                if message:  # maybe to delete
+                    raise_create_region(win)
+                    sys.exit()
+                return None
         else:
             return None
 
@@ -2816,6 +2818,108 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
     pyvista_throughfocus(a)
 
 
+def add_field_after_matching(
+    FinalCat=None,
+    ColumnCat=None,
+    path1=None,
+    path2=None,
+    radec1=["RA", "DEC"],
+    radec2=["RA", "DEC"],
+    distance=0.5,
+    field="Z_ML",
+    new_field=None,
+    query=None,
+):
+    """
+    """
+    import astropy.units as u
+    from astropy.coordinates import SkyCoord
+
+    if path1 is not None:
+        try:
+            FinalCat = Table.read(path1)
+        except:
+            FinalCat = Table.read(path1, format="ascii")
+
+    if path2 is not None:
+        try:
+            ColumnCat = Table.read(path2)
+        except:
+            ColumnCat = Table.read(path2, format="ascii")
+    verboseprint("cat 1 : %i lines" % (len(FinalCat)))
+    verboseprint("cat 2 : %i lines" % (len(ColumnCat)))
+    # print(ColumnCat['ZFLAG'])
+    print(ColumnCat)
+    if query is not None:
+        ColumnCat = apply_query(
+            cat=ColumnCat, query=query, path=None, new_path=None, delete=True
+        )
+        print(ColumnCat)
+        mask = np.isfinite(ColumnCat[radec2[0]]) & np.isfinite(ColumnCat[radec2[1]])
+        ColumnCat = ColumnCat[mask]
+    # print(ColumnCat['ZFLAG'])
+    if len(radec1) == 2:
+        try:
+            c = SkyCoord(
+                ra=ColumnCat[radec2[0]] * u.deg, dec=ColumnCat[radec2[1]] * u.deg
+            )
+        except Exception as e:
+            print(e)
+            c = SkyCoord(ra=ColumnCat[radec2[0]], dec=ColumnCat[radec2[1]])
+        try:
+            catalog = SkyCoord(
+                ra=FinalCat[radec1[0]] * u.deg, dec=FinalCat[radec1[1]] * u.deg
+            )
+        except Exception:
+            catalog = SkyCoord(ra=FinalCat[radec1[0]], dec=FinalCat[radec1[1]])
+        #        idx, d2d, d3d = catalog.match_to_catalog_sky(c[mask])
+        print(catalog)
+        print(c)
+        idx, d2d, d3d = catalog.match_to_catalog_sky(c)
+        mask = 3600 * np.array(d2d) < distance
+        print("Number of matches < %0.2f arcsec :  %i " % (distance, mask.sum()))
+
+    elif len(radec1) == 1:
+        import pandas as pd
+        from pyds9plugin.DS9Utils import delete_multidim_columns
+
+        ColumnCat = ColumnCat[radec2 + field]
+        if new_field is not None:
+            ColumnCat.rename_columns(field, new_field)
+        ColumnCat.rename_column(radec2[0], "id_test")
+        FinalCat = DeleteMultiDimCol(FinalCat)
+        ColumnCat = DeleteMultiDimCol(ColumnCat)
+        FinalCatp = FinalCat.to_pandas()
+        ColumnCatp = ColumnCat.to_pandas()
+        a = pd.merge(
+            FinalCatp, ColumnCatp, left_on=radec1[0], right_on="id_test", how="left"
+        ).drop("id_test", axis=1)
+        return Table.from_pandas(a)  # .to_table()
+
+    if new_field is None:
+        new_field = field
+    idx_ = idx[mask]
+    for fieldi, new_field in zip(field, new_field):
+        print("Adding field " + fieldi + " " + new_field)
+        if new_field not in FinalCat.colnames:
+            if type(ColumnCat[fieldi][0]) == np.ndarray:
+                FinalCat[new_field] = (
+                    np.ones((len(FinalCat), *ColumnCat[fieldi][0].shape)) * -99.00
+                )
+                # print(np.ones((len(FinalCat),*ColumnCat[fieldi][0].shape)).shape)
+                # print(1)
+            else:
+                FinalCat[new_field] = -99.00
+                # print(FinalCat[new_field].shape)
+                # print(2)
+
+        # print(FinalCat[new_field][0].shape)
+        # print(FinalCat[new_field])
+        FinalCat[new_field][mask] = ColumnCat[fieldi][idx_]
+        # verboseprint(FinalCat[new_field])
+    return FinalCat
+
+
 def explore_throughfocus(xpapoint=None, argv=[]):
     """Create focus exploration based on sextractor catalog including VIGNETS
     """
@@ -2834,6 +2938,7 @@ def explore_throughfocus(xpapoint=None, argv=[]):
         help="Column to use to sort the PSFs",
         metavar="",
         choices=[
+            "",
             "MAG_AUTO",
             "FWHM_IMAGE",
             "THETA_IMAGE",
@@ -2857,9 +2962,10 @@ def explore_throughfocus(xpapoint=None, argv=[]):
         )
         sys.exit()
 
-    mask = (np.nanmin(a[names[0]], axis=(1, 2)) > -1e30) & (
-        np.nanmin(a[names[1]], axis=(1, 2)) > -1e30
-    )
+    mask = np.nanmin(a[names[0]], axis=(1, 2)) > -1e30
+    #  & (
+    #     np.nanmin(a[names[1]], axis=(1, 2)) > -1e30
+    # )
     a = a[mask]
     for name in names:
         a[name] = [(data - np.nanmin(data)) for data in a[name]]
@@ -2867,7 +2973,8 @@ def explore_throughfocus(xpapoint=None, argv=[]):
             convolve(data, Gaussian2DKernel(x_stddev=1)) for data in a[name]
         ]
     a["AMPLITUDE"] = [data.ptp() for data in a[names[0]]]
-    a.sort(args.sort)
+    if args.sort != "":
+        a.sort(args.sort)
     pyvista_throughfocus(a, names)
     return
 
@@ -2890,6 +2997,9 @@ def pyvista_throughfocus(a, names):
         splitting_position=None,
         title="Throughfocus",
     )
+    print(names)
+    print(a[names[0]])
+    print(a[names[0]][0].shape)
     value = a[names[0]][0].shape[0]
     mesh = create_mesh(a[names[0]][0] / a[names[0]][0].ptp(), value=value)
     p.add_mesh(
@@ -2903,9 +3013,19 @@ def pyvista_throughfocus(a, names):
         scalar_bar_args={"title": "Value"},
         show_scalar_bar=True,
     )
-
+    p.add_title(names[0])
     dict_ = {"smooth": "", "number": 0, "field": names[0]}
-    fields = [c for c in a.colnames if (("SNR" in c) | ("X_IM" in c) | ("Y_IM" in c))]
+    fields = [
+        c
+        for c in a.colnames
+        if (
+            ("FLUX_MAX" in c)
+            | ("BACKGROUND" in c)
+            # | ("SNR" in c)
+            | ("X_IM" in c)
+            | ("Y_IM" in c)
+        )
+    ]
     # ["X_IMAGE", "Y_IMAGE", "SNR_WIN", "AMPLITUDE"]
     labels = ["\n".join(["%s=%i" % (c, _[c]) for c in fields]) for _ in a]
 
@@ -2969,11 +3089,9 @@ def pyvista_throughfocus(a, names):
         p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
 
     def change_field(val):
-        print(dict_["field"])
-        index = names.index(dict_["field"])
-        name = names[index + 1]
-        dict_["field"] = name
-        print(dict_["field"])
+        index = names.index(dict_["field"].replace(dict_["smooth"], ""))
+        dict_["field"] = names[index + 1]
+        name = names[index + 1] + dict_["smooth"]
         points = mesh.points.copy()
         data = a[name][int(dict_["number"])] / a[name][int(dict_["number"])].ptp()
         points[:, -1] = value * (data - np.nanmin(data)).reshape(-1)
@@ -2982,6 +3100,7 @@ def pyvista_throughfocus(a, names):
         p.update_coordinates(points)  # , render=False)
         p.update_scalars(scalar, render=False)
         p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
+        p.add_title(name)
 
     p.add_text_slider_widget(
         throughfocus_callback,
@@ -3478,13 +3597,14 @@ def set_axes_equal(ax):
 def create_mesh(array, value=None):
     """
     """
-    from pyvista import StructuredGrid, PolyData
+    from pyvista import StructuredGrid, PolyData  # , UniformGrid
     import numpy as np
 
     xx, yy = np.indices(array.shape)
     if value is None:
         value = array.shape[0] / (array.max() - array.min())
     data_mesh = StructuredGrid()
+    data_mesh.dimensions = (9, 9, 1)
     data_mesh.points = PolyData(
         np.c_[
             xx.reshape(-1),
@@ -4064,7 +4184,7 @@ def throw_apertures(xpapoint=None, argv=[]):
         areasd = create_areas(image, area=area, radius=radius)
         areas = areasd
     else:
-        print(area)
+        # print(area)
         areas = np.array(
             [
                 np.random.randint(area[2], area[3], n_aper),
@@ -4250,6 +4370,8 @@ def execute_command(
             verboseprint(len(exp))
             fitsimage.header.remove("COMMAND")
         try:
+            if ("NAXIS3" in header) & (header["NAXIS"] == 2):
+                fits.delval(filename, "NAXIS3")
             fitsimage.writeto(name, overwrite=True)
         except RuntimeError:
             fitswrite(ds9, name)
@@ -4917,6 +5039,8 @@ def lims_from_region(region=None, coords=None, dtype=int):
 
     if coords is not None:
         if len(coords) == 1:
+            # if (len(coords) != 3) & (len(coords) != 4):
+            print(coords)
             if len(coords[0]) > 3:
                 xc, yc, w, h = coords[0][:4]
             else:
@@ -4926,6 +5050,7 @@ def lims_from_region(region=None, coords=None, dtype=int):
             if len(coords) > 3:
                 xc, yc, w, h = coords[:4]
             else:
+                # print(coords[:3])
                 xc, yc, w = coords[:3]
                 h, w = 2 * coords[-1], 2 * coords[-1]
     else:
@@ -6980,7 +7105,8 @@ def create_image_from_catalog(xpapoint=None, nb=int(1e3), argv=[]):
                     x,
                     y,
                     # catalog[i]["FLUX_AUTO"],
-                    catalog[i]["VIGNET"].max() - np.median(catalog[i]["VIGNET"]),
+                    # catalog[i]["VIGNET"].max() - np.median(catalog[i]["VIGNET"]),
+                    catalog[i]["FLUX_MAX"],
                     catalog[i]["X_IMAGE"],
                     catalog[i]["Y_IMAGE"],
                     catalog[i]["A_IMAGE"],
@@ -7765,7 +7891,6 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
     if np.nanmean(y[-10:]) > np.nanmean(y[:10]):
         y = y[::-1]
     np.savetxt("/tmp/xy.txt", np.array([x, y]).T)
-    print("ok")
     if args.background.lower() == "exponential":
         exp = True
     if args.background.lower() == "doubleexponential":
@@ -7811,19 +7936,20 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             linewidth=1,
             function=function,
         )
-    rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor="None")
-    for edge in "left", "right", "top", "bottom":
-        rax.spines[edge].set_visible(False)
-    scale = CheckButtons(rax, ["log"])
+    if args.other_features != "User-defined-interactively":
+        rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor="None")
+        for edge in "left", "right", "top", "bottom":
+            rax.spines[edge].set_visible(False)
+        scale = CheckButtons(rax, ["log"])
 
-    def scalefunc(label):
-        if gui.ax.get_yscale() == "linear":
-            gui.ax.set_yscale("log")
-        elif gui.ax.get_yscale() == "log":
-            gui.ax.set_yscale("linear")
-        gui.figure.canvas.draw_idle()
+        def scalefunc(label):
+            if gui.ax.get_yscale() == "linear":
+                gui.ax.set_yscale("log")
+            elif gui.ax.get_yscale() == "log":
+                gui.ax.set_yscale("linear")
+            gui.figure.canvas.draw_idle()
 
-    scale.on_clicked(scalefunc)
+        scale.on_clicked(scalefunc)
     # gui.ax.set_title(os.path.basename(get_filename(d)))
     plt.show()
     return
@@ -7840,7 +7966,10 @@ def interactiv_manual_fitting(
     import numpy as np
     import matplotlib.pyplot as plt
     from matplotlib.widgets import Button, TextBox
+
     from dataphile.graphics.widgets import Slider
+
+    # from matplotlib.widgets import Slider
     from matplotlib.widgets import CheckButtons
 
     n = len(xdata)
@@ -8002,7 +8131,35 @@ def interactiv_manual_fitting(
         bounds=lims,
         init_value=np.mean(lims),
     )
-
+    # AttributeError: 'Slider' object has no attribute 'widget'
+    # b_a = Slider(
+    #     figure=fig,
+    #     ax=plt.axes([0.1, 0.17, 0.8, 0.03], facecolor="None"),
+    #     label="a",
+    #     valmin=lims[0],
+    #     valmax=lims[1],
+    # )
+    # b_b = Slider(
+    #     figure=fig,
+    #     ax=plt.axes([0.1, 0.14, 0.8, 0.03], facecolor="None"),
+    #     label="b",
+    #     valmin=lims[0],
+    #     valmax=lims[1],
+    # )
+    # b_c = Slider(
+    #     figure=fig,
+    #     ax=plt.axes([0.1, 0.11, 0.8, 0.03], facecolor="None"),
+    #     label="c",
+    #     valmin=lims[0],
+    #     valmax=lims[1],
+    # )
+    # b_d = Slider(
+    #     figure=fig,
+    #     ax=plt.axes([0.1, 0.08, 0.8, 0.03], facecolor="None"),
+    #     label="d",
+    #     valmin=lims[0],
+    #     valmax=lims[1],
+    # )
     b_a.on_changed(update)
     b_b.on_changed(update)
     b_c.on_changed(update)
@@ -9209,6 +9366,7 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
         param_dir, param_dict["PARAMETERS_NAME"]
     )
     param_dict["FILTER_NAME"] = os.path.join(param_dir, param_dict["FILTER_NAME"])
+    # print(param_dict["STARNNW_NAME"])
     param_dict["STARNNW_NAME"] = os.path.join(param_dir, param_dict["STARNNW_NAME"])
 
     verboseprint("Image used for detection  = " + str(DETECTION_IMAGE))
@@ -9433,6 +9591,96 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
     print(param_dict["CATALOG_NAME"])
     catalog.write(param_dict["CATALOG_NAME"], overwrite=True)
     return catalog
+
+
+def BackgroundMeasurement():
+    """
+    """
+    from decimal import Decimal
+
+    # x, y = x+93, y-93
+    d = DS9n()
+
+    # try:
+    region = getregion(d, quick=True, message=False)
+    # except ValueError:
+    if region is None:
+        image_area = [1500, 2000, 1500, 2000]
+        Yinf, Ysup, Xinf, Xsup = image_area
+    else:
+        Yinf, Ysup, Xinf, Xsup = lims_from_region(None, coords=region)
+        # [131,1973,2212,2562]
+        image_area = [Yinf, Ysup, Xinf, Xsup]
+        verboseprint(Yinf, Ysup, Xinf, Xsup)
+    if d.get("tile") == "yes":
+        d.set("frame first")
+        n1 = int(d.get("frame"))
+        d.set("frame last")
+        n2 = int(d.get("frame"))
+        n = n2 - n1 + 1
+        verboseprint("Number of frame = ", n)
+        d.set("frame first")
+    else:
+        n = 1
+    for frame in range(n):
+        data = d.get_pyfits()[0].data
+        try:
+            texp = float(d.get_pyfits()[0].header["EXPTIME"])
+        except KeyError as e:
+            verboseprint(e)
+        else:
+            xc = [int(2336), int((image_area[1] + image_area[0]) / 2)]
+            #            yc = 1000
+            #            w,l = 300,1900
+            yc = int((image_area[2] + image_area[3]) / 2)  # 1000
+            w, l = (
+                int(image_area[1] - image_area[0]),
+                int(image_area[3] - image_area[2]),
+            )
+            reg = data[
+                int(yc - l / 2) : int(yc + l / 2),
+                int(xc[1] - w / 2) : int(xc[1] + w / 2),
+            ]
+            regOS = data[int(yc - l / 2) : int(yc + l / 2), 2200:2500]
+            meanADU = np.nanmean(reg) - np.nanmean(regOS)
+            stdADU = np.nanstd(reg)
+
+            create_ds9_regions(
+                [xc[0]],
+                [yc],
+                radius=[150, l],
+                form=["box"],
+                save=True,
+                color=["yellow"],
+                ID=[
+                    [
+                        "PHYS=%i - OS=%i"
+                        % (Decimal(np.nanmean(reg)), Decimal(np.nanmean(regOS)))
+                    ]
+                ],
+                savename="/tmp/centers.reg",
+            )
+            create_ds9_regions(
+                [xc[1]],
+                [yc],
+                radius=[w, l],
+                form=["box"],
+                save=True,
+                color=["yellow"],
+                ID=[
+                    [
+                        "ADUs=%0.1fADU/pix = %is x %0.2fADU/s/pix"
+                        % (Decimal(meanADU), texp, Decimal(meanADU / texp))
+                    ]
+                ],
+                savename="/tmp/centers1.reg",
+            )
+            d.set("region delete all")
+            d.set("region {}".format("/tmp/centers.reg"))
+            d.set("region {}".format("/tmp/centers1.reg"))
+            if d.get("tile") == "yes":
+                d.set("frame next")
+    return
 
 
 def run_sex(path, DETECTION_IMAGE, param_dict):
@@ -10676,6 +10924,8 @@ def cosmology_calculator(xpapoint=None, argv=[]):
     """Plot the different information for a given cosmology
     """
     from dataphile.graphics.widgets import Slider
+
+    # from matplotlib.widgets import Slider
     import numpy as np
 
     parser = create_parser(get_name_doc())
@@ -12834,6 +13084,7 @@ def main():
         "throw_apertures": throw_apertures,
         "convert_image": convert_image,
         "manual_fitting": manual_fitting,
+        "BackgroundMeasurement": BackgroundMeasurement,
         # "compute_gain": compute_gain,
         "LoadDS9QuickLookPlugin": LoadDS9QuickLookPlugin,
     }
@@ -12909,6 +13160,7 @@ def main():
                     "emccd_model",
                     "throw_apertures",
                     "PlotSpectraFilters",
+                    "BackgroundMeasurement",
                     "add_field_to_header",
                 ]:
                     print(
