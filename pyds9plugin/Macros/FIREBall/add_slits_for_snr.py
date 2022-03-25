@@ -50,9 +50,13 @@ fitsfile[0].data -= slits
 files = glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/1/*im.fits')
 
 data = fitsfile[0].data
+limit_max = []
+limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(2),mode='same')==0))[0][0]])
+limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==int(value.max()/1e4)))[0][0]])
+limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==int(value.max()/5e2)))[0][0]])
 for i in range(3):
-    limit_max = bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==0))[0][0]]-400*i
-    mask = data>limit_max
+    # limit_max = bins[np.where((bins>bias) & ( np.convolve(value,np.ones(2),mode='same')==0))[0][0]]-400*i
+    mask = data>limit_max[i]
     mask2 =   np.hstack([mask[:,-1:], mask[:,:-1]])#.shape 
     mask3 =   np.hstack([mask[:,-2:], mask[:,:-2]])#.shape 
     data[mask | mask2 | mask3]=np.nan#np.median(data) #np.nan
@@ -63,7 +67,7 @@ for i in range(3):
         data = interpolate_replace_nans(data, kernel)
         STD_DEV += 1    
     fitsfile[0].data = data+slits
-    filename = '/tmp/2022_hot_pixels_corrected_%i.fits'%(limit_max)
+    filename = '/tmp/2022_hot_pixels_corrected_%i.fits'%(limit_max[i])
     fitsfile.writeto(filename,overwrite=True)
     files.append(filename)
 
@@ -79,8 +83,9 @@ file_2018 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-F
 cat_file_2018 =  file_2018.replace('.fits','_cat.fits')
 os.system(' sex %s   -WRITE_XML Y  -CATALOG_NAME %s -CATALOG_TYPE FITS_1.0 -PARAMETERS_NAME /Users/Vincent/Github/pyds9plugin/pyds9plugin/Sextractor/sex_vignet.param -DETECT_TYPE CCD -DETECT_MINAREA 100 -DETECT_MAXAREA 0 -THRESH_TYPE RELATIVE -DETECT_THRESH 5 -ANALYSIS_THRESH 5 -FILTER Y -FILTER_NAME /Users/Vincent/Github/pyds9plugin/pyds9plugin/Sextractor/gauss_4.0_7x7.conv -DEBLEND_NTHRESH 64 -DEBLEND_MINCONT 0.0003 -CLEAN Y -CLEAN_PARAM 1.0 -MASK_TYPE CORRECT -WEIGHT_TYPE NONE -RESCALE_WEIGHTS Y -WEIGHT_GAIN Y -FLAG_IMAGE NONE -FLAG_TYPE OR -PHOT_APERTURES 6,12,18 -PHOT_AUTOPARAMS 2.5,4.0 -PHOT_PETROPARAMS 2.0,4.0 -PHOT_FLUXFRAC 0.3,0.5,0.9 -SATUR_LEVEL 50000.0 -SATUR_KEY SATURATE -MAG_ZEROPOINT 0.0 -MAG_GAMMA 4.0 -GAIN GAIN -PIXEL_SCALE 0 -SEEING_FWHM 0.8 -STARNNW_NAME /Users/Vincent/Github/pyds9plugin/pyds9plugin/Sextractor/default.nnw -CHECKIMAGE_TYPE NONE -BACK_TYPE AUTO -BACK_VALUE 0.0 -BACK_SIZE 64 -BACK_FILTERSIZE 3 -BACKPHOTO_TYPE LOCAL -BACKPHOTO_THICK 24 -BACK_FILTTHRESH 0.0 -MEMORY_OBJSTACK 3000 -MEMORY_PIXSTACK 300000 -MEMORY_BUFSIZE 1024 -NTHREADS 10 -CHECKIMAGE_NAME /Users/Vincent/DS9QuickLookPlugIn/Users/Vincent/DS9QuickLookPlugIn/tmp/image_check_NONE.fits'%(file_2018, cat_file_2018))
 cat_2018=Table.read(cat_file_2018)
+cat_2018['SNR'] = cat_2018['FLUXERR_ISO']   / cat_2018['ISOAREAF_IMAGE']**2
 # name=os.path.basename(file)[:-5]
-fields = ['VIGNET',"SNR_WIN","FLUX_MAX"]
+fields = ['VIGNET',"SNR_WIN","FLUX_MAX",'SNR']
 for field in fields:
     cat_2018.rename_column(field,field + os.path.basename(file_2018)[:-5])
 
@@ -91,6 +96,12 @@ for filei in files:
     cat_file = filei.replace('.fits','_cat.fits')
     os.system(' sex %s,%s   -WRITE_XML Y  -CATALOG_NAME %s -CATALOG_TYPE FITS_1.0 -PARAMETERS_NAME /Users/Vincent/Github/pyds9plugin/pyds9plugin/Sextractor/sex_vignet.param -DETECT_TYPE CCD -DETECT_MINAREA 100 -DETECT_MAXAREA 0 -THRESH_TYPE RELATIVE -DETECT_THRESH 5 -ANALYSIS_THRESH 5 -FILTER Y -FILTER_NAME /Users/Vincent/Github/pyds9plugin/pyds9plugin/Sextractor/gauss_4.0_7x7.conv -DEBLEND_NTHRESH 64 -DEBLEND_MINCONT 0.0003 -CLEAN Y -CLEAN_PARAM 1.0 -MASK_TYPE CORRECT -WEIGHT_TYPE NONE -RESCALE_WEIGHTS Y -WEIGHT_GAIN Y -FLAG_IMAGE NONE -FLAG_TYPE OR -PHOT_APERTURES 6,12,18 -PHOT_AUTOPARAMS 2.5,4.0 -PHOT_PETROPARAMS 2.0,4.0 -PHOT_FLUXFRAC 0.3,0.5,0.9 -SATUR_LEVEL 50000.0 -SATUR_KEY SATURATE -MAG_ZEROPOINT 0.0 -MAG_GAMMA 4.0 -GAIN GAIN -PIXEL_SCALE 0 -SEEING_FWHM 0.8 -STARNNW_NAME /Users/Vincent/Github/pyds9plugin/pyds9plugin/Sextractor/default.nnw -CHECKIMAGE_TYPE NONE -BACK_TYPE AUTO -BACK_VALUE 0.0 -BACK_SIZE 64 -BACK_FILTERSIZE 3 -BACKPHOTO_TYPE LOCAL -BACKPHOTO_THICK 24 -BACK_FILTTHRESH 0.0 -MEMORY_OBJSTACK 3000 -MEMORY_PIXSTACK 300000 -MEMORY_BUFSIZE 1024 -NTHREADS 10 -CHECKIMAGE_NAME /Users/Vincent/DS9QuickLookPlugIn/Users/Vincent/DS9QuickLookPlugIn/tmp/image_check_NONE.fits'%(file_2018, filei, cat_file))
     cat=Table.read(cat_file)
+    cat['SNR'] = cat['FLUXERR_ISO']   / np.array(cat['ISOAREAF_IMAGE'],dtype=float)**0.5
+    
+    # cat['FLUXERR_ISO/ISOAREAF_IMAGE**0.5'] = cat['FLUXERR_ISO']   / np.array(cat['ISOAREAF_IMAGE'],dtype=float)**0.5
+    # print( cat['FLUXERR_ISO','ISOAREAF_IMAGE','FLUXERR_ISO/ISOAREAF_IMAGE**0.5'])
+    #Isophotal area above Analysis threshold
+
     name=os.path.basename(filei)[:-5]
     for field in fields:#"SNR_WIN","BKGSIG"
         cat_2018[field + name] = cat[field]#cat['FLUX_MAX']colnames
@@ -114,3 +125,12 @@ explore_throughfocus(argv="-p /tmp/noise_analysis.fits")
 #     # ax3.imshow(np.array(line[names[2]],dtype=float))
 #     # plt.colorbar()
 #     plt.show()
+# plt.imshow(cat[10]['VIGNET']);colorbar()
+# plt.title('%s'%(cat[10]['BACKGROUND','FLUXERR_ISO','ISOAREAF_IMAGE']))
+
+# plt.title('%s'%([cat[10]['BACKGROUND'],cat[10]['FLUXERR_ISO']]))
+
+# plot(cat['BACKGROUND'])
+
+# cat[]['BACKGROUND']
+# cat['BACKGROUND']

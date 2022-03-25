@@ -113,7 +113,7 @@ def EMCCD(
         gamma_distribution_up = 0
         # print(flux)
         for f in np.arange(1, 20):
-            v = poisson.pmf(k=f, mu=np.max([flux_, 0]))
+            v = poisson.pmf(k=f, mu=np.nanmax([flux_, 0]))
             denominator = sps.gamma(f) * (EmGain * ConversionGain) ** f
             # print(1, denominator)
             # denominator[~np.isfinite(denominator)]=1
@@ -165,7 +165,12 @@ def EMCCD(
         # gamma_distribution[0] = pixs_sup_0*(1 - np.nansum(gamma_distribution[np.isfinite(gamma_distribution)]))
         if sCIC > 0:
             # changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
-            p_sCIC = sCIC  # /4#/ np.mean(1/ np.power(EmGain * ConversionGain, np.arange(604) / 604))
+            p_sCIC = sCIC / np.mean(
+                1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
+            )
+            # p_sCIC = sCIC / np.mean(
+            #     1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
+            # )
             gain_ = np.power(
                 EmGain * ConversionGain, np.linspace(1, n_registers, 100) / n_registers
             )
@@ -224,6 +229,8 @@ def EMCCD(
         stddev=RN * ConversionGain / bin_size, x_size=int(301.1 * 10)
     )
     y = convolve(gamma_distribution, read_noise) * n_pix  #
+    y /= x[1] - x[0]
+
     return np.log10(y)
 
 
@@ -284,8 +291,6 @@ def EMCCDhist(
         EmGain,
         Bias,
         RN,
-        p_pCIC,
-        p_sCIC,
         Smearing,
         SmearExpDecrement,
         n_registers,
@@ -302,26 +307,36 @@ def EMCCDhist(
             # print(' y=',y[y>1])
             # print('sum',np.nansum(y[np.isfinite(y)]))
             n_pix = np.nansum(10 ** y[np.isfinite(10 ** y)])  # 1e6#
-            # print('global',np.sum(10**y),n_pix)
+            # print("global", np.sum(10 ** y), n_pix)
         except TypeError:
             n_pix = 10 ** 6.3
-            # print('fixed',np.sum(10**y),n_pix)
+            # print("fixed", np.sum(10 ** y), n_pix)
         n = 1
         # print('npix', n_pix)
-        im = np.zeros((1000, int(n_pix / 1000) + 1))
+        im = np.zeros(int(n_pix))  #
+        im = np.zeros((1000, int(n_pix / 1000)))
         # im = np.zeros((1000,10+1))
         # factor = 1#np.log(2)
         # EmGain *= factor
         # imaADU = np.random.gamma(flux, EmGain, size=im.shape)
         # print(np.max([flux,0]),flux,EmGain)
         imaADU = np.random.gamma(
-            np.random.poisson(np.max([flux, 0]), size=im.shape), abs(EmGain)
+            np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain)
         )
         # Add pCIC (no interest, as flux)
         # imaADU[np.random.rand(size[1],size[0]) <  p_pCIC] += 1
 
         # pixels in which sCIC electron might appear
-        id_scic = np.random.rand(im.shape[0], im.shape[1]) < sCIC  # sCIC positions
+        p_sCIC = sCIC / np.mean(
+            1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
+        )
+        # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
+
+        id_scic = (
+            np.random.rand(im.shape[0], im.shape[1])
+            < p_sCIC
+            # np.random.rand(im.shape[0])< p_sCIC
+        )  # sCIC  # sCIC positions
         # stage of the EM register at which each sCIC e- appear
         register = np.random.randint(1, n_registers, size=id_scic.sum())
         # Compute and add the partial amplification for each sCIC pixel
@@ -344,7 +359,9 @@ def EMCCDhist(
         imaADU += Bias
         imaADU += read_noise
         range = [np.nanmin(x), np.nanmax(x)]
-        n, bins = np.histogram(imaADU.flatten(), range=range, bins=len(x))
+        # n, bins = np.histogram(imaADU.flatten(), range=range, bins=len(x))
+        # print(x)
+        n, bins = np.histogram(imaADU.flatten(), bins=[x[0] - 1] + list(x))
         return np.convolve(n, np.ones(3) / 3, mode="same")
 
     y = simulate_fireball_emccd_hist(
@@ -353,8 +370,6 @@ def EMCCDhist(
         EmGain=EmGain,
         Bias=bias,
         RN=RN,
-        p_pCIC=0,
-        p_sCIC=0,
         Smearing=smearing,
         SmearExpDecrement=1e4,
         n_registers=604,
@@ -362,4 +377,6 @@ def EMCCDhist(
         sCIC=sCIC,
     )
     y[y == 0] = 1
+    y /= x[1] - x[0]
+    # print("len(y)", np.sum(y))
     return np.log10(y)

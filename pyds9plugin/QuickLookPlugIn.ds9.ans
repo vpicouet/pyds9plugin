@@ -66,10 +66,10 @@ hmenu 1. Generic Functions
 	bind q
 	DS9Utils quit -x $xpa_method
 
-	Button #7
-	*
-	bind B
-	DS9Utils button #-x $xpa_method
+	#Button #7
+	#*
+	#bind B
+	#DS9Utils button #-x $xpa_method
 
 	hmenu Setups
 		Change Display Parameters (S) #7
@@ -130,7 +130,7 @@ hmenu 1. Generic Functions
 		Filtering & organizing images
 		*
 		menu
-		DS9Utils organize_files -x $xpa_method  $param(subset_); -p "$cat" -n "all" -a $Fields -s "$Mask" | $text
+		DS9Utils organize_files -x $xpa_method  $param(subset_); -p "$cat" -n "all" -a $Fields -s "$Mask" -n $number -c $copy | $text
 
 
 #		Add header Field
@@ -259,10 +259,10 @@ hmenu 1. Generic Functions
 	DS9Utils fit_gaussian_2d -x $xpa_method   -p 0   | $text
 
 
-	Convert image
-	*
-	menu
-	DS9Utils convert_image  -x $xpa_method $param(Conversion); -r $scaling -t $type -p - | $text
+#	Convert image
+#	*
+#	menu
+#	DS9Utils convert_image  -x $xpa_method $param(Conversion); -r $scaling -t $type -p - | $text
 
 #	Stack Images (s)  #20#
 #	*
@@ -431,10 +431,10 @@ hmenu 3. Astronomical Softwares
 	menu
 	DS9Utils astrometry_net -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); --type $Image --scale-units "$scale_units" --scale-lower "$scale_lower" --scale-upper "$scale_upper" --scale-est "$scale_est" --scale-err "$scale_err" --ra  "$center_ra" --dec "$center_dec" --radius "$radius"  --downsample "$downsample_factor" --tweak-order "$tweak_order" --crpix-center $crpix_center --parity  $parity --positional_error "$positional_error"   | $text
 
-#	MaxiMask
-#	*
-#	menu
-#	DS9Utils maxi_mask -x $xpa_method   $param(MaxiMask);  -t $prob -b $size -m $single -n $net  -f $F1-$F2-$F3-$F4-$F5-$F6-$F7-$F8-$F9-$F_10-$F_11-$F_12-$F_13-$F_14 -P $P1-$P2-$P3-$P4-$P5-$P6-$P7-$P8-$P9-$P_10-$P_11-$P_12-$P_13-$P_14  -T $T1-$T2-$T3-$T4-$T5-$T6-$T7-$T8-$T9-$T_10-$T_11-$T_12-$T_13-$T_14    | $text
+	MaxiMask
+	*
+	bind M
+	DS9Utils maxi_mask -x $xpa_method   $param(MaxiMask);  -t $prob -b $size -m $single -n $net  -f $F1-$F2-$F3-$F4-$F5-$F6-$F7-$F8-$F9-$F_10-$F_11-$F_12-$F_13-$F_14 -P $P1-$P2-$P3-$P4-$P5-$P6-$P7-$P8-$P9-$P_10-$P_11-$P_12-$P_13-$P_14  -T $T1-$T2-$T3-$T4-$T5-$T6-$T7-$T8-$T9-$T_10-$T_11-$T_12-$T_13-$T_14    | $text
 
 
 
@@ -1102,9 +1102,10 @@ endparam
 param subset_
 #cat entry {Input Header catalog} - {Path of the input header catalog to filter/organize files}
 cat open {Input Header catalog} {$env(HOME)/DS9QuickLookPlugIn/HeaderDataBase/} {Path of the input header catalog to filter/organize files}
-Mask entry {Selection} "" {Selection to be applied.  Use \| for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) \| (EMGAIN>0) }
+Mask entry {Selection} "" {Selection to be applied.  Use | for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) | (EMGAIN>0) }
 Fields entry {Re-arange} Directory {Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2}
-#number menu {Number of images} all|1|2|5|10|100 {Number of images having the same characteristics}
+number menu {Number of images} all|1|2|5|10|100 {Number of images having the same characteristics}
+copy menu {Copy type} symbolic-link|copy {ype of copy or link of the the original images.}
 endparam
 
 param autocorr
@@ -1483,7 +1484,7 @@ endparam
 
 
 param Python-Command-P
-exp menu {Expression} EMCCD_fit_analytical.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp menu {Expression} EMCCD_fit_analytical.py|EMCCD_fit_stochastic.py|EMCCD_fit_stochastic2.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 #overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam

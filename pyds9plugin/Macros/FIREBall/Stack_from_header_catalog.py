@@ -4,7 +4,10 @@ from pyds9plugin.DS9Utils import *
 
 path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/2019-01+MarseilleTestsImages/DetectorAnalysis/TestVincent/HeaderCatalogbasic_image_estimators.csv"#get(d, "Path of the header catalog :", exit_=True)
 path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/2019-01+MarseilleTestsImages/DetectorAnalysis/TestVincent/190206/highsignal/HeaderCatalogbasic_image_estimators.csv"#get(d, "Path of the header catalog :", exit_=True)
+path = "/Volumes/Vincent/FIREBall_Data/HeaderCatalog.csv"#get(d, "Path of the header catalog :", exit_=True)
 
+
+number_files = 1
 from astropy.table import Table
 try:
     cat = Table.read(path)

@@ -6,7 +6,7 @@ from matplotlib.widgets import Button
 import numpy as np
 
 # from dataphile.graphics.widgets import Slider
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Slider,RangeSlider
 
 from astropy.io import fits
 from scipy.optimize import curve_fit
@@ -66,7 +66,6 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     x = np.linspace(np.nanmin(xdata), np.nanmax(xdata), len(ydata))
 
     bias = bins[np.nanargmax(val_os)]
-    # PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.nanargmax(value)],50,0])['popt'][1]
     if bias > 1500:
         ConversionGain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
         RN = 45
@@ -75,31 +74,22 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         RN = 10
 
     lims = [
-        # (-1e3, 4.5e3),
         (bins.min(), bins.max()),
         (0, 300),
         (100, 2200),
         (1e-5, 7),
-        (0, 1),  # Can not go higher because we only take the first 6 pixels
-        # (1e4, 9e4),
+        (0, 1),
         (0, 0.3),
-    ]  # ,(0,1)]
-    # centers = [
-    #     xdata[np.nanargmax(ydata)],
-    #     50,
-    #     1200,
-    #     0.01,
-    #     0,
-    #     0.01,
-    # ]  # , 1.5e4
+    ]
     centers = [
         bias,
         RN / ConversionGain,
         1200,
-        0.01,
+        0.001,
         0,
-        0.0,
-    ]  # , 1.5e4
+        0.0]
+    # centers2 = centers+0.01
+      # , 1.5e4
     # from pyds9plugin.Macros.Fitting_Functions import functions
     # from inspect import signature
     # function_ = getattr(functions, "EMCCD")
@@ -158,7 +148,8 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         c="black",
         alpha=0.4,
     )
-    (l,) = plt.plot(x, function(x, *centers), "-", lw=1, label="EMCCD model")
+    (l1,) = plt.plot(x, function(x, *centers), "-", c='k',lw=1, label="EMCCD model")
+    (l2,) = plt.plot(x, function(x, *centers), "-", c='k',lw=1, label="EMCCD model")
     # ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(ydata)))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))
 
@@ -193,31 +184,49 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         bounds_box.spines[edge].set_visible(False)
 
     def update(val):
-        vals = []
+        vals1 = []
+        vals2 = []
         try:
             for slid in sliders:
-                vals.append(slid.value)
+                vals1.append(slid.value)
+                # vals2.append(slid.value[1])
                 dict_values[slid.label] = slid.value
         except AttributeError:
             for slid in sliders:
-                vals.append(slid.val)
+                vals1.append(slid.val)
+                # vals2.append(slid.val)
                 dict_values[slid.label] = slid.val
 
         x = dict_values["x"]
-        l.set_ydata(function(x, *vals))
+        # print([type(v)for v in vals1])
+        v1 = [v if type(v)!=np.ndarray else v[0] for v in vals1]
+        v2 = [v if type(v)!=np.ndarray else v[1] for v in vals1]
+        print(v1,v2)
+        l1.set_ydata(function(x, *v1))
+        l2.set_ydata(function(x, *v2))
         fig.canvas.draw_idle()
         return
 
     sliders = []
-    for i, (lim, center) in enumerate(zip(lims[::-1], centers[::-1])):
-        slid = Slider(
-            figure=fig,
-            ax=plt.axes([0.3, 0.08 + i * 0.03, 0.6, 0.03], facecolor="None"),
-            label=names[::-1][i],
-            valmin=lim[0],
-            valmax=lim[1],
-            valinit=center,
-        )
+    for i, (lim, center,t) in enumerate(zip(lims[::-1], centers[::-1],[0,0,1,0,0,0])):
+        if t==1:
+            slid = RangeSlider(
+                figure=fig,
+                ax=plt.axes([0.3, 0.08 + i * 0.03, 0.6, 0.03], facecolor="None"),
+                label=names[::-1][i],
+                valmin=lim[0],
+                valmax=lim[1],
+                valinit=(center,center+0.1),
+            )
+        else:
+            slid = Slider(
+                figure=fig,
+                ax=plt.axes([0.3, 0.08 + i * 0.03, 0.6, 0.03], facecolor="None"),
+                label=names[::-1][i],
+                valmin=lim[0],
+                valmax=lim[1],
+                valinit=center,
+            )
 
         # slid = Slider(
         #     figure=fig,
@@ -330,10 +339,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         plt.draw()
 
         for slid, vali in zip(sliders, vals):
-            try:
-                slid.widget.set_val(vali)
-            except AttributeError:
-                slid.set_val(vali)
+            slid.widget.set_val(vali)
 
     def fit0(event):
         bins, value = xdata, ydata

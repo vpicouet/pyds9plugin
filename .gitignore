@@ -49,3 +49,9 @@ pyds9plugin/photometry.py
 Sans titre
 
 .obsidian/
+
+pyds9plugin/MaxiMask-1.1/
+
+pyds9plugin/Macros/FIREBall/pc_redux.py
+
+pyds9plugin/Macros/FIREBall/ptc_redux_bench.py

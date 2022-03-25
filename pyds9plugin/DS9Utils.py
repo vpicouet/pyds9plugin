@@ -800,7 +800,7 @@ def setup(xpapoint=None, color="cool", argv=[]):
     return
 
 
-def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
+def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "/subsets/", argv=[]):
     """From a fits file database, create a subset of images considering
     a selection and ordering rules
     """
@@ -838,6 +838,16 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
         default="all",
         help="Number of same files to take",
         type=str,
+        metavar="",
+    )
+
+    parser.add_argument(
+        "-c",
+        "--copy",
+        default="None",
+        help="Type of copy or link of the the original images.",
+        type=str,
+        choices=["copy", "symbolic-link"],
         metavar="",
     )
     args = parser.parse_args_modif(argv)
@@ -880,7 +890,7 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
         except Exception:
             query = ds9entry(
                 args.xpapoint,
-                "UndefinedVariableError in query, please rewrite a query.",
+                "UndefinedVariableError in %s query, please correct it here:" % (query),
                 quit_=False,
             )
             new_table = df.query(query)
@@ -897,12 +907,12 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
     if not os.path.exists(path_date):
         os.makedirs(path_date)
 
-    t3 = t2.copy()
-    t3.remove_rows(np.arange(len(t2)))
-    for field in fields:
-        for value in np.unique(t2[field]):
-            t3 = vstack((t3, t2[t2[field] == value][-int(number) :]))
-    t2 = t3
+    # t3 = t2.copy()
+    # t3.remove_rows(np.arange(len(t2)))
+    # for field in fields:
+    #     for value in np.unique(t2[field]):
+    #         t3 = vstack((t3, t2[t2[field] == value][-int(number) :]))
+    # t2 = t3
     try:
         numbers = t2[list(fields)].as_array()
     except KeyError:
@@ -915,12 +925,38 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "subsets/", argv=[]):
         new_path = os.path.join(path_date, f)
         if not os.path.exists(new_path):
             os.makedirs(new_path)
-        symlink_force(filename, new_path + "/%s" % (os.path.basename(filename)))
+        if len(glob.glob(new_path + "/*")) < int(args.number):
+            if args.copy == "copy":
+                copyfile(filename, new_path + "/%s" % (os.path.basename(filename)))
+            else:
+                symlink_force(filename, new_path + "/%s" % (os.path.basename(filename)))
+        #
 
     copyfile(cat_path, os.path.join(path_date, os.path.basename(cat_path)))
-    csvwrite(t2, os.path.join(path_date, "HeaderCatalogSubset.csv"))
-    message(d, "Images are saved as symbolik links there : %s" % (path_date))
+    # TODO error here, correct
+    # print(t2, os.path.join(path_date, "HeaderCatalogSubset.csv"))
+    # csvwrite(t2, os.path.join(path_date, "HeaderCatalogSubset.csv"))
+    if yesno(
+        d,
+        "Images are saved as symbolik links there : %s. Do you want to open the folder?"
+        % (path_date),
+    ):
+        open_folder(path_date)
+    # app("Finder").reveal(mactypes.Alias(path_date).alias)
     return t2
+
+
+def open_folder(path):
+    import os
+    import platform
+    import subprocess
+
+    if platform.system() == "Windows":
+        os.startfile(path)
+    elif platform.system() == "Darwin":
+        subprocess.Popen(["open", path])
+    else:
+        subprocess.Popen(["xdg-open", path])
 
 
 def create_repositories(path, field, values):
@@ -1172,9 +1208,9 @@ def PlotFit1D(
             popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds, sigma=sigma)
         except RuntimeError as e:
             logger.warning(e)
-            print(law)
-            print(type(law))
-            print(e)
+            # print(law)
+            # print(type(law))
+            # print(e)
             if interactive:
                 if input("Do you want to fit it manually? [y/n]") == "y":
                     from IPython import get_ipython
@@ -1320,6 +1356,10 @@ def create_regions(regions, savename=tmp_region, texts="               "):
         regions_ += add_region(region, color=color, text=text)
     with open(savename, "w") as text_file:
         text_file.write(regions_)
+
+
+def table_to_array(table):
+    return np.lib.recfunctions.structured_to_unstructured(table.as_array())
 
 
 def add_region(region, color="Yellow", text=""):
@@ -2849,12 +2889,12 @@ def add_field_after_matching(
     verboseprint("cat 1 : %i lines" % (len(FinalCat)))
     verboseprint("cat 2 : %i lines" % (len(ColumnCat)))
     # print(ColumnCat['ZFLAG'])
-    print(ColumnCat)
+    verboseprint(ColumnCat)
     if query is not None:
         ColumnCat = apply_query(
             cat=ColumnCat, query=query, path=None, new_path=None, delete=True
         )
-        print(ColumnCat)
+        verboseprint(ColumnCat)
         mask = np.isfinite(ColumnCat[radec2[0]]) & np.isfinite(ColumnCat[radec2[1]])
         ColumnCat = ColumnCat[mask]
     # print(ColumnCat['ZFLAG'])
@@ -2873,11 +2913,11 @@ def add_field_after_matching(
         except Exception:
             catalog = SkyCoord(ra=FinalCat[radec1[0]], dec=FinalCat[radec1[1]])
         #        idx, d2d, d3d = catalog.match_to_catalog_sky(c[mask])
-        print(catalog)
-        print(c)
+        verboseprint(catalog)
+        verboseprint(c)
         idx, d2d, d3d = catalog.match_to_catalog_sky(c)
         mask = 3600 * np.array(d2d) < distance
-        print("Number of matches < %0.2f arcsec :  %i " % (distance, mask.sum()))
+        verboseprint("Number of matches < %0.2f arcsec :  %i " % (distance, mask.sum()))
 
     elif len(radec1) == 1:
         import pandas as pd
@@ -2900,7 +2940,7 @@ def add_field_after_matching(
         new_field = field
     idx_ = idx[mask]
     for fieldi, new_field in zip(field, new_field):
-        print("Adding field " + fieldi + " " + new_field)
+        verboseprint("Adding field " + fieldi + " " + new_field)
         if new_field not in FinalCat.colnames:
             if type(ColumnCat[fieldi][0]) == np.ndarray:
                 FinalCat[new_field] = (
@@ -2997,9 +3037,9 @@ def pyvista_throughfocus(a, names):
         splitting_position=None,
         title="Throughfocus",
     )
-    print(names)
-    print(a[names[0]])
-    print(a[names[0]][0].shape)
+    verboseprint(names)
+    verboseprint(a[names[0]])
+    verboseprint(a[names[0]][0].shape)
     value = a[names[0]][0].shape[0]
     mesh = create_mesh(a[names[0]][0] / a[names[0]][0].ptp(), value=value)
     p.add_mesh(
@@ -3021,7 +3061,7 @@ def pyvista_throughfocus(a, names):
         if (
             ("FLUX_MAX" in c)
             | ("BACKGROUND" in c)
-            # | ("SNR" in c)
+            | ("SNR_WIN" in c)
             | ("X_IM" in c)
             | ("Y_IM" in c)
         )
@@ -4371,7 +4411,8 @@ def execute_command(
             fitsimage.header.remove("COMMAND")
         try:
             if ("NAXIS3" in header) & (header["NAXIS"] == 2):
-                fits.delval(filename, "NAXIS3")
+                # fits.delval(filename, "NAXIS3")
+                del header["NAXIS3"]
             fitsimage.writeto(name, overwrite=True)
         except RuntimeError:
             fitswrite(ds9, name)
@@ -4506,19 +4547,19 @@ def check_file(xpapoint=None):
     fitsim = fits.open(path)
 
     for i, fitsi in enumerate(fitsim):
-        print(
+        verboseprint(
             "\n\n********************** ",
             i,
             " **********************\nImage = ",
             fitsi.is_image,
         )
         try:
-            print("Shape = ", fitsi.data.shape)
-            print("Size = ", fitsi.size)
+            verboseprint("Shape = ", fitsi.data.shape)
+            verboseprint("Size = ", fitsi.size)
         except AttributeError:
-            print("Size = ", fitsi.size)
+            verboseprint("Size = ", fitsi.size)
         if not fitsi.is_image:
-            print(Table(fitsi.data))
+            verboseprint(Table(fitsi.data))
 
 
 class bcolors:
@@ -5040,7 +5081,7 @@ def lims_from_region(region=None, coords=None, dtype=int):
     if coords is not None:
         if len(coords) == 1:
             # if (len(coords) != 3) & (len(coords) != 4):
-            print(coords)
+            # print(coords)
             if len(coords[0]) > 3:
                 xc, yc, w, h = coords[0][:4]
             else:
@@ -6049,7 +6090,9 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
         help="Addition file in pyds9plugin/Macros/Macros_Header_catalog/ that can be added for image analysis",
         type=str,
         metavar="",
-    )  # , choices=['image','none','wcs'])#metavar='',
+    )
+
+    # , choices=['image','none','wcs'])#metavar='',
     args = parser.parse_args_modif(argv, required=True)
     extension = "-"
     verboseprint("info, extension = %s, %s" % (args.info, extension))
@@ -6105,15 +6148,15 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
         datetime.now().strftime("%y%m%d-%HH%Mm%Ss"),
         f,
     )
+    # print(t1, path_db)
     csvwrite(t1, path_db)
 
-    if format == ".csv":
-        csvwrite(t1, path_db)
-        question = "Analysis saved in %s! Do you want to load the file with PRISM?" % (
-            path_db
-        )
-        if yesno(d, question):
-            d.set("prism import csv " + path_db)
+    # if format == ".csv":
+    # csvwrite(t1, path_db)
+    question = "Analysis saved in %s! Do you want to open the folder?" % (path_db)
+    if yesno(d, question):
+        open_folder(os.path.commonpath(files))
+        # d.set("prism import csv " + path_db)
     return
 
 
@@ -6266,7 +6309,8 @@ def create_catalog(files, ext=[0], info=None):
         f = ".csv"  # os.path.dirname(path)
     info_name = os.path.basename(info).replace(".py", "")
     name = os.path.commonpath(files) + "/HeaderCatalog" + info_name + f
-    print(name)
+    # print(table_header["intensity"], name)
+    # table_header.write(name.replace(".ecsv", ".fits"))
     csvwrite(table_header, name)
     # .filled("")
     return table_header
@@ -9654,8 +9698,12 @@ def BackgroundMeasurement():
                 color=["yellow"],
                 ID=[
                     [
-                        "PHYS=%i - OS=%i"
-                        % (Decimal(np.nanmean(reg)), Decimal(np.nanmean(regOS)))
+                        "%i - %i = %0.1fADU/pix "
+                        % (
+                            Decimal(np.nanmean(reg)),
+                            Decimal(np.nanmean(regOS)),
+                            Decimal(meanADU),
+                        )
                     ]
                 ],
                 savename="/tmp/centers.reg",
@@ -9669,8 +9717,8 @@ def BackgroundMeasurement():
                 color=["yellow"],
                 ID=[
                     [
-                        "ADUs=%0.1fADU/pix = %is x %0.2fADU/s/pix"
-                        % (Decimal(meanADU), texp, Decimal(meanADU / texp))
+                        "F=%is x %0.2fADU/s/pix, STD=%0.2f"
+                        % (texp, Decimal(meanADU / texp), stdADU)
                     ]
                 ],
                 savename="/tmp/centers1.reg",
