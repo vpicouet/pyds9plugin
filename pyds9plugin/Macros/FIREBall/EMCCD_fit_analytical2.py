@@ -6,7 +6,7 @@ from matplotlib.widgets import Button
 import numpy as np
 
 # from dataphile.graphics.widgets import Slider
-from matplotlib.widgets import Slider,RangeSlider
+from matplotlib.widgets import Slider, RangeSlider
 
 from astropy.io import fits
 from scipy.optimize import curve_fit
@@ -77,19 +77,13 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         (bins.min(), bins.max()),
         (0, 300),
         (100, 2200),
-        (1e-5, 7),
-        (0, 1),
+        (1e-5, 0.1),
+        (0, 1.5),
         (0, 0.3),
     ]
-    centers = [
-        bias,
-        RN / ConversionGain,
-        1200,
-        0.001,
-        0,
-        0.0]
+    centers = [bias, RN / ConversionGain, 1200, 0.001, 0, 0.0]
     # centers2 = centers+0.01
-      # , 1.5e4
+    # , 1.5e4
     # from pyds9plugin.Macros.Fitting_Functions import functions
     # from inspect import signature
     # function_ = getattr(functions, "EMCCD")
@@ -109,13 +103,13 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     )  # +(ydata.max()-f0.max())
 
     args_number = len(inspect.getargspec(function).args) - 1
-    print(ydata)
-    print(centers[0], xdata, 10 ** ydata)
+    # print(ydata)
+    # print(centers[0], xdata, 10 ** ydata)
     upper_limit = bins[np.where((xdata > centers[0]) & (10 ** ydata == 1.0))[0][0]]
 
     os_v = np.log10(np.array(val_os, dtype=float) * os.size / len(os[np.isfinite(os)]))
     bins_os, os_v = bins[np.isfinite(os_v)], os_v[np.isfinite(os_v)]
-    print(centers[0], bins_os, 10 ** os_v)
+    # print(centers[0], bins_os, 10 ** os_v)
     upper_limit_os = bins[np.where((bins_os > centers[0]) & (10 ** os_v == 1.0))[0][0]]
 
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -148,8 +142,8 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         c="black",
         alpha=0.4,
     )
-    (l1,) = plt.plot(x, function(x, *centers), "-", c='k',lw=1, label="EMCCD model")
-    (l2,) = plt.plot(x, function(x, *centers), "-", c='k',lw=1, label="EMCCD model")
+    (l1,) = plt.plot(x, function(x, *centers), "-", c="k", lw=1, label="EMCCD model")
+    (l2,) = plt.plot(x, function(x, *centers), "-", c="k", lw=1, label="EMCCD model")
     # ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(ydata)))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))
 
@@ -157,7 +151,6 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
     ax.margins(x=0)
 
-    bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor="None")
     c = "white"
     hc = "0.975"
     button = Button(
@@ -180,9 +173,6 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         plt.axes([0.47 - 0.02 * 3, 0.025, 0.1, 0.04]), "Fit OS", color=c, hovercolor=hc,
     )
 
-    for edge in "left", "right", "top", "bottom":
-        bounds_box.spines[edge].set_visible(False)
-
     def update(val):
         vals1 = []
         vals2 = []
@@ -199,24 +189,26 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
         x = dict_values["x"]
         # print([type(v)for v in vals1])
-        v1 = [v if type(v)!=np.ndarray else v[0] for v in vals1]
-        v2 = [v if type(v)!=np.ndarray else v[1] for v in vals1]
-        print(v1,v2)
+        v1 = [v if type(v) != np.ndarray else v[0] for v in vals1]
+        v2 = [v if type(v) != np.ndarray else v[1] for v in vals1]
+        # print(v1, v2)
         l1.set_ydata(function(x, *v1))
         l2.set_ydata(function(x, *v2))
         fig.canvas.draw_idle()
         return
 
     sliders = []
-    for i, (lim, center,t) in enumerate(zip(lims[::-1], centers[::-1],[0,0,1,0,0,0])):
-        if t==1:
+    for i, (lim, center, t) in enumerate(
+        zip(lims[::-1], centers[::-1], [0, 0, 1, 0, 0, 0])
+    ):
+        if t == 1:
             slid = RangeSlider(
                 figure=fig,
                 ax=plt.axes([0.3, 0.08 + i * 0.03, 0.6, 0.03], facecolor="None"),
                 label=names[::-1][i],
                 valmin=lim[0],
                 valmax=lim[1],
-                valinit=(center,center+0.1),
+                valinit=(center, center + 0.1),
             )
         else:
             slid = Slider(

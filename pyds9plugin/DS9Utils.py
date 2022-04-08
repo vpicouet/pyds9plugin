@@ -800,7 +800,7 @@ def setup(xpapoint=None, color="cool", argv=[]):
     return
 
 
-def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "/subsets/", argv=[]):
+def organize_files(xpapoint=None, argv=[]):
     """From a fits file database, create a subset of images considering
     a selection and ordering rules
     """
@@ -850,31 +850,42 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "/subsets/", argv=[]):
         choices=["copy", "symbolic-link"],
         metavar="",
     )
+    parser.add_argument(
+        "-np",
+        "--new_path",
+        default=DS9_BackUp_path + "/subsets/",
+        help="Path where should be places the new images.",
+        type=str,
+        metavar="",
+    )
     args = parser.parse_args_modif(argv)
     d = DS9n(args.xpapoint)
-    cat_path, number, fields, query = (
+    cat_path, fields, query = (
         args.path,
-        args.number,
         args.arange,
         args.selection,
     )
-    if number == "all":
-        number = 1000
+    if args.number == "all":
+        args.number = 1000
     cat_path = cat_path.rstrip()[::-1].rstrip()[::-1]
     fields = np.array(fields.split(","), dtype=str)
     if os.path.isdir(cat_path):
-        files = glob.glob(os.path.join(cat_path, "*.csv"))
+        files = glob.glob(os.path.join(cat_path, "HeaderCatalog*.csv"))
         files.sort(key=lambda x: os.path.getmtime(x))
         file = files[-1]
-        if yesno(
-            d,
-            """%s is a directory not a table. Do you wish to take the most
-               recent csv table of this directory: %s?"""
-            % (cat_path, os.path.basename(file)),
-        ):
-            cat_path = file
+        if (xpapoint != "None") & (xpapoint != None):
+            if yesno(
+                d,
+                """%s is a directory not a table. Do you wish to take the most
+                   recent csv table of this directory: %s?"""
+                % (cat_path, os.path.basename(file)),
+            ):
+                cat_path = file
+            else:
+                sys.exit()
         else:
-            sys.exit()
+            cat_path = file
+
     try:
         cat = Table.read(cat_path)
     except Exception as e:
@@ -888,12 +899,16 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "/subsets/", argv=[]):
         try:
             new_table = df.query(query)
         except Exception:
-            query = ds9entry(
-                args.xpapoint,
-                "UndefinedVariableError in %s query, please correct it here:" % (query),
-                quit_=False,
-            )
-            new_table = df.query(query)
+            try:
+                new_table = df.query(query.replace("$Mask", "&"))
+            except Exception:
+                query = ds9entry(
+                    args.xpapoint,
+                    "UndefinedVariableError in %s query, please correct it here:"
+                    % (query),
+                    quit_=False,
+                )
+                new_table = df.query(query)
         t2 = Table.from_pandas(new_table)
     else:
         t2 = cat
@@ -903,16 +918,12 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "/subsets/", argv=[]):
     verboseprint(t2)
     verboseprint("SELECTION %i -> %i" % (len(cat), len(t2)))
     verboseprint("SELECTED FIELD  %s" % (fields))
-    path_date = dpath + datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
+    path_date = os.path.join(
+        args.new_path, datetime.datetime.now().strftime("%y%m%d_%HH%Mm%S")
+    )
     if not os.path.exists(path_date):
         os.makedirs(path_date)
 
-    # t3 = t2.copy()
-    # t3.remove_rows(np.arange(len(t2)))
-    # for field in fields:
-    #     for value in np.unique(t2[field]):
-    #         t3 = vstack((t3, t2[t2[field] == value][-int(number) :]))
-    # t2 = t3
     try:
         numbers = t2[list(fields)].as_array()
     except KeyError:
@@ -925,7 +936,7 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "/subsets/", argv=[]):
         new_path = os.path.join(path_date, f)
         if not os.path.exists(new_path):
             os.makedirs(new_path)
-        if len(glob.glob(new_path + "/*")) < int(args.number):
+        if len(glob.glob(new_path + "/*")) < args.number:
             if args.copy == "copy":
                 copyfile(filename, new_path + "/%s" % (os.path.basename(filename)))
             else:
@@ -936,12 +947,13 @@ def organize_files(xpapoint=None, dpath=DS9_BackUp_path + "/subsets/", argv=[]):
     # TODO error here, correct
     # print(t2, os.path.join(path_date, "HeaderCatalogSubset.csv"))
     # csvwrite(t2, os.path.join(path_date, "HeaderCatalogSubset.csv"))
-    if yesno(
-        d,
-        "Images are saved as symbolik links there : %s. Do you want to open the folder?"
-        % (path_date),
-    ):
-        open_folder(path_date)
+    if (xpapoint != "None") & (xpapoint != None):
+        if yesno(
+            d,
+            "Images are saved as symbolik links there : %s. Do you want to open the folder?"
+            % (path_date),
+        ):
+            open_folder(path_date)
     # app("Finder").reveal(mactypes.Alias(path_date).alias)
     return t2
 
@@ -4738,19 +4750,25 @@ def stack_images_path(
                 verboseprint(e)
                 n -= 1
         stack = stack / n
-    elif Type == "nanmedian":
-        stack = np.array(
-            getattr(np, Type)(
-                np.array([fits.open(file)[i].data for file in paths[index]]), axis=0,
-            ),
-            dtype=dtype,
-        )
     else:
-        stack = getattr(np, Type)(
-            np.array([fits.open(file)[i].data for file in paths[index]]),
-            dtype=dtype,
-            axis=0,
-        )
+        array3d = np.array([fits.open(file)[i].data for file in paths[index]])
+        # print(paths)
+        # print(array3d)
+        stack = np.array(getattr(np, Type)(array3d, axis=0,), dtype=dtype,)
+
+    # elif Type == "nanmedian":
+    #     stack = np.array(
+    #         getattr(np, Type)(
+    #             np.array([fits.open(file)[i].data for file in paths[index]]), axis=0,
+    #         ),
+    #         dtype=dtype,
+    #     )
+    # else:
+    #     stack = getattr(np, Type)(
+    #         np.array([fits.open(file)[i].data for file in paths[index]]),
+    #         dtype=dtype,
+    #         axis=0,
+    #     )
     try:
         numbers = [
             int(re.findall(r"\d+", os.path.basename(filename))[-1])
@@ -4771,10 +4789,10 @@ def stack_images_path(
                 fname,
             )
         except ValueError:
-            name = "{}/StackedImage_{}-{}{}".format(
+            name = "{}/StackedImage_{}-{}{}.fits".format(
                 os.path.dirname(paths[0]),
                 os.path.basename(paths[0]).split(".")[0],
-                os.path.basename(paths[-1]),
+                os.path.basename(paths[-1][:-5]),
                 fname,
             )
     else:
@@ -6098,6 +6116,8 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
     verboseprint("info, extension = %s, %s" % (args.info, extension))
 
     if files is None:
+        if os.path.isdir(args.path):
+            args.path += "**/image??????.fits"
         files = globglob(args.path, ds9_im=False)
         verboseprint("%s : %s" % (args.path, files))
         while len(files) == 0:
@@ -6154,8 +6174,9 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
     # if format == ".csv":
     # csvwrite(t1, path_db)
     question = "Analysis saved in %s! Do you want to open the folder?" % (path_db)
-    if yesno(d, question):
-        open_folder(os.path.commonpath(files))
+    if (xpapoint != "None") & (xpapoint != None):
+        if yesno(d, question):
+            open_folder(os.path.commonpath(files))
         # d.set("prism import csv " + path_db)
     return
 
@@ -6312,6 +6333,7 @@ def create_catalog(files, ext=[0], info=None):
     # print(table_header["intensity"], name)
     # table_header.write(name.replace(".ecsv", ".fits"))
     csvwrite(table_header, name)
+    print(name)
     # .filled("")
     return table_header
 
@@ -9688,7 +9710,6 @@ def BackgroundMeasurement():
             regOS = data[int(yc - l / 2) : int(yc + l / 2), 2200:2500]
             meanADU = np.nanmean(reg) - np.nanmean(regOS)
             stdADU = np.nanstd(reg)
-
             create_ds9_regions(
                 [xc[0]],
                 [yc],
@@ -9700,9 +9721,9 @@ def BackgroundMeasurement():
                     [
                         "%i - %i = %0.1fADU/pix "
                         % (
-                            Decimal(np.nanmean(reg)),
-                            Decimal(np.nanmean(regOS)),
-                            Decimal(meanADU),
+                            Decimal(float(np.nanmean(reg))),
+                            Decimal(float(np.nanmean(regOS))),
+                            Decimal(float(meanADU)),
                         )
                     ]
                 ],
@@ -10133,7 +10154,7 @@ def ds9_swarp(xpapoint=None, argv=[]):
     else:
         os.chdir(os.path.dirname(paths[0]))
         os.system("sleep 0.1")
-        print(
+        verboseprint(
             "swarp %s  -c default.swarp -" % (" ".join(paths))
             + " -".join(
                 [key + " " + str(param_dict[key]) for key in list(param_dict.keys())[:]]

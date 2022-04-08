@@ -71,59 +71,54 @@ def EMCCD(
     sCIC=[0, 1, 0],
 ):
     """EMCCD model based on convolution of distributions: Gamma(poison)xNormal
-    TODO: add smearing!
+    First attempt to add smearing
+    RN : Read noise in e-/pix
+    EmGain : amplificaiton gain in e-/e-
+    flux : incoming charges in e-/pix
+    smearing : exponential length in pixel of the charge decay due to poor CTE
+    sCIC : fraction of semi-amplified spurious charges that appear in the amplifier register
     """
     from astropy.convolution import Gaussian1DKernel, convolve
     import scipy.special as sps
     import numpy as np
     from scipy.stats import poisson
 
+    # recover number of pixels to generate distributions
     try:
         y = globals()["y"]
         n_pix = np.sum(10 ** y)
-        # print('global',np.sum(10**y),n_pix)
     except TypeError:
         n_pix = 10 ** 6.3
-        # print('fixed',np.sum(10**y),n_pix)
-    n_registers = 604
-    if bias > 1500:
-        ConversionGain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
+    n_registers = 604  # number of amplification registers
+    if bias > 1500:  # 2018
+        ConversionGain = 0.53  # Conversiongain in ADU/e-
     else:
-        ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
+        ConversionGain = 1 / 4.5  # 2022
     bin_size = np.median((x[1:] - x[:-1]))
     bins = x - np.nanmin(x)
-    # factor = 1#np.log(2)
-    # gamma_distribution = bins**(shape-1)*(np.exp(-bins/scale) / (sps.gamma(shape)*scale**shape))
-    # https://numpy.org/doc/stable/reference/random/generated/numpy.random.gamma.html
-
-    # denominator = (sps.gamma(flux) * (EmGain*ConversionGain) ** flux)
-    # gamma_distribution = (bin_size* bins ** (flux - 1) * (np.exp(-bins / (EmGain*ConversionGain)) / denominator))
-
     distributions = []
-    pixs_sup_0 = 0
+    pixs_sup_0 = 0  # fraction of pixels that have ADU higher than distribution limit
     n = np.arange(2) if smearing > 0 else [0]
-    poissons = int(flux * 3)
-    fluxes = (
-        flux * np.power(smearing, n) / np.sum(np.power(smearing, n))
-    )  # [flux*smearing**i for i in range(n)] / np.sum([flux*smearing**i for i in range(n)])
+    fluxes = flux * np.power(smearing, n) / np.sum(np.power(smearing, n))
     emgains = [EmGain] + [EmGain / (1.7 * i) for i in n[1:]]
+    # for smearing we consider each pixel recieve x% of their flux and Then
+    # they receive the rest with a lower gain. This approximation is # NOTE:
+    # true and need to be revised. The interest is that it is then independant
+    # draws and that distributions can be convoluted.
     for i, (flux_, EmGain) in enumerate(zip(fluxes, emgains)):
-        # for i,(flux,EmGain) in enumerate(zip([(1-smearing)*flux, smearing*flux],[EmGain,EmGain/2])):
         gamma_distribution = 0
-        gamma_distribution_up = 0
-        # print(flux)
-        for f in np.arange(1, 20):
+        # We sum up distributions from from the different poisson output
+        for f in np.arange(
+            1, 20
+        ):  # careful about the 20 limit which needs to be enough at high flux
             v = poisson.pmf(k=f, mu=np.nanmax([flux_, 0]))
+            # gamma distribution : https://numpy.org/doc/stable/reference/random/generated/numpy.random.gamma.html
             denominator = sps.gamma(f) * (EmGain * ConversionGain) ** f
-            # print(1, denominator)
-            # denominator[~np.isfinite(denominator)]=1
-            # print(bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain))))
             distribution = (
                 bin_size
                 * bins ** (f - 1)
                 * (np.exp(-bins / (EmGain * ConversionGain)) / denominator)
             )
-            # distribution_up = (bin_size* (bins+bins.ptp()) ** (f - 1) * (np.exp(-(bins+bins.ptp()) / (EmGain*ConversionGain)) / denominator))
             distribution_up = (
                 3
                 * bin_size
@@ -133,44 +128,23 @@ def EMCCD(
                     / denominator
                 )
             )
-            # disminush the number of pixels by the number of ones that are above the threshold:
+            # disminush the number of pixels by the fraction above distribution range
             factor = np.sum(distribution[np.isfinite(distribution_up)]) / (
                 np.sum(distribution_up[np.isfinite(distribution_up)])
                 + np.sum(distribution[np.isfinite(distribution)])
             )
-            # no need for the factor, just recale here
-            # print(factor)
-            if test:
-                l = plt.semilogy(distribution, label=f)
-            # print(f,np.nansum(distribution),distribution[0],(1 - np.nansum(distribution[1:][np.isfinite(distribution[1:])])))
-            # if f>0:
-            # en fait ce qu'il faut faire ici c'est compter les pixels. Compte la proportion qui sont au dessus de bins.max() ,  puis ajouter (1-gammadim *)
-            # distribution[0] = (1 - np.nansum(distribution[1:][np.isfinite(distribution[1:])]))#*factor
-            # print(f,distribution[0])
-            # print(f,distribution[0])
-            if test:
-                plt.semilogy(distribution[0], ".", c=l[0].get_color())
             gamma_distribution += distribution * v
-            # print(factor, v, factor*v)
             pixs_sup_0 += (1 - factor) * v
-            # print(pixs_sup_0)
-
-        # bonne solution, le probleme c'est que deja il faut tirer des poissons assez loin à fort flux! et avoir une meilleur estimation des gamma superieur à la limite de l'hist que juste fair un rapport
         gamma_distribution[0] = (
             1
             - np.nansum(gamma_distribution[1:][np.isfinite(gamma_distribution[1:])])
             - pixs_sup_0
         )
-        # print(gamma_distribution[0])
-        # gamma_distribution[0] = pixs_sup_0*(1 - np.nansum(gamma_distribution[np.isfinite(gamma_distribution)]))
+        # adding sCIC and comvolving distributions as independant draws.
         if sCIC > 0:
             # changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
-            p_sCIC = sCIC / np.mean(
-                1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
-            )
-            # p_sCIC = sCIC / np.mean(
-            #     1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
-            # )
+            p_sCIC = sCIC  # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
+            # Estimation of average gain for semi-amplified CIC
             gain_ = np.power(
                 EmGain * ConversionGain, np.linspace(1, n_registers, 100) / n_registers
             )
@@ -178,7 +152,6 @@ def EMCCD(
                 [(1 / gaini) * np.exp(-bins / gaini) for gaini in gain_], axis=0
             )  # *n_pix/len(gain_)
             cic_disdribution /= cic_disdribution.sum()
-
             cic_disdribution *= p_sCIC
             cic_disdribution[0] = 1 - np.sum(cic_disdribution[1:])
             cic_disdribution = np.hstack(
@@ -196,30 +169,6 @@ def EMCCD(
                 distributions[i - 1], smeared_distribution, mode="valid"
             )
             distributions[i] = gamma_distribution
-    # gamma_distribution = 0
-    # for f in np.arange(1,10) :
-    #     v = poisson.pmf(k=f, mu=np.max([flux,0]))
-    #     denominator = (sps.gamma(f) * (EmGain*ConversionGain) ** f)
-    #     # print(1, denominator)
-    #     # denominator[~np.isfinite(denominator)]=1
-    #     # print(bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain))))
-    #     distribution = (bin_size* bins ** (f - 1) * (np.exp(-bins / (EmGain*ConversionGain)) / denominator))
-    #     gamma_distribution += distribution*v
-    # gamma_distribution[0] = 1 - np.nansum(gamma_distribution[np.isfinite(gamma_distribution)])
-    # if sCIC>0:
-    #     #changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
-    #     p_sCIC =  sCIC/ np.mean([(1/ np.power(EmGain * ConversionGain, reg / 604))  for reg in np.arange(604)])
-    #     gain_ = np.power(EmGain*ConversionGain, np.linspace(1,n_registers,100) / n_registers)
-    #     cic_disdribution = n_pix*np.sum([(1/gaini) * np.exp(-bins/gaini) for gaini in gain_],axis=0)/len(gain_)
-    #     cic_disdribution /= cic_disdribution.sum()
-
-    #     cic_disdribution *= p_sCIC
-    #     cic_disdribution[0] = 1 -np.sum(cic_disdribution[1:])
-    #     cic_disdribution = np.hstack((np.zeros(len(cic_disdribution)-1),cic_disdribution))
-    #     gamma_distribution = np.convolve(gamma_distribution,cic_disdribution,mode='valid')
-    # Renormalization of the gamma distribution to one #I might doing it wrong here!
-    # print(factor)
-    # gamma_distribution[0]*/(1+factor)
 
     # Addition of the bias
     if bias > x[0]:
@@ -228,9 +177,9 @@ def EMCCD(
     read_noise = Gaussian1DKernel(
         stddev=RN * ConversionGain / bin_size, x_size=int(301.1 * 10)
     )
+    # Convolution with read noise
     y = convolve(gamma_distribution, read_noise) * n_pix  #
     y /= x[1] - x[0]
-
     return np.log10(y)
 
 
@@ -243,6 +192,14 @@ def EMCCDhist(
     smearing=[0, 1, 0.01],
     sCIC=[0, 1, 0],
 ):
+    """
+    Stochastic model for EMCCD histogram.
+    RN : Read noise in e-/pix
+    EmGain : amplificaiton gain in e-/e-
+    flux : incoming charges in e-/pix
+    smearing : exponential length in pixel of the charge decay due to poor CTE
+    sCIC : fraction of semi-amplified spurious charges that appear in the amplifier register
+    """
     # def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000], flux=[0.001, 1,0.04], smearing=[0, 3,0.31], sCIC=[0,1,0],SmearExpDecrement=[1.5e3,1.5e5,15e4]):
     from scipy.sparse import dia_matrix
     import inspect
@@ -255,15 +212,6 @@ def EMCCDhist(
     else:
         ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
 
-    # def variable_smearing_kernels(image, Smearing=1.5, SmearExpDecrement=50000):
-    #     """Creates variable smearing kernels for inversion
-    #     """
-    #     import numpy as np
-    #     n=6
-    #     smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-    #     smearing_kernels = np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length)
-    #     smearing_kernels /= smearing_kernels.sum(axis=0)
-    #     return smearing_kernels
     def variable_smearing_kernels(
         image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
     ):
@@ -301,50 +249,34 @@ def EMCCDhist(
         """
         import numpy as np
 
+        # recover number of pixels to generate distributions
         try:
             y = globals()["y"]
-            # print('len y=',len(y))
-            # print(' y=',y[y>1])
-            # print('sum',np.nansum(y[np.isfinite(y)]))
             n_pix = np.nansum(10 ** y[np.isfinite(10 ** y)])  # 1e6#
-            # print("global", np.sum(10 ** y), n_pix)
         except TypeError:
             n_pix = 10 ** 6.3
-            # print("fixed", np.sum(10 ** y), n_pix)
         n = 1
-        # print('npix', n_pix)
         im = np.zeros(int(n_pix))  #
-        im = np.zeros((1000, int(n_pix / 1000)))
-        # im = np.zeros((1000,10+1))
-        # factor = 1#np.log(2)
-        # EmGain *= factor
-        # imaADU = np.random.gamma(flux, EmGain, size=im.shape)
-        # print(np.max([flux,0]),flux,EmGain)
+        # im = np.zeros((1000, int(n_pix / 1000)))
         imaADU = np.random.gamma(
             np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain)
         )
-        # Add pCIC (no interest, as flux)
-        # imaADU[np.random.rand(size[1],size[0]) <  p_pCIC] += 1
-
+        # changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
+        p_sCIC = sCIC  # / np.mean(
+        #     1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
         # pixels in which sCIC electron might appear
-        p_sCIC = sCIC / np.mean(
-            1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
-        )
-        # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
-
-        id_scic = (
-            np.random.rand(im.shape[0], im.shape[1])
-            < p_sCIC
-            # np.random.rand(im.shape[0])< p_sCIC
-        )  # sCIC  # sCIC positions
+        id_scic = np.random.rand(im.shape[0], im.shape[1]) < p_sCIC
         # stage of the EM register at which each sCIC e- appear
-        register = np.random.randint(1, n_registers, size=id_scic.sum())
+        register = np.random.randint(1, n_registers, size=id_scic.shape)
         # Compute and add the partial amplification for each sCIC pixel
-        imaADU[id_scic] += np.random.exponential(
-            np.power(EmGain, register / n_registers)
+        # when f=1e- gamma is equivalent to expoential law
+        # should we add poisson here?
+        imaADU += np.random.gamma(
+            np.random.poisson(1 * id_scic), np.power(EmGain, register / n_registers)
         )
+        # imaADU[id_scic] += np.random.gamma(1, np.power(EmGain, register / n_registers))
         imaADU *= ConversionGain
-
+        # smearing data
         if Smearing > 0:
             smearing_kernels = variable_smearing_kernels(
                 imaADU, Smearing, SmearExpDecrement
@@ -355,14 +287,13 @@ def EMCCDhist(
                 shape=(imaADU.size, imaADU.size),
             )
             imaADU = A.dot(imaADU.ravel()).reshape(imaADU.shape)
-        read_noise = np.random.normal(0, RN * ConversionGain, size=im.shape)
+        # adding read noise and bias
+        read_noise = np.random.normal(0, abs(RN * ConversionGain), size=im.shape)
         imaADU += Bias
         imaADU += read_noise
         range = [np.nanmin(x), np.nanmax(x)]
-        # n, bins = np.histogram(imaADU.flatten(), range=range, bins=len(x))
-        # print(x)
         n, bins = np.histogram(imaADU.flatten(), bins=[x[0] - 1] + list(x))
-        return np.convolve(n, np.ones(3) / 3, mode="same")
+        return n
 
     y = simulate_fireball_emccd_hist(
         x=x,
@@ -371,12 +302,11 @@ def EMCCDhist(
         Bias=bias,
         RN=RN,
         Smearing=smearing,
-        SmearExpDecrement=1e4,
+        SmearExpDecrement=1e4,  # 1e4,  # 1e5 #2022=1e5, 2018=1e4...
         n_registers=604,
         flux=flux,
         sCIC=sCIC,
     )
     y[y == 0] = 1
     y /= x[1] - x[0]
-    # print("len(y)", np.sum(y))
     return np.log10(y)

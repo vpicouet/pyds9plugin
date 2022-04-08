@@ -130,7 +130,7 @@ hmenu 1. Generic Functions
 		Filtering & organizing images
 		*
 		menu
-		DS9Utils organize_files -x $xpa_method  $param(subset_); -p "$cat" -n "all" -a $Fields -s "$Mask" -n $number -c $copy | $text
+		DS9Utils organize_files -x $xpa_method  $param(subset_); -p "$cat" -a $Fields -s "$Mask" -n $number -c $copy | $text
 
 
 #		Add header Field
@@ -1484,7 +1484,7 @@ endparam
 
 
 param Python-Command-P
-exp menu {Expression} EMCCD_fit_analytical.py|EMCCD_fit_stochastic.py|EMCCD_fit_stochastic2.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp menu {Expression} EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 #overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam

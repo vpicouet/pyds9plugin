@@ -10,8 +10,9 @@ from matplotlib.widgets import Slider
 
 from astropy.io import fits
 from scipy.optimize import curve_fit
+from pyds9plugin.DS9Utils import *
 
-
+d=DS9n()
 def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     """Plot EMCCD simulation
     """
@@ -166,7 +167,6 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
     ax.margins(x=0)
 
-    bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor="None")
     c = "white"
     hc = "0.975"
     button = Button(
@@ -189,8 +189,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         plt.axes([0.47 - 0.02 * 3, 0.025, 0.1, 0.04]), "Fit OS", color=c, hovercolor=hc,
     )
 
-    for edge in "left", "right", "top", "bottom":
-        bounds_box.spines[edge].set_visible(False)
+
 
     def update(val):
         vals = []

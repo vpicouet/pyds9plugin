@@ -198,7 +198,6 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
     ax.margins(x=0)
 
-    bounds_box = plt.axes([0.87, -0.029, 0.15, 0.15], facecolor="None")
     c = "white"
     hc = "0.975"
     button = Button(
@@ -223,9 +222,6 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         color=c,
         hovercolor=hc,
     )
-
-    for edge in "left", "right", "top", "bottom":
-        bounds_box.spines[edge].set_visible(False)
 
     def update(val):
         vals = []

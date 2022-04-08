@@ -18,58 +18,68 @@ if ('snr.py' in __file__) or (function=='execute_command'):
     filename=get_filename(d)
 else:
     pass
-
-    
-data = fitsfile[0].data
-header = fitsfile[0].header
-
-
-lx, ly = data.shape
-Xinf, Xsup, Yinf, Ysup = 1, -1, 1, -1
-Xinf, Xsup, Yinf, Ysup = 1120, 2100, 1300, 1900
-# Xinf, Xsup, Yinf, Ysup = l1, l2, 1, -1
-physical_region = data[Yinf:Ysup, Xinf:Xsup]
-pre_scan = data[:, 600:1000]
-post_scan = data[:, 2500:3000]
-range_=(np.nanpercentile(physical_region,0.1),np.nanpercentile(physical_region,99.9))
-value, b = np.histogram(data[Yinf:Ysup, Xinf:Xsup].flatten(),bins=np.arange(1000,8000,1))
-bins = (b[1:]+b[:-1])/2
-bias = bins[np.argmax(value)]
-
-
-
-
 slits = fits.open("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/7000/test_snr/1_image/image_220311-23H54M34.fits")[0].data
-fitsfile[0].data = fitsfile[0].data.astype(float)
-fitsfile[0].data += slits
-# new_filename1 = '/tmp/hot_' + os.path.basename(filename.replace('.fits','_slits.fits'))
-new_filename1 = '/tmp/2022_hot_pixels.fits'
-fitsfile.writeto(new_filename1,overwrite=True)
-fitsfile[0].data -= slits
 
-files = glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/1/*im.fits')
+files = glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/1/*im.fits')[-1:]
 
-data = fitsfile[0].data
-limit_max = []
-limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(2),mode='same')==0))[0][0]])
-limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==int(value.max()/1e4)))[0][0]])
-limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==int(value.max()/5e2)))[0][0]])
-for i in range(3):
-    # limit_max = bins[np.where((bins>bias) & ( np.convolve(value,np.ones(2),mode='same')==0))[0][0]]-400*i
-    mask = data>limit_max[i]
-    mask2 =   np.hstack([mask[:,-1:], mask[:,:-1]])#.shape 
-    mask3 =   np.hstack([mask[:,-2:], mask[:,:-2]])#.shape 
-    data[mask | mask2 | mask3]=np.nan#np.median(data) #np.nan
-    STD_DEV = 1
-    while ~np.isfinite(data).all():
-        print(limit_max, STD_DEV,np.mean(~np.isfinite(data)))
-        kernel = Gaussian2DKernel(x_stddev=STD_DEV, y_stddev=STD_DEV)
-        data = interpolate_replace_nans(data, kernel)
-        STD_DEV += 1    
-    fitsfile[0].data = data+slits
-    filename = '/tmp/2022_hot_pixels_corrected_%i.fits'%(limit_max[i])
-    fitsfile.writeto(filename,overwrite=True)
-    files.append(filename)
+if d.get('tile')=='yes':
+    if yesno(d,'Are you sure you want to run the analysis on all the frames?'):
+        filename = get_filename(d, All=True)
+    else:
+        filename = [get_filename(d, All=False) ]
+else:
+    filename = [get_filename(d, All=False) ]
+
+
+for file in filename: 
+    
+    fitsfile=fits.open(file)
+    data = fitsfile[0].data
+    header = fitsfile[0].header
+    lx, ly = data.shape
+    Xinf, Xsup, Yinf, Ysup = 1, -1, 1, -1
+    Xinf, Xsup, Yinf, Ysup = 1120, 2100, 1300, 1900
+    # Xinf, Xsup, Yinf, Ysup = l1, l2, 1, -1
+    physical_region = data[Yinf:Ysup, Xinf:Xsup]
+    pre_scan = data[:, 600:1000]
+    post_scan = data[:, 2500:3000]
+    range_=(np.nanpercentile(physical_region,0.1),np.nanpercentile(physical_region,99.9))
+    value, b = np.histogram(data[Yinf:Ysup, Xinf:Xsup].flatten(),bins=np.arange(1000,8000,1))
+    bins = (b[1:]+b[:-1])/2
+    bias = bins[np.argmax(value)]
+    
+    
+    fitsfile[0].data = fitsfile[0].data.astype(float)
+    fitsfile[0].data += slits
+    # new_filename1 = '/tmp/hot_' + os.path.basename(filename.replace('.fits','_slits.fits'))
+    new_filename = '/tmp/' + os.path.basename(file)
+    fitsfile.writeto(new_filename,overwrite=True)
+    fitsfile[0].data -= slits
+
+    files.append(new_filename)
+
+# data = fitsfile[0].data
+# limit_max = []
+# limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(2),mode='same')==0))[0][0]])
+# limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==int(value.max()/1e4)))[0][0]])
+# limit_max.append(bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==int(value.max()/5e2)))[0][0]])
+# for i in range(3):
+#     mask = data>limit_max[i]
+#     mask2 =   np.hstack([mask[:,-1:], mask[:,:-1]])#.shape 
+#     mask3 =   np.hstack([mask[:,-2:], mask[:,:-2]])#.shape 
+#     data[mask | mask2 | mask3]=np.nan#np.median(data) #np.nan
+#     STD_DEV = 1
+#     while ~np.isfinite(data).all():
+#         print(limit_max, STD_DEV,np.mean(~np.isfinite(data)))
+#         kernel = Gaussian2DKernel(x_stddev=STD_DEV, y_stddev=STD_DEV)
+#         data = interpolate_replace_nans(data, kernel)
+#         STD_DEV += 1    
+#     fitsfile[0].data = data+slits
+#     filename = '/tmp/2022_hot_pixels_corrected_%i.fits'%(limit_max[i])
+#     fitsfile.writeto(filename,overwrite=True)
+#     files.append(filename)
+
+
 
 # fitsfile[0].data = fitsfile[0].data.astype(int)
 # fitsfile[0].header['BITPIX']=16 #does not work
@@ -110,6 +120,7 @@ names = [name for name in cat_2018.colnames if len(cat_2018[name].shape) > 2] * 
 for field in names:
     for i in range(len(cat_2018)):
         cat_2018[field][i][cat_2018[field][i]<-1e29]=np.nan
+cat_2018.sort('Y_IMAGE')
 cat_2018.write('/tmp/noise_analysis.fits',overwrite=True)
 
 
