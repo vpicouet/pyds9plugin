@@ -3,7 +3,6 @@ import sys, glob
 import matplotlib.pyplot as plt
 
 
-
 def HistogramSums(path=[]):
     """
     """
@@ -26,13 +25,17 @@ def HistogramSums(path=[]):
     # if len(sys.argv) > 5:
     #     path = Charge_path_new(filename, entry_point=5)
 
-    region = None  # getregion(d, quick=True, message=False)
+    region = None  #
+    # d = DS9n()
+    # region = getregion(d, quick=True, message=False)
     if region is None:
         Yinf, Ysup, Xinf, Xsup = [1130, 1430, 1300, 1900]
+        Yinf, Ysup, Xinf, Xsup = [1300, 1900, 1130, 1430]
+        Yinf, Ysup, Xinf, Xsup = [30, 530, 1500, 2100]
     else:
         Yinf, Ysup, Xinf, Xsup = lims_from_region(None, coords=region)
         # image_area = [Yinf, Ysup,Xinf, Xsup]
-        verboseprint(Yinf, Ysup, Xinf, Xsup)
+    print(Yinf, Ysup, Xinf, Xsup)
 
     bins = np.arange(0, 10000, 1)
     fitsfile = fits.open(path[0])[0]
@@ -42,9 +45,9 @@ def HistogramSums(path=[]):
         fitsfile.header["DATE"][:10],
     )
     print(date)
-    if int(date[:4])>2020:
-        fitsfile.data = fitsfile.data[:,::-1]
-    data = fitsfile.data[Xinf:Xsup, Yinf:Ysup]
+    if int(date[:4]) > 2020:
+        fitsfile.data = fitsfile.data[:, ::-1]
+    data = fitsfile.data[Yinf:Ysup, Xinf:Xsup]  # avant [Xinf:Xsup,Yinf:Ysup]
     os_ = fitsfile.data[Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
     # value, bins = np.histogram(data.flatten(), range=[0, 2 ** 16], bins=int(2 ** 16 / 2 ** 2))
     value, bins = np.histogram(data.flatten(), bins=bins)
@@ -108,11 +111,11 @@ def HistogramSums(path=[]):
     csvwrite(
         Table(np.vstack((bins_c, value, value_os)).T),
         os.path.dirname(path[0]) + "/Histogram_%s_%sG_%is.csv" % (date, daq, exptime),
-    ) 
+    )
     csvwrite(
         Table(np.vstack((bins_c, value, value_os)).T),
-        '/tmp' + "/Histogram_%s_%sG_%is.csv" % (date, daq, exptime),
-    ) 
+        "/tmp" + "/Histogram_%s_%sG_%is.csv" % (date, daq, exptime),
+    )
 
     emccd_model(
         xpapoint=None,
@@ -128,18 +131,18 @@ if "" in sys.argv:
     sys.argv.remove("")
 path = sys.argv[1:]
 HistogramSums(path=path)
-# for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/7000/220329_18H54m27/EMGAIN_7000.0/*'):    
-# for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/6800/220330_09H27m13/EMGAIN_6800/*'):    
-# for folder in glob.glob('/Volumes/Vincent/FIREBall_Data/190223/lowsignalT_113/220329_17H18m24/EMGAIN_9200/*'):    
-# for fold in glob.glob('/Users/Vincent/DS9QuickLookPlugIn/subsets/220328_12H41m59/Directory_darks_T95/*'):    
-#     for folder in glob.glob(fold+'/*'):    
+# for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/7000/220329_18H54m27/EMGAIN_7000.0/*'):
+# for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/6800/220330_09H27m13/EMGAIN_6800/*'):
+# for folder in glob.glob('/Volumes/Vincent/FIREBall_Data/190223/lowsignalT_113/220329_17H18m24/EMGAIN_9200/*'):
+# for fold in glob.glob('/Users/Vincent/DS9QuickLookPlugIn/subsets/220328_12H41m59/Directory_darks_T95/*'):
+#     for folder in glob.glob(fold+'/*'):
 #         if os.path.isdir(folder):
 #             print(folder)
 #             path = glob.glob(folder + '/image*.fits')
 #             print(path)
 #             HistogramSums(path=path[1:10])
-        # sys.exit()
-        #%%
+# sys.exit()
+#%%
 
 
 def EMCCDhist(
@@ -239,14 +242,11 @@ def EMCCDhist(
         #     1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
         # )
         # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
-        
-        id_scic = (
-            np.random.rand(im.shape[0], im.shape[1])
-            < p_sCIC
-        )  
-        print(id_scic.sum()/id_scic.size)
+
+        id_scic = np.random.rand(im.shape[0], im.shape[1]) < p_sCIC
+        print(id_scic.sum() / id_scic.size)
         # sCIC  # sCIC positions
-            # np.random.rand(im.shape[0])< p_sCIC
+        # np.random.rand(im.shape[0])< p_sCIC
         # stage of the EM register at which each sCIC e- appear
         register = np.random.randint(1, n_registers, size=id_scic.sum())
         # Compute and add the partial amplification for each sCIC pixel
@@ -290,5 +290,17 @@ def EMCCDhist(
     y[y == 0] = 1
     y /= x[1] - x[0]
     # print("len(y)", np.sum(y))
-    return np.log10(y)        
-plot(EMCCDhist(np.arange(3000),bias=1000,RN=100,EmGain=1000,flux=0.1,smearing=0.7,sCIC=0.01))
+    return np.log10(y)
+
+
+plot(
+    EMCCDhist(
+        np.arange(3000),
+        bias=1000,
+        RN=100,
+        EmGain=1000,
+        flux=0.1,
+        smearing=0.7,
+        sCIC=0.01,
+    )
+)

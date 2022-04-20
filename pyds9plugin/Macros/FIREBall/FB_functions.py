@@ -83,7 +83,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     # PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.nanargmax(value)],50,0])['popt'][1]
     if bias > 1500:
         conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
-        smearing = 1.5  # ADDED
+        smearing = 0.8  # 1.5  # ADDED
         RN = 60  # 45 #ADDED
     else:
         conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
@@ -171,8 +171,10 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         flux_max = 25
     elif (median_im - bias) > 2e2:
         flux_max = 3  # ADDED
-    else:
+    elif (median_im - bias) > 1e2:
         flux_max = 1  # ADDED
+    else:
+        flux_max = 0.3  # ADDED
     lims = [
         (bins.min(), bins.min() + bins.ptp() / 2),
         (0, 300),
@@ -193,6 +195,8 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     ]
 
     names = inspect.getargspec(function).args[1:]
+    # print(names)
+    names = ["Bias", "Read Noise", "EM gain", "sCIC - Flux", "Smearing", "mCIC"]
     plt.plot(
         xdata, ydata, "k", alpha=0.2,
     )

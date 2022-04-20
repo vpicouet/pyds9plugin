@@ -4,6 +4,7 @@ from pyds9plugin.DS9Utils import *#DS9n,PlotFit1D
 # from pyds9plugin.Macros import functions
 #TODO  create histogram for every image
 from astropy.table import Column
+from astropy.io import fits
 from scipy import signal
 import matplotlib.pyplot as plt
 import matplotlib
@@ -34,8 +35,8 @@ else:
 
 
 # colors= ['#E24A33','#348ABD','#988ED5','#777777','#FBC15E','#8EBA42','#FFB5B8'] + ['#E24A33','#348ABD','#988ED5','#777777','#FBC15E','#8EBA42','#FFB5B8']
-full_analysis = True
-Plot = True
+full_analysis = False
+Plot = False
 # write_files = True
 data = fitsfile[0].data
 header = fitsfile[0].header
@@ -246,6 +247,10 @@ table["TopImage_median"] = np.nanmedian(physical_region[-30:-10,:]) - table['pre
 
 table["flat"] = (np.nanmedian(physical_region) - table['pre_scan'] )/np.nanvar(physical_region)
 
+
+
+
+
 ##create subset
 table = create_cubsets(table, header)
 # table['EMGAIN>0'] = header['EMGAIN']>0 
@@ -281,7 +286,9 @@ table['bias_os'] = bias_os
 
 
 
-    
+fits.setval(filename, 'PRESCAN', value=float(table['pre_scan'] ), comment='Median value of the pre scan region')
+fits.setval(filename, 'BIAS_OS', value=float(table['bias_os'] ), comment='Bias estimated on overscan region')
+ 
 
     
     # plt.figure();plt.plot(table['bins'],table['hist'] ,'.');plt.show()

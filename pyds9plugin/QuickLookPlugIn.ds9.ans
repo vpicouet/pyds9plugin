@@ -1,3 +1,58 @@
+buttonbar
+Optimize Display
+*
+button
+DS9Utils setup -x $xpa_method  $param(Setup); -s "$scale"  -l $cut  -c  $color | $text
+
+Radial Profile
+*
+button
+DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $diam    | $text
+
+
+SExtractor #36
+*
+button
+DS9Utils run_sextractor -x $xpa_method  $param(SEXTRACTOR-NEW); -d "$DETECTION_IMAGE" -CN "$CATALOG_NAME" -CT $CATALOG_TYPE -PN $PARAMETERS_NAME -DT $DETECT_TYPE -DM $DETECT_MINAREA -Dm $DETECT_MAXAREA -TT $THRESH_TYPE -dT $DETECT_THRESH -AT $ANALYSIS_THRESH -F $FILTER -FN $FILT_NAME -DN $DEBLEND_NTHRESH -D $DEBLEND_MINCONT -C $CLEAN_T -CP $CLEAN_PARAM -M $MASK_TYPE -WT $WEIGHT_TYPE -RW $RESCALE_WEIGHTS -WI "$WEIGHT_IMAGE" -WG $WEIGHT_GAIN -FI $FLAG_IMAGE -FT $FLAG_TYPE -PA $PHOT_APERTURES -P $PHOT_AUTOPARAMS -PP $PHOT_PETROPARAMS -PF $PHOT_FLUXFRAC -SL $SATUR_LEVEL -SK $SATUR_KEY -MZ $MAG_ZEROPOINT -MG $MAG_GAMMA -G $GAIN -PS $PIXEL_SCALE -SF $SEEING_FWHM -SN $STARNNW_NAME -ct $CHECKIMAGE_TYPE -BT $BACK_TYPE -BV $BACK_VALUE -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BPT $BACKPHOTO_TYPE -bpt $BACKPHOTO_THICK -BFT $BACK_FILTTHRESH -MO $MEMORY_OBJSTACK -MP $MEMORY_PIXSTACK -MB $MEMORY_BUFSIZE  | $text
+
+SWARP #38
+*
+button
+DS9Utils ds9_swarp -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME -w $WEIGHT_TYPE -rw $RESCALE_WEIGHTS -W "$WEIGHT_IMAGE" -c $COMBINEI -ct $COMBINE_TYPE -CA $CLIP_AMPFRAC -CS $CLIP_SIGMA -CT $CELESTIAL_TYPE -PT $PROJECTION_TYPE -PE $PROJECTION_ERR -C_T $CENTER_TYPE -C $CENTERI -PST $PIXELSCALE_TYPE -PS $PIXEL_SCALE -IS $IMAGE_SIZE -R $RE-SAMPLING  -r $RESAMPLING_TYPE  -o $OVERSAMPLING  -I $INTERPOLATE -SB $SUBTRACT_BACK  -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BFT $BACK_FILTTHRESH     | $text
+
+
+Plot Region In 3D
+*
+button
+DS9Utils plot_3d -x $xpa_method  | $text
+
+
+Interactive Fitting
+*
+button
+DS9Utils fit_ds9_plot -x $xpa_method   $param(Background-Fit-1D); -b $background -g $gaussians -m $moffats -v $voight -o $other  | $text
+
+
+Python
+*
+button
+DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
+
+
+
+remove dark
+*
+button
+/Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+endbuttonbar
+
+
+
+param Reduction
+flux open {Flux} /tmp/Samtec_cables_D_lamp/image_0000000[15].fits {Flux images}
+dark open {Dark} /tmp/Samtec_cables_D_lamp/image_0000000[8-9].fits {Dark images}
+name combobox {name} |tilted_mask|grid_mask|science_mask|open_mask {name to add to the final image}
+endparam
 
 
 #Test $data
@@ -71,6 +126,10 @@ hmenu 1. Generic Functions
 	#bind B
 	#DS9Utils button #-x $xpa_method
 
+
+
+
+
 	hmenu Setups
 		Change Display Parameters (S) #7
 		*
@@ -112,6 +171,8 @@ hmenu 1. Generic Functions
 		*
 		menu
 		DS9Utils lock -x $xpa_method   $param(Lock); -f $var1 -c $var3 -l $var2  -s $var4 -m $var5   | $text
+
+
 
 		Lock/Unlock Frames Key
 		*
@@ -220,7 +281,7 @@ hmenu 1. Generic Functions
 	Open Image Key
 	*
 	bind O
-	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
+	DS9Utils open_file -x $xpa_method  $param(opentest); -p "$path" -t $type  -c 0 | $text
 
 	Plot Region In 3D
 	*
@@ -239,7 +300,8 @@ hmenu 1. Generic Functions
 	*
 	bind P
 	#		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $env(HOME)/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/$exp   -o 0 -p  "$path"| $text
+	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/FIREBall/$exp   -o 0 -p  "$path"| $text
+#	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $env(HOME)/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/$exp   -o 0 -p  "$path"| $text
 
 
 
@@ -298,16 +360,17 @@ hmenu 2. Instrumentation - AIT
 		menu
 		DS9Utils throughfocus -x $xpa_method  $param(Throughfocus); -p "$Path" -w $WCS -s $sort -v "$offsets"  | $text  #$steps
 
+
+#		Throughfocus_test
+#		*
+#		bind t
+#		DS9Utils throughfocus -x $xpa_method  $param(Throughfocus_); -p "$Path" -w $WCS -s $sort -v "$offsets"  | $text  #$steps
+
 		Explore PSFs/Vignettes #24
 		*
 		menu
 		DS9Utils explore_throughfocus -x $xpa_method  $param(SExtractor-Vignets-Path); -p "$Path" -s "$sort" | $text  #$steps
 
-
-#		Throughfocus Image Key
-#		*
-#		bind t
-#		DS9Utils throughfocus -x $xpa_method  $param(Throughfocus); "$Path" $WCS $steps  | $text
 
 		Radial Profile (r)
 		*
@@ -731,10 +794,10 @@ endtab
 endparam
 
 param CreateContourRegions
-block menu {Block} 1|2|4|8|16|32 {}
+block combobox {Block} 1|2|4|8|16|32 {}
 theshold entry {Threshold} 0.1 {}
 erosion entry {Erosion} 0 {}
-dilatation entry {Dilatation} 50 {}
+dilatation combobox {Dilatation} 50|100 {}
 endparam
 
 
@@ -743,8 +806,8 @@ smearing checkbox {Smearing} 0 {Use smearing model}
 endparam
 
 param Aperture-photometry
-aper entry {Apertures} 5,10,15 {Apertures radius in pixel}
-zpm entry {Zero point magnitude} 0 {Value to be added to -2.5 log(SumPix)}
+aper combobox {Apertures} 5,10,15|5,10|5 {Apertures radius in pixel}
+zpm combobox {Zero point magnitude} 0|30|27 {Value to be added to -2.5 log(SumPix)}
 endparam
 
 
@@ -764,14 +827,21 @@ type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|IMPORT-3D|PRIS
 endparam
 
 
+
+param opentest
+path open {Path of the image(s) to open}  $dir/Images/stack????????.fits  {} #NORMAL
+#clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
+type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|IMPORT-3D|PRISM {}
+endparam
+
 param Catalog-name
 save save {Path where to save the catalog}  /tmp/test.csv  {} #NORMAL
 endparam
 
 param Plot-Apertures
 save save {Regions' catalog path}  /tmp/test.csv  {} #NORMAL
-x menu {X}  xcentroid|ycentroid|var|std|mean|median|min|max {} #NORMAL
-y menu {Y}  xcentroid|ycentroid|var|std|mean|median|min|max  {} #NORMAL
+x combobox {X}  xcentroid|ycentroid|var|std|mean|median|min|max {} #NORMAL
+y combobox {Y}  xcentroid|ycentroid|var|std|mean|median|min|max  {} #NORMAL
 select entry {Path where to save the catalog}    {} #NORMAL
 endparam
 
@@ -791,8 +861,8 @@ verbose checkbox {Verbose} 0 {Check to enter verbose mode.} #NORMAL QUIET|DEBUG
 endparam
 
 param Get-depth
-mag_zp entry {Magnitude zero point} - {'-' for Auto (CLAUDS): 30 for MegaCam and VIRCAM, 27 for HSC}
-aper_size entry {Aperture size} 2 {Size of the random apertures in arc seconds}
+mag_zp entry {Magnitude zero point} "" {Keep clear for Auto (CLAUDS): 30 for MegaCam and VIRCAM, 27 for HSC}
+aper_size combobox {Aperture size} 2|3|1 {Size of the random apertures in arc seconds}
 N_aper entry {number of random apertures} 10000 {Number of random apertures}
 endparam
 
@@ -809,16 +879,16 @@ endparam
 
 param SExtractor-Vignets-Path
 Path open {Path} "" {SExtractor catalog with VIGNETS}
-sort menu {Sorting-type} |MAG_AUTO|FWHM_IMAGE|THETA_IMAGE|ELLIPTICITY|X_IMAGE|Y_IMAGE|AMPLITUDE {Column to use to sort the PSFs}
+sort combobox {Sorting-type} |MAG_AUTO|FWHM_IMAGE|THETA_IMAGE|ELLIPTICITY|X_IMAGE|Y_IMAGE|AMPLITUDE {Column to use to sort the PSFs}
 endparam
 
 param Setup
 #var2 text {} {To explore a specific part of the image select a region. We can not write more...} {}
 #var2 text {} {It is not possible to write a lot here... Indeed there is not much room...} {}
 scale menu {Scale} Log|Linear|Power|Square-Root|ASINH|SINH|Histogram-Equalization|zscale|minmax {Scale}
-cut entry {Scale Limits} 50-99.9 {Scale limits in percentile of the image (or defined region)}
+cut combobox {Scale Limits} 50-99.9|50-99|50-98|50-95|50-90 {Scale limits in percentile of the image (or defined region)}
 #smooth menu {Smooth} 0|1|2|3|4|5|6|7|8|9|10 {Smoothing boxcar radius in pixel}
-color menu {Color} cool|grey|cubehelix0|red|green|blue|a|b|bb|he|i8|aips0|sls|hsv|heat|rainbow|standard|staircase {Color}
+color combobox {Color} cool|grey|cubehelix0|red|green|blue|a|b|bb|he|i8|aips0|sls|hsv|heat|rainbow|standard|staircase {Color}
 #invert checkbox {invert} 0 {Invert colormap}
 #grid checkbox {Grid} 0 {Display grid}
 endparam
@@ -832,7 +902,7 @@ endparam
 
 
 param Replace-region
-number entry {Replacing value} nan {Value by which you want to replace the encircled pixels, eg. 5.4, nan, -inf.}
+number combobox {Replacing value} nan|inf|1|0 {Value by which you want to replace the encircled pixels, eg. 5.4, nan, -inf.}
 overwrite checkbox {Overwrite} 0 {If False the new image will be saved at $filename_modified.fits}
 endparam
 
@@ -891,7 +961,7 @@ OVERSAMPLING entry {OVERSAMPLING} 0 {Amount of oversampling in each dimension. 0
 INTERPOLATE checkbox {INTERPOLATE} 0 {Interpolate bad input pixels ?}
 
 SUBTRACT_BACK checkbox {SUBTRACT_BACK} 0 {Subtraction sky background ?}
-BACK_SIZE entry {BACK_SIZE} 128 {Size in pixels of a background mesh.}
+BACK_SIZE combobox {BACK_SIZE} 128|64|32 {Size in pixels of a background mesh.}
 BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Size in background meshes of the background-filtering mask.}
 BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Difference threshold (in ADUs) for the background-filtering}
 
@@ -993,10 +1063,16 @@ Ks checkbox {Ks} 1 {Ks band 		- 2190 nm - FWHM=390nm}
 endparam
 
 param Variable-Smearing-Kernel
-Smearing entry {Smearing length} 1.5 {Smearing exponential folding length in pixel}
-RateSmearing entry {Smearing length rate} 50000 {Smearing length exponential decrement (0 means constant smearing)}
+Smearing combobox {Smearing length} 0.6|1.5 {Smearing exponential folding length in pixel}
+RateSmearing combobox {Smearing length rate} 50000|10000|100000 {Smearing length exponential decrement (0 means constant smearing)}
 endparam
 
+
+# Simulate FIREBall emCCD detector
+# *
+# menu
+# DS9FIREBall $xpa_method SimulateFIREBallemCCD  $param(Detector-Parameters); $size $overscan $OS $ConversionGain $EmGain $n_registers $Bias $RN $pCIC $sCIC $Dark $Smearing $RateSmearing $Exposure $Flux $Source $Rx $Ry  $Name $spectra $cube $threshold $hist    | $text
+#
 
 param Detector-Parameters
 size entry {Detector size} 3216,2069 {Size of the detector in pixels}
@@ -1042,13 +1118,6 @@ Autocorr_region_2D entry {Autocorr region 2D} '1500-2000-1500-2000' {}
 endparam
 
 
-#param foobar
-#var1 entry {Variable 1} default {this is a entry}
-#var2 entry {Variable 1} default {this is a entry}
-#var2 checkbox {Variable 2} 1 {this is a checkbox}
-#var3 checkbox {Variable 3} 2 {thilkns is a checkbox}
-#var4 menu {Variable 4} AAA|BBB|CCC {this is a menu}
-#endparam
 
 param radial_profile
 center menu {Centering algorithm} Maximum|User|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fitting {Algorithm used for centering.}
@@ -1085,7 +1154,16 @@ param Throughfocus
 Path open {RegExp Path} "" {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
 sort menu {Sorting type} 	AlphaNumerical|CreationDate|DS9-Order {Way to sort files to create throughfocus profile}
 WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
-offsets entry {Steps} "" {If throughfocus images not taken uniformely, provide the offset of each image separated by a coma, eg: 0,0.5,2,3}
+offsets entry {Steps} "" {If throughfocus images not taken uniformaly, provide the offset of each image separated by a coma, eg: 0,0.5,2,3}
+endparam
+
+
+
+param Throughfocus_
+Path open {RegExp Path} $dir/Images/stack????????.fits {Paths of the images you want to analyse. Use global pattern matching (*/?/[], etc)}
+sort menu {Sorting type} 	AlphaNumerical|CreationDate|DS9-Order {Way to sort files to create throughfocus profile}
+WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
+offsets entry {Steps} "" {If throughfocus images not taken uniformaly, provide the offset of each image separated by a coma, eg: 0,0.5,2,3}
 endparam
 
 param Click-Enter-For-Only-DS9-Image
@@ -1100,17 +1178,11 @@ endparam
 
 
 param subset_
-#cat entry {Input Header catalog} - {Path of the input header catalog to filter/organize files}
 cat open {Input Header catalog} {$env(HOME)/DS9QuickLookPlugIn/HeaderDataBase/} {Path of the input header catalog to filter/organize files}
-Mask entry {Selection} "" {Selection to be applied.  Use | for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) | (EMGAIN>0) }
-Fields entry {Re-arange} Directory {Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2}
-number menu {Number of images} all|1|2|5|10|100 {Number of images having the same characteristics}
+Mask combobox {Selection} |FLUX*EXPTIME>1|(EXPTIME>0)\\&(EMGAIN>0)  {Selection to be applied.  Use | for OR and \& for AND eg: ((FLUX*EXPTIME>1) \& (FLUX*EXPTIME<30)) | (EMGAIN>0) }
+Fields combobox {Re-arange} Directory|Directory,NAXIS2|EXPTIME,EMGAIN {Coma separated fields, order matters for folder creation. eg: Directory,NAXIS2}
+number combobox {Number of images} all|1|2|5|10|100 {Number of images having the same characteristics}
 copy menu {Copy type} symbolic-link|copy {ype of copy or link of the the original images.}
-endparam
-
-param autocorr
-type menu {Type} 2D-XY|X|Y {Choose autocorrelation type}
-path entry {RegExp Path} $filename {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
 endparam
 
 
@@ -1127,7 +1199,7 @@ endparam
 param Header-Catalog
 #path entry {RegExp Path} $filename {Path of the images to extract.  Use global pattern matching (*/?/[9-16], etc)}
 path open {RegExp Path} {$env(HOME)/*fits} {Path of the images to extract.  Use global pattern matching (*/?/[9-16], etc)}
-info menu {Info} |basic_image_estimators.py|FIREBall.py {Macros file to add image estimators to header catalog, takes more time. Leave blank for no image analysis}
+info combobox {Info} |basic_image_estimators.py|FIREBall.py {Macros file to add image estimators to header catalog, takes more time. Leave blank for no image analysis}
 #ext entry {Ext} 0 {Header extensions to be extracted: eg. 0,1,2,3}
 endparam
 
@@ -1270,11 +1342,12 @@ param Background-Fit-1D
 #axis menu {Direction} x|y {Variation direction to be analyzed}
 background menu {Background deg} Constant|None|slope|Exponential|DoubleExponential|Logarithmic {Shape of the background}
 #law menu {Law} None|Exponiential|DoubleExponiential {Law used to fit the background}
-gaussians menu {Number of Gaussians} 0|1|2|3|4|5 {Number of features to be fitted by a gaussian}
+gaussians combobox {Number of Gaussians} 0|1|2|3|4|5 {Number of features to be fitted by a gaussian}
 moffats menu {Number of Moffats} 0|1|2|3 {Number of features to be fitted by a moffat}
 voight menu {Number of Voight} 0|1|2|3 {Number of features to be fitted by a voight}
 #sinusoid menu {Number of Sinusoids} 0|1|2 {Add sinusoids to the fitting signal}
-other menu {Other features} None|User-defined-interactively|Import-from-Macros {If import, function needs to be written in pyds9plugin/Macros/Fitting_Functions/functions.py}
+# other menu {Other features} None|User-defined-interactively|Import-from-Macros {If import, function needs to be written in pyds9plugin/Macros/Fitting_Functions/functions.py}
+other combobox {Other features} None|slit|smeared_slit|EMCCDhist|EMCCD|defocused_gaussian|gaussian {Any function implemented $dir/Macros/Fitting_Functions/functions.py}
 #kernel entry {kernel} 1 {int, Convolution kenel}
 #Value menu {Value} Linear|Log {Fit in linear or log value}
 endparam
@@ -1282,7 +1355,7 @@ endparam
 
 
 param Gaussian-Fit-2D
-FWHM entry {FWHM} - {FWHM limits in pixel for the fit. Eg: 6-7}
+FWHM combobox {FWHM} -|6-7|3-3 {FWHM limits in pixel for the fit}
 Center checkbox {Center} 0 {Force the fit on the central pixel}
 noise checkbox {Noise measurement} 0 {To do the measurement on 100 random positions}
 endparam
@@ -1312,77 +1385,15 @@ endparam
 
 param Catalog-to-region
 path open {Path} "" {Path of the catalog}
-fields entry {x,y fields} "" {Name of the x and y fields: ex = xcentroid,ycentroid}
-name entry {field name} "" {field to put in region name: ex = magnitude, name, etc}
+fields combobox {x,y fields} |X,Y|xcentroid,ycentroid|X_IMAGE,Y_IMAGE {Name of the x and y fields}
+name combobox {field name} |magnitude|name {field to put in region name: ex = magnitude, name, etc}
 form menu {form of the region} circle|box {Form of the regions to display}
 size entry {Regions size} 10 {Size in pixel or arcseconds}
 wcs checkbox {WCS} 0 {Check if the catalog fields are in degree-WCS, then radius must be in arc-second}
-Selection entry {[Selection]} "" {selection of the region in th catalog: Use | for OR and \& for AND}
+Selection combobox {[Selection]} |X_IMAGE>10\\&Y_IMAGE>10 {selection of the region in the catalog: Use | for OR and \& for AND}
 endparam
 
 
-
-param SEXTRACTOR
-tab {Basic Params}
-DETECTION_IMAGE open {DETECTION_IMAGE} "" {Image to use for detection of the sources. If - using same than photometric image, eg. DS9 frame}
-CATALOG_NAME save {CATALOG_NAME} "" {Name of the output catalog without extension. eg /tmp/catalog.fits, if -, saved as $filename_ds9_cat.fits}
-CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
-
-DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
-DETECT_MINAREA entry {DETECT_MINAREA} 10 {}
-#DETECT_MAXAREA entry {DETECT_MAXAREA} - {}
-THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
-DETECT_THRESH entry {DETECT_THRESH} 0.8 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
-ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
-endtab
-tab {Filter Params}
-
-FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
-FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/}
-
-DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 64 {Number of deblending sub-thresholds}
-DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.0003 {Minimum contrast parameter for deblending}
-
-CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
-CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency, 0 for no cleaning}
-MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
-
-WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
-WEIGHT_IMAGE entry {WEIGHT_IMAGE} "" {}
-#RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 0 {}
-
-#FLAG_IMAGE entry {FLAG_IMAGE} - {}
-#FLAG_TYPE menu {FLAG_TYPE} MAX|MIN|? {}
-endtab
-tab {Photometry parameters}
-
-PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
-PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,4.0 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
-PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,4.0 {MAG_PETRO parameters: <Petrosian_fact>}
-PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.3,0.5,0.9 {flux fraction[s] used for FLUX_RADIUS}
-#SATUR_LEVEL entry {SATUR_LEVEL} - {level (in ADUs) at which arises saturation}
-MAG_ZEROPOINT entry {MAG_ZEROPOINT} 0.0 {magnitude zero-point}
-#MAG_GAMMA entry {MAG_GAMMA} - {gamma of emulsion (for photographic scans)}
-#GAIN entry {GAIN} - {detector gain in e-/ADU}
-PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
-
-SEEING_FWHM entry {SEEING_FWHM} 0.8 {stellar FWHM in arcsec}
-STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
-endtab
-tab {Background parameters}
-
-BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
-BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
-BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Background filter: <size> or <width>,<height>}
-BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
-BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
-BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
-
-CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
-REGION_NAME menu {REGION_NAME} NUMBER|FWHM_IMAGE|MAG_AUTO|MAG_ISO|MAG_APER|MU_MAX|ELLIPTICITY|CLASS_STAR|THETA_IMAGE|ELONGATION {The name you want to display above each source on DS9}
-endtab
-endparam
 
 
 
@@ -1468,8 +1479,8 @@ endparam
 
 param Distance-Convertissor
 Value entry {Value} 1 {Value to convert}
-Unit1 menu {Unit 1} ---DISTANCE---|angstrom|meter|parsec|astronomical_unit|lightyear|---ENERGY---|Joule|erg|Ry|cal|eV|---MASS---|kg|earthMass|M_e|M_p|Msun|lb|oz|---MAGNITUDE--- {Unit of the value}
-Unit2 menu {Unit 2} ---DISTANCE---|angstrom|meter|parsec|astronomical_unit|lightyear|---ENERGY---|Joule|erg|Ry|cal|eV|---MASS---|kg|earthMass|M_e|M_p|Msun|lb|oz|---MAGNITUDE--- {Unit for conversion}
+Unit1 combobox {Unit 1} |---DISTANCE---|angstrom|meter|parsec|astronomical_unit|lightyear|---ENERGY---|Joule|erg|Ry|cal|eV|---MASS---|kg|earthMass|M_e|M_p|Msun|lb|oz|---MAGNITUDE--- {Unit of the value}
+Unit2 combobox {Unit 2} |---DISTANCE---|angstrom|meter|parsec|astronomical_unit|lightyear|---ENERGY---|Joule|erg|Ry|cal|eV|---MASS---|kg|earthMass|M_e|M_p|Msun|lb|oz|---MAGNITUDE--- {Unit for conversion}
 Redshift entry {Redshift} - {Only if needed}
 endparam
 
@@ -1484,16 +1495,23 @@ endparam
 
 
 param Python-Command-P
-exp menu {Expression} EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+#exp menu {Expression} EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path in pyds9plugin Macro directory}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp combobox {Expression} {EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py|Mask_cosmic_rays.py|histogram_sum.py|remove_hot_pixels.py|mask_hot_pixels.py|smear.py|desmear.py|lasso_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 #overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
 
-param Python-Command
-exp open {Expression} ds9 {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+
+
+#exp open {Expression} ds9 {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+#exp combobox {Expression} ds9+=np.random.normal(0,0.1,ds9.shape)|ds9=ds9[:10,:10]|ds9+=30*(ds9-gaussian_filter(ds9,1))|ds9=np.hypot(sobel(ds9,axis=0,mode='constant'),sobel(ds9,axis=1,mode='constant'))|ds9=np.abs(fftshift(fft2(ds9)))**2|ds9=correlate2d(ds9.astype('uint64'),ds9,boundary='symm',mode='same')|ds9=interpolate_replace_nans(ds9,Gaussian2DKernel(x_stddev=5,y_stddev=5))|n=1060;ds9=np.hstack([ds9.min()*np.ones((ds9.shape[0],n)),ds9[:,::-1],ds9.min()*np.ones((ds9.shape[0],3216-n-ds9.shape[1]))]) {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 #im_path entry {image} "" {Optional path of a second image to use}
 #eval checkbox {SimpleEval} 0 {Use the SimpleEval method in order to minimize possible execution risks (see doc).}
 #path entry {RegExp Path} $filename {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
+
+
+param Python-Command
+exp combobox {Expression} {ds9[(ds9>50)&(ds9<-50)]=np.nan|ds9=interpolate_replace_nans(sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std'),Gaussian2DKernel(x_stddev=3,y_stddev=1))|ds9=sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std')|a,b=np.array(d.get('scale limits').split(),dtype=float);ds9[np.bitwise_or(ds9>a,ds9<b)]=np.nan|ds9=ds9[:10,:10]|ds9+=np.random.normal(0,0.1,ds9.shape)|ds9+=30*(ds9-gaussian_filter(ds9,1))|ds9=np.abs(fftshift(fft2(region)))**2|ds9=correlate2d(region.astype('uint64'),region,boundary='symm',mode='same')|ds9=interpolate_replace_nans(ds9,Gaussian2DKernel(x_stddev=5,y_stddev=5))|n=1060;ds9=np.hstack([ds9.min()*np.ones((ds9.shape[0],n)),ds9[:,::-1],ds9.min()*np.ones((ds9.shape[0],3216-n-ds9.shape[1]))])|np.random.gamma(np.random.poisson(np.ones(ds9.shape)*np.linspace(0,1,ds9.shape[0])), 1400)+ np.random.normal(3000,50, size=ds9.shape)} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
 
@@ -1515,6 +1533,14 @@ endparam
 
 
 
+
+
+param Save
+var1 entry {path 1} - {Path of the red image eg. R band}
+var2 entry {path 2} - {Path to the green image eg. G band}
+var3 entry {path 3} - {Path to the blue image eg. U band}
+var4 entry {Name to save} /tmp/test.tiff {Name for the image to save. Will be saved in the dame repository}
+endparam
 
 
 param Save
@@ -1569,7 +1595,7 @@ DETECTION_IMAGE open {DETECTION_IMAGE} "" {Image to use for detection of the sou
 
 CATALOG_NAME save {CATALOG_NAME} "" {Name of the output catalog without extension. eg /tmp/catalog.fits, if none, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME menu {PARAMETERS_NAME} sex.param|sex_vignet.param|sex_all.param {File name in ds9_package/Calibration/Sextractor/}
+PARAMETERS_NAME combobox {PARAMETERS_NAME} sex.param|sex_vignet.param{File name in ds9_package/Calibration/Sextractor/}
 
 DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
 DETECT_MINAREA entry {DETECT_MINAREA} 10 {min number of pixels above threshold}
@@ -1581,13 +1607,13 @@ ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
 
 
 FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
-FILT_NAME menu {FILTER_NAME} gauss_4.0_7x7.conv|NONE|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
+FILT_NAME combobox {FILTER_NAME} gauss_4.0_7x7.conv|NONE|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
 
-DEBLEND_NTHRESH entry {DEBLEND_NTHRESH} 64 {Number of deblending sub-thresholds}
+DEBLEND_NTHRESH combobox {DEBLEND_NTHRESH} 64|128|32 {Number of deblending sub-thresholds}
 DEBLEND_MINCONT entry {DEBLEND_MINCONT} 0.0003 {Minimum contrast parameter for deblending}
 
 CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
-CLEAN_PARAM entry {CLEAN_PARAM} 1.0 {Cleaning efficiency, 0 for no cleaning}
+CLEAN_PARAM combobox {CLEAN_PARAM} 1.0|0.0|0.5 {Cleaning efficiency, 0 for no cleaning}
 MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
 
 endtab
@@ -1616,7 +1642,7 @@ PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.3,0.5,0.9 {flux fraction[s] used for FLUX_
 
 SATUR_LEVEL entry {SATUR_LEVEL} 50000.0 {level (in ADUs) at which arises saturation}
 SATUR_KEY entry {SATUR_KEY} SATURATE {keyword for saturation level (in ADUs)}
-MAG_ZEROPOINT entry {MAG_ZEROPOINT} 0.0 {magnitude zero-point}
+MAG_ZEROPOINT combobox {MAG_ZEROPOINT} 0.0|30|27 {magnitude zero-point}
 MAG_GAMMA entry {MAG_GAMMA} 4.0 {gamma of emulsion (for photographic scans)}
 GAIN entry {GAIN} GAIN {detector gain in e-/ADU}
 PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
@@ -1638,7 +1664,7 @@ tab {BACKGROUND}
 BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
 BACK_VALUE entry {BACK_VALUE} 0.0 {Default background value in MANUAL mode}
 
-BACK_SIZE entry {BACK_SIZE} 64 {Background mesh: <size> or <width>,<height>}
+BACK_SIZE combobox {BACK_SIZE} 64|128|32 {Background mesh: <size> or <width>,<height>}
 
 BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Background filter: <size> or <width>,<height>}
 
@@ -1652,7 +1678,109 @@ tab {MEMORY & MISC.}
 MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
 MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
 MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
-#NTHREADS menu {NTHREADS} 1|2|4|8|16|32 {Number of threads for multi processing}
+#NTHREADS combobox {NTHREADS} 1|2|4|8|16|32 {Number of threads for multi processing}
+
+endtab
+
+endparam
+
+
+
+
+
+param SEXTRACTOR-SLITS
+
+
+tab {EXTRACTION}
+
+DETECTION_IMAGE open {DETECTION_IMAGE} "" {Image to use for detection of the sources. If none using same than photometric image, eg. DS9 frame}
+
+CATALOG_NAME save {CATALOG_NAME} "" {Name of the output catalog without extension. eg /tmp/catalog.fits, if none, saved as $filename_ds9_cat.fits}
+CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
+PARAMETERS_NAME combobox {PARAMETERS_NAME} sex.param|sex_vignet.param{File name in ds9_package/Calibration/Sextractor/}
+
+DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
+DETECT_MINAREA entry {DETECT_MINAREA} 30 {min number of pixels above threshold}
+
+DETECT_MAXAREA entry {DETECT_MAXAREA} 2000 {max number of pixels above threshold (0=unlimited)}
+THRESH_TYPE menu {THRESH_TYPE} RELATIVE|ABSOLUTE {}
+DETECT_THRESH entry {DETECT_THRESH} 2.0 {Detection threshold. 1 argument: ADUs or relative to Background RMS, see THRESH TYPE}
+ANALYSIS_THRESH entry {ANALYSIS_THRESH} 2.0 {}
+
+
+FILTER checkbox {FILTER} 1 {apply filter for detection (Y or N)?}
+FILT_NAME combobox {FILTER_NAME} gauss_4.0_7x7.conv|NONE|gauss_1.5_3x3.conv|gauss_2.0_3x3.conv|gauss_2.0_5x5.conv|gauss_2.5_5x5.conv|gauss_3.0_5x5.conv|gauss_3.0_7x7.conv|gauss_4.0_7x7.conv|gauss_5.0_9x9.conv|mexhat_1.5_5x5.conv|mexhat_2.0_7x7.conv|mexhat_2.5_7x7.conv|mexhat_3.0_9x9.conv|mexhat_4.0_9x9.conv|mexhat_5.0_11x11.conv|block_3x3.conv|tophat_1.5_3x3.conv|tophat_2.0_3x3.conv|tophat_2.5_3x3.conv|tophat_3.0_3x3.conv|tophat_4.0_5x5.conv|tophat_5.0_5x5.conv|default.conv {Name of the sextractor filter in ds9_package/Calibration/Sextractor/, NONE for no filter}
+
+DEBLEND_NTHRESH combobox {DEBLEND_NTHRESH} 16|64|128|32 {Number of deblending sub-thresholds}
+DEBLEND_MINCONT combobox {DEBLEND_MINCONT} 0.3|0.03|0.003 {Minimum contrast parameter for deblending}
+
+CLEAN_T checkbox {CLEAN} 1 {Clean spurious detections? (Y or N)?}
+CLEAN_PARAM combobox {CLEAN_PARAM} 1.0|0.0|0.5 {Cleaning efficiency, 0 for no cleaning}
+MASK_TYPE menu {MASK_TYPE} CORRECT|NONE|BLANK {type of detection MASKing}
+
+endtab
+
+
+
+tab {WEIGHTING & FLAG}
+
+
+WEIGHT_TYPE menu {WEIGHT_TYPE} NONE|NONE,MAP_VAR|MAP_VAR|MAP_VAR,MAP_VAR {First one for detection image, second one for photometric image}
+RESCALE_WEIGHTS checkbox {RESCALE_WEIGHTS} 1 {Rescale input weights/variances }
+WEIGHT_IMAGE open {WEIGHT_IMAGE} "" {weight-map filename}
+WEIGHT_GAIN checkbox {WEIGHT_GAIN} 1 {modulate gain (E/ADU) with weights? }
+
+FLAG_IMAGE open {FLAG_IMAGE} NONE {filename for an input FLAG-image}
+FLAG_TYPE menu {FLAG_TYPE} OR|AND|MAX|MIN|MOST {flag pixel combination}
+endtab
+
+
+tab {PHOTOMETEY}
+
+PHOT_APERTURES entry {PHOT_APERTURES} 6,12,18 {MAG_APER aperture diameter(s) in pixels}
+PHOT_AUTOPARAMS entry {PHOT_AUTOPARAMS} 2.5,4.0 {MAG_AUTO parameters: <Kron_fact>,<min_radius>}
+PHOT_PETROPARAMS entry {PHOT_PETROPARAMS} 2.0,4.0 {MAG_PETRO parameters: <Petrosian_fact>}
+PHOT_FLUXFRAC entry {PHOT_FLUXFRAC} 0.3,0.5,0.9 {flux fraction[s] used for FLUX_RADIUS}
+
+SATUR_LEVEL entry {SATUR_LEVEL} 50000.0 {level (in ADUs) at which arises saturation}
+SATUR_KEY entry {SATUR_KEY} SATURATE {keyword for saturation level (in ADUs)}
+MAG_ZEROPOINT combobox {MAG_ZEROPOINT} 0.0|30|27 {magnitude zero-point}
+MAG_GAMMA entry {MAG_GAMMA} 4.0 {gamma of emulsion (for photographic scans)}
+GAIN entry {GAIN} GAIN {detector gain in e-/ADU}
+PIXEL_SCALE entry {PIXEL_SCALE} 0 {size of pixel in arcsec (0=use FITS WCS info)}
+
+endtab
+
+tab {STAR/GALAXY &  CHECK.}
+
+SEEING_FWHM entry {SEEING_FWHM} 0.8 {stellar FWHM in arcsec}
+STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
+CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
+REGION_NAME menu {REGION_NAME} NUMBER|FWHM_IMAGE|MAG_AUTO|MAG_ISO|MAG_APER|MU_MAX|ELLIPTICITY|CLASS_STAR|THETA_IMAGE|ELONGATION {The name you want to display above each source on DS9}
+
+
+endtab
+
+tab {BACKGROUND}
+
+BACK_TYPE menu {BACK_TYPE} AUTO|MANUAL {}
+BACK_VALUE entry {BACK_VALUE} 0.0 {Default background value in MANUAL mode}
+
+BACK_SIZE combobox {BACK_SIZE} 64|128|32 {Background mesh: <size> or <width>,<height>}
+
+BACK_FILTERSIZE entry {BACK_FILTERSIZE} 3 {Background filter: <size> or <width>,<height>}
+
+BACKPHOTO_TYPE menu {BACKPHOTO_TYPE} LOCAL|GLOBAL {}
+BACKPHOTO_THICK entry {BACKPHOTO_THICK} 24 {thickness of the background LOCAL annulus}
+BACK_FILTTHRESH entry {BACK_FILTTHRESH} 0.0 {Threshold above which the background map filter operates}
+
+endtab
+
+tab {MEMORY & MISC.}
+MEMORY_OBJSTACK entry {MEMORY_OBJSTACK} 3000 {number of objects in stack}
+MEMORY_PIXSTACK entry {MEMORY_PIXSTACK} 300000 {number of pixels in stack}
+MEMORY_BUFSIZE entry {MEMORY_BUFSIZE} 1024 {number of lines in buffer}
+#NTHREADS combobox {NTHREADS} 1|2|4|8|16|32 {Number of threads for multi processing}
 
 endtab
 

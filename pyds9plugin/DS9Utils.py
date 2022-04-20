@@ -763,7 +763,7 @@ def setup(xpapoint=None, color="cool", argv=[]):
     except FileNotFoundError:
         fitsimage = d.get_pyfits()
     fitsimage = fitsimage[fits_ext(fitsimage)].data
-    lx, ly = fitsimage.shape[0], fitsimage.shape[1]
+    ly, lx = fitsimage.shape[0], fitsimage.shape[1]
     if region is not None:
         image_area = lims_from_region(None, coords=region)
         x_inf, x_sup, y_inf, y_sup = image_area
@@ -782,20 +782,27 @@ def setup(xpapoint=None, color="cool", argv=[]):
             int(ly / 2) + 50,
         ]
     x_inf, x_sup, y_inf, y_sup = image_area
-    image = fitsimage[y_inf:y_sup, x_inf:x_sup]
+    if len(fitsimage.shape) == 2:
+        image = fitsimage[y_inf:y_sup, x_inf:x_sup]
+    elif len(fitsimage.shape) == 3:
+        image = fitsimage[:, y_inf:y_sup, x_inf:x_sup]
+    elif len(fitsimage.shape) == 4:
+        image = fitsimage[:, :, y_inf:y_sup, x_inf:x_sup]
+
     try:
         image_ok = image[np.isfinite(image)]
         d.set(
-            "cmap %s ; scale %s ; scale limits %0.3f %0.3f "
+            "cmap %s ; scale %s ; scale limits %0.3f %0.3f  ; scale open"
             % (
                 args.color,
                 args.scale,
                 np.nanpercentile(image_ok, cuts[0]),
                 np.nanpercentile(image_ok, cuts[1]),
             )
-        )
-    except ValueError:
-        d.set("cmap %s ; scale %s " % (args.color, args.scale))
+        ),
+    except ValueError as e:
+        print(e, image_ok, image, fitsimage)
+        d.set("cmap %s ; scale %s ; scale open" % (args.color, args.scale))
 
     return
 
@@ -894,13 +901,18 @@ def organize_files(xpapoint=None, argv=[]):
         logger.warning(e)
     cat = delete_multidim_columns(cat)
     if query != "":
+        # print(sys.argv)
+        # print(args.selection)
+        # print(query)
+        query = query.replace("$Mask", "&")
+        # print(query)
         df = cat.to_pandas()
         verboseprint(query)
         try:
             new_table = df.query(query)
         except Exception:
             try:
-                new_table = df.query(query.replace("$Mask", "&"))
+                new_table = df.query(query)
             except Exception:
                 query = ds9entry(
                     args.xpapoint,
@@ -914,7 +926,7 @@ def organize_files(xpapoint=None, argv=[]):
         t2 = cat
     if len(t2) == 0:
         d = DS9n(args.xpapoint)
-        message(d, "No header verifying your condition, please verify it.")
+        message(d, "No header verifying %s condition, please verify it." % (query))
     verboseprint(t2)
     verboseprint("SELECTION %i -> %i" % (len(cat), len(t2)))
     verboseprint("SELECTED FIELD  %s" % (fields))
@@ -1694,8 +1706,7 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
             kernel = Gaussian2DKernel(x_stddev=2, y_stddev=2)
             image = interpolate_replace_nans(image, kernel)
             verboseprint(np.isfinite(image).all())
-        lx, ly = image.shape
-        lx, ly = ly, lx
+        ly, lx = image.shape
         x = np.linspace(0, lx - 1, lx)
         y = np.linspace(0, ly - 1, ly)
         x, y = np.meshgrid(x, y)
@@ -3612,7 +3623,7 @@ def get_image(xpapoint=None):
         # verboseprint("Region = Circle Radius = ", region[0].r)
         image = np.array(image, dtype=float)
         y, x = np.indices((image.shape))
-        lx, ly = image.shape
+        ly, lx = image.shape
         r = np.sqrt((x - lx / 2) ** 2 + (y - ly / 2) ** 2)
         image[r > int(region[0].r)] = np.nan
         # verboseprint(image)
@@ -4275,6 +4286,8 @@ def execute_command(
         binary_closing,
         label,
     )
+    from astropy.stats import sigma_clip
+
     from astropy.io import fits
     from astropy.convolution import convolve
     import numpy as np
@@ -4294,6 +4307,13 @@ def execute_command(
         )[0]
     ds9 = fitsimage.data
     header = fitsimage.header
+    region = 0
+    try:
+        region = getregion(d, selected=True)
+        x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
+        region = ds9[y_inf:y_sup, x_inf:x_sup]
+    except Exception:
+        region = None
     # if os.path.isfile(path2remove) is False:
     #     if "image" in exp:
     #         d = DS9n()
@@ -4309,7 +4329,9 @@ def execute_command(
         "ds9": ds9,
         "header": header,
         "fits": fits,
+        "region": region,
         # "image": image,
+        "sigma_clip":sigma_clip,
         "convolve": convolve,
         "filename": filename,
         "grey_dilation": grey_dilation,
@@ -4472,7 +4494,8 @@ def fitswrite(fitsimage, filename, verbose=True, header=None):
         fitsimage.writeto(filename, overwrite=True)
     except IOError:
         verboseprint("Can not write in this repository : " + filename)
-        filename = "/tmp/" + os.path.basename(filename)
+        filename = "%s/%s"%(os.path.dirname(os.path.dirname(filename)),os.path.basename(filename))
+        # filename = "/tmp/" + os.path.basename(filename)
         verboseprint("Instead writing new file in : " + filename)
         fitsimage.writeto(filename, overwrite=True)
     verboseprint("Image saved: %s" % (filename))
@@ -4728,7 +4751,7 @@ def stack_images_path(
             for image in paths
         ]
     )
-    index = stds < np.nanmean(stds) + clipping * np.nanstd(stds)
+    index = stds < 1e100  # np.nanmean(stds) + clipping * np.nanstd(stds)
     paths = np.array(paths)
     if std is False:
         stds = np.ones(len(paths[index]))
@@ -4736,8 +4759,8 @@ def stack_images_path(
         stds /= np.nansum(stds[index])
     n = len(paths)
     paths.sort()
-    lx, ly = fitsfile[i].data.shape
-    stack = np.zeros((lx, ly), dtype=dtype)
+    ly, lx = fitsfile[i].data.shape
+    stack = np.zeros((ly, lx), dtype=dtype)
     if std:
         verboseprint("Using std method")
         for i, file in enumerate(paths[index]):
@@ -4769,6 +4792,7 @@ def stack_images_path(
     #         dtype=dtype,
     #         axis=0,
     #     )
+
     try:
         numbers = [
             int(re.findall(r"\d+", os.path.basename(filename))[-1])
@@ -4776,33 +4800,43 @@ def stack_images_path(
         ]
     except IndexError:
         numbers = paths
+    # print(numbers)
     images = " - ".join(list(np.array(numbers, dtype=str)))
     new_fitsfile = fitsfile[i]
     new_fitsfile.data = stack
     new_fitsfile.header["STK_NB"] = images
     if name is None:
         try:
-            name = "{}/StackedImage_{}-{}{}.fits".format(
+            name = "{}/stack{}_{}-{}.fits".format(
                 os.path.dirname(paths[0]),
-                int(os.path.basename(paths[0])[5 : 5 + 6]),
-                int(os.path.basename(paths[-1])[5 : 5 + 6]),
+                # os.path.dirname(os.path.dirname(paths[0])),
                 fname,
+                # int(os.path.basename(paths[0])[5 : 5 + 6]),
+                # int(os.path.basename(paths[-1])[5 : 5 + 6]),
+                numbers[0],
+                numbers[-1],
             )
         except ValueError:
-            name = "{}/StackedImage_{}-{}{}.fits".format(
+            name = "{}/stack{}_{}-{}.fits".format(
                 os.path.dirname(paths[0]),
+                # os.path.dirname(os.path.dirname(paths[0])),
+                fname,
                 os.path.basename(paths[0]).split(".")[0],
                 os.path.basename(paths[-1][:-5]),
-                fname,
             )
     else:
         name = os.path.join(os.path.dirname(paths[0]), name)
     verboseprint("Image saved : %s" % (name))
+    print('write here', name)
     try:
-        fitswrite(new_fitsfile, name)
+        name = fitswrite(new_fitsfile, name)
+    # except OSError:
+    #     print('System seems read only... trying to save in upper directory')
+    #     name=os.path.join(os.path.dirname(os.path.dirname(name)), os.path.basename(name) )
+    #     fitswrite(new_fitsfile, name)
     except RuntimeError as e:
         verboseprint("Unknown error to be fixed: ", e)
-        fitswrite(new_fitsfile.data, name)
+        name = fitswrite(new_fitsfile.data, name)
     return fitsfile, name
 
 
@@ -6128,6 +6162,12 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
                 exit_=True,
             )
             files = globglob(path, ds9_im=False)
+    new_files = [file for file in files if os.path.islink(file) is False]
+    if (len(files) > 0) & (len(new_files) == 0):
+        # print(len(new_files))
+        new_files = files
+        # print("keeping all")
+    files = new_files
     fname = os.path.dirname(os.path.dirname(files[0]))
     verboseprint(fname)
     ext = len(fits.open(files[0]))
@@ -7156,7 +7196,7 @@ def create_image_from_catalog(xpapoint=None, nb=int(1e3), argv=[]):
         except astropy.io.registry.IORegistryError:
             catalog = Table.read(catfile, format="ascii")
         if args.size == "None":
-            lx, ly = int(catalog["X_IMAGE"].max()), int(catalog["Y_IMAGE"].max())
+            ly, ly = int(catalog["X_IMAGE"].max()), int(catalog["Y_IMAGE"].max())
         else:
             lx, ly = np.array(args.size.split(","), dtype=int)
         background = np.median(catalog["BACKGROUND"])
@@ -7266,8 +7306,9 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 gaussian1D,
                 voigt1D,
                 sinusoid1D,
+                uniform,
             )
-            from dataphile.statistics.distributions import uniform
+            # from dataphile.statistics.distributions import uniform
             from scipy.optimize import curve_fit
             import matplotlib.pyplot as plt
 
@@ -7895,14 +7936,14 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
         help="Other features to fit",
         metavar="",
         type=str,
-        choices=[
-            "None",
-            "Import-from-Macros",
-            "User-defined-interactively",
-            "Schechter",
-            "Double-Schechter",
-            "User-defined",
-        ],
+        # choices=[
+        #     "None",
+        #     "Import-from-Macros",
+        #     "User-defined-interactively",
+        #     "Schechter",
+        #     "Double-Schechter",
+        #     "User-defined",
+        # ],
     )
     args = parser.parse_args_modif(argv)
 
@@ -7963,11 +8004,14 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
         double_exp = True
     if args.background.lower() == "logarithmic":
         log = True
-    if args.other_features == "Import-from-Macros":
+    # if args.other_features == "Import-from-Macros":
+    if args.other_features != "None":
         from inspect import getmembers, isfunction
         from pyds9plugin.Macros.Fitting_Functions import functions
-
+        function = args.other_features
         possible_functions = [f[0] for f in getmembers(functions, isfunction)]
+        bckgd = -1
+
         while function not in possible_functions:
             # function = "EMCCDhist"
             function = get(
@@ -9556,6 +9600,11 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
                         font=10,
                     )
                 d.set("regions " + reg_file)
+                # ('VIGNET' in cat_sex.colnames)
+        if ("vignet" in args.PARAMETERS_NAME) & (len(cat_sex)<1000):
+             if yesno(d,"""Do you want to plot the sources in 3D?"""):
+                explore_throughfocus(xpapoint=None, argv="-p %s"%(param_dict["CATALOG_NAME"]))
+
     else:
         verboseprint("Can not find the output sextractor catalog...")
     return
@@ -12074,6 +12123,7 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
     )
     i += 2
     d.set('analysis task "Open Image (O)"')
+    # d.set('analysis task "Open Image Key"')
 
     wait_for_n(xpapoint)
 
@@ -12136,6 +12186,7 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
         )
         wait_for_n(xpapoint)
     d.set('analysis task "Throughfocus  "')
+    # d.set('analysis task "Throughfocus_test"')
     wait_for_n(xpapoint)
     return
 

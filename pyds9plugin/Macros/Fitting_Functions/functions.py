@@ -11,6 +11,18 @@ except OSError:
     x, y = [0, 1], [0, 1]
 
 
+def slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=len(y) * np.array([0,1,0.2]), x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1])):
+    """Convolution of a box with a gaussian
+    """
+    from scipy import special
+    import numpy as np
+
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
+    function = amp * (a + b) / (a + b).ptp()#4 * l
+    return  function + offset
+
+
 def gaussian(x, a=[0, 100], xo=[0, 100], sigma=[0, 10]):
     """Defines a gaussian function with offset
     """
@@ -182,6 +194,26 @@ def EMCCD(
     y /= x[1] - x[0]
     return np.log10(y)
 
+def variable_smearing_kernels(
+    image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
+):
+    """Creates variable smearing kernels for inversion
+    """
+    import numpy as np
+
+    n = 15
+    smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+    if type_ == "exp":
+        smearing_kernels = np.exp(
+            -np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length
+        )
+    else:
+        assert 0 <= Smearing <= 1
+        smearing_kernels = np.power(Smearing, np.arange(n))[
+            :, np.newaxis, np.newaxis
+        ] / np.ones(smearing_length.shape)
+    smearing_kernels /= smearing_kernels.sum(axis=0)
+    return smearing_kernels
 
 def EMCCDhist(
     x,
@@ -212,26 +244,6 @@ def EMCCDhist(
     else:
         ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
 
-    def variable_smearing_kernels(
-        image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
-    ):
-        """Creates variable smearing kernels for inversion
-        """
-        import numpy as np
-
-        n = 15
-        smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-        if type_ == "exp":
-            smearing_kernels = np.exp(
-                -np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length
-            )
-        else:
-            assert 0 <= Smearing <= 1
-            smearing_kernels = np.power(Smearing, np.arange(n))[
-                :, np.newaxis, np.newaxis
-            ] / np.ones(smearing_length.shape)
-        smearing_kernels /= smearing_kernels.sum(axis=0)
-        return smearing_kernels
 
     def simulate_fireball_emccd_hist(
         x,
@@ -257,7 +269,7 @@ def EMCCDhist(
             n_pix = 10 ** 6.3
         n = 1
         im = np.zeros(int(n_pix))  #
-        # im = np.zeros((1000, int(n_pix / 1000)))
+        im = np.zeros((1000, int(n_pix / 1000)))
         imaADU = np.random.gamma(
             np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain)
         )
@@ -307,6 +319,55 @@ def EMCCDhist(
         flux=flux,
         sCIC=sCIC,
     )
-    y[y == 0] = 1
-    y /= x[1] - x[0]
+    y[y == 0] = 1.0
+    y = y / (x[1] - x[0])
     return np.log10(y)
+
+
+def variable_smearing_kernels(
+    image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
+):
+    """Creates variable smearing kernels for inversion
+    """
+    import numpy as np
+
+    n = 15
+    smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+    if type_ == "exp":
+        smearing_kernels = np.exp(
+            -np.arange(n)[::int(np.sign(smearing_length[0])), np.newaxis, np.newaxis] / abs(smearing_length)
+        )
+    else:
+        assert 0 <= Smearing <= 1
+        smearing_kernels = np.power(Smearing, np.arange(n))[
+            :, np.newaxis, np.newaxis
+        ] / np.ones(smearing_length.shape)
+    smearing_kernels /= smearing_kernels.sum(axis=0)
+    return smearing_kernels
+
+
+
+def smeared_slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1]),Smearing=[-2,2,0.8]):
+    """Convolution of a box with a gaussian
+    """
+    from scipy import special
+    import numpy as np
+    from scipy.sparse import dia_matrix
+
+
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
+    function = amp * (a + b) / (a + b).ptp()#+1#4 * l
+    # function = np.vstack((function,function)).T
+    smearing_kernels = variable_smearing_kernels(
+        function, Smearing, SmearExpDecrement=50000)
+    n = smearing_kernels.shape[0]
+    # print(smearing_kernels.sum(axis=1))
+    # print(smearing_kernels.sum(axis=1))
+    A = dia_matrix(
+        (smearing_kernels.reshape((n, -1)), np.arange(n)),
+        shape=(function.size, function.size),
+    )
+    function = A.dot(function.ravel()).reshape(function.shape)
+    # function = np.mean(function,axis=1)
+    return  function + offset
