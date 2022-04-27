@@ -30,9 +30,9 @@ class LassoManager:
     def __init__(self, data):
         self.image=data
         self.image_masked = data
-        self.y = np.median(data[0:100,:],axis=0)
+        self.y = np.nanmedian(data[0:100,:],axis=0)
         self.x = np.arange(len(self.y))
-        self.axes =plt.axes(xlim=(0, 1000), ylim=(ds9[0:100,:].mean(axis=0).min(), ds9[0:100,:].mean(axis=0).max()), autoscale_on=False)# ax
+        self.axes =plt.axes(xlim=(0, 1000), ylim=(np.nanmin(self.y),np.nanmax( self.y)), autoscale_on=False)# ax
         self.canvas = self.axes.figure.canvas
         self.data = [Datum(x,y) for x,y in enumerate(self.y)]
 
@@ -45,9 +45,9 @@ class LassoManager:
             facecolors=facecolors,
             offsets=self.xys,
             transOffset=self.axes.transData)
-        self.axes.plot(np.mean(data[0:100,:],axis=0),'.')
-        self.axes.add_collection(self.collection)
-
+        self.axes.plot(np.nanmean(data[0:100,:],axis=0),'.',label='mean',color='orange')
+        self.axes.add_collection(self.collection)#,label='median to select')
+        self.axes.legend()
         self.cid = self.canvas.mpl_connect('button_press_event', self.on_press)
 
 
@@ -121,7 +121,7 @@ class LassoManager:
     # data = [Datum(*xy) for xy in np.random.rand(100, 2)]
     # ax.set_title('Lasso points using left mouse button')
 lman = LassoManager(ds9)
-plt.title('Choose data you want to keep. Unselected data will be used to clip out image')
+plt.title('Encircle blue points you want to keep. \nUnselected data will be used to clip out image')
 plt.show()
 print(1,2,4)
 ds9 = lman.image_masked_both

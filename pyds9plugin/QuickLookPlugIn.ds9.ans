@@ -43,8 +43,16 @@ DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp" 
 remove dark
 *
 button
-/Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+# /Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+/usr/bin/python3 $dir/Macros/FIREBall/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
 endbuttonbar
+
+
+Simulate FIREBall emCCD detector
+*
+bind E
+/usr/bin/python3 $dir/Macros/FIREBall/simulate_EMCCD.py  -x $xpa_method  $param(Detector-Parameters); $size $overscan $OS $ConversionGain $EmGain $n_registers $Bias $RN $pCIC $sCIC $Dark $Smearing $RateSmearing $Exposure $Flux $Source $Rx $Ry  $Name $spectra $cube $threshold $hist    | $text
+
 
 
 
@@ -277,11 +285,13 @@ hmenu 1. Generic Functions
 	menu
 	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
+# ds9=np.array([fits.open(f)[0].data for f in glob.glob('/tmp/?.fits')])
+# ds9 = np.array([fits.open(f)[0].data for f in glob.glob('/private/tmp/test.?.corr.fits')])
 
-	Open Image Key
-	*
-	bind O
-	DS9Utils open_file -x $xpa_method  $param(opentest); -p "$path" -t $type  -c 0 | $text
+	# Open Image Key
+	# *
+	# bind O
+	# DS9Utils open_file -x $xpa_method  $param(opentest); -p "$path" -t $type  -c 0 | $text
 
 	Plot Region In 3D
 	*
@@ -364,7 +374,7 @@ hmenu 2. Instrumentation - AIT
 #		Throughfocus_test
 #		*
 #		bind t
-#		DS9Utils throughfocus -x $xpa_method  $param(Throughfocus_); -p "$Path" -w $WCS -s $sort -v "$offsets"  | $text  #$steps
+#		DS9Utils throughfocus -x $pxpa_method  $param(Throughfocus_); -p "$Path" -w $WCS -s $sort -v "$offsets"  | $text  #$steps
 
 		Explore PSFs/Vignettes #24
 		*
@@ -828,11 +838,11 @@ endparam
 
 
 
-param opentest
-path open {Path of the image(s) to open}  $dir/Images/stack????????.fits  {} #NORMAL
-#clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
-type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|IMPORT-3D|PRISM {}
-endparam
+# param opentest
+# path open {Path of the image(s) to open}  $dir/Images/stack????????.fits  {} #NORMAL
+# #clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
+# type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|IMPORT-3D|PRISM {}
+# endparam
 
 param Catalog-name
 save save {Path where to save the catalog}  /tmp/test.csv  {} #NORMAL
@@ -1073,6 +1083,8 @@ endparam
 # menu
 # DS9FIREBall $xpa_method SimulateFIREBallemCCD  $param(Detector-Parameters); $size $overscan $OS $ConversionGain $EmGain $n_registers $Bias $RN $pCIC $sCIC $Dark $Smearing $RateSmearing $Exposure $Flux $Source $Rx $Ry  $Name $spectra $cube $threshold $hist    | $text
 #
+
+
 
 param Detector-Parameters
 size entry {Detector size} 3216,2069 {Size of the detector in pixels}
@@ -1496,11 +1508,11 @@ endparam
 
 param Python-Command-P
 #exp menu {Expression} EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path in pyds9plugin Macro directory}#. See doc for exemples (convolution, adding noise, masking, trimming).
-exp combobox {Expression} {EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py|Mask_cosmic_rays.py|histogram_sum.py|remove_hot_pixels.py|mask_hot_pixels.py|smear.py|desmear.py|lasso_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+# exp combobox {Expression} {EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py|Mask_cosmic_rays.py|histogram_sum.py|remove_hot_pixels.py|mask_hot_pixels.py|smear.py|desmear.py|lasso_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp combobox {Expression} {FIREBall/EMCCD_fit_stochastic2.py|FIREBall/EMCCD_fit_analytical2.py|FIREBall/EMCCD_fit_stochastic.py|FIREBall/EMCCD_simulator.py|FIREBall/fireball_functions.py|FIREBall/Mask_cosmic_rays.py|FIREBall/OScorrection.py|FIREBall/Stack_from_header_catalog.py|FIREBall/FIREBall.py|FIREBall/add_slits_for_snr.py|FIREBall/Mask_cosmic_rays.py|FIREBall/histogram_sum.py|FIREBall/remove_hot_pixels.py|FIREBall/mask_hot_pixels.py|FIREBall/smear.py|FIREBall/desmear.py|FIREBall/lasso_masking.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|edge_detection.py|Create_contour_regions.py|bright_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 #overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
-
 
 
 #exp open {Expression} ds9 {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
@@ -1511,7 +1523,7 @@ endparam
 
 
 param Python-Command
-exp combobox {Expression} {ds9[(ds9>50)&(ds9<-50)]=np.nan|ds9=interpolate_replace_nans(sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std'),Gaussian2DKernel(x_stddev=3,y_stddev=1))|ds9=sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std')|a,b=np.array(d.get('scale limits').split(),dtype=float);ds9[np.bitwise_or(ds9>a,ds9<b)]=np.nan|ds9=ds9[:10,:10]|ds9+=np.random.normal(0,0.1,ds9.shape)|ds9+=30*(ds9-gaussian_filter(ds9,1))|ds9=np.abs(fftshift(fft2(region)))**2|ds9=correlate2d(region.astype('uint64'),region,boundary='symm',mode='same')|ds9=interpolate_replace_nans(ds9,Gaussian2DKernel(x_stddev=5,y_stddev=5))|n=1060;ds9=np.hstack([ds9.min()*np.ones((ds9.shape[0],n)),ds9[:,::-1],ds9.min()*np.ones((ds9.shape[0],3216-n-ds9.shape[1]))])|np.random.gamma(np.random.poisson(np.ones(ds9.shape)*np.linspace(0,1,ds9.shape[0])), 1400)+ np.random.normal(3000,50, size=ds9.shape)} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp combobox {Expression} {ds9[(ds9>50)&(ds9<-50)]=np.nan|ds9=interpolate_replace_nans(sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std'),Gaussian2DKernel(x_stddev=3,y_stddev=1))|ds9=sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std')|a,b=np.array(d.get('scale limits').split(),dtype=float);ds9[np.bitwise_or(ds9>a,ds9<b)]=np.nan|ds9=ds9[:10,:10]|ds9+=np.random.normal(0,0.1,ds9.shape)|ds9+=30*(ds9-gaussian_filter(ds9,1))|ds9=np.abs(fftshift(fft2(region)))**2|ds9=correlate2d(region.astype('uint64'),region,boundary='symm',mode='same')|ds9=interpolate_replace_nans(ds9,Gaussian2DKernel(x_stddev=5,y_stddev=5))|n=1060;ds9=np.hstack([ds9.min()*np.ones((ds9.shape[0],n)),ds9[:,::-1],ds9.min()*np.ones((ds9.shape[0],3216-n-ds9.shape[1]))])|np.random.gamma(np.random.poisson(np.ones(ds9.shape)*np.linspace(0,1,ds9.shape[0])), 1400)+ np.random.normal(3000,50, size=ds9.shape)|ds9=mask_CR_tails(ds9, header,threshold=15000,n=3,size=0)|ds9=grey_dilation(grey_erosion(ds9, size=(3, 3)), size=(3, 3))|ds9=np.array([fits.open(f)[0].data for f in glob.glob('/tmp/?.fits')])|ds9[fits.open('/tmp/HP_mask_50s_-95C.fits')[0].data==1]=np.nan|ds9-=fits.open("test")[0].data} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
 

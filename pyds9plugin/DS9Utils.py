@@ -318,7 +318,6 @@ def verboseprint(*args, logger=logger, verbose=verbose_):  # False
         print(*args)
         # if sys.stdin is None:
         from tqdm import tqdm
-
         with tqdm(
             total=1,
             bar_format="{postfix[0]} {postfix[1][value]:>s}",
@@ -948,7 +947,7 @@ def organize_files(xpapoint=None, argv=[]):
         new_path = os.path.join(path_date, f)
         if not os.path.exists(new_path):
             os.makedirs(new_path)
-        if len(glob.glob(new_path + "/*")) < args.number:
+        if len(glob.glob(str(new_path) + "/*")) < int(args.number):
             if args.copy == "copy":
                 copyfile(filename, new_path + "/%s" % (os.path.basename(filename)))
             else:
@@ -2236,6 +2235,10 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
                 raise_create_region(d)
                 sys.exit()
         coords = [float(c) for c in info.split(")")[0].split(",")]
+        if "text={" in info:
+            id = info.split("text={")[-1][:-1]
+        else:
+            id = ""
         if quick:
             # verboseprint(regions)
             if len(regions) == 1:
@@ -2249,8 +2252,8 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
         else:
             if name == "box":
                 xc, yc, w, h, angle = coords
-                box = namedtuple("Box", "data xc yc w h angle")
-                processed_regions.append(box(0, xc, yc, w, h, angle))
+                box = namedtuple("Box", "data xc yc w h angle id")
+                processed_regions.append(box(0, xc, yc, w, h, angle, id))
             elif name == "bpanda":
                 xc, yc, a1, a2, a3, a4, a5, w, h, a6, a7 = coords
                 box = namedtuple("Box", "data xc yc w h angle")
@@ -4182,6 +4185,117 @@ def create_cube(d, data):
     p.show()
 
 
+def fit_surface(x,y,z):
+    from scipy import linalg
+    import numpy as np
+    data = np.array([x,y,z]).T
+
+    # regular grid covering the domain of the data
+    n=50
+    X,Y = np.meshgrid(np.arange(x.min(),x.max(), n), np.arange(y.min(),y.max(),n))
+    XX = X.flatten()
+    YY = Y.flatten()
+    order = 2    # 1: linear, 2: quadratic
+    if order == 1:
+        # best-fit linear plane
+        A = np.c_[data[:,0], data[:,1], np.ones(data.shape[0])]
+        C,_,_,_ = linalg.lstsq(A, data[:,2])    # coefficients
+        # evaluate it on grid
+        Z = C[0]*X + C[1]*Y + C[2]
+        # or expressed using matrix/vector product
+        #Z = np.dot(np.c_[XX, YY, np.ones(XX.shape)], C).reshape(X.shape)
+    elif order == 2:
+        # best-fit quadratic curve
+        A = np.c_[np.ones(data.shape[0]), data[:,:2], np.prod(data[:,:2], axis=1), data[:,:2]**2]
+        C,_,_,_ = linalg.lstsq(A, data[:,2])
+        # evaluate it on a grid
+        Z = np.dot(np.c_[np.ones(XX.shape), XX, YY, XX*YY, XX**2, YY**2], C).reshape(X.shape)
+    return  np.array(X, dtype=np.float32), np.array(Y, dtype=np.float32), np.array(Z, dtype=np.float32)
+
+# def turn_surface_to_mesh(X,Y,Z):
+
+#     return mesh
+
+def plot_surface(cat,x_,y_,z_):
+    from pyvista import Plotter, set_plot_theme  # StructuredGrid, PolyData,
+    # from pyvistaqt import BackgroundPlotter as Plotter
+    # from pyvista import set_plot_theme  # StructuredGrid, PolyData,
+
+    import pyvista as pv
+    import numpy as np
+    zz = (cat[z_]-cat[z_].min())/(cat[z_]-cat[z_].min()).ptp()
+    X,Y,Z = fit_surface(cat[x_],cat[y_],zz)
+    data = np.array([cat[x_],cat[y_],zz]).T
+
+    # from pyvistaqt import BackgroundPlotter
+    set_plot_theme("document")
+    # x,y,z = np.array(X, dtype=np.float32),np.array(Y, dtype=np.float32),np.array(Z, dtype=np.float32)
+    # Create and plot structured grid
+    mesh = pv.StructuredGrid(X, Y,Z)# (z-z.min()/(z-z.min().ptp()))
+    mesh_non_normalized =  pv.StructuredGrid(*fit_surface(cat[x_],cat[y_],cat[z_]))
+    p = Plotter(
+        notebook=False,
+        window_size=(1500, 1000),
+        line_smoothing=True,
+        point_smoothing=True,
+        polygon_smoothing=True,
+        splitting_position=None,
+    )
+    # plotter = pv.Plotter()
+    import cmocean
+    cmap = cmocean.cm.thermal
+    cmap = cmocean.cm.deep
+    cmap = cmocean.cm.solar
+    # cmap = cmocean.cm.dense
+    # cmap='thermal'
+    # cmap='jet'
+    names = [c for c in cat.colnames]*50
+    dict_ = {"field": z_}
+    p.add_title(z_)
+    p.show_grid()
+    mesh['scalars'] = mesh_non_normalized.points[:, -1]#,scalars='scalars',#
+    p.add_mesh(mesh,show_edges=True, scalars=mesh_non_normalized.points[:, -1],
+              scalar_bar_args={'vertical': True}   ,lighting=False,opacity=0.7  ,
+              use_transparency=False,  cmap=cmap)
+    p.set_scale(xscale=1, yscale=1, zscale=0.7*cat[x_].ptp()/zz.ptp())
+    point_cloud = pv.PolyData(data)
+    point_cloud['scalars'] =cat[z_]
+    p.add_points(data,render_points_as_spheres=True,point_size=30.0,  cmap=cmap, scalars=cat[z_],)
+    # p.set_scale(xscale=1, yscale=1*x.ptp()/y.ptp(), zscale=1000)#/z.ptp())
+    # p.set_scale(zscale=1.2/x.ptp())#/z.ptp())
+
+    def change_field(val):
+        a=cat
+        index = names.index(dict_["field"])
+        name = names[index + 1]
+        dict_["field"] = name
+        points = mesh.points.copy()
+        value = (a[name] - a[name].min())/ (a[name] - a[name].min()).ptp()
+        data[:, -1] = value#(value - np.nanmin(value)).reshape(-1)#value *
+        p.update_coordinates(data,render=False)#,mesh=point_cloud
+        scalar = a[name].ravel()
+        p.update_scalars(scalar,  render=False)# mesh=point_cloud,
+        _ =pv.StructuredGrid(*fit_surface(cat[x_],cat[y_],cat[name] ))
+        mesh['scalars'] = _.points[:, -1].ravel()
+        p.update_coordinates(pv.StructuredGrid(*fit_surface(cat[x_],cat[y_],value)).points, mesh=mesh,render=False)
+        p.update_scalars(_.points[:, -1].ravel(), mesh=mesh, render=True)
+        p.add_title(name + ": %0.1f,%0.1f"%(np.nanmin(_.points[:, -1]), np.nanmax(_.points[:, -1])))
+        # p.add_title(name + ": %0.1f,%0.1f"%(np.nanmin(scalar), np.nanmax(scalar)))
+        p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
+        # p.update_scalar_bar_range([np.nanmin(_.points[:, -1]), np.nanmax(_.points[:, -1])])
+        # p.update_scalar_bar_range([np.nanmin(mesh_non_normalized.points[:, -1]), np.nanmax(mesh_non_normalized.points[:, -1])], mesh=mesh)
+        # p.update_coordinates(data)  # , render=False)
+        # p.set_scale(xscale=2, yscale=4*x.ptp()/y.ptp(), zscale=1.2*x.ptp()/z.ptp())
+        p.scalar_bars._scalar_bar_ranges = {mesh.active_scalars_name: [0, 0]}
+        p.render()
+
+    p.add_checkbox_button_widget(change_field, position=(10, 150))
+
+    # p.add_mesh(mesh.contour(isosurfaces=10), color="white", line_width=5)
+    # scale plot to enforce 1:1:1 aspect ratio
+    # plotter.set_scale(xscale=1, yscale=1*x.ptp()/y.ptp(), zscale=1*x.ptp()/z.ptp())
+    p.show()
+
 def throw_apertures(xpapoint=None, argv=[]):
     """Throws aperture in image in order to compute depth
     """
@@ -4295,7 +4409,7 @@ def execute_command(
     from scipy import signal
     from scipy.signal import correlate, correlate2d
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
-
+    from tqdm.tk import trange, tqdm
     try:
         fitsimage = fits.open(filename)
         ext = fits_ext(fitsimage)
@@ -4311,7 +4425,10 @@ def execute_command(
     try:
         region = getregion(d, selected=True)
         x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
-        region = ds9[y_inf:y_sup, x_inf:x_sup]
+        if np.ndim(ds9)==2:
+            region = ds9[y_inf:y_sup, x_inf:x_sup]
+        else:
+            region = ds9[:,y_inf:y_sup, x_inf:x_sup]
     except Exception:
         region = None
     # if os.path.isfile(path2remove) is False:
@@ -4326,6 +4443,7 @@ def execute_command(
     ds9 = np.array(ds9, dtype=float)
 
     ldict = {
+        "fitsimage": fitsimage,
         "ds9": ds9,
         "header": header,
         "fits": fits,
@@ -4344,6 +4462,8 @@ def execute_command(
         "binary_closing": binary_closing,
         "label": label,
         "fftpack": fftpack,
+        # "tqdm": tqdm,
+        # "trange": trange,
         "np": np,
         "signal": signal,
         "correlate": correlate,
@@ -5709,7 +5829,8 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
             form=[form],
             save=True,
             color=["yellow"],
-            ID=[np.round(np.array(cat[ID], dtype=float), 1)],
+            # ID=[np.round(np.array(cat[ID], dtype=float), 1)],
+            ID=[cat[ID]],
             savename=tmp_region,
             system=system,
         )
@@ -5858,27 +5979,130 @@ def mask_regions_2(filename, top, bottom, left, right, regions=None):
     fitswrite(fitsimage, name)
     return fitsimage, name
 
+def mask_CR_tails(image,header, area=[0,10000,0,10000], threshold=15000, n=3, size=0, create=False):
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
+    import numpy as np
+    # import matplotlib.dates as mdates
+    import re
+    from astropy.table import Table
+
+    # fitsimage = fits.open(filename)[0]
+    # image = fitsimage.data
+    # header = fitsimage.header
+    verboseprint("area=", area)
+    #    locator = mdates.HourLocator(interval=1)
+    #    locator.MAXTICKS = 50000
+    ax = plt.gca()
+    #    ax.xaxis.set_minor_locator(locator)
+    verboseprint(threshold)
+    #    CS = ax.contour(image, levels=threshold, colors='white', alpha=0.5)
+    cr_places = np.array(image > threshold, dtype=int)
+    CS = ax.contour(cr_places, levels=1)
+    plt.close()
+
+    names = ("id", "sizex", "sizey", "len_contour", "max_x", "min_y", "max_y")
+    cosmics = Table(np.zeros((len(CS.allsegs[0]), len(names))), names=names)
+    cosmics["front"] = 1
+    cosmics["dark"] = 0
+
+    cosmics["id"] = np.arange(len(CS.allsegs[0]))
+    cosmics["sizex"] = [cs[:, 0].max() - cs[:, 0].min() for cs in CS.allsegs[0]]
+    cosmics["sizey"] = [cs[:, 1].max() - cs[:, 1].min() for cs in CS.allsegs[0]]
+    cosmics["len_contour"] = [len(cs[:, 1]) for cs in CS.allsegs[0]]
+    cosmics["max_x"] = [int(cs[:, 0].max() + n * 1) for cs in CS.allsegs[0]]
+    cosmics["min_y"] = [int(cs[:, 1].min() - n * 1) for cs in CS.allsegs[0]]
+    cosmics["max_y"] = [int(cs[:, 1].max() + n * 2) for cs in CS.allsegs[0]]
+    cosmics["mean_y"] = [int((cs[:, 1].max() + cs[:, 1].max()) / 2) for cs in CS.allsegs[0]]
+    cosmics["size"] = [n * 50 for cs in CS.allsegs[0]]
+    cosmics["size_opp"] = [n * 1 for cs in CS.allsegs[0]]
+    cosmics["EXPTIME"] = header["EXPTIME"]
+    cosmics["EMGAIN"] = header["EMGAIN"]
+    # cosmics["number"] = re.findall(r"\d+", os.path.basename(filename))[-1]
+    contours = CS.allsegs[0]
+    imagettes = [image[int(cs[:, 1].min()) : int(cs[:, 1].max()) + 1, int(cs[:, 0].min()) : int(cs[:, 0].max()) + 1] for cs in contours]
+    #    for cs in contours:
+    #        verboseprint(int(cs[:,0].min()),int(cs[:,0].max())+1,int(cs[:,1].min()),int(cs[:,1].max()+1))
+    cosmics["cx"] = [np.where(ima == np.nanmax(ima))[1][-1] for ima in imagettes]
+    cosmics["cy"] = [np.where(ima == np.nanmax(ima))[0][0] for ima in imagettes]
+    cosmics["c0x"] = [int(cs[:, 0].min()) for cs in contours]
+    cosmics["c0y"] = [int(cs[:, 1].min()) for cs in contours]
+    cosmics["xcentroid"] = cosmics["c0x"] + cosmics["cx"]
+    cosmics["ycentroid"] = cosmics["c0y"] + cosmics["cy"]
+    cosmics["value"] = [image[y, x] for x, y in zip(cosmics["xcentroid"], cosmics["ycentroid"])]
+    index = (cosmics["ycentroid"] > area[0]) & (cosmics["ycentroid"] < area[1]) & (cosmics["xcentroid"] > area[2]) & (cosmics["xcentroid"] < area[3])
+    cosmics = cosmics[index]
+    # cosmics = cosmics[(cosmics['max_x']>500) & (cosmics['max_x']<2500)]
+
+    mask1 = cosmics["len_contour"] <= 20
+    mask2 = (cosmics["len_contour"] > 20) & (cosmics["len_contour"] < 2000)
+    mask3 = (cosmics["len_contour"] > 50) & (cosmics["len_contour"] < 2000)
+    mask4 = (cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)
+    cosmics["size"][mask2] = n * 200
+    cosmics["size"][mask3] = n * 3000
+    if size > 1000:
+        cosmics["size"] = n * 3000  # [ n*3000   for cs in CS.allsegs[0] ]
+    cosmics["size_opp"][mask4] = n * 3000
+    cosmics["min_y"][(cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)] -= n * 20
+    cosmics["max_y"][(cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)] += n * 20
+    # a = cosmics
+
+    maskedimage = mask_cosmic_rays(image, cosmics=cosmics, top=2, bottom=2, left=100, right=2)
+    # savename = DS9backUp + "CSVs/Cosmics_" + os.path.basename(filename)[:-5] + ".csv"
+    # csvwrite(a, savename)
+
+    verboseprint("%i cosmic rays found!" % (len(cosmics)))
+
+    # fitsimage.data = maskedimage
+    ds9 = maskedimage
+    # name = os.path.dirname(filename) + "/CosmicRayFree/" + os.path.basename(filename)[:-5] + ".CRv_cs.fits"
+    header["N_CR"] = len(cosmics)
+    header["N_CR1"] = len(cosmics[mask1])
+    header["N_CR2"] = len(cosmics[mask2])
+    header["N_CR3"] = len(cosmics[mask3])
+    header["N_CR4"] = len(cosmics[mask4])
+    #
+    # try:
+    #     fitsimage.header["MASK"] = 100 * float(np.sum(~np.isfinite(maskedimage[:, 1053:2133]))) / (maskedimage[:, 1053:2133].shape[0] * maskedimage[:, 1053:2133].shape[1])
+    #     fits.setval(filename, "MASK", value=100 * float(np.sum(~np.isfinite(maskedimage[:, 1053:2133]))) / (maskedimage[:, 1053:2133].shape[0] * maskedimage[:, 1053:2133].shape[1]))
+    # except ZeroDivisionError:
+    #     fitsimage.header["MASK"] = 100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0] * maskedimage.shape[1])
+    #     fits.setval(filename, "MASK", value=100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0] * maskedimage.shape[1]))
+    # if create:
+    #     fitswrite(fitsimage, name)
+    #     return name, cosmics
+    # elif len(cosmics) > 0:
+    #     fitswrite(fitsimage, name)
+    #     return name, cosmics
+    # else:  # testv
+    #     if not os.path.exists(os.path.dirname(name)):
+    #         os.makedirs(os.path.dirname(name))
+    #     symlink_force(filename, name)
+    return ds9
 
 def mask_cosmic_rays(
     image, cosmics, top=0, bottom=0, left=4, right=0, cols=None, all=False
 ):
     """Replace pixels impacted by cosmic rays by NaN values
     """
-    from tqdm import tqdm_gui  # tqdm,
+    from tqdm import tqdm_gui   as tqdm # tqdm,
+    # from tqdm.gui import tqdm_gui
+    # from tqdm.tk import tqdm
     import numpy as np
 
     y, x = np.indices((image.shape))
     image = image.astype(float)
     if all is False:
         cosmics = cosmics[(cosmics["front"] == 1) & (cosmics["dark"] < 1)]
-    for i in tqdm_gui(range(len(cosmics))):  # range(len(cosmics)):
+    # for i in tqdm(range(len(cosmics))):  # range(len(cosmics)):
+    for i in tqdm(range(len(cosmics))):  # range(len(cosmics)):
+        # print(i)
         image[
             (y > cosmics[i]["ycentroid"] - bottom - 0.1)
             & (y < cosmics[i]["ycentroid"] + top + 0.1)
             & (x < cosmics[i]["xcentroid"] + right + 0.1)
             & (x > -left - 0.1 + cosmics[i]["xcentroid"])
         ] = np.nan
-
     return image
 
 
@@ -6280,15 +6504,16 @@ def create_catalog(files, ext=[0], info=None):
     from astropy.table import Column, vstack  # hstack,
     from datetime import datetime
     import warnings
-    from tqdm import tqdm  # _gui
+    # from tqdm import tqdm  # _gui
+    from tqdm.tk import trange, tqdm
     import numpy as np
-
     warnings.simplefilter("ignore", UserWarning)
     files.sort()
     path = files[0]
     file_header = []
     files_name = []
-    for i in tqdm(range(len(files)), file=sys.stdout, desc="Files: ", ncols=99):
+    for i in tqdm(range(len(files)), file=sys.stdout, desc="Files analyzed:" ,unit=" images", ncols=99):
+    # for i in tqdm(range(len(files)), file=sys.stdout, desc="Files: ", ncols=99):
         try:
             table = create_table_from_header(files[i], exts=ext, info=info)
             if table is not None:
@@ -6732,7 +6957,7 @@ def extract_sources(xpapoint=None, argv=[]):
     return
 
 
-def delete_doublons(sources, dist):
+def delete_duplicates(sources, dist):
     """Function that delete doublons detected in a table,
     the initial table and the minimal distance must be specifies
     """
@@ -6803,7 +7028,7 @@ def extract_sources_photutils(
                 verboseprint("catalog empty")
                 if len(sources0) == 0:
                     sources0 = sources1
-    sources = delete_doublons(sources0, dist=distance_doublons)
+    sources = delete_duplicates(sources0, dist=distance_doublons)
     csvwrite(sources, filename[:-5] + ".csv")
     return sources
 
@@ -7164,7 +7389,9 @@ def create_image_from_catalog(xpapoint=None, nb=int(1e3), argv=[]):
     """
     import astropy
     from astropy.table import Table
-    from tqdm import tqdm  # tqdm_gui,
+    # from tqdm import tqdm  # tqdm_gui,
+    from tqdm.tk import trange, tqdm
+
     from astropy.modeling.functional_models import Gaussian2D
     from photutils.datasets import make_100gaussians_image
     import numpy as np
@@ -8010,7 +8237,7 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
         from pyds9plugin.Macros.Fitting_Functions import functions
         function = args.other_features
         possible_functions = [f[0] for f in getmembers(functions, isfunction)]
-        bckgd = -1
+        # bckgd = -1
 
         while function not in possible_functions:
             # function = "EMCCDhist"
@@ -8060,7 +8287,7 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             gui.figure.canvas.draw_idle()
 
         scale.on_clicked(scalefunc)
-    # gui.ax.set_title(os.path.basename(get_filename(d)))
+    gui.ax.set_title(os.path.basename(get_filename(d)))
     plt.show()
     return
 
@@ -9604,6 +9831,9 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
         if ("vignet" in args.PARAMETERS_NAME) & (len(cat_sex)<1000):
              if yesno(d,"""Do you want to plot the sources in 3D?"""):
                 explore_throughfocus(xpapoint=None, argv="-p %s"%(param_dict["CATALOG_NAME"]))
+        else:
+             if yesno(d,"""Do you want to parameters in 3D?"""):
+                 plot_surface(cat_sex,"X_IMAGE","Y_IMAGE","X_IMAGE")
 
     else:
         verboseprint("Can not find the output sextractor catalog...")
@@ -9743,8 +9973,14 @@ def BackgroundMeasurement():
             texp = float(d.get_pyfits()[0].header["EXPTIME"])
         except KeyError as e:
             verboseprint(e)
-        else:
-            xc = [int(2336), int((image_area[1] + image_area[0]) / 2)]
+            try:
+                texp = float(d.get_pyfits()[0].header["EXPOSURE"])/1000
+            except KeyError as e:
+                verboseprint(e)
+            print(texp)
+        if 1==1:
+            # xc = [int(2336), int((image_area[1] + image_area[0]) / 2)]
+            xc = [int(500), int((image_area[1] + image_area[0]) / 2)]
             #            yc = 1000
             #            w,l = 300,1900
             yc = int((image_area[2] + image_area[3]) / 2)  # 1000
@@ -9757,6 +9993,7 @@ def BackgroundMeasurement():
                 int(xc[1] - w / 2) : int(xc[1] + w / 2),
             ]
             regOS = data[int(yc - l / 2) : int(yc + l / 2), 2200:2500]
+            regOS = data[int(yc - l / 2) : int(yc + l / 2), 50:900]
             meanADU = np.nanmean(reg) - np.nanmean(regOS)
             stdADU = np.nanstd(reg)
             create_ds9_regions(
@@ -10363,6 +10600,9 @@ def blockshaped(arr, nrows, ncols, cut=True):
         .swapaxes(1, 2)
         .reshape(-1, nrows, ncols)
     )
+
+
+
 
 
 def ds9_psfex(xpapoint=None, argv=[]):
@@ -12704,8 +12944,10 @@ def python_command(xpapoint=None, argv=[]):
             # if answer == "y":
             try:
                 fitsimage = d.get_pyfits()[0]
-                path = [tmp_image]
-                fitswrite(fitsimage, tmp_image)
+                # path = [tmp_image]
+                new_path = path[0].replace('.fits','_.fits')
+                path = [new_path]
+                fitswrite(fitsimage,new_path)
             except TypeError:
                 pass
 

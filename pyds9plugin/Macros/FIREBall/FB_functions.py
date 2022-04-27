@@ -30,11 +30,15 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         fitsim = fits.open(name)[0]
         header = fitsim.header
         data = fitsim.data
-
-        im = data[Yinf:Ysup, Xinf:Xsup]
-        os = data[Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
+        if len(data.shape)==3:
+            im = data[0,Yinf:Ysup, Xinf:Xsup]
+            os = data[0,Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
+        else:
+            im = data[Yinf:Ysup, Xinf:Xsup]
+            os = data[Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
         median_im = np.nanmedian(im)
         min_, max_ = (np.nanpercentile(os, 0.1), np.nanpercentile(im, 99.8))
+        print(os, min_, max_)
         val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1))
         val_os, bins_os = np.histogram(os.flatten(), bins=np.arange(min_, max_, 1))
         bins = (bins[1:] + bins[:-1]) / 2

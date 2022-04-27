@@ -11,7 +11,7 @@ except OSError:
     x, y = [0, 1], [0, 1]
 
 
-def slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=len(y) * np.array([0,1,0.2]), x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1])):
+def slit(x, amp=y.ptp() * np.array([0,1.3,1]), l=len(y) * np.array([0,1,0.2]), x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,35,2], offset=np.array([np.nanmin(y),np.nanmax(y),np.nanmin(y)])):
     """Convolution of a box with a gaussian
     """
     from scipy import special
@@ -76,9 +76,9 @@ test = False
 def EMCCD(
     x,
     bias=[1000, 4000, x[np.argmax(y)]],
-    RN=[20, 150, 44],
+    RN=[20, 350, 44],
     EmGain=[300, 10000, 1900],
-    flux=[0, 0.2, 0.01],
+    flux=[0, 0.5, 0.01],
     smearing=[0, 1, 0.01],
     sCIC=[0, 1, 0],
 ):
@@ -99,13 +99,16 @@ def EMCCD(
     try:
         y = globals()["y"]
         n_pix = np.sum(10 ** y)
+        print('1')
     except TypeError:
         n_pix = 10 ** 6.3
+        print('2')
     n_registers = 604  # number of amplification registers
     if bias > 1500:  # 2018
         ConversionGain = 0.53  # Conversiongain in ADU/e-
     else:
         ConversionGain = 1 / 4.5  # 2022
+    ConversionGain=1
     bin_size = np.median((x[1:] - x[:-1]))
     bins = x - np.nanmin(x)
     distributions = []
@@ -191,37 +194,18 @@ def EMCCD(
     )
     # Convolution with read noise
     y = convolve(gamma_distribution, read_noise) * n_pix  #
-    y /= x[1] - x[0]
+    # y /= x[1] - x[0]
     return np.log10(y)
 
-def variable_smearing_kernels(
-    image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
-):
-    """Creates variable smearing kernels for inversion
-    """
-    import numpy as np
 
-    n = 15
-    smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-    if type_ == "exp":
-        smearing_kernels = np.exp(
-            -np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length
-        )
-    else:
-        assert 0 <= Smearing <= 1
-        smearing_kernels = np.power(Smearing, np.arange(n))[
-            :, np.newaxis, np.newaxis
-        ] / np.ones(smearing_length.shape)
-    smearing_kernels /= smearing_kernels.sum(axis=0)
-    return smearing_kernels
 
 def EMCCDhist(
     x,
     bias=[1e3, 4.5e3, 1194],
-    RN=[0, 200, 53],
+    RN=[0, 350, 53],
     EmGain=[100, 10000, 5000],
-    flux=[0.001, 1, 0.04],
-    smearing=[0, 1, 0.01],
+    flux=[0.0001, 1, 0.04],
+    smearing=[0, 1.8, 0.01],
     sCIC=[0, 1, 0],
 ):
     """
@@ -244,7 +228,26 @@ def EMCCDhist(
     else:
         ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
 
+    def variable_smearing_kernels(
+        image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
+    ):
+        """Creates variable smearing kernels for inversion
+        """
+        import numpy as np
 
+        n = 15
+        smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+        if type_ == "exp":
+            smearing_kernels = np.exp(
+                -np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length
+            )
+        else:
+            assert 0 <= Smearing <= 1
+            smearing_kernels = np.power(Smearing, np.arange(n))[
+                :, np.newaxis, np.newaxis
+            ] / np.ones(smearing_length.shape)
+        smearing_kernels /= smearing_kernels.sum(axis=0)
+        return smearing_kernels
     def simulate_fireball_emccd_hist(
         x,
         ConversionGain,
@@ -320,7 +323,7 @@ def EMCCDhist(
         sCIC=sCIC,
     )
     y[y == 0] = 1.0
-    y = y / (x[1] - x[0])
+    # y = y / (x[1] - x[0])
     return np.log10(y)
 
 
@@ -347,7 +350,7 @@ def variable_smearing_kernels(
 
 
 
-def smeared_slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1]),Smearing=[-2,2,0.8]):
+def smeared_slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1]),Smearing=[-5,5,0.8]):
     """Convolution of a box with a gaussian
     """
     from scipy import special
