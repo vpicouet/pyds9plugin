@@ -23,7 +23,7 @@ requires = [
     "pandas",
     "argparse",
     # "PyQt5",
-    "dataphile",
+    # "dataphile",
     # "sep",
 ]
 
