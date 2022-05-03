@@ -18,7 +18,7 @@ requires = [
     "pyds9",
     "photutils",
     "tqdm",
-    "pyvista",  # ==0.25.3
+    # "pyvista",  # ==0.25.3
     "datetime",
     "pandas",
     "argparse",
