@@ -47,7 +47,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
             np.array(val_os, dtype=float) * os.size / len(os[np.isfinite(os)])
         )  # TODO thake care of this factor
         bins_os, os_v = bins[np.isfinite(os_v)], os_v[np.isfinite(os_v)]
-        header_exptime, header_gain = header["EXPTIME"], header["EMGAIN"]
+        # header_exptime, header_gain = header["EXPTIME"], header["EMGAIN"]
 
         # val *= im.size / len(im[np.isfinite(im)])
     else:
@@ -214,8 +214,8 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         y_conv[xdata < upper_limit],
         "-",
         c="black",
-        label="Data: Gconv=%0.2f\ntexp=%i\nG=%i"
-        % (conversion_gain, header_exptime, header_gain),
+        # label="Data: Gconv=%0.2f\ntexp=%i\nG=%i"
+        # % (conversion_gain, header_exptime, header_gain),
     )
     # plt.plot(
     #     xdata[xdata > upper_limit], ydata[xdata > upper_limit], ":", c="black",

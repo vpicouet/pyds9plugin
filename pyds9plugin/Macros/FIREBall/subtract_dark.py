@@ -52,28 +52,28 @@ def subtract_dark(flux, dark, name):
     fits.HDUList([fits.PrimaryHDU(a, header=flux[0].header)]).writeto(filename, overwrite=True)
 
 
-    texp = flux[0].header["EXPOSURE"]/1e3
-    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(10, 5))  # ,sharex=True)
-    ax0.plot(np.nanmean(a[10:, 10:100], axis=1),".",label="lambda ~ 213nm, f=%ie-/sec" % (np.nanmax(np.nanmean(a[10:, 10:100], axis=1))/texp))
-    ax0.plot(np.nanmean(a[10:, 500:600], axis=1), ".", label="lambda ~ 206nm, f=%ie-/sec" % (np.nanmax(np.nanmean(a[10:,  500:600], axis=1))/texp))
-    ax0.plot(np.nanmean(a[10:, -200:-100], axis=1), ".", label="lambda ~ 202nm, f=%ie-/sec" % (np.nanmax(np.nanmean(a[10:,-200:-100], axis=1))/texp))
-    ax0.legend()
-    ax0.set_xlabel("Spatial direction")
-    ax1.plot(np.nanmean(a[100:200, :-10], axis=0), ".", label="Bottom detector, f=%ie-/sec" % (np.nanmax(np.nanmean(a[100:200, :-10], axis=0))/texp))
-    ax1.plot(np.nanmean(a[1000:1100, :-10], axis=0), ".", label="Middle detector, f=%ie-/sec" % (np.nanmax(np.nanmean(a[1000:1100, :-10], axis=0))/texp))
-    ax1.plot(np.nanmean(a[-200:-100, :-10], axis=0), ".", label="Top detector, f=%ie-/sec" % (np.nanmax(np.nanmean(a[-200:-100, :-10], axis=0))/texp))
-    ax1.set_xlabel("Spectral direction")
-    ax1.legend()
-    try:
-        ax0.set_title(os.path.basename(filename)[:-5] + " : Texp=%is" % (texp))
-    except Exception:
-        pass
-    fig.tight_layout()
-    fig.savefig(filename.replace('.fits','.png'))
-    plt.show()
-    return
+    # texp = flux[0].header["EXPOSURE"]/1e3
+    # fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(10, 5))  # ,sharex=True)
+    # ax0.plot(np.nanmean(a[10:, 10:100], axis=1),".",label="lambda ~ 213nm, f=%ie-/sec" % (np.nanmax(np.nanmean(a[10:, 10:100], axis=1))/texp))
+    # ax0.plot(np.nanmean(a[10:, 500:600], axis=1), ".", label="lambda ~ 206nm, f=%ie-/sec" % (np.nanmax(np.nanmean(a[10:,  500:600], axis=1))/texp))
+    # ax0.plot(np.nanmean(a[10:, -200:-100], axis=1), ".", label="lambda ~ 202nm, f=%ie-/sec" % (np.nanmax(np.nanmean(a[10:,-200:-100], axis=1))/texp))
+    # ax0.legend()
+    # ax0.set_xlabel("Spatial direction")
+    # ax1.plot(np.nanmean(a[100:200, :-10], axis=0), ".", label="Bottom detector, f=%ie-/sec" % (np.nanmax(np.nanmean(a[100:200, :-10], axis=0))/texp))
+    # ax1.plot(np.nanmean(a[1000:1100, :-10], axis=0), ".", label="Middle detector, f=%ie-/sec" % (np.nanmax(np.nanmean(a[1000:1100, :-10], axis=0))/texp))
+    # ax1.plot(np.nanmean(a[-200:-100, :-10], axis=0), ".", label="Top detector, f=%ie-/sec" % (np.nanmax(np.nanmean(a[-200:-100, :-10], axis=0))/texp))
+    # ax1.set_xlabel("Spectral direction")
+    # ax1.legend()
+    # try:
+    #     ax0.set_title(os.path.basename(filename)[:-5] + " : Texp=%is" % (texp))
+    # except Exception:
+    #     pass
+    # fig.tight_layout()
+    # fig.savefig(filename.replace('.fits','.png'))
+    # plt.show()
+    return filename
 
-subtract_dark(flux, dark, name)
+filename = subtract_dark(flux, dark, name)
 d = DS9n()
 
 d.set("frame new ; file " + filename)

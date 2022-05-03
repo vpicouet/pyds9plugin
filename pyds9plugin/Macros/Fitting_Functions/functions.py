@@ -328,7 +328,7 @@ def EMCCDhist(
 
 
 def variable_smearing_kernels(
-    image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
+    image, Smearing=0.7, SmearExpDecrement=50000, ratio=1, type_="exp"
 ):
     """Creates variable smearing kernels for inversion
     """
@@ -336,10 +336,16 @@ def variable_smearing_kernels(
 
     n = 15
     smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+    # smearing_length = Smearing * np.ones(image.shape)#np.exp(-image / SmearExpDecrement)
     if type_ == "exp":
-        smearing_kernels = np.exp(
+        smearing_kernels = ratio*np.exp(
             -np.arange(n)[::int(np.sign(smearing_length[0])), np.newaxis, np.newaxis] / abs(smearing_length)
         )
+        if ratio!=1:
+            smearing_kernels[0,:,:] = 1
+        # smearing_kernels = amp*np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / abs(smearing_length))
+        # smearing_kernels[0,:,:] = 1
+
     else:
         assert 0 <= Smearing <= 1
         smearing_kernels = np.power(Smearing, np.arange(n))[
@@ -349,6 +355,31 @@ def variable_smearing_kernels(
     return smearing_kernels
 
 
+
+def smeared_slit_ratio(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1]),Smearing=[-5,5,0.8],ratio=[0.01,1,0.9]):#,SmearExpDecrement=[1,500000,40000]):
+    """Convolution of a box with a gaussian
+    """
+    from scipy import special
+    import numpy as np
+    from scipy.sparse import dia_matrix
+
+
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
+    function = amp * (a + b) / (a + b).ptp()#+1#4 * l
+    # function = np.vstack((function,function)).T
+    smearing_kernels = variable_smearing_kernels(
+        function, Smearing, ratio=ratio)
+    n = smearing_kernels.shape[0]
+    # print(smearing_kernels.sum(axis=1))
+    # print(smearing_kernels.sum(axis=1))
+    A = dia_matrix(
+        (smearing_kernels.reshape((n, -1)), np.arange(n)),
+        shape=(function.size, function.size),
+    )
+    function = A.dot(function.ravel()).reshape(function.shape)
+    # function = np.mean(function,axis=1)
+    return  function + offset
 
 def smeared_slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1]),Smearing=[-5,5,0.8]):
     """Convolution of a box with a gaussian

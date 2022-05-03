@@ -58,18 +58,23 @@ import os
 im=ds9
 physical=im[:,1100:2130]
 # val,bins,ax = plt.hist(physical.flatten(),bins=1000,log=True,alpha=0.5)
-val,bins = np.histogram(physical.flatten(),bins=1000,log=True,alpha=0.5)
+val,bins = np.histogram(physical.flatten(),bins=1000)#,log=True,alpha=0.5)
 medians = np.nanmedian(physical,axis=1)
 sigmas = np.nanstd(physical,axis=1)
+n_sigma = 10
 cut = medians+1*sigmas
+cut = medians+n_sigma*sigmas
 mask = (im.T>cut).T
 mask2 =   np.hstack([mask[:,-1:], mask[:,:-1]])#.shape
 mask3 =   np.hstack([mask[:,-2:], mask[:,:-2]])#.shape
 mask4 =   np.hstack([mask[:,-3:], mask[:,:-3]])#.shape
 total_mask = mask | mask2 | mask3| mask4
 im[total_mask]=np.nan
+plt.hist(im.flatten(),bins=np.arange(1100,4000,1),log=True,hist_type='step',alpha=0.5)
+
 ds9=im
-filename = '/tmp/HP_mask_%is_%iG_%iT.fits'%(header['EXPTIME'],header['EMGAIN'],float(header['TEMPA']) )
+filename = '/tmp/HP_mask_%is_%iG_%iT_%isig.fits'%(header['EXPTIME'],header['EMGAIN'],float(header['TEMPA'],n_sigma) )
+header['HOTPIX'] = 1-np.mean(np.isfinite(im))
 fits.HDUList(fits.PrimaryHDU(np.array(total_mask,dtype="int8"))).writeto(filename,overwrite=True)
 # d.set('frame new')
 # d.set_np2arr(im)

@@ -310,7 +310,7 @@ hmenu 1. Generic Functions
 	*
 	bind P
 	#		file:/Users/Vincent/Github/DS9functions/pyds9plugin/doc/ref/index.html
-	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/FIREBall/$exp   -o 0 -p  "$path"| $text
+	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/$exp   -o 0 -p  "$path"| $text
 #	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $env(HOME)/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/$exp   -o 0 -p  "$path"| $text
 
 
@@ -1211,7 +1211,7 @@ endparam
 param Header-Catalog
 #path entry {RegExp Path} $filename {Path of the images to extract.  Use global pattern matching (*/?/[9-16], etc)}
 path open {RegExp Path} {$env(HOME)/*fits} {Path of the images to extract.  Use global pattern matching (*/?/[9-16], etc)}
-info combobox {Info} |basic_image_estimators.py|FIREBall.py {Macros file to add image estimators to header catalog, takes more time. Leave blank for no image analysis}
+info combobox {Info} |basic_image_estimators.py|basic_estimators_FIREBall.py|FIREBall.py {Macros file to add image estimators to header catalog, takes more time. Leave blank for no image analysis}
 #ext entry {Ext} 0 {Header extensions to be extracted: eg. 0,1,2,3}
 endparam
 
@@ -1506,10 +1506,11 @@ endparam
 
 
 
+
 param Python-Command-P
 #exp menu {Expression} EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path in pyds9plugin Macro directory}#. See doc for exemples (convolution, adding noise, masking, trimming).
 # exp combobox {Expression} {EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py|Mask_cosmic_rays.py|histogram_sum.py|remove_hot_pixels.py|mask_hot_pixels.py|smear.py|desmear.py|lasso_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
-exp combobox {Expression} {FIREBall/EMCCD_fit_stochastic2.py|FIREBall/EMCCD_fit_analytical2.py|FIREBall/EMCCD_fit_stochastic.py|FIREBall/EMCCD_simulator.py|FIREBall/fireball_functions.py|FIREBall/Mask_cosmic_rays.py|FIREBall/OScorrection.py|FIREBall/Stack_from_header_catalog.py|FIREBall/FIREBall.py|FIREBall/add_slits_for_snr.py|FIREBall/Mask_cosmic_rays.py|FIREBall/histogram_sum.py|FIREBall/remove_hot_pixels.py|FIREBall/mask_hot_pixels.py|FIREBall/smear.py|FIREBall/desmear.py|FIREBall/lasso_masking.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|edge_detection.py|Create_contour_regions.py|bright_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp combobox {Expression} {FIREBall/EMCCD_fit_stochastic2.py|FIREBall/EMCCD_fit_analytical2.py|FIREBall/EMCCD_fit_stochastic.py|FIREBall/stack_fit_slit.py|FIREBall/interpolate_table_in_header.py|FIREBall/EMCCD_simulator.py|FIREBall/fireball_functions.py|FIREBall/Mask_cosmic_rays.py|FIREBall/OScorrection.py|FIREBall/Stack_from_header_catalog.py|FIREBall/FIREBall.py|FIREBall/add_slits_for_snr.py|FIREBall/Mask_cosmic_rays.py|FIREBall/histogram_sum.py|FIREBall/remove_hot_pixels.py|FIREBall/smear.py|FIREBall/desmear.py|FIREBall/lasso_masking.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|edge_detection.py|Create_contour_regions.py|bright_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 #overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam

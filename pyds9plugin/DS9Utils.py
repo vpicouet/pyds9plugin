@@ -2238,7 +2238,11 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
         if "text={" in info:
             id = info.split("text={")[-1][:-1]
         else:
-            id = ""
+            id=""
+        if "# color=" in info:
+            color = info.split('# color=')[-1].split()[0]
+        else:
+            color = ""
         if quick:
             # verboseprint(regions)
             if len(regions) == 1:
@@ -2252,8 +2256,8 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
         else:
             if name == "box":
                 xc, yc, w, h, angle = coords
-                box = namedtuple("Box", "data xc yc w h angle id")
-                processed_regions.append(box(0, xc, yc, w, h, angle, id))
+                box = namedtuple("Box", "data xc yc w h angle id color")
+                processed_regions.append(box(0, xc, yc, w, h, angle, id, color))
             elif name == "bpanda":
                 xc, yc, a1, a2, a3, a4, a5, w, h, a6, a7 = coords
                 box = namedtuple("Box", "data xc yc w h angle")
@@ -4250,21 +4254,23 @@ def plot_surface(cat,x_,y_,z_):
     # cmap='thermal'
     # cmap='jet'
     names = [c for c in cat.colnames]*50
-    dict_ = {"field": z_}
     p.add_title(z_)
     p.show_grid()
     mesh['scalars'] = mesh_non_normalized.points[:, -1]#,scalars='scalars',#
+    point_cloud = pv.PolyData(data)
+    # point_cloud['scalars'] =cat[z_]
+    point_cloud_mesh = p.add_points(point_cloud,render_points_as_spheres=True,point_size=15.0)#,  cmap=cmap, scalars=cat[z_],)#,scalars='scalars')#,  cmap=cmap, scalars=cat[z_],)
+    contours = mesh.contour(isosurfaces=10)
+    contours = p.add_mesh(contours, color="white", line_width=5)
     p.add_mesh(mesh,show_edges=True, scalars=mesh_non_normalized.points[:, -1],
               scalar_bar_args={'vertical': True}   ,lighting=False,opacity=0.7  ,
               use_transparency=False,  cmap=cmap)
     p.set_scale(xscale=1, yscale=1, zscale=0.7*cat[x_].ptp()/zz.ptp())
-    point_cloud = pv.PolyData(data)
-    point_cloud['scalars'] =cat[z_]
-    p.add_points(data,render_points_as_spheres=True,point_size=30.0,  cmap=cmap, scalars=cat[z_],)
-    # p.set_scale(xscale=1, yscale=1*x.ptp()/y.ptp(), zscale=1000)#/z.ptp())
-    # p.set_scale(zscale=1.2/x.ptp())#/z.ptp())
+
+    dict_ = {"field": z_,"contours":contours}
 
     def change_field(val):
+        p.remove_actor(dict_["contours"])
         a=cat
         index = names.index(dict_["field"])
         name = names[index + 1]
@@ -4272,26 +4278,34 @@ def plot_surface(cat,x_,y_,z_):
         points = mesh.points.copy()
         value = (a[name] - a[name].min())/ (a[name] - a[name].min()).ptp()
         data[:, -1] = value#(value - np.nanmin(value)).reshape(-1)#value *
-        p.update_coordinates(data,render=False)#,mesh=point_cloud
+        p.update_coordinates(data,render=False,mesh=point_cloud)
         scalar = a[name].ravel()
-        p.update_scalars(scalar,  render=False)# mesh=point_cloud,
+        point_cloud['scalar']= scalar#a[name].ravel()
+        p.update_scalars(scalar,  render=True , mesh=point_cloud,)
         _ =pv.StructuredGrid(*fit_surface(cat[x_],cat[y_],cat[name] ))
         mesh['scalars'] = _.points[:, -1].ravel()
-        p.update_coordinates(pv.StructuredGrid(*fit_surface(cat[x_],cat[y_],value)).points, mesh=mesh,render=False)
+        mesh_non_normlized = pv.StructuredGrid(*fit_surface(cat[x_],cat[y_],value))
+        mesh_non_normlized['scalars']= _.points[:, -1].ravel()
+        p.update_coordinates(mesh_non_normlized.points, mesh=mesh,render=False)
+        p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
         p.update_scalars(_.points[:, -1].ravel(), mesh=mesh, render=True)
         p.add_title(name + ": %0.1f,%0.1f"%(np.nanmin(_.points[:, -1]), np.nanmax(_.points[:, -1])))
         # p.add_title(name + ": %0.1f,%0.1f"%(np.nanmin(scalar), np.nanmax(scalar)))
-        p.update_scalar_bar_range([np.nanmin(scalar), np.nanmax(scalar)])
         # p.update_scalar_bar_range([np.nanmin(_.points[:, -1]), np.nanmax(_.points[:, -1])])
-        # p.update_scalar_bar_range([np.nanmin(mesh_non_normalized.points[:, -1]), np.nanmax(mesh_non_normalized.points[:, -1])], mesh=mesh)
+        contours = mesh_non_normlized.contour(isosurfaces=10)
+        contours = p.add_mesh(contours, color="white", line_width=5)
+        dict_["contours"]=contours
+
+        # p.update_coordinates(mesh_non_normlized.contour().points, mesh=contours)
+
+        # p.update_scalar_bar_range([np.nanmin(mesh_non_normalized.points[:, -1]), np.nanmax(mesh_non_normalized.points[:, -1])])#, mesh=mesh)
         # p.update_coordinates(data)  # , render=False)
         # p.set_scale(xscale=2, yscale=4*x.ptp()/y.ptp(), zscale=1.2*x.ptp()/z.ptp())
-        p.scalar_bars._scalar_bar_ranges = {mesh.active_scalars_name: [0, 0]}
+        # p.scalar_bars._scalar_bar_ranges = {mesh.active_scalars_name: [0, 0]}
         p.render()
 
     p.add_checkbox_button_widget(change_field, position=(10, 150))
 
-    # p.add_mesh(mesh.contour(isosurfaces=10), color="white", line_width=5)
     # scale plot to enforce 1:1:1 aspect ratio
     # plotter.set_scale(xscale=1, yscale=1*x.ptp()/y.ptp(), zscale=1*x.ptp()/z.ptp())
     p.show()
@@ -4410,6 +4424,7 @@ def execute_command(
     from scipy.signal import correlate, correlate2d
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
     from tqdm.tk import trange, tqdm
+    from matplotlib import pyplot as plt
     try:
         fitsimage = fits.open(filename)
         ext = fits_ext(fitsimage)
@@ -4445,6 +4460,7 @@ def execute_command(
     ldict = {
         "fitsimage": fitsimage,
         "ds9": ds9,
+        "plt": plt,
         "header": header,
         "fits": fits,
         "region": region,
@@ -6437,13 +6453,43 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
 
     # if format == ".csv":
     # csvwrite(t1, path_db)
-    question = "Analysis saved in %s! Do you want to open the folder?" % (path_db)
-    if (xpapoint != "None") & (xpapoint != None):
+    # load_table_topcat(path_db)
+    question = "Analysis saved in %s! Open the table with TOPCAT?" % (path_db)
+    print(question,args.xpapoint)
+
+    if (args.xpapoint != "None") & (args.xpapoint != None):
         if yesno(d, question):
-            open_folder(os.path.commonpath(files))
+            # open_folder(os.path.commonpath(files))
+            load_table_topcat(path_db)
         # d.set("prism import csv " + path_db)
     return
 
+def load_table_topcat(path):
+    import os
+    from astropy.table import Table
+    from astropy.samp import SAMPIntegratedClient
+    client = SAMPIntegratedClient()
+    try:
+        client.connect()
+    except Exception:
+        os.system('java -Xmx2048M -jar /Applications/TOPCAT.app/Contents/Java/topcat-full.jar %s &'%(path))
+    else:
+        Table.read(path).write(path.replace('.csv','.fits'),overwrite=True)
+
+        params = {}
+        params["url"] = 'file://' +path.replace('.csv','.fits')
+        # params["url"] = 'file:///Users/Vincent/Desktop/sex.xml'
+        # params["name"] = "Robitaille et al. (2008), Table 3"
+
+        message = {}
+        message["samp.mtype"] = "table.load.fits"
+        message["samp.params"] = params
+        client.notify_all(message)
+        # print(client.get_registered_clients())
+        # print(client.get_metadata('c1'))
+        client.notify('c1', message)
+        client.disconnect()
+    return
 
 def get_columns(path):
     """IMPORTANT get column names from fits table path quickly wo opening it
@@ -6512,7 +6558,12 @@ def create_catalog(files, ext=[0], info=None):
     path = files[0]
     file_header = []
     files_name = []
-    for i in tqdm(range(len(files)), file=sys.stdout, desc="Files analyzed:" ,unit=" images", ncols=99):
+    # if os.path.isfile(info):
+    #     info = compile(open(info).read(), '<string>', 'exec')
+    # else:
+    #     info = None
+    # print(info,type(info))
+    for i in tqdm(range(len(files)), file=sys.stdout, desc="Files analyzed" ,unit=" images", ncols=99):
     # for i in tqdm(range(len(files)), file=sys.stdout, desc="Files: ", ncols=99):
         try:
             table = create_table_from_header(files[i], exts=ext, info=info)
@@ -6555,7 +6606,21 @@ def create_catalog(files, ext=[0], info=None):
             Column(
                 [
                     datetime.strptime(
-                        time.ctime(os.path.getctime(file)), "%a %b %d %H:%M:%S %Y",
+                        time.ctime(os.stat(file).st_birthtime), "%a %b %d %H:%M:%S %Y",
+                    ).strftime("%Y-%m-%dT%H:%M:%S")
+                    for file in files_name#1977-04-22T01:00:00-05:00
+                ]
+            ),
+            name="CreationTime_ISO8601",
+            index=3,
+            rename_duplicate=True,
+        )
+
+        table_header.add_column(
+            Column(
+                [
+                    datetime.strptime(
+                        time.ctime(os.stat(file).st_birthtime), "%a %b %d %H:%M:%S %Y",
                     ).strftime("%y%m%d.%H%M")
                     for file in files_name
                 ]
@@ -6564,6 +6629,9 @@ def create_catalog(files, ext=[0], info=None):
             index=3,
             rename_duplicate=True,
         )
+        # print(datetime.strptime(
+        #     time.ctime(os.path.getmtime(files_name[0])), "%a %b %d %H:%M:%S %Y",
+        # ))
         table_header.add_column(
             Column(
                 [
@@ -6639,11 +6707,13 @@ def create_table_from_header(path, exts=[0], info=""):
             tabs.append(cat)
         except IndexError:
             pass
-    verboseprint(info, os.path.isfile(info))
+    # verboseprint(info, os.path.isfile(info))
+    # exec_file =
     if len(tabs) > 0:
         table = hstack(tabs)
         # verboseprint(table.colnames)
         if os.path.isfile(info):
+        # if info is not None:
             fitsfile = fits.open(path)
             ldict = {
                 "fitsfile": fitsfile,
@@ -6656,6 +6726,8 @@ def create_table_from_header(path, exts=[0], info=""):
             verboseprint("Executing file %s" % (exp))
             try:
                 exec(open(info).read(), globals(), ldict)
+                # exec(info, globals(), ldict)
+                # exec(exec_file, globals(), ldict)
             except (SyntaxError) as e:
                 print(e)
         return table
@@ -9833,7 +9905,7 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
                 explore_throughfocus(xpapoint=None, argv="-p %s"%(param_dict["CATALOG_NAME"]))
         else:
              if yesno(d,"""Do you want to parameters in 3D?"""):
-                 plot_surface(cat_sex,"X_IMAGE","Y_IMAGE","X_IMAGE")
+                 plot_surface(cat_sex,"X_IMAGE","Y_IMAGE","FWHM_IMAGE")
 
     else:
         verboseprint("Can not find the output sextractor catalog...")
@@ -9977,12 +10049,11 @@ def BackgroundMeasurement():
                 texp = float(d.get_pyfits()[0].header["EXPOSURE"])/1000
             except KeyError as e:
                 verboseprint(e)
-            print(texp)
         if 1==1:
             # xc = [int(2336), int((image_area[1] + image_area[0]) / 2)]
-            xc = [int(500), int((image_area[1] + image_area[0]) / 2)]
             #            yc = 1000
             #            w,l = 300,1900
+            xc = [int(500), int((image_area[1] + image_area[0]) / 2)]
             yc = int((image_area[2] + image_area[3]) / 2)  # 1000
             w, l = (
                 int(image_area[1] - image_area[0]),
@@ -12929,7 +13000,7 @@ def python_command(xpapoint=None, argv=[]):
 
     path2remove, exp, eval_ = args.other_image, args.exp, 0
     verboseprint("Expression to be evaluated: %s" % (exp))
-    path = globglob(args.path, xpapoint)
+    path = globglob(args.path, args.xpapoint)
     verboseprint("path: %s" % (path))
     write = bool(int(args.overwrite))
 
@@ -12958,6 +13029,7 @@ def python_command(xpapoint=None, argv=[]):
             fitswrite(fitsimage, tmp_image)
         except TypeError:
             pass
+
     # result, name = parallelize(
     #     function=execute_command,
     #     parameters=[path2remove, exp, xpapoint, bool(int(eval_)), write, d,],

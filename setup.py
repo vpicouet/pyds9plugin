@@ -94,7 +94,7 @@ and then launch DS9.""",
 def setup_package():
     setup(
         name="pyds9plugin",
-        python_requires=">3.5.2",
+        # python_requires=">3.5.2",
         version=version,
         license="CeCILL-B",
         install_requires=requires,

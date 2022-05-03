@@ -1,6 +1,6 @@
 # from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD, EMCCDhist
 from pyds9plugin.DS9Utils import *#DS9n,PlotFit1D
-# from pyds9plugin.DS9Utils import blockshaped
+from pyds9plugin.DS9Utils import blockshaped
 # from pyds9plugin.Macros import functions
 #TODO  create histogram for every image
 from astropy.table import Column

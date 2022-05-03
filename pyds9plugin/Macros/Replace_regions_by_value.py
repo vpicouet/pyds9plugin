@@ -42,6 +42,6 @@ except AttributeError:
             Ysup = int(np.ceil(xc + w / 2 - 1))
             mask = (x > Xinf) & (x < Xsup + 1) & (y > Yinf) & (y < Ysup + 1)
         ds9[mask] = value  # np.nan
-print(ds9[0,0])
-fitsimage.data=ds9
-fitsimage.writeto('/tmp/test.fits',overwrite=True)
+# print(ds9[0,0])
+# fitsimage.data=ds9
+# fitsimage.writeto('/tmp/test.fits',overwrite=True)
