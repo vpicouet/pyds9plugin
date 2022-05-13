@@ -21,6 +21,7 @@ button
 DS9Utils ds9_swarp -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME -w $WEIGHT_TYPE -rw $RESCALE_WEIGHTS -W "$WEIGHT_IMAGE" -c $COMBINEI -ct $COMBINE_TYPE -CA $CLIP_AMPFRAC -CS $CLIP_SIGMA -CT $CELESTIAL_TYPE -PT $PROJECTION_TYPE -PE $PROJECTION_ERR -C_T $CENTER_TYPE -C $CENTERI -PST $PIXELSCALE_TYPE -PS $PIXEL_SCALE -IS $IMAGE_SIZE -R $RE-SAMPLING  -r $RESAMPLING_TYPE  -o $OVERSAMPLING  -I $INTERPOLATE -SB $SUBTRACT_BACK  -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BFT $BACK_FILTTHRESH     | $text
 
 
+
 Plot Region In 3D
 *
 button
@@ -288,10 +289,10 @@ hmenu 1. Generic Functions
 # ds9=np.array([fits.open(f)[0].data for f in glob.glob('/tmp/?.fits')])
 # ds9 = np.array([fits.open(f)[0].data for f in glob.glob('/private/tmp/test.?.corr.fits')])
 
-	# Open Image Key
-	# *
-	# bind O
-	# DS9Utils open_file -x $xpa_method  $param(opentest); -p "$path" -t $type  -c 0 | $text
+	Open Image Key
+	*
+	bind O
+	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
 	Plot Region In 3D
 	*
@@ -711,13 +712,27 @@ DS9Utils next_step  -x  $xpa_method  | $text #-x $xpa_method
 
 
 
-Fluctucation
+# Fluctucation
+# *
+# bind F
+# DS9Utils -x $xpa_method compute_fluctuation $param(ComputeFluctuation) -n $Number -a $Radius | $text
+
+
+Compute gain from fluctuation FB #29
 *
 bind F
-DS9Utils -x $xpa_method compute_fluctuation $param(ComputeFluctuation) -n $Number -a $Radius | $text
+DS9Utils ComputeEmGain -x $xpa_method  $param(EmGainFB); $subtract "$path" $box $overscan $limits  "$path"   | $text
 
 
 
+param EmGainFB
+subtract checkbox {Subtract Image} 0 {Subtract image to have better assesment of the variance}
+number entry {Number/path} - {Number/path image to subtract, let - to automatically take the +/- consecutive image}
+box entry {Bin size} 30,30 {Size of the bins on which compute the variance and intensity}
+overscan menu {Overscan regions} 2|1 {Choose the number of overscan region you want to use}
+limits entry {Overscan limits} 50,400,2200,2400 {Limits of the overscan region on which you want to calculate the average}
+path entry {RegExp Path} "" {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+endparam
 
 ---
 ###########################################################################################################################################
@@ -1510,7 +1525,7 @@ endparam
 param Python-Command-P
 #exp menu {Expression} EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path in pyds9plugin Macro directory}#. See doc for exemples (convolution, adding noise, masking, trimming).
 # exp combobox {Expression} {EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py|Mask_cosmic_rays.py|histogram_sum.py|remove_hot_pixels.py|mask_hot_pixels.py|smear.py|desmear.py|lasso_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
-exp combobox {Expression} {FIREBall/EMCCD_fit_stochastic2.py|FIREBall/EMCCD_fit_analytical2.py|FIREBall/EMCCD_fit_stochastic.py|FIREBall/stack_fit_slit.py|FIREBall/interpolate_table_in_header.py|FIREBall/EMCCD_simulator.py|FIREBall/fireball_functions.py|FIREBall/Mask_cosmic_rays.py|FIREBall/OScorrection.py|FIREBall/Stack_from_header_catalog.py|FIREBall/FIREBall.py|FIREBall/add_slits_for_snr.py|FIREBall/Mask_cosmic_rays.py|FIREBall/histogram_sum.py|FIREBall/remove_hot_pixels.py|FIREBall/smear.py|FIREBall/desmear.py|FIREBall/lasso_masking.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|edge_detection.py|Create_contour_regions.py|bright_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp combobox {Expression} {FIREBall/EMCCD_fit_stochastic2.py|FIREBall/EMCCD_fit_analytical2.py|FIREBall/merge_log_in_header.py|FIREBall/EMCCD_fit_stochastic.py|FIREBall/stack_fit_slit.py|FIREBall/interpolate_table_in_header.py|FIREBall/EMCCD_simulator.py|FIREBall/fireball_functions.py|FIREBall/Mask_cosmic_rays.py|FIREBall/OScorrection.py|FIREBall/Stack_from_header_catalog.py|FIREBall/FIREBall.py|FIREBall/add_slits_for_snr.py|FIREBall/Mask_cosmic_rays.py|FIREBall/histogram_sum.py|FIREBall/remove_hot_pixels.py|FIREBall/smear.py|FIREBall/desmear.py|FIREBall/lasso_masking.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|edge_detection.py|Create_contour_regions.py|bright_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 #overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
@@ -1608,7 +1623,7 @@ DETECTION_IMAGE open {DETECTION_IMAGE} "" {Image to use for detection of the sou
 
 CATALOG_NAME save {CATALOG_NAME} "" {Name of the output catalog without extension. eg /tmp/catalog.fits, if none, saved as $filename_ds9_cat.fits}
 CATALOG_TYPE menu {CATALOG_TYPE} FITS_1.0|NONE|ASCII|ASCII_HEAD|ASCII_SKYCAT|ASCII_VOTABLE|FITS_LDAC {Type of the output catalog}
-PARAMETERS_NAME combobox {PARAMETERS_NAME} sex.param|sex_vignet.param{File name in ds9_package/Calibration/Sextractor/}
+PARAMETERS_NAME combobox {PARAMETERS_NAME} sex.param|sex_vignet.param {File name in ds9_package/Calibration/Sextractor/}
 
 DETECT_TYPE menu {DETECT_TYPE} CCD|PHOTO {CCD (linear) or PHOTO (with gamma correction)}
 DETECT_MINAREA entry {DETECT_MINAREA} 10 {min number of pixels above threshold}

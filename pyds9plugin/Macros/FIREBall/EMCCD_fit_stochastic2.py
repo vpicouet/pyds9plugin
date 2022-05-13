@@ -1,6 +1,6 @@
 from pyds9plugin.Macros.FIREBall.FB_functions import emccd_model
 
-if ("FIREBall.py" in __file__) or (function == "execute_command"):
+if ("FIREBall.py" in __file__) :#or (function == "execute_command")
     from astropy.table import Table
 
     d = DS9n()
@@ -13,8 +13,12 @@ if ("FIREBall.py" in __file__) or (function == "execute_command"):
 else:
     pass
 
-
-emccd_model(xpapoint=None, path=None, smearing=1, argv=[])
+emccd_model(xpapoint=None, path=filename, smearing=1, argv=[])
+# if ".fit" not in filename:
+#     emccd_model(xpapoint=None, path=filename, smearing=1, argv=[])
+# else:
+#     emccd_model(xpapoint=None, path=None, smearing=1, argv=[])
+# print(filename)
 
 # from pyds9fb.DS9FB import calc_emccdParameters
 # from pyds9plugin.DS9Utils import variable_smearing_kernels  # , EMCCD

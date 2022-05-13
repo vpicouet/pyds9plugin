@@ -70,16 +70,24 @@ def fitLine(x, y, param = None):
 
 
 def gain_calc():
-    bias_dir = '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/bias_T183_1MHz/'
-    # dark_dir = '/home/cheng/data/NUVU/211109/w18d7/darks_T300/'
-    data_dir = '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/ptc_T183_1MHz_405nm/'
+    # bias_dir = '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/W17D13/bias_T183_1MHz/'
+    # # dark_dir = '/home/cheng/data/NUVU/211109/w18d7/darks_T300/'
+    # data_dir = '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/W17D13/ptc_T183_1MHz_405nm/'
 
-    data_pattern = data_dir + 'image0*.fits'
-    data_pattern = data_dir + 'image0*[345]?.fits'
-    images = sorted(set(glob.glob(data_pattern)))
+    # data_pattern = data_dir + 'image0*.fits'
+    # data_pattern = data_dir + 'image0*[345]?.fits'
+ 
+    # images = sorted(set(globglob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/W17D13/ptc_T183_1MHz_405nm/image0000[21-60].fits")))
+    # bias = sorted(set(glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/W17D13/bias_T183_1MHz/image0*.fits')))
+
+
+    # images = sorted(set(globglob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/20220508/PTC/to_keep/image_000000[57-81].fits")))
+
     
-    bias_pattern = bias_dir + 'image0*.fits'
-    bias = sorted(set(glob.glob(bias_pattern)))
+    # bias = sorted(set(globglob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/20220508/PTC/image_000000[6-25].fits')))
+    images = sorted(set(glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220509/PTC_phonelight/image000*.fits")))
+    bias = sorted(set(glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220509/PTC_phonelight/image000*.fits")))
+
     flatlist = []
     #darklist = []
     biaslist = []
@@ -107,6 +115,7 @@ def gain_calc():
     yregions = np.arange(200,1400,n)
     xregions = [1200,1900]
     xregions_b = [1200,1900]
+    xregions_b = [100,1000]
     x1 = 1300
     x2 = 1500
     j = 0
@@ -182,12 +191,6 @@ def gain_calc():
                 signallist.append((mf1-mb1))
         j = j + 2
 
-    #exit()
-
-#print signallist
-    #print gainlist
-    #print readnoiselist
-
     np.savetxt(data_dir + '/gainlist.txt',[gainlist],delimiter=',',fmt='%.8f')
     np.savetxt(data_dir + '/signallist.txt',[signallist],delimiter=',',fmt='%.8f')
     np.savetxt(data_dir + '/readnoiselist.txt',[readnoiselist],delimiter=',',fmt='%.8f')
@@ -225,7 +228,7 @@ def gain_plot(signallist,gainlist,sigb1):
 
 
 def ptc_plot(variance,signal,sigb1):
-
+#%%
     #print np.max(variance)
     rms_noise = np.sqrt(np.array(variance))
 
@@ -238,7 +241,7 @@ def ptc_plot(variance,signal,sigb1):
 
     log_rms_noise = np.log10(rms_noise_sort)
     log_signal = np.log10(signal_sort)
-    rn_idx = np.where((rms_noise_sort > 0) & (rms_noise_sort < 50))
+    rn_idx = np.where((rms_noise_sort > 0) & (rms_noise_sort < 12))
     rn_idx = rn_idx[1][:]
     max_sig = np.where(log_signal == np.nanmax(log_signal))
          
@@ -248,11 +251,11 @@ def ptc_plot(variance,signal,sigb1):
     RNoffset = 0
     RN = RN_raw + RNoffset
     print(RN)
-
+    val_max =3300
     readnoise_trendline = 0.00000001*rnfit + RN_raw
 
     log_shot_noise = np.real(np.log10(np.sqrt((rms_noise_sort)**2 - (RN)**2)))
-    shot_idx_low = np.where(signal_sort>int(4000))
+    shot_idx_low = np.where(signal_sort>int(val_max))
     shot_idx_high = np.where(signal_sort>int(40000))
     shot_idx_low1 = (np.array(shot_idx_low)[0,0])
     shot_idx_high1 = -1#(np.array(shot_idx_high)[0,0])
@@ -274,8 +277,8 @@ def ptc_plot(variance,signal,sigb1):
     print('Shot noise slope = %0.6f.' % (slope))
     print('Intercept = %0.6f.' % (intercept))
             
-    slope_trendline = 0.5*xfit + np.nanmean(b)
-    preamp_gain = (10**(np.nanmean(b)*(-1)))
+    slope_trendline = 0.5*xfit + np.nanmean(b[np.isfinite(b)])
+    preamp_gain = (10**(np.nanmean(b[np.isfinite(b)])*(-1)))
     readnoise = preamp_gain*RN_raw
     print('Bias noise is = %0.6f.' % (sigb1))
     print('Readnoise from bias frame is = %0.6f.' % (preamp_gain*sigb1))
@@ -296,8 +299,9 @@ def ptc_plot(variance,signal,sigb1):
     # plt.rcParams['mathtext.fontset']='stix'
     # plt.rcParams['font.family']='STIXGeneral'
     # plt.rcParams['font.size']='40'
-    plt.xlabel("Signal mean [ADU]",fontsize=25)
-    plt.ylabel("Noise[ADU]",fontsize=25)
+    plt.title('Conversion gain = %0.1f, RN=%0.1f'%(preamp_gain,preamp_gain*sigb1))
+    plt.xlabel("Signal mean [ADU]",fontsize=12)
+    plt.ylabel("Noise[ADU]",fontsize=12)
     grid(b=True, which='major', color='0.75', linestyle='--')
     grid(b=True, which='minor', color='0.75', linestyle='--')
     plt.tick_params(axis='x')#, labelsize=25)
@@ -311,9 +315,9 @@ def ptc_plot(variance,signal,sigb1):
     #plt.xlim([10**xmin,10**ymax])
     plt.loglog(10**log_signal, 10**(log_shot_noise[0,:]), color='red',marker='.',markersize=8,label='Shot Noise')
     plt.loglog(10**xfit, 10**(slope_trendline), color='black',linestyle='--',linewidth=2,label='Slope 0.5')
-    plt.loglog(10**log_signal, 10**(np.log10(rms_noise_sort[0,:])),linestyle='-',linewidth=1,color='blue',markersize=20,label='Total Noise')
+    plt.loglog(10**log_signal, 10**(np.log10(rms_noise_sort[0,:])),'.',linewidth=0,color='blue',label='Total Noise')
     plt.loglog(10**rnfit,readnoise_trendline, color='green',linestyle='-',linewidth=1,label='Readnoise')
-    plt.legend(loc=2,prop={'size':20})
+    plt.legend(loc=2,fontsize=10)#,prop={'size':20})
     #figtext(.65, .15,'Pre-amp = %0.4f e-/ADU.\nReadnoise = %0.4f e-' % (preamp_gain, readnoise),fontsize=20)
     # fig_name = data_dir#.replace('/home/cheng/data/NUVU/','')
     # fig_name = fig_name[:-1].replace('/','_')
@@ -324,6 +328,7 @@ def ptc_plot(variance,signal,sigb1):
 
     plt.savefig('/tmp/ptc.png')
     plt.show()
+#%%
     return
 
 

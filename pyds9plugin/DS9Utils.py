@@ -2904,7 +2904,7 @@ def add_field_after_matching(
     """
     import astropy.units as u
     from astropy.coordinates import SkyCoord
-
+    from astropy.table import Table
     if path1 is not None:
         try:
             FinalCat = Table.read(path1)
@@ -2957,8 +2957,8 @@ def add_field_after_matching(
         if new_field is not None:
             ColumnCat.rename_columns(field, new_field)
         ColumnCat.rename_column(radec2[0], "id_test")
-        FinalCat = DeleteMultiDimCol(FinalCat)
-        ColumnCat = DeleteMultiDimCol(ColumnCat)
+        FinalCat = delete_multidim_columns(FinalCat)
+        ColumnCat = delete_multidim_columns(ColumnCat)
         FinalCatp = FinalCat.to_pandas()
         ColumnCatp = ColumnCat.to_pandas()
         a = pd.merge(
@@ -3007,22 +3007,15 @@ def explore_throughfocus(xpapoint=None, argv=[]):
         default="MAG_AUTO",
         help="Column to use to sort the PSFs",
         metavar="",
-        choices=[
-            "",
-            "MAG_AUTO",
-            "FWHM_IMAGE",
-            "THETA_IMAGE",
-            "ELLIPTICITY",
-            "X_IMAGE",
-            "Y_IMAGE",
-            "AMPLITUDE",
-        ],
     )
     args = parser.parse_args_modif(argv)
     d = DS9n(args.xpapoint)
     a = Table.read(args.path)
     if len(a.colnames):
-        a = Table.read(args.path, format="fits", hdu="LDAC_OBJECTS")
+        try:
+            a = Table.read(args.path, format="fits", hdu="LDAC_OBJECTS")
+        except OSError:
+            pass
     names = [name for name in a.colnames if len(a[name].shape) > 2] * 2
     if len(names) == 0:
         message(
@@ -4425,17 +4418,23 @@ def execute_command(
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
     from tqdm.tk import trange, tqdm
     from matplotlib import pyplot as plt
-    try:
-        fitsimage = fits.open(filename)
-        ext = fits_ext(fitsimage)
-        fitsimage = fitsimage[ext]
-    except ValueError:
-        filename = tmp_image
-        fitsimage = fits.open(
-            resource_filename("pyds9plugin", "Images/stack18446524.fits")
-        )[0]
-    ds9 = fitsimage.data
-    header = fitsimage.header
+    if ".fit" in filename:
+        try:
+            fitsimage = fits.open(filename)
+            ext = fits_ext(fitsimage)
+            fitsimage = fitsimage[ext]
+        except ValueError:
+            filename = tmp_image
+            fitsimage = fits.open(
+                resource_filename("pyds9plugin", "Images/stack18446524.fits")
+            )[0]
+        ds9 = fitsimage.data
+        header = fitsimage.header
+    else:
+        fitsimage = 0
+        ds9 = 0
+        header = 0
+
     region = 0
     try:
         region = getregion(d, selected=True)
@@ -6391,7 +6390,7 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
 
     if files is None:
         if os.path.isdir(args.path):
-            args.path += "**/image??????.fits"
+            args.path += "/**/image??????.fits"
         files = globglob(args.path, ds9_im=False)
         verboseprint("%s : %s" % (args.path, files))
         while len(files) == 0:
@@ -6469,26 +6468,29 @@ def load_table_topcat(path):
     from astropy.table import Table
     from astropy.samp import SAMPIntegratedClient
     client = SAMPIntegratedClient()
-    try:
-        client.connect()
-    except Exception:
-        os.system('java -Xmx2048M -jar /Applications/TOPCAT.app/Contents/Java/topcat-full.jar %s &'%(path))
-    else:
-        Table.read(path).write(path.replace('.csv','.fits'),overwrite=True)
-
-        params = {}
-        params["url"] = 'file://' +path.replace('.csv','.fits')
-        # params["url"] = 'file:///Users/Vincent/Desktop/sex.xml'
-        # params["name"] = "Robitaille et al. (2008), Table 3"
-
-        message = {}
-        message["samp.mtype"] = "table.load.fits"
-        message["samp.params"] = params
-        client.notify_all(message)
-        # print(client.get_registered_clients())
-        # print(client.get_metadata('c1'))
-        client.notify('c1', message)
-        client.disconnect()
+    os.system('java -Xmx2048M -jar /Applications/TOPCAT.app/Contents/Java/topcat-full.jar %s &'%(path))
+    # try:
+    #     client.connect()
+    # except Exception:
+    #     os.system('java -Xmx2048M -jar /Applications/TOPCAT.app/Contents/Java/topcat-full.jar %s &'%(path))
+    # else:
+    #     Table.read(path).write(path.replace('.csv','.fits'),overwrite=True)
+    #
+    #     params = {}
+    #     params["url"] = 'file://' +path.replace('.csv','.fits')
+    #     # params["url"] = 'file:///Users/Vincent/Desktop/sex.xml'
+    #     # params["name"] = "Robitaille et al. (2008), Table 3"
+    #
+    #     message = {}
+    #     message["samp.mtype"] = "table.load.fits"
+    #     message["samp.params"] = params
+    #     for name in client.get_registered_clients():
+    #         if client.get_metadata(name)['samp.name'] == 'topcat':
+    #             client.notify(name, message)
+    #     # client.notify_all(message)
+    #     # print(client.get_registered_clients())
+    #     # print(client.get_metadata('c1'))
+    #     client.disconnect()
     return
 
 def get_columns(path):
@@ -6505,6 +6507,365 @@ def get_columns(path):
             first_line = f.readline()
         cols = first_line.split()
     return cols
+
+
+def DS9ComputeEmGain_FB(xpapoint=None, subtract=True, verbose=False):
+    """Compute EMgain with the variance intensity method
+    """
+    import numpy as np
+    d = DS9n(xpapoint)
+    filename = get_filename(d)
+    if len(d.get("regions").split("\n")) != 5:
+        d.set("region delete all")
+    path = globglob(sys.argv[-1])
+    verboseprint(sys.argv[-1], path)
+    subtract, number, size, overscan, limits, filenames = sys.argv[-6:]  #'f3 names'#sys.argv[3]
+    overscan = int(overscan)
+    limits = np.array(limits.split(","), dtype=int)
+    radius = np.array(size.split(","), dtype=int)
+    if overscan == 0:
+        OSR1 = None
+        OSR2 = None
+    else:
+        OSR1 = [20, -20, 0, 400]
+        OSR2 = [20, -20, 2200, 2600]
+    if int(float(subtract)) == 0:
+        subtract = False
+        Path2substract = None
+    elif os.path.isfile(number):
+        Path2substract = number
+    elif number.isdigit():
+        Path2substract = return_path(filename, number)
+    elif number == "-":
+        Path2substract = None
+
+    region = getregion(d, quick=True)
+    Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
+    area = [Xinf, Xsup, Yinf, Ysup]
+    if len(path) == 1:
+        plot_flag = True
+    else:
+        plot_flag = False
+    D = []
+    verboseprint("Path2substract, subtract = ", Path2substract, subtract)
+    for filename in path:
+        verboseprint(filename)
+        if len(path) > 1:
+            D.append(ComputeEmGain(filename, Path2substract=Path2substract, save=True, d=d, Plot=plot_flag, area=area, subtract=subtract, radius=radius, OSR1=OSR1, OSR2=OSR2))
+        else:
+            D = ComputeEmGain(filename, Path2substract=Path2substract, save=True, d=d, Plot=plot_flag, area=area, subtract=subtract, radius=radius, OSR1=OSR1, OSR2=OSR2)
+    return D
+
+
+def ComputeEmGain(
+    filename,
+    Path2substract=None,
+    save=True,
+    Plot=True,
+    d=None,
+    ax=None,
+    radius=[40, 40],
+    subtract=False,
+    area=None,
+    DS9backUp=DS9_BackUp_path,
+    verbose=True,
+    OSR1=[20, -20, 0, 400],
+    OSR2=[20, -20, 2200, 2400],
+):
+    """Compute EMgain with the variance intensity method
+    """
+    import matplotlib
+    import numpy as np
+    matplotlib.use("TkAgg")
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+    from pyds9plugin.Macros.FIREBall.remove_overscann import ApplyOverscanCorrection
+    verboseprint(
+        """##################\nSubtracting Image = %s \nPath to subtract = %s\nradius = %s \nArea = %s\n\nfilename = %s \nplot_flag = %s\n##################"""
+        % (subtract, Path2substract, radius, area, filename, Plot))
+    fitsimage = fits.open(filename)
+    fitsimage, name  = ApplyOverscanCorrection(fitsimage=fitsimage,OSR1=OSR1,OSR2=OSR2,save=False,ColumnCorrection='None')
+    # print(image)
+    # fitsimage = fitsimage[fits_ext(fitsimage)]
+    image = fitsimage[0].data
+    areasd = create_areas(image, area=area, radius=radius)
+    # areas = areasd
+    # verboseprint("Number of regions : ", len(areas))
+    var_all = []
+    intensity_all = []
+    # for i, area in enumerate(areas):
+    #     inti, v = np.nanmean(image[area[0] : area[2], area[3] : area[1]]), np.nanvar(image[area[0] : area[1], area[2] : area[3]])  # MeanVarArea(image_sub, area)
+    #     var_all.append(v)
+    #     intensity_all.append(inti)
+    # var_all, intensity_all = np.array(var_all).flatten(), np.array(intensity_all).flatten()
+
+
+    # print(image[area[0]:area[1],area[2]:area[3]].shape)
+    xx, yy = np.indices(image.shape)
+    appertures = blockshaped(image[area[2]:area[3],area[0]:area[1]], 40, 40)
+    print(appertures)
+    var_all = np.nanvar(appertures,axis=(1,2))
+    intensity_all = np.nanmedian(appertures,axis=(1,2))
+    x = np.mean(blockshaped(xx[area[2]:area[3],area[0]:area[1]], 40, 40))
+    y = np.mean(blockshaped(yy[area[2]:area[3],area[0]:area[1]], 40, 40))
+
+    a = 1
+    Index_all = (var_all < np.nanpercentile(var_all, 90)) & (intensity_all < np.nanpercentile(intensity_all, 90)) & (var_all < np.nanmedian(var_all) + a * np.nanstd(var_all))  # .std()
+    verboseprint(var_all)
+    verboseprint(Index_all)
+    intensity_all, var_all = intensity_all[Index_all], var_all[Index_all]
+    # areas = np.array(areas)
+    # if type(radius) == int:
+    #     r1, r2 = radius, radius
+    # else:
+    #     r1, r2 = radius
+    # if d is not None:
+    #     create_ds9_regions(areas[:, 2] + float(r1) / 2, areas[:, 0] + float(r2) / 2, radius=radius, form="box", save=True, color="yellow", savename="/tmp/centers")
+    #     d.set("regions /tmp/centers.reg")
+        # pass
+    # print(x.shape)
+    # Table(data=[x,y,var_all,intensity_all],names=('x','y','var','intensity'))
+    emgain = 0 #fitsimage[0].header['EMGAIN']
+    if emgain > 0:
+        cst = 2
+    else:
+        cst = 1
+    fig = plt.figure()
+    ax0 = fig.add_axes([0.1, 0.30, 0.84, 0.66])
+    print(intensity_all, var_all / cst)
+    intensity_phys_n, var_phys_n = SigmaClipBinned(intensity_all, var_all / cst, sig=1, Plot=True, ax=ax0)
+
+    # GeneralFitNew(intensity_phys_n, var_phys_n, ax=ax0, background=1, nb_gaussians=0, marker="", linewidth=0)
+    x,y = intensity_phys_n, var_phys_n
+    a = np.poly1d(np.polyfit(x, y, deg=1)).coef[::-1][0]
+    boundsa =  (y.mean() - (y.max() - y.min()), y.mean() + (y.max() - y.min())) # (a - (y.max() - y.min()), a + (y.max() - y.min()))
+    boundsb = ((y.min() - a) / x.max()/10, 10*(y.max() - a) / x.min(),(y.max() - a) / x.mean())
+    def linear1d_centered(x, intercept=boundsa, slope=boundsb):
+        """A one dimensional line."""
+        return slope * (x - intensity_phys_n.mean()) + intercept  # origine
+    # popt, pcov = curve_fit(linear1d_centered,intensity_phys_n, var_phys_n)
+    GeneralFitNew(intensity_phys_n, var_phys_n, ax=ax0, background=None, function=linear1d_centered, nb_gaussians=0, marker="", linewidth=0)
+    # GeneralFitNew(intensity_phys_n, var_phys_n, ax=ax0, background=1, nb_gaussians=0, marker="", linewidth=0)
+    ax0.set_ylim((1 * var_phys_n.min(), 1 * var_phys_n.max()))
+    ax0.set_xlim((1 * intensity_phys_n.min(), 1 * intensity_phys_n.max()))
+
+    # fig.suptitle("Variance intensity diagram - %s - - #regions = %i" % (os.path.basename(filename), areas[:, 1].shape[0]), y=1)
+    fig.tight_layout()
+    if save:
+        if not os.path.exists(os.path.dirname(filename) + "/VarIntensDiagram"):
+            os.makedirs(os.path.dirname(filename) + "/VarIntensDiagram")
+        plt.savefig(os.path.dirname(filename) + "/VarIntensDiagram/" + os.path.basename(filename)[:-5] + "_.png")
+    if Plot:
+        plt.show()
+    else:
+        plt.close()
+    # D = {'ax':ax, 'EMG_var_int_w_OS':emgain_phys, 'EMG_var_int_wo_OS':emgain_phys}
+    return 1  # D
+
+# def compute_gain(xpapoint=None, subtract=True, verbose=False):
+#     """Compute EMgain with the variance intensity method
+#     """
+#     d = DS9n(xpapoint)
+#     filename = get_filename(d)
+#     if len(d.get("regions").split("\n")) != 5:
+#         d.set("region delete all")
+#     path = globglob(sys.argv[-1])
+#     verboseprint(filename,path)
+#     subtract, number, size, overscan, limits,filenames = sys.argv[-7:]  #'f3 names'#sys.argv[3]
+#     overscan = int(overscan)
+#     limits = np.array(limits.split(","), dtype=int)
+#     radius = np.array(size.split(","), dtype=int)
+#     if overscan == 0:
+#         OSR1 = None
+#         OSR2 = None
+#     else:
+#         OSR1 = [20, -20, 0, 400]
+#         OSR2 = [20, -20, 2200, 2600]
+#     if int(float(subtract)) == 0:
+#         subtract = False
+#         Path2substract = None
+#     if os.path.isfile(number):
+#         Path2substract = number
+#     elif number.isdigit():
+#         Path2substract = return_path(filename, number)
+#     elif number == "-":
+#         Path2substract = None
+
+#     try:
+#         region = getregion(d, quick=True)
+#     except ValueError:
+#         # message(d,"Please define a region.")
+#         # sys.exit()
+#         area = [-2133, -1053, 0, -1]
+#         #area = my_conf.physical_region  # [1053,2133,500,2000]
+#     else:
+#         Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
+#         area = [Xinf, Xsup, Yinf, Ysup]
+#     if len(path) == 1:
+#         plot_flag = True
+#     else:
+#         plot_flag = False
+#     D = []
+#     verboseprint("Path2substract, subtract = ", Path2substract, subtract)
+#     for filename in path:
+#         verboseprint(filename)
+#         if len(path) > 1:
+#             D.append(ComputeEmGain(filename, Path2substract=Path2substract, save=True, d=d, Plot=plot_flag, area=area, subtract=subtract, radius=radius, OSR1=OSR1, OSR2=OSR2))
+#         else:
+#             D = ComputeEmGain(filename, Path2substract=Path2substract, save=True, d=d, Plot=plot_flag, area=area, subtract=subtract, radius=radius, OSR1=OSR1, OSR2=OSR2)
+#     return D
+
+
+def PlotComputeEmGain(intensity, var, emgain, n, filename, len_area_det, ax=None, DS9backUp=DS9_BackUp_path, name="", cst=2):
+    """Compute emgain based on variance intensity diagram
+    """
+    import matplotlib
+
+    matplotlib.use("TkAgg")
+    obj = GeneralFitNew(intensity, var, ax=ax, background=1, nb_gaussians=0, linestyle=None, marker="")
+    obj.ax.set_ylabel("Variance [ADU] / %s" % (cst))
+    return ax, emgain
+
+
+def ComputeEmGain_FB(filename, Path2substract=None, save=True, Plot=True, d=None, ax=None, radius=[40, 40], subtract=False, area=None, DS9backUp=DS9_BackUp_path, verbose=True, OSR1=[20, -20, 0, 400], OSR2=[20, -20, 2200, 2400]):
+    """Compute EMgain with the variance intensity method
+    """
+    import matplotlib
+    from pyds9plugin.Macros.FIREBall.remove_overscann import ApplyOverscanCorrection, ComputeOSlevel1
+    matplotlib.use("TkAgg")
+    import matplotlib.pyplot as plt
+    from astropy.io import fits
+
+    verboseprint("""##################\nSubtracting Image = %s \nPath to subtract = %s\nradius = %s \nArea = %s\n\nfilename = %s \nplot_flag = %s\n##################""" % (subtract, Path2substract, radius, area, filename, Plot))
+    fitsimage = fits.open(filename)[0]
+    image = fitsimage.data
+    try:
+        texp = fitsimage.header["EXPTIME"]
+    except :
+        texp = 1
+    # offset = 20
+    if (OSR1 is not None) | (OSR2 is not None):
+        image = image - ComputeOSlevel1(image, OSR1=OSR1, OSR2=OSR1)
+    if subtract:
+        n = 2
+        if Path2substract is None:
+            images = return_path(filename, All=True)
+            im = "next"
+            if images.index(filename) < len(images) - 1:
+                name = images[images.index(filename) + 1]
+                image_n = fits.open(name)[0]
+                data, exptime = image_n.data, image_n.header["EXPTIME"]
+                if int(float(exptime)) == int(float(texp)):
+                    verboseprint("Subtracting previous image: %s" % (name))
+                    image_sub = image - data
+                    im = 0
+                else:
+                    verboseprint("Previous image do not have same exposure time")
+                    im = "next"
+            if (im == "next") or (images.index(filename) == len(images) - 1):
+                name = images[images.index(filename) - 1]
+                image_n = fits.open(name)[0]
+                data, exptime = image_n.data, image_n.header["EXPTIME"]
+                if int(float(exptime)) == int(float(texp)):
+                    verboseprint("Subtracting next image: %s" % (name))
+                    image_sub = image - data
+                else:
+                    verboseprint("No image have the same exposure time: No subtraction!")
+                    n = 1
+                    image_sub = image
+        else:
+            image_sub = image - fits.open(Path2substract)[0].data
+    else:
+        n = 1
+        image_sub = image
+    if area is None:
+        area = [1053,2133,0,2000]#my_conf.physical_region  # 
+    areasd = create_areas(image, area=area, radius=radius)  #    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
+    areasOS1 = create_areas(image, area=[0, 400, area[2], area[3]], radius=radius)  #    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
+    areasOS2 = create_areas(image, area=[2200, 2400, area[2], area[3]], radius=radius)  #    n = 300#300#300#    xis = [40]*3 + [400]*3 + [800]*3  + [1200]*3  + [1600]*3  #    yis = [1100, 1450, 1800]*len(xis)#    areas = [[xo, xo + n, yo, yo + n] for xo, yo in zip(xis,yis)]#area=[40,330,1830,2100]
+    if (OSR1 is None) | (OSR2 is None):
+        areasOS1 = []
+        areasOS1 = []
+    len_area_det = len(areasd)
+    areas = areasd + areasOS1 + areasOS2
+    areas_OS = areasOS1 + areasOS2
+    # verboseprint("Number of regions : ", len(areas))
+    var_all = []
+    intensity_all = []
+    var_phys = []
+    intensity_phys = []
+    var_os = []
+    intensity_os = []
+    for i, area in enumerate(areas):
+        i, v = np.nanmean(image[area[0] : area[1], area[2] : area[3]]), np.nanvar(image_sub[area[0] : area[1], area[2] : area[3]])  # MeanVarArea(image_sub, area)
+        var_all.append(v)
+        intensity_all.append(i)
+    for i, area in enumerate(areasd):
+        i, v = np.nanmean(image[area[0] : area[1], area[2] : area[3]]), np.nanvar(image_sub[area[0] : area[1], area[2] : area[3]])  # MeanVarArea(image_sub, area)
+        var_phys.append(v)
+        intensity_phys.append(i)
+    for i, area in enumerate(areas_OS):
+        i, v = np.nanmean(image[area[0] : area[1], area[2] : area[3]]), np.nanvar(image_sub[area[0] : area[1], area[2] : area[3]])  # MeanVarArea(image_sub, area)
+        var_os.append(v)
+        intensity_os.append(i)
+
+    var_all, var_phys = np.array(var_all).flatten(), np.array(var_phys).flatten()
+    a = 1
+    # Index_phys = (var_phys < np.nanmedian(var_phys) + a * np.nanstd(var_phys)) & (intensity_phys < np.nanmedian(intensity_phys) + a * np.nanstd(intensity_phys))#.std()
+    Index_phys = (var_phys < np.nanpercentile(var_phys, 98)) & (intensity_phys < np.nanpercentile(intensity_phys, 98))  # .std()
+    Index_all = var_all < np.nanmedian(var_phys) + a * np.nanstd(var_phys)  # .std()
+    Index_os = var_os < np.nanmedian(var_os) + a * np.nanstd(var_os)  # .std()
+    var_all, intensity_all = var_all[Index_all], np.array(intensity_all)[Index_all].flatten()
+    var_phys, intensity_phys = var_phys[Index_phys], np.array(intensity_phys)[Index_phys].flatten()
+    var_os, intensity_os = np.array(var_os)[Index_os], np.array(intensity_os)[Index_os].flatten()
+
+    areas = np.array(areas)
+    if type(radius) == int:
+        r1, r2 = radius, radius
+    else:
+        r1, r2 = radius
+    if d is not None:
+        #        create_ds9_regions(areas[:,2]+float(r1)/2,areas[:,0]+float(r2)/2, radius=radius, form = 'box',
+        #                           save=True,color = 'yellow', savename='/tmp/centers')
+        #        d.set('regions /tmp/centers.reg')
+        pass
+    try:
+        emgain = fitsimage.header["EMGAIN"]
+    except KeyError:
+        emgain = 1
+    if emgain > 0:
+        cst = 2
+    else:
+        cst = 1
+    fig, (ax0, ax1) = plt.subplots(1, 2)  # ,figsize=(14,6))
+    fig.subplots_adjust(left=None, bottom=0.3, right=None, top=None, wspace=None, hspace=None)
+
+    intensity_phys_n, var_phys_n = SigmaClipBinned(intensity_phys, var_phys / cst, sig=1, Plot=True, ax=ax0)
+    intensity_os_n, var_os_n = SigmaClipBinned(intensity_os, var_os / cst, sig=1, Plot=True, ax=ax0)
+    intensity_phys_n, var_phys_n = SigmaClipBinned(intensity_phys, var_phys / cst, sig=1, Plot=True, ax=ax1)
+
+    # ax, emgain_phys = PlotComputeEmGain_old(intensity_phys_n, var_phys_n, emgain, r1 * r2, filename=filename, len_area_det=len_area_det, ax=ax1, cst="(%i x %i)" % (cst, n))
+    ax, emgain_all = PlotComputeEmGain(np.hstack((intensity_os_n, intensity_phys_n)), np.hstack((var_os_n, var_phys_n)), emgain, r1 * r2, filename=filename, len_area_det=len_area_det, ax=ax0, cst="(%i x %i)" % (cst, n))
+
+    csvwrite(np.vstack((intensity_phys_n, var_phys_n / cst)).T, DS9backUp + "CSVs/%s_VarianceIntensity_%s.csv" % (datetime.datetime.now().strftime("%y%m%d-%H:%M:%S"), os.path.basename(filename)[:-5]))
+    csvwrite(np.vstack((np.hstack((intensity_os_n, intensity_phys_n)), np.hstack((var_os_n, var_phys_n)) / cst)).T, DS9backUp + "CSVs/%s_VarianceIntensity_%s.csv" % (datetime.datetime.now().strftime("%y%m%d-%H:%M:%S"), os.path.basename(filename)[:-5]))
+
+    ax0.set_ylim((0.97 * np.hstack((var_os_n, var_phys_n)).min(), 1.03 * np.hstack((var_os_n, var_phys_n)).max()))
+    ax0.set_xlim((0.97 * np.hstack((intensity_os_n, intensity_phys_n)).min(), 1.03 * np.hstack((intensity_os_n, intensity_phys_n)).max()))
+    ax1.set_ylim((0.97 * var_phys_n.min(), 1.03 * var_phys_n.max()))
+    ax1.set_xlim((0.97 * intensity_phys_n.min(), 1.03 * intensity_phys_n.max()))
+    fig.suptitle("Variance intensity diagram - %s - G = %s - #regions = %i" % (os.path.basename(filename), emgain, areas[:, 1].shape[0]), y=1)
+    # fig.tight_layout()
+    if save:
+        if not os.path.exists(os.path.dirname(filename) + "/VarIntensDiagram"):
+            os.makedirs(os.path.dirname(filename) + "/VarIntensDiagram")
+        plt.savefig(os.path.dirname(filename) + "/VarIntensDiagram/" + os.path.basename(filename)[:-5] + "_.png")
+    if Plot:
+        plt.show()
+    else:
+        plt.close()
+    # D = {"ax": ax, "EMG_var_int_w_OS": emgain_all, "EMG_var_int_wo_OS": emgain_phys}
+    return 
 
 
 def parallelize(
@@ -6550,8 +6911,9 @@ def create_catalog(files, ext=[0], info=None):
     from astropy.table import Column, vstack  # hstack,
     from datetime import datetime
     import warnings
+    import re
     # from tqdm import tqdm  # _gui
-    from tqdm.tk import trange, tqdm
+    from tqdm import trange, tqdm
     import numpy as np
     warnings.simplefilter("ignore", UserWarning)
     files.sort()
@@ -6615,13 +6977,12 @@ def create_catalog(files, ext=[0], info=None):
             index=3,
             rename_duplicate=True,
         )
-
         table_header.add_column(
             Column(
                 [
-                    datetime.strptime(
+                    float(datetime.strptime(
                         time.ctime(os.stat(file).st_birthtime), "%a %b %d %H:%M:%S %Y",
-                    ).strftime("%y%m%d.%H%M")
+                    ).strftime("%y%m%d.%H%M"))
                     for file in files_name
                 ]
             ),
@@ -6629,9 +6990,14 @@ def create_catalog(files, ext=[0], info=None):
             index=3,
             rename_duplicate=True,
         )
-        # print(datetime.strptime(
-        #     time.ctime(os.path.getmtime(files_name[0])), "%a %b %d %H:%M:%S %Y",
-        # ))
+        table_header.add_column(
+            Column(
+                [re.findall('[0-9]+',file)[-1] if len(re.findall('[0-9]+',file))>0 else np.nan for file in table_header['Filename']]
+            ),
+            name="IMNO",
+            index=3,
+            rename_duplicate=True,
+        )
         table_header.add_column(
             Column(
                 [
@@ -7562,7 +7928,8 @@ def gaussian_2dim(xy, amplitude, xo, yo, sigma_x, sigma_y, angle=0, offset=0):
     return g(x, y).ravel() + offset
 
 
-functions = ["interactive_plotter", "Function", "fit_ds9_plot"]
+functions = ["interactive_plotter", "Function",
+             "fit_ds9_plot", "ComputeEmGain"]
 if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
 
     from dataphile.demos.auto_gui import Demo
@@ -13022,13 +13389,13 @@ def python_command(xpapoint=None, argv=[]):
             except TypeError:
                 pass
 
-    if (".fit" not in path[0]) & (len(path) == 1):
-        try:
-            fitsimage = d.get_pyfits()[0]
-            path = [tmp_image]
-            fitswrite(fitsimage, tmp_image)
-        except TypeError:
-            pass
+    # if (".fit" not in path[0]) & (len(path) == 1):
+    #     try:
+    #         fitsimage = d.get_pyfits()[0]
+    #         path = [tmp_image]
+    #         fitswrite(fitsimage, tmp_image)
+    #     except TypeError:
+    #         pass
 
     # result, name = parallelize(
     #     function=execute_command,
@@ -13479,6 +13846,9 @@ def main():
     """Main function where the arguments are defined and the other
     functions called
     """
+    verboseprint(datetime.datetime.now())
+    start = time.time()
+
     # "PlotSpectraDataCube": PlotSpectraDataCube,#
     # "StackDataDubeSpectrally": StackDataDubeSpectrally,#
     # "stack_images": stack_images,#stack
@@ -13534,6 +13904,7 @@ def main():
         # "column_line_correlation": column_line_correlation,
         "get_depth_image": get_depth_image,
         # "emccd_model": emccd_model,
+        "ComputeEmGain":DS9ComputeEmGain_FB,
     }
 
     dict_function_soft = {
@@ -13583,6 +13954,7 @@ def main():
                     "guidance",
                     "LoadDS9QuickLookPlugin",
                     "verbose",
+                    "ComputeEmGain",
                     "next_step",
                     "Quit",
                     "check_file",
@@ -13628,6 +14000,14 @@ def main():
                 verboseprint("'" + "' '".join(sys.argv) + "'", verbose="1")
         else:
             dict_function[function]()
+    stop = time.time()
+    verboseprint(
+        """
+        *******************************************************************************************************
+                   date : %s     Exited OK, duration = %s
+        ******************************************************************************************************* """
+        % (datetime.datetime.now().strftime("%y/%m/%d %HH%Mm%S"), str(datetime.timedelta(seconds=stop - start))[:-3])
+        )
     return
 
 

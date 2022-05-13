@@ -8,7 +8,7 @@ def slitm(x, amp, l, x0, FWHM, offset):
     """
     from scipy import special
     import numpy as np
-
+    l/=2
     a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
     b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
     function = amp * (a + b) / (a + b).ptp()#4 * l
@@ -83,8 +83,9 @@ cat = Table(names=['name','color','x','y','amp_x','lx','x0','fwhm_x','off_x','am
 
 for region in tqdm(regs[:]):
     x,y = int(region.xc),int(region.yc)
-    if (x>1060) & (y>40) & (y<2060):
-        # names.append(regs[i].id)
+    if (x>1060) & (y<1950) & (y>40) & (x<2060):
+        # if region.id=="":
+            # region.id = "%i"%(region.yc)
         x_inf, x_sup, y_inf, y_sup = lims_from_region(region=region, coords=None)
         # if fit=='spatial':
         #     subim = image[y_inf:y_sup, x_inf:x_sup].T
@@ -132,9 +133,15 @@ for region in tqdm(regs[:]):
         except ValueError:
             popt_spectral_deconvolved = [0.1]*6
         print(popt_spectral_deconvolved)
+        # bounds = [[0.7*y_spatial.ptp(), 10, 0, 0, np.nanmin(y_spatial)], [y_spatial.ptp(),  len(y_spatial), len(y_spatial), 10, np.nanmax(y_spatial)]]
+        # popt_spatial = PlotFit1D(x_spatial,y_spatial,deg=slitm, plot_=plot_,ax=ax2,P0=[y_spatial.ptp(),20,x_spatial.mean()+1,2,y_spatial.min()],c='k',lw=2,bounds=bounds)['popt']
         try:
-            popt_spatial = PlotFit1D(x_spatial,y_spatial,deg=slitm, plot_=plot_,ax=ax2,P0=[y_spatial.ptp(),4,x_spatial.mean()+1,2,y_spatial.min()],c='k',lw=2)['popt']
-            popt_spectral = PlotFit1D(x_spectral,y_spectral,deg=slitm, plot_=plot_,ax=ax3,P0=[y_spectral.ptp(),4,x_spectral.mean()+1,2,y_spectral.min()],c='k',ls='--',lw=0.5)['popt']
+            bounds = [[0.7*y_spatial.ptp(), 20, 0, 0, np.nanmin(y_spatial)], [y_spatial.ptp(),  len(y_spatial), len(y_spatial), 18, np.nanmax(y_spatial)]]
+            popt_spatial = PlotFit1D(x_spatial,y_spatial,deg=slitm, plot_=plot_,ax=ax2,P0=[y_spatial.ptp(),22,x_spatial.mean()+1,2,y_spatial.min()],c='k',lw=2,bounds=bounds)['popt']
+            bounds = [[0.7*y_spectral.ptp(), 3, 0, 0, np.nanmin(y_spectral)],
+                      [y_spectral.ptp(),  len(y_spectral), len(y_spectral), 7, np.nanmax(y_spectral)]]
+            popt_spectral = PlotFit1D(x_spectral, y_spectral, deg=slitm, plot_=plot_, ax=ax3, P0=[y_spectral.ptp(
+            ), 4, x_spectral.mean()+1, 2, y_spectral.min()], c='k', ls='--', lw=0.5, bounds=bounds)['popt']
             popt_spatial = abs(np.array(popt_spatial))
             popt_spectral = abs(np.array(popt_spectral))
         except ValueError:
@@ -147,7 +154,7 @@ for region in tqdm(regs[:]):
         #     fwhmi, slit_w = popt[-2],popt[1]
         # print([regs[i].id,regs[i].xc,regs[i].yc,*popt_spatial,*popt_spectral])
         # print(len([regs[i].id,regs[i].xc,regs[i].yc,*popt_spatial,*popt_spectral]))
-        cat.add_row([region.id,region.color,region.xc,region.yc,*popt_spatial,*popt_spectral,popt_spectral_deconvolved[-1],popt_spectral_deconvolved[-3]])
+        cat.add_row([region.id,region.color,region.xc,region.yc,*popt_spectral,*popt_spatial,popt_spectral_deconvolved[-1],popt_spectral_deconvolved[-3]])
 
         # amp, l, x0, FWHM
         # fwhm.append(fwhmi)
@@ -178,7 +185,11 @@ for region in tqdm(regs[:]):
             ax2.set_xlim((x_spatial.min(),x_spatial.max()))
             ax3.set_xlim((x_spectral.min(),x_spectral.max()))
             fig.tight_layout()
-            plt.savefig(os.path.dirname(filename)+'/fits/%s_%s.png'%(os.path.basename(filename)[:2],region.id))
+            if region.id=="":
+                plt.savefig(os.path.dirname(filename)+'/fits/%s_%s.png' %
+                            (os.path.basename(filename)[:2], int(region.yc)))
+            else:
+                plt.savefig(os.path.dirname(filename)+'/fits/%s_%s.png'%(os.path.basename(filename)[:2],region.id))
             plt.close()
             # plt.show()
             # sys.exit()
@@ -209,11 +220,14 @@ field = os.path.basename(filename)[:2]
 from matplotlib.colors import LogNorm
 
 
-mask = (cat['fwhm_x_unsmear']>0.5)& (cat['fwhm_y']>0.5)& (cat['fwhm_x']>0.5)& (cat['fwhm_x']<8)& (cat['fwhm_y']<8)& (cat['fwhm_x_unsmear']<8)
+mask = (cat['fwhm_y'] > 0.5) & (cat['fwhm_x'] > 0.5) #& (cat['x'] <1950)  & (cat['x'] >50) #& (cat['fwhm_x'] < 8) & (cat['fwhm_y'] < 8) & (cat['fwhm_x_unsmear'] < 8)  
+    # = (cat['fwhm_x_unsmear']>0.5)&
 fig, axes = plt.subplots(2,2,sharex='col',sharey='row', gridspec_kw={'height_ratios': [1, 3],'width_ratios': [3, 1]},figsize=(8,5))
 ax0,ax1,ax2,ax3 = axes.flatten()
 m = 'o'
 size=3
+print(cat['fwhm_x_unsmear'],cat['fwhm_y'],cat['fwhm_x'])
+print(cat['fwhm_x_unsmear'][mask])
 norm= LogNorm(vmin=np.min(cat['fwhm_x_unsmear'][mask]),vmax=np.max(cat['fwhm_y'][mask]))
 im=ax2.scatter(cat['y'][mask]-50,cat['x'][mask],c=cat['fwhm_y'][mask],s=50,norm =norm)#,marker=',',)
 ax2.scatter(cat['y'][mask],cat['x'][mask],c=cat['fwhm_x'][mask],s=50,norm = norm)#,vmin=3,vmax=6)
@@ -223,14 +237,14 @@ from matplotlib.ticker import LogFormatter
 cax = make_axes_locatable(ax2).append_axes('right', size='2%', pad=0.02)
 fig.colorbar(im, cax=cax, orientation='vertical',ticks=[1,2,3,4,5,6,7], format=LogFormatter(10, labelOnlyBase=False) )
 
-cat['color'][(cat['color']==np.ma.core.MaskedConstant).mask]='green'
+# cat['color'][(cat['color']==np.ma.core.MaskedConstant).mask]='green'
 ax3.set_ylim(ax2.get_ylim())
-
-for color in ['red','yellow','green']:
+for color in ['red']:#,'yellow','green']:
+# for color in ['red','yellow','green']:
     mask = (cat['color']==color)#.mask
     p=ax0.plot(cat[mask]['y'],cat[mask]['fwhm_y'],marker='s',lw=0,ms=size,c=color.replace('yellow','orange'))
     fit = PlotFit1D(cat[mask]['y'],cat[mask]['fwhm_y'],deg=2, plot_=True,ax=ax0,c=p[0].get_color())
-    # ax0.plot(cat['y'],cat['fwhm_x'],m)
+    ax0.plot(cat['y'],cat['fwhm_x'],m,c=color.replace('yellow','orange'),alpha=0.3)
     p=ax0.plot(cat['y'][mask],cat['fwhm_x_unsmear'][mask],marker='>',lw=0,ms=size,c=color.replace('yellow','orange'))
     fit = PlotFit1D(cat['y'][mask],cat['fwhm_x_unsmear'][mask],deg=2, plot_=True,ax=ax0,c=p[0].get_color(),ls='--')
     ax0.set_ylim((1.5,8))

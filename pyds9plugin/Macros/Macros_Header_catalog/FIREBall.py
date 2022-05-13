@@ -35,8 +35,8 @@ else:
 
 
 # colors= ['#E24A33','#348ABD','#988ED5','#777777','#FBC15E','#8EBA42','#FFB5B8'] + ['#E24A33','#348ABD','#988ED5','#777777','#FBC15E','#8EBA42','#FFB5B8']
-full_analysis = False
-Plot = False
+full_analysis = True
+Plot = True
 # write_files = True
 data = fitsfile[0].data
 header = fitsfile[0].header
@@ -56,12 +56,13 @@ if date<2020:
 else:
     conversion_gain =  0.22#1 / 4.5# ADU/e-  0.53 
     RN=50
+    # RN=20
     l1,l2 = -2133, -1053
     smearing=0.5
 
 
-# header['EMGAIN']=9200
-# table['EMGAIN']=9200
+header['EMGAIN']=8600
+table['EMGAIN']=8600
 
 
 analysis_path = os.path.join(os.path.dirname(filename),'analysis/')
@@ -85,9 +86,9 @@ def Create_label_header(header,L):
         return np.sum(text,axis=0)
     else:
         return None
-    
+   #%% 
 # replace flux par zero et reploter!
-def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conversion_gain,analysis_path=analysis_path,ax=None,im=None):
+def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conversion_gain,analysis_path=analysis_path,ax=None,im=None,smearing=smearing):
     from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD, EMCCDhist
     from matplotlib import pyplot as plt
     import numpy as np
@@ -95,11 +96,9 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
     colors= ['r','g','b','orange','#FBC15E','#8EBA42','#FFB5B8'] + ['#E24A33','#348ABD','#988ED5','#777777','#FBC15E','#8EBA42','#FFB5B8']
     f=1.1
     n_conv = 1
-    # table['Gain0'] *=1.2
     bias, ron, gain, flux = table['bias_os'],  table['RON_os'], table['Gain0'],table['Flux1'] #table["TopImage"]/table['Gain0']/conversion_gain
     if bias ==0.0:
         bias = table['bias']
-    # limit = bias+1000 #After 2000 it is getting very bad
     
     if ax is None:
         fig, ax = plt.subplots(figsize=(9,5))  
@@ -110,40 +109,29 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
     ax.set_xlabel("Pixel Value [ADU]", fontsize=12)
     ax.set_ylabel("Log(\# Pixels)", fontsize=12)
     try:
-        l_data = "Exp, G = %is, %i \n" "T det = %0.1f C" % (header['EXPTIME'], header['EMGAIN'], float(header['TEMPA']))
+        l_data = "Exp, G = %is, %i \n" "T det = %0.1f C" % (header['EXPTIME'], header['EMGAIN'], float(header['EMGAIN']))
     except KeyError:
         l_data = ""#"%s-%s\nExposure = %i sec\nGain = %i \n" "T det = %0.1f C" % ("","","", "","")
-    # l_model = "Bias = %0.1f DN\n$\sigma$ = %0.1f e-\nEMg = %0.1f e/e\nF=%0.3fe-$\pm$10" % (bias,ron, gain, flux )
-    # l_model2 = "Bias = %0.1f DN\n$\sigma$ = %0.1f e-\nEMg = %0.1f e/e\nF=%0.3fe-$\pm$10" % (bias,ron, table['Gain2'], flux )
     threshold = table['bias_fit']+ 5.5* (table['RON']*conversion_gain)
-    # ax.semilogy([threshold,threshold],[0,1e6],'k:')
-    # model_to_fit = lambda bin_center,biais\,RN,EmGain,flux,p_sCIC,Smearing
     for n,alpha,l  in zip(ns[::-1],[0.5,0.2][::-1],["DATA PHYSICAL:\n"+l_data,'DATA OS\nbias = %0.1f e-\n$\sigma$ = %0.1f e-'%(bias,ron)][::-1]):
         ax.semilogy(bin_center, np.convolve(n,np.ones(n_conv)/n_conv,mode='same'),'k:',alpha=alpha,  label=l)
     n=ns[0]
-    model =            10**EMCCD(    bin_center,bias, ron, gain, flux, sCIC=0,smearing=0)
+    model =            10**EMCCD(    bin_center,bias, ron*conversion_gain, gain*conversion_gain, flux, sCIC=0,smearing=0)
     # model2 =            10**EMCCD(    bin_center,bias, ron, table['Gain2'], table['Flux2'], sCIC=0,smearing=0)
-    model_stochastic = 10**EMCCDhist(bin_center,bias, ron, gain, flux,sCIC=0,smearing=0)
-    model_low = 10**EMCCD(bin_center,bias, ron, f*gain, flux/f,sCIC=0,smearing=0)
-    model_high = 10**EMCCD(bin_center,bias, ron, gain/f, flux*f,sCIC=0,smearing=0)
-    constant = 1#np.nanmax(n)/np.nanmax(model)
-    constant_stochastic  = 1#np.nanmax(n)/np.nanmax(model_stochastic)
+    model_stochastic = 10**EMCCDhist(bin_center,bias, ron*conversion_gain, gain*conversion_gain, flux,sCIC=0,smearing=0)
+    # model_low = 10**EMCCD(bin_center,bias, ron, f*gain, flux/f,sCIC=0,smearing=0)
+    # model_high = 10**EMCCD(bin_center,bias, ron, gain/f, flux*f,sCIC=0,smearing=0)
+    # constant = 1#np.nanmax(n)/np.nanmax(model)
+    # constant_stochastic  = 1#np.nanmax(n)/np.nanmax(model_stochastic)
     CIC_min=0.005
-    model_to_fit =            lambda bin_center, EmGain,flux: EMCCD(    bin_center,bias,ron,EmGain,flux,0,CIC_min)+np.log10(constant)
-    model_to_fit_os =            lambda bin_center, EmGain,cic: EMCCD(    bin_center,bias,ron,EmGain,0,smearing,cic)+np.log10(constant)
-    model_to_fits =             lambda bin_center, EmGain,cic: EMCCDhist(    bin_center,bias,ron,EmGain,0,smearing,cic)+np.log10(constant_stochastic)
-    model_to_fit_cic =            lambda bin_center,EmGain,flux, cic : EMCCD(    bin_center,bias,ron,EmGain,flux,0,cic)+np.log10(constant)
-    model_to_fit_all =            lambda  bin_center,  EmGain,flux, cic : EMCCD(    bin_center,bias,ron,EmGain,flux,0,cic)+np.log10(constant)
+    model_to_fit =            lambda bin_center, EmGain,flux: EMCCD(    bin_center,bias,ron*conversion_gain,EmGain*conversion_gain,flux,0,CIC_min)#+np.log10(constant)
+    model_to_fit_os =            lambda bin_center, EmGain,cic: EMCCD(    bin_center,bias,ron*conversion_gain,EmGain*conversion_gain,0,smearing,cic)#+np.log10(constant)
+    model_to_fits =             lambda bin_center, EmGain,cic: EMCCDhist(    bin_center,bias,ron*conversion_gain,EmGain*conversion_gain,0,smearing,cic)#+np.log10(constant_stochastic)
+    model_to_fit_cic =            lambda bin_center,EmGain,flux, cic : EMCCD(    bin_center,bias,ron*conversion_gain,EmGain*conversion_gain,flux,0,cic)#+np.log10(constant)
+    model_to_fit_all =            lambda  bin_center,  EmGain,flux, cic : EMCCD(    bin_center,bias,ron*conversion_gain,EmGain*conversion_gain,flux,0,cic)#+np.log10(constant)
     for i, (mask,c) in enumerate(zip(masks,colors)):
         model =  10**EMCCD(    bin_center,bias, ron,  table['Gain%i'%(i)],table['Flux%i'%(i)], sCIC=0,smearing=0)
         l_model = "Bias = %0.1f DN\n$\sigma$ = %0.1f e-\nEMg = %0.1f e/e\nCIC=%0.3fe-" % (bias,ron,  table['Gain%i'%(i)],table['Flux%i'%(i)] )
-        # a =  PlotFit1D(bin_center[mask & (n>0)],np.log10(value[mask & (n>0)]),deg=1, plot_=False)
-        # ax.semilogy(bin_center, 10**a['function'](bin_center), "-",c=c, label="Model (from slope):\n"+l_model)
-        # a =  PlotFit1D(bin_center[(bin_center>1500) ],value[(bin_center>1500)],deg='exp', plot_=False,P0=[30,1000,0])#lambda x,a,b:b*np.exp(-a*x)
-        # ax.semilogy(bin_center, a['function'](bin_center,*a['popt']), "-",c='k',label=a['popt'][1]/conversion_gain)
-        # ax.semilogy(bin_center[masks[i]], 10+5*(i+1)*np.ones(len(bin_center[masks[i]])), '-',c=c)#, label="Mask %i"%(i+1))
-
-    # ax.semilogy(bin_center[masks[1]], 5*np.ones(len(bin_center[masks[1]])), "k-")#, label="Mask %i"%(i+1))
     mask = (bin_center>bias-ron)&(bin_center<np.nanpercentile(im,99.9))&(n>0)
     
     if len(bin_center[mask])==0:
@@ -157,14 +145,19 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
     p0_all=[float(table['Gain0']),float(table["TopImage"]/table['Gain0']/conversion_gain),0.01]
     if len(n[mask])>0:
         try:
-            # popt, pcov = curve_fit(model_to_fit,bin_center[mask],np.log10(n[mask]),p0=p0)
-            popt, pcov = curve_fit(model_to_fit_os,bin_center[np.isfinite(np.log10(ns[-1]))],np.log10(ns[-1][np.isfinite(np.log10(ns[-1]))]),p0=p0)
-            # popt, pcov = curve_fit(model_to_fits,bin_center[np.isfinite(np.log10(ns[-1]))],np.log10(ns[-1][np.isfinite(np.log10(ns[-1]))]),p0=p0,epsfcn=1)
+            #to fit the overscan region  use model_to_fit or model_to_fit_os depending on the level of CIC
+            # popt, pcov = curve_fit(model_to_fit,bin_center[np.isfinite(np.log10(ns[-1]))],np.log10(ns[-1][np.isfinite(np.log10(ns[-1]))]),p0=p0)
+            popt, pcov = curve_fit(model_to_fit_os,bin_center[masks[2]&np.isfinite(np.log10(ns[-1]))],np.log10(ns[-1][masks[2]&np.isfinite(np.log10(ns[-1]))]),p0=p0)
+            popt = abs(popt)
             popt_all, pcov = curve_fit(model_to_fit_all,bin_center[mask],np.log10(n[mask]),p0=p0_all)
-        except RuntimeError:
+        except (RuntimeError,ValueError) as e:
+            print(e)
+            print(bin_center[masks[0]])
             popt,popt_all = [-99,-99], [-99,-99,-99,-99]
             table['gain_ls']=popt[0]
-            # table['flux_ls']=popt[1]
+            # table['gain_ls'] =   np.max([50,np.min([table['gain_ls'],5000])])
+
+            table['flux_ls']=popt_all[1]
             table['sCIC_ls']=popt[1]
             print('%s has a probleme, only nan values\n'%(filename))
             os.system('echo %s has a probleme, only nan values\n> /tmp/a.txt'%(filename))
@@ -173,7 +166,7 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
     else:
         popt,popt_all = [-99,-99], [-99,-99,-99,-99]
         table['gain_ls']=popt[0]
-        # table['flux_ls']=popt[1]
+        table['flux_ls']=popt_all[1]
         table['sCIC_ls']=popt[1]
         os.system('echo %s has a probleme, only nan values\n> /tmp/a.txt'%(filename))
         return 
@@ -190,18 +183,14 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
 
 
     ax.semilogy(bin_center, 10**model_to_fit_os(bin_center,*popt), "b-", label="Least square:\n"+l_fit,lw=1)
-    # ax.semilogy(bin_center, 10**model_to_fits(bin_center,*popt), "b-", label="Least square:\n"+l_fit,lw=1)
-    # ax.semilogy(bin_center, 10**model_to_fits(bin_center,*popt), "b-", label="Least square:\n"+l_fit,lw=1)
-    # ax.semilogy(bin_center, 10**model_to_fit(bin_center,*change_val_list(popt,popt[1],0)), "b-", label=None,lw=1)
-    # ax.semilogy(bin_center, 10**model_to_fit_all(bin_center,*popt_all), "r:", label="Least square all:\n"+l_fit_all,lw=1)
 
-    table['gain_ls']=popt[0]
-    # table['flux_ls']=popt[1]
+    table['gain_ls']=popt[0] 
     table['sCIC_ls']=popt[1]
-    print(table['sCIC_ls'])
-    model_to_fit_stochastic = lambda bin_center, EmGain,flux : EMCCDhist(bin_center,bias,ron,EmGain,flux,smearing,np.max([0.005,abs(popt[1])]))+np.log10(constant_stochastic)
+    # print(table['sCIC_ls'])
+    model_to_fit_stochastic = lambda bin_center, EmGain,flux : EMCCDhist(bin_center,bias,ron*conversion_gain,EmGain*conversion_gain,flux,smearing,np.max([0.005,abs(popt[1])]))#+np.log10(constant_stochastic)
     popt_stoch, pcov = curve_fit(model_to_fit_stochastic,bin_center[mask],np.log10(n[mask]),p0=[popt_all[0],popt_all[1]],epsfcn=1)
-    ax.semilogy(bin_center, 10**model_to_fit_stochastic(bin_center,*popt_stoch), "r-", label="Least square:\nEMGain=%i\nF=%0.2f,"%(*popt_stoch,),lw=1)
+    popt_stoch = abs(popt_stoch)
+    ax.semilogy(bin_center, 10**model_to_fit_stochastic(bin_center,*popt_stoch), "r-", label="Least square:\nEMGain=%i\nF=%0.3f,"%(*popt_stoch,),lw=1)
 
 
     ax.legend(loc="upper right", fontsize=10,ncol=2)
@@ -209,7 +198,10 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
     ax.set_xlim(xmin=bin_center[ns[-1]>1].min(),xmax=np.nanpercentile(im,99.9))#limit+500)
     ax.tick_params(axis="x", labelsize=13)
     ax.tick_params(axis="y", labelsize=13)
-    ax.set_title('/'.join(filename.replace(".fits","").split('/')[-4:]) + "    %s-%s"%(header['TEMPDATE'],header['TEMPTIME'])) #+ 'Counts image:%0.2f'%())
+    try:
+        ax.set_title('/'.join(filename.replace(".fits","").split('/')[-4:]) + "    %s-%s"%(header['TEMPDATE'],header['TEMPTIME'])) #+ 'Counts image:%0.2f'%())
+    except KeyError:
+        pass
     plt.show()
     if save:
         fig.savefig(analysis_path + os.path.basename(filename).replace(".fits","_hist.png"))
@@ -217,14 +209,16 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
         plt.show()
         plt.close()
 
-
-
+# table['RON_os']=28
+# plot_hist(bins,[value,value_os],filename, header, table,masks=masks,ax=None,im=physical_region)
+#%%
 
 # if data is None:
 #     data = np.nan * np.ones((10,10))
 lx, ly = data.shape
 Xinf, Xsup, Yinf, Ysup = 1, -1, 1, -1
 Xinf, Xsup, Yinf, Ysup = 1120, 2100, 1300, 1900#l1, l2, 1, -1
+Xinf, Xsup, Yinf, Ysup = 1120, 1540, 10, 1960#l1, l2, 1, -1
 # Xinf, Xsup, Yinf, Ysup = l1, l2, 1, -1
 physical_region = data[Yinf:Ysup, Xinf:Xsup]
 pre_scan = data[:, 600:1000]
@@ -325,12 +319,12 @@ try:
     limit_max_os = bins_os[np.where((bins_os>bias) & ( np.convolve(value_os,np.ones(1),mode='same')==0))[0][0]]
 except IndexError:
     limit_max_os=1e6
-
-# mask_gain0 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<bins[np.where((bins>bias) & ( np.convolve(value,np.ones(1),mode='same')==0))[0][0]])
+n_conv=1
+mask_gain0 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<bins[np.where((bins>bias) & ( np.convolve(value,np.ones(n_conv),mode='same')==0))[0][0]])
 mask_gain1 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<limit_max)
 mask_gain2 = (bins>bias+6*ron_fixed) & (bins<bias+50*ron_fixed) #too dangerous, no values
 mask_gain3 = (bins>bias+6*ron_fixed) & (bins<bias+30*ron_fixed) #too dangerous, no values
-masks = [mask_gain1,mask_gain3,mask_gain2]#mask_gain0,
+masks = [mask_gain0,mask_gain1,mask_gain3,mask_gain2]#mask_gain0,
 for i, mask in enumerate(masks):
     try:
         if header['EMGAIN']==0:
@@ -354,13 +348,15 @@ for i, mask in enumerate(masks):
                 # print(table['Gain0'], table['Gain2'])
                 table['Flux%i'%(i)] =  table["TopImage"]/ table['Gain%i'%(i)] /conversion_gain
                 # table['Flux2'] =   table["TopImage"]/ table['Gain2'] /conversion_gain
+            table['Gain%i'%(i)]  =   np.max([50,np.min([table['Gain%i'%(i)] ,5000])])
+
     except IndexError as e:#(ValueError,RuntimeWarning)
         print(e)
         table['Gain%i'%(i)] = -99
         table['Gain%i'%(i)] = -99
         # table['Flux1'] = -99
         # table['Flux2'] = -99
-        a =  PlotFit1D(bin_center[(bin_center>1500) ],value[(bin_center>1500)],deg='exp', plot_=False,P0=[30,1000,0])#lambda x,a,b:b*np.exp(-a*x)
+        a =  PlotFit1D(bins[(bins>1500) ],value[(bins>1500)],deg='exp', plot_=False,P0=[30,1000,0])#lambda x,a,b:b*np.exp(-a*x)
         # ax.semilogy(bin_center, a['function'](bin_center,*a['popt']), "-",c='k',label=None)
 
 cst = 2 if float(table['EMGAIN'])>0 else 1
@@ -455,7 +451,6 @@ for i in range(3):
     table["hot_pixels_fraction_%i"%(i)] = 100 * float(np.sum(region> limit_max)) / np.sum(region > 0)
 
 np.savetxt("/tmp/xy.txt", np.array([bins, np.log10(value)]).T)
-
 if full_analysis:
     table['var_analysis'] = Column([vars_], name="var_analysis")   
     table['intensity_analysis'] = Column([ intensities], name="intensity_analysis")  

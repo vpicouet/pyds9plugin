@@ -16,7 +16,7 @@ def slit(x, amp=y.ptp() * np.array([0,1.3,1]), l=len(y) * np.array([0,1,0.2]), x
     """
     from scipy import special
     import numpy as np
-
+    l/=2
     a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
     b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
     function = amp * (a + b) / (a + b).ptp()#4 * l
@@ -99,16 +99,18 @@ def EMCCD(
     try:
         y = globals()["y"]
         n_pix = np.sum(10 ** y)
-        print('1')
+        # print('1')
     except TypeError:
         n_pix = 10 ** 6.3
-        print('2')
+        # print('2')
     n_registers = 604  # number of amplification registers
-    if bias > 1500:  # 2018
-        ConversionGain = 0.53  # Conversiongain in ADU/e-
-    else:
-        ConversionGain = 1 / 4.5  # 2022
-    ConversionGain=1
+    # if bias > 1500:  # 2018
+    #     ConversionGain = 0.53  # Conversiongain in ADU/e-
+    # else:
+    #     ConversionGain = 1 / 4.5  # 2022
+    ConversionGain= 1 #/ 4.5
+    # ConversionGain = 0.53  # C
+    # ConversionGain=1
     bin_size = np.median((x[1:] - x[:-1]))
     bins = x - np.nanmin(x)
     distributions = []
@@ -223,11 +225,12 @@ def EMCCDhist(
     from matplotlib.widgets import Button
     import numpy as np
 
-    if bias > 1500:
-        ConversionGain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
-    else:
-        ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
-
+    # if bias > 1500:
+    #     ConversionGain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
+    # else:
+    #     ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
+    ConversionGain = 1#/4.5
+    # ConversionGain = 0.53  # C
     def variable_smearing_kernels(
         image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
     ):
@@ -388,7 +391,7 @@ def smeared_slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(
     import numpy as np
     from scipy.sparse import dia_matrix
 
-
+    l/=2
     a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
     b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
     function = amp * (a + b) / (a + b).ptp()#+1#4 * l

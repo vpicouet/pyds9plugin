@@ -131,6 +131,7 @@ if "" in sys.argv:
     sys.argv.remove("")
 path = sys.argv[1:]
 HistogramSums(path=path)
+# HistogramSums(path=glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220512/EMgain_gillian_-100/220512_15H02m48/Directory_EMgain_gillian_-100/EMGAIN_9230/EXPTIME_0.0/*.fits"))
 # for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/7000/220329_18H54m27/EMGAIN_7000.0/*'):
 # for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/6800/220330_09H27m13/EMGAIN_6800/*'):
 # for folder in glob.glob('/Volumes/Vincent/FIREBall_Data/190223/lowsignalT_113/220329_17H18m24/EMGAIN_9200/*'):
@@ -144,153 +145,154 @@ HistogramSums(path=path)
 # sys.exit()
 #%%
 
+# from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist, EMCCD
 
-def EMCCDhist(
-    x,
-    bias=[1e3, 4.5e3, 1194],
-    RN=[0, 200, 53],
-    EmGain=[100, 10000, 5000],
-    flux=[0.001, 1, 0.04],
-    smearing=[0, 1, 0.01],
-    sCIC=[0, 1, 0],
-):
-    # def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000], flux=[0.001, 1,0.04], smearing=[0, 3,0.31], sCIC=[0,1,0],SmearExpDecrement=[1.5e3,1.5e5,15e4]):
-    from scipy.sparse import dia_matrix
-    import inspect
-    from astropy.table import Table
-    from matplotlib.widgets import Button
-    import numpy as np
+# def EMCCDhist(
+#     x,
+#     bias=[1e3, 4.5e3, 1194],
+#     RN=[0, 200, 53],
+#     EmGain=[100, 10000, 5000],
+#     flux=[0.001, 1, 0.04],
+#     smearing=[0, 1, 0.01],
+#     sCIC=[0, 1, 0],
+# ):
+#     # def EMCCDhist(x, bias=[1e3, 4.5e3,1194], RN=[0,200,53], EmGain=[100, 10000,5000], flux=[0.001, 1,0.04], smearing=[0, 3,0.31], sCIC=[0,1,0],SmearExpDecrement=[1.5e3,1.5e5,15e4]):
+#     from scipy.sparse import dia_matrix
+#     import inspect
+#     from astropy.table import Table
+#     from matplotlib.widgets import Button
+#     import numpy as np
 
-    if bias > 1500:
-        ConversionGain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
-    else:
-        ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
+#     if bias > 1500:
+#         ConversionGain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
+#     else:
+#         ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
 
-    # def variable_smearing_kernels(image, Smearing=1.5, SmearExpDecrement=50000):
-    #     """Creates variable smearing kernels for inversion
-    #     """
-    #     import numpy as np
-    #     n=6
-    #     smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-    #     smearing_kernels = np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length)
-    #     smearing_kernels /= smearing_kernels.sum(axis=0)
-    #     return smearing_kernels
-    def variable_smearing_kernels(
-        image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
-    ):
-        """Creates variable smearing kernels for inversion
-        """
-        import numpy as np
+#     # def variable_smearing_kernels(image, Smearing=1.5, SmearExpDecrement=50000):
+#     #     """Creates variable smearing kernels for inversion
+#     #     """
+#     #     import numpy as np
+#     #     n=6
+#     #     smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+#     #     smearing_kernels = np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length)
+#     #     smearing_kernels /= smearing_kernels.sum(axis=0)
+#     #     return smearing_kernels
+#     def variable_smearing_kernels(
+#         image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
+#     ):
+#         """Creates variable smearing kernels for inversion
+#         """
+#         import numpy as np
 
-        n = 15
-        smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-        if type_ == "exp":
-            smearing_kernels = np.exp(
-                -np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length
-            )
-        else:
-            assert 0 <= Smearing <= 1
-            smearing_kernels = np.power(Smearing, np.arange(n))[
-                :, np.newaxis, np.newaxis
-            ] / np.ones(smearing_length.shape)
-        smearing_kernels /= smearing_kernels.sum(axis=0)
-        return smearing_kernels
+#         n = 15
+#         smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+#         if type_ == "exp":
+#             smearing_kernels = np.exp(
+#                 -np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length
+#             )
+#         else:
+#             assert 0 <= Smearing <= 1
+#             smearing_kernels = np.power(Smearing, np.arange(n))[
+#                 :, np.newaxis, np.newaxis
+#             ] / np.ones(smearing_length.shape)
+#         smearing_kernels /= smearing_kernels.sum(axis=0)
+#         return smearing_kernels
 
-    def simulate_fireball_emccd_hist(
-        x,
-        ConversionGain,
-        EmGain,
-        Bias,
-        RN,
-        Smearing,
-        SmearExpDecrement,
-        n_registers,
-        flux,
-        sCIC=0,
-    ):
-        """Silumate EMCCD histogram
-        """
-        import numpy as np
+#     def simulate_fireball_emccd_hist(
+#         x,
+#         ConversionGain,
+#         EmGain,
+#         Bias,
+#         RN,
+#         Smearing,
+#         SmearExpDecrement,
+#         n_registers,
+#         flux,
+#         sCIC=0,
+#     ):
+#         """Silumate EMCCD histogram
+#         """
+#         import numpy as np
 
-        try:
-            y = globals()["y"]
-            # print('len y=',len(y))
-            # print(' y=',y[y>1])
-            # print('sum',np.nansum(y[np.isfinite(y)]))
-            n_pix = np.nansum(10 ** y[np.isfinite(10 ** y)])  # 1e6#
-            # print("global", np.sum(10 ** y), n_pix)
-        except TypeError:
-            n_pix = 10 ** 6.3
-            # print("fixed", np.sum(10 ** y), n_pix)
-        n = 1
-        # print('npix', n_pix)
-        im = np.zeros(int(n_pix))  #
-        im = np.zeros((1000, int(n_pix / 1000)))
-        # im = np.zeros((1000,10+1))
-        # factor = 1#np.log(2)
-        # EmGain *= factor
-        # imaADU = np.random.gamma(flux, EmGain, size=im.shape)
-        # print(np.max([flux,0]),flux,EmGain)
-        imaADU = np.random.gamma(
-            np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain)
-        )
-        # Add pCIC (no interest, as flux)
-        # imaADU[np.random.rand(size[1],size[0]) <  p_pCIC] += 1
+#         try:
+#             y = globals()["y"]
+#             # print('len y=',len(y))
+#             # print(' y=',y[y>1])
+#             # print('sum',np.nansum(y[np.isfinite(y)]))
+#             n_pix = np.nansum(10 ** y[np.isfinite(10 ** y)])  # 1e6#
+#             # print("global", np.sum(10 ** y), n_pix)
+#         except TypeError:
+#             n_pix = 10 ** 6.3
+#             # print("fixed", np.sum(10 ** y), n_pix)
+#         n = 1
+#         # print('npix', n_pix)
+#         im = np.zeros(int(n_pix))  #
+#         im = np.zeros((1000, int(n_pix / 1000)))
+#         # im = np.zeros((1000,10+1))
+#         # factor = 1#np.log(2)
+#         # EmGain *= factor
+#         # imaADU = np.random.gamma(flux, EmGain, size=im.shape)
+#         # print(np.max([flux,0]),flux,EmGain)
+#         imaADU = np.random.gamma(
+#             np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain)
+#         )
+#         # Add pCIC (no interest, as flux)
+#         # imaADU[np.random.rand(size[1],size[0]) <  p_pCIC] += 1
 
-        # pixels in which sCIC electron might appear
-        p_sCIC = sCIC  # / np.mean(
-        #     1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
-        # )
-        # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
+#         # pixels in which sCIC electron might appear
+#         p_sCIC = sCIC  # / np.mean(
+#         #     1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
+#         # )
+#         # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
 
-        id_scic = np.random.rand(im.shape[0], im.shape[1]) < p_sCIC
-        print(id_scic.sum() / id_scic.size)
-        # sCIC  # sCIC positions
-        # np.random.rand(im.shape[0])< p_sCIC
-        # stage of the EM register at which each sCIC e- appear
-        register = np.random.randint(1, n_registers, size=id_scic.sum())
-        # Compute and add the partial amplification for each sCIC pixel
-        imaADU[id_scic] += np.random.exponential(
-            np.power(EmGain, register / n_registers)
-        )
-        imaADU *= ConversionGain
+#         id_scic = np.random.rand(im.shape[0], im.shape[1]) < p_sCIC
+#         print(id_scic.sum() / id_scic.size)
+#         # sCIC  # sCIC positions
+#         # np.random.rand(im.shape[0])< p_sCIC
+#         # stage of the EM register at which each sCIC e- appear
+#         register = np.random.randint(1, n_registers, size=id_scic.sum())
+#         # Compute and add the partial amplification for each sCIC pixel
+#         imaADU[id_scic] += np.random.exponential(
+#             np.power(EmGain, register / n_registers)
+#         )
+#         imaADU *= ConversionGain
 
-        if Smearing > 0:
-            smearing_kernels = variable_smearing_kernels(
-                imaADU, Smearing, SmearExpDecrement
-            )
-            offsets = np.arange(6)
-            A = dia_matrix(
-                (smearing_kernels.reshape((6, -1)), offsets),
-                shape=(imaADU.size, imaADU.size),
-            )
-            imaADU = A.dot(imaADU.ravel()).reshape(imaADU.shape)
-        read_noise = np.random.normal(0, abs(RN * ConversionGain), size=im.shape)
-        imaADU += Bias
-        imaADU += read_noise
-        range = [np.nanmin(x), np.nanmax(x)]
-        # n, bins = np.histogram(imaADU.flatten(), range=range, bins=len(x))
-        # print(x)
-        n, bins = np.histogram(imaADU.flatten(), bins=[x[0] - 1] + list(x))
-        n_conv = 1
-        return np.convolve(n, np.ones(n_conv) / n_conv, mode="same")
+#         if Smearing > 0:
+#             smearing_kernels = variable_smearing_kernels(
+#                 imaADU, Smearing, SmearExpDecrement
+#             )
+#             offsets = np.arange(6)
+#             A = dia_matrix(
+#                 (smearing_kernels.reshape((6, -1)), offsets),
+#                 shape=(imaADU.size, imaADU.size),
+#             )
+#             imaADU = A.dot(imaADU.ravel()).reshape(imaADU.shape)
+#         read_noise = np.random.normal(0, abs(RN * ConversionGain), size=im.shape)
+#         imaADU += Bias
+#         imaADU += read_noise
+#         range = [np.nanmin(x), np.nanmax(x)]
+#         # n, bins = np.histogram(imaADU.flatten(), range=range, bins=len(x))
+#         # print(x)
+#         n, bins = np.histogram(imaADU.flatten(), bins=[x[0] - 1] + list(x))
+#         n_conv = 1
+#         return np.convolve(n, np.ones(n_conv) / n_conv, mode="same")
 
-    y = simulate_fireball_emccd_hist(
-        x=x,
-        ConversionGain=ConversionGain,  # 0.53,
-        EmGain=EmGain,
-        Bias=bias,
-        RN=RN,
-        Smearing=smearing,
-        SmearExpDecrement=1e4,  # 1e4,  # 1e5 #2022=1e5, 2018=1e4...
-        n_registers=604,
-        flux=flux,
-        sCIC=sCIC,
-    )
-    y[y == 0] = 1
-    y /= x[1] - x[0]
-    # print("len(y)", np.sum(y))
-    return np.log10(y)
+#     y = simulate_fireball_emccd_hist(
+#         x=x,
+#         ConversionGain=ConversionGain,  # 0.53,
+#         EmGain=EmGain,
+#         Bias=bias,
+#         RN=RN,
+#         Smearing=smearing,
+#         SmearExpDecrement=1e4,  # 1e4,  # 1e5 #2022=1e5, 2018=1e4...
+#         n_registers=604,
+#         flux=flux,
+#         sCIC=sCIC,
+#     )
+#     y[y == 0] = 1
+#     y /= x[1] - x[0]
+#     # print("len(y)", np.sum(y))
+#     return np.log10(y)
 
 
 plot(

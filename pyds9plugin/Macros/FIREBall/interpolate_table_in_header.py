@@ -50,10 +50,10 @@ def RetrieveTimeFormat(time):
 
 # catalog, Field, timediff, timeformatImage, timeformatCat, filename = "/Users/Vincent/Downloads/Safari/alltemps-4.csv",  "time", 7 ,'%Y-%m-%d %H:%M:%S.%f', "%m/%d/%y %H:%M:%S",  "/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/20220430/image_00000*.fits"
 
-catalog = get(d, 'Catalog to interpolate tada from', exit_=True)
+catalog = get(d, 'Catalog to interpolate data from', exit_=True)
 timediff = int(get(d, 'Time difference', exit_=True))
 if yesno(d, "Do you want to run this on all the folder images"):
-    filename = os.path.dirname(filename) + '/image*.fits'
+    filename = os.path.dirname(filename) + '/image_*.fits'
 
 timeformatCat, timeformatImage = "-", "-"
 # print("Field, catalog, timediff, formatImage, formatCat =", Field, catalog, timediff, timeformatImage, timeformatCat)
@@ -75,6 +75,7 @@ TimeFieldCat = FindTimeField(cat.colnames)
 if (timeformatCat == "-") or (timeformatCat == "'-'"):
     timeformatCat = RetrieveTimeFormat(cat[TimeFieldCat][0])
 cat['timestamp'] =[ datetime.datetime.strptime(d, timeformatCat) for d in cat[TimeFieldCat]]#.timestamp()
+
 
 cat = AddTimeSec(cat, TUtimename=TimeFieldCat, NewTime_s="DATE_s", timeformat=timeformatCat)
 cat.sort("DATE_s")
@@ -102,6 +103,9 @@ if plot_:
 # y = y[index]
 # FieldInterp = interpolate.interp1d(t, np.array(y), kind="linear")
 
+
+
+
 for filename in path:
     verboseprint(filename)
     header = fits.getheader(filename)
@@ -120,6 +124,10 @@ for filename in path:
     #     value = -999
     #     # plt.plot(datetime.datetime.strptime(header[TimeFieldImage], timeformatImage), np.nanmean(yy), "P", c="black")  # , label='Images out of interpoalation range: -999')
     # value = np.round(value, 12)
+
+
+
+
     if "NAXIS3" in header:
         fits.delval(filename, "NAXIS3")
         verboseprint("2D array: Removing NAXIS3 from header...")
