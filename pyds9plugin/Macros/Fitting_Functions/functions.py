@@ -6,9 +6,10 @@ import numpy as np
 
 try:
     x, y = np.loadtxt("/tmp/xy.txt").T
+    # x, y =  np.array(x), np.array(y)
     # print(np.log10(np.sum(10**y)))
 except OSError:
-    x, y = [0, 1], [0, 1]
+    x, y = np.array([0, 1]), np.array([0, 1])
 
 
 def slit(x, amp=y.ptp() * np.array([0,1.3,1]), l=len(y) * np.array([0,1,0.2]), x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,35,2], offset=np.array([np.nanmin(y),np.nanmax(y),np.nanmin(y)])):
