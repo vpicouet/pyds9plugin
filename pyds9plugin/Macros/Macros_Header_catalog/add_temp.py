@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 # table['median'] = np.nanmedian(fitsfile[0].data) if  fitsfile[0].data is not None else np.nan
 from astropy.table import Table, Column
+
 # import re
 import numpy as np
+
 # from pyds9plugin.DS9Utils import *#DS9n,PlotFit1D
 # from pyds9plugin.DS9Utils import blockshaped
 # from astropy.table import Column
@@ -13,90 +15,22 @@ import numpy as np
 # import matplotlib.pyplot as plt
 # import matplotlib
 import datetime
+from pyds9plugin.Macros.FIREBall.old.merge_temp import give_value_from_time
 
 
-# if (int(re.findall('[0-9]+',filename)[-1])>16) &  (int(re.findall('[0-9]+',filename)[-1])<23):
-#     table['CLEAN']=False
-# else:
-#     table['CLEAN']=True
-
-
-def FindTimeField(liste):
-    timestamps = ["Datation GPS","CreationTime_ISO8601", "date", "Date", "Time", "Date_TU", "UT Time", "Date_Time", "Time UT","DATETIME"]
-    timestamps_final = [field.upper() for field in timestamps] + [field.lower() for field in timestamps] + timestamps
-    try:
-        timestamps_final.remove("date")
-    except ValueError:
-        pass
-    for timename in timestamps_final:
-        if timename in liste:  # table.colnames:
-            timefield = timename
-    try:
-        print("Time field found : ", timefield)
-        return timefield
-    except UnboundLocalError as e:
-        print(e)
-        return "DATETIME"#liste[0]  # table.colnames[0]
-
-
-
-
-
-def give_value_from_time(cat, date_time, date_time_field=None, timeformatImage=None,  TimeFieldCat=None,timeformatCat=None,columns=None,timediff=0):
-    import numpy as np
-
-    def RetrieveTimeFormat(time):
-        formats = ["%d/%m/%Y %H:%M:%S.%f", '%Y-%m-%d %H:%M:%S.%f',"%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%m/%d/%Y %H:%M:%S", "%m/%d/%y %H:%M:%S"]
-        form = []
-        for formati in formats:
-            try:
-                # print(time)
-                datetime.datetime.strptime(time, formati)
-                form.append(True)
-            except ValueError:
-                form.append(False)
-        return formats[np.argmax(form)]
-    if TimeFieldCat is None:
-        TimeFieldCat = FindTimeField(cat.colnames)
-    if timeformatCat is None:
-        timeformatCat = RetrieveTimeFormat(cat[TimeFieldCat][0])
-    if date_time_field is None:
-        date_time_field = FindTimeField(date_time.colnames)
-    # print(cat[TimeFieldCat])
-    cat = cat[~np.ma.is_masked(cat[TimeFieldCat])]
-    cat['timestamp'] = [datetime.datetime.strptime(d, timeformatCat) for d in cat[TimeFieldCat]]  # .timestamp()
-    if timeformatImage is None:
-        timeformatImage = RetrieveTimeFormat(date_time[date_time_field][0])
-    # print("%s: %s is %s"%(date_time_field,date_time[date_time_field][0], timeformatImage))
-    # print("%s: %s is %s"%(TimeFieldCat,cat[TimeFieldCat][0], timeformatCat))
-
-    if columns is None:
-        columns = cat.colnames
-        columns.remove(TimeFieldCat)
-        columns.remove('timestamp')
-    for i, column in enumerate(columns):
-        date_time[column]=np.nan
-    for j, line in enumerate(date_time):
-        timestamp_image = datetime.datetime.strptime(date_time[date_time_field][j], timeformatImage)
-        for i, column in enumerate(columns):
-            mask = np.isfinite(cat[column])#.mask
-            try:
-                temp = cat[column][mask][np.argmin(abs(cat[mask]['timestamp']+ datetime.timedelta(hours=timediff)-timestamp_image))]
-                # print(date_time[col][j])
-                date_time[column][j]=temp
-            except ValueError:
-                pass
-            # print(date_time[column])
-            
-        # print(temp, type(temp))
-    return date_time
-temp_file = "/Users/Vincent/Github/pyds9plugin-doc/site/temperatures/alltemps.csv"#os.path.dirname(os.path.dirname(filename))+"/alltemps.csv"
+temp_file = "/Users/Vincent/Github/pyds9plugin-doc/site/temperatures/alltemps.csv"  # os.path.dirname(os.path.dirname(filename))+"/alltemps.csv"
 # if os.path.isfile(temp_file):
 cat = Table.read(temp_file)
-table['datime_time'] = str(table['OBSDATE'][0]) + \
-    " " + str(table['OBSTIME'][0])
-print(table['datime_time'])
-table = give_value_from_time(cat, date_time=table, timediff=0, columns=None, date_time_field="datime_time",TimeFieldCat='time')
+table["datime_time"] = str(table["OBSDATE"][0]) + " " + str(table["OBSTIME"][0])
+print(table["datime_time"])
+table = give_value_from_time(
+    cat,
+    date_time=table,
+    timediff=0,
+    columns=None,
+    date_time_field="datime_time",
+    TimeFieldCat="time",
+)
 
 
 # SATURATION = 2 ** 16 -1
@@ -114,21 +48,10 @@ table = give_value_from_time(cat, date_time=table, timediff=0, columns=None, dat
 # table['image'] = Column([data[915:987,1176:1267]], name="twoD_std")
 
 
-
-
-
-
-
-
-
-
-
-
 # np.seterr(divide = 'ignore')
 # full_analysis = False
 # Plot = False
 # # if Plot:
-
 
 
 # if ('FIREBall.py' in __file__) or (function=='execute_command'):
@@ -154,7 +77,6 @@ table = give_value_from_time(cat, date_time=table, timediff=0, columns=None, dat
 #     os.mkdir(analysis_path) #kills the jobs return none!!
 
 
-
 # data = fitsfile[0].data
 # header = fitsfile[0].header
 # try:
@@ -177,9 +99,6 @@ table = give_value_from_time(cat, date_time=table, timediff=0, columns=None, dat
 #     smearing=0.5
 
 
-
-
-
 # def create_cubsets(table, header):
 #     try:
 #         table['EXPOSURE==0'] = header['EXPOSURE']==0
@@ -187,7 +106,6 @@ table = give_value_from_time(cat, date_time=table, timediff=0, columns=None, dat
 #     except KeyError:
 #         pass
 #     return table
-
 
 
 # lx, ly = data.shape
@@ -324,7 +242,6 @@ table = give_value_from_time(cat, date_time=table, timediff=0, columns=None, dat
 #     np.savetxt("/tmp/varintens.dat", np.array([intensities,vars_]).T)
 
 
-
 # # table['sCIC_OS'] = (table['post_scan'] - table['pre_scan'] )/ table['Gain0'] /conversion_gain
 
 # n=20
@@ -335,8 +252,6 @@ table = give_value_from_time(cat, date_time=table, timediff=0, columns=None, dat
 # table['fft_var'] = np.var(fft)
 # table['fft_mean'] = np.mean(fft)
 # table['fft_median'] = np.median(fft)
-
-
 
 
 # x_correlation = np.zeros(image_center_01.shape)

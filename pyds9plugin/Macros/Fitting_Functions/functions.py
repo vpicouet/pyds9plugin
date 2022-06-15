@@ -1,3 +1,5 @@
+#%%
+
 # Function used to fit some DS9 plots
 # Please be sure to define a list as default parameters for each arguments
 # as they will be used to define the lower and upper bounds of each widget.
@@ -11,17 +13,115 @@ try:
 except OSError:
     x, y = np.array([0, 1]), np.array([0, 1])
 
+#%%
 
-def slit(x, amp=y.ptp() * np.array([0,1.3,1]), l=len(y) * np.array([0,1,0.2]), x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,35,2], offset=np.array([np.nanmin(y),np.nanmax(y),np.nanmin(y)])):
+
+def slit(
+    x,
+    amp=y.ptp() * np.array([0, 1.3, 1]),
+    l=len(y) * np.array([0, 1, 0.2]),
+    x0=len(y) * np.array([0, 1, 0.5]),
+    FWHM=[0.1, 35, 2],
+    offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
+):
     """Convolution of a box with a gaussian
     """
     from scipy import special
     import numpy as np
-    l/=2
-    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
-    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
-    function = amp * (a + b) / (a + b).ptp()#4 * l
-    return  function + offset
+
+    l /= 2
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    function = amp * (a + b) / (a + b).ptp()  # 4 * l
+    return function + offset
+
+
+#%%
+
+
+def slit_astigmatism(
+    x,
+    amp=y.ptp() * np.array([0, 1.3, 1]),
+    l=len(y) * np.array([0, 1, 0.2]),
+    x0=len(y) * np.array([0, 1, 0.5]),
+    FWHM=[0.1, 35, 2],
+    astigm=[0, 50, 2],
+    offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
+):
+    """Convolution of a box with a gaussian
+    """
+    from scipy import special
+    import numpy as np
+    from scipy import signal
+
+    l /= 2
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    function = amp * (a + b) / (a + b).ptp()  # 4 * l
+    astigm = int(astigm)
+    if astigm > 1:
+        triang = signal.triang(astigm) / signal.triang(astigm).sum()
+        function = np.convolve(function, triang, mode="same")
+    return function + offset
+
+
+def moffat_profile(
+    x,
+    amp=y.ptp() * np.array([0, 1.3, 1]),
+    σ=[0.01, 50, 4],
+    alpha=[0, 10, 2.5],
+    offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
+):
+    """1D moffat function
+    """
+    import numpy as np
+
+    x0 = 0
+    return amp * np.power((1 + np.square((x - x0) / σ)), -alpha) + offset
+
+
+def gaussian_profile(
+    x,
+    amp=y.ptp() * np.array([0, 1.3, 1]),
+    FWHM=[0.01, 50, 2],
+    offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
+):
+    FWHM /= 2.35
+    return offset + amp * np.exp(-np.square(x / FWHM) / 2)
+
+
+def fiber_radial_profile(
+    r,
+    amp=y.ptp() * np.array([0, 1.3, 1]),
+    rad_fiber=[0, 30, 5],
+    FWHM=[0.01, 50, 2],
+    offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
+):
+    """Convolution of a disk with a gaussian to simulate the image of a fiber
+    """
+    from scipy.integrate import quad
+    from scipy import special
+    import numpy as np
+
+    FWHM /= 2.35
+    integrand = (
+        lambda eta, r_: special.iv(0, r_ * eta / np.square(FWHM))
+        * eta
+        * np.exp(-np.square(eta) / (2 * np.square(FWHM)))
+    )
+    integ = [
+        quad(integrand, 0, rad_fiber, args=(r_,))[0]
+        * np.exp(-np.square(r_) / (2 * np.square(FWHM)))
+        / (np.pi * np.square(rad_fiber * FWHM))
+        for r_ in r
+    ]
+    integ = np.array(integ) / np.max(integ)
+    return offset + amp * integ
+
+
+# plt.plot(fiber_radial_profile(np.linspace(0,15,100),1,2,3,0))
+
+#%%
 
 
 def gaussian(x, a=[0, 100], xo=[0, 100], sigma=[0, 10]):
@@ -109,7 +209,7 @@ def EMCCD(
     #     ConversionGain = 0.53  # Conversiongain in ADU/e-
     # else:
     #     ConversionGain = 1 / 4.5  # 2022
-    ConversionGain= 1 #/ 4.5
+    ConversionGain = 1  # / 4.5
     # ConversionGain = 0.53  # C
     # ConversionGain=1
     bin_size = np.median((x[1:] - x[:-1]))
@@ -201,7 +301,6 @@ def EMCCD(
     return np.log10(y)
 
 
-
 def EMCCDhist(
     x,
     bias=[1e3, 4.5e3, 1194],
@@ -230,7 +329,7 @@ def EMCCDhist(
     #     ConversionGain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
     # else:
     #     ConversionGain = 1 / 4.5  # ADU/e-  0.53 in 2018
-    ConversionGain = 1#/4.5
+    ConversionGain = 1  # /4.5
     # ConversionGain = 0.53  # C
     def variable_smearing_kernels(
         image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
@@ -252,6 +351,7 @@ def EMCCDhist(
             ] / np.ones(smearing_length.shape)
         smearing_kernels /= smearing_kernels.sum(axis=0)
         return smearing_kernels
+
     def simulate_fireball_emccd_hist(
         x,
         ConversionGain,
@@ -342,11 +442,15 @@ def variable_smearing_kernels(
     smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
     # smearing_length = Smearing * np.ones(image.shape)#np.exp(-image / SmearExpDecrement)
     if type_ == "exp":
-        smearing_kernels = ratio*np.exp(
-            -np.arange(n)[::int(np.sign(smearing_length[0])), np.newaxis, np.newaxis] / abs(smearing_length)
-        )
-        if ratio!=1:
-            smearing_kernels[0,:,:] = 1
+        try:
+            x = np.arange(n)[
+                :: int(np.sign(smearing_length[0])), np.newaxis, np.newaxis
+            ]
+        except ValueError:
+            x = np.arange(n)[:, np.newaxis, np.newaxis]
+        smearing_kernels = ratio * np.exp(-x / abs(smearing_length))
+        if ratio != 1:
+            smearing_kernels[0, :, :] = 1
         # smearing_kernels = amp*np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / abs(smearing_length))
         # smearing_kernels[0,:,:] = 1
 
@@ -359,21 +463,27 @@ def variable_smearing_kernels(
     return smearing_kernels
 
 
-
-def smeared_slit_ratio(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1]),Smearing=[-5,5,0.8],ratio=[0.01,1,0.9]):#,SmearExpDecrement=[1,500000,40000]):
+def smeared_slit_ratio(
+    x,
+    amp=y.ptp() * np.array([0.7, 1.3, 1]),
+    l=[0, len(y), 4],
+    x0=len(y) * np.array([0, 1, 0.5]),
+    FWHM=[0.1, 10, 2],
+    offset=np.nanmin(y) * np.array([0.5, 3, 1]),
+    Smearing=[-5, 5, 0.8],
+    ratio=[0.01, 1, 0.9],
+):  # ,SmearExpDecrement=[1,500000,40000]):
     """Convolution of a box with a gaussian
     """
     from scipy import special
     import numpy as np
     from scipy.sparse import dia_matrix
 
-
-    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
-    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
-    function = amp * (a + b) / (a + b).ptp()#+1#4 * l
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    function = amp * (a + b) / (a + b).ptp()  # +1#4 * l
     # function = np.vstack((function,function)).T
-    smearing_kernels = variable_smearing_kernels(
-        function, Smearing, ratio=ratio)
+    smearing_kernels = variable_smearing_kernels(function, Smearing, ratio=ratio)
     n = smearing_kernels.shape[0]
     # print(smearing_kernels.sum(axis=1))
     # print(smearing_kernels.sum(axis=1))
@@ -383,22 +493,34 @@ def smeared_slit_ratio(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x
     )
     function = A.dot(function.ravel()).reshape(function.shape)
     # function = np.mean(function,axis=1)
-    return  function + offset
+    return function + offset
 
-def smeared_slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(y) * np.array([0,1,0.5]), FWHM=[0.1,10,2], offset=np.nanmin(y)*np.array([0.5,3,1]),Smearing=[-5,5,0.8]):
+
+def smeared_slit(
+    x,
+    amp=y.ptp() * np.array([0.7, 1.3, 1]),
+    l=[0.1, len(y), 4],
+    x0=len(y) * np.array([0, 1, 0.5]),
+    FWHM=[0.1, 10, 2],
+    offset=np.nanmin(y) * np.array([0.5, 3, 1]),
+    Smearing=[-5, 5, 0.8],
+):
     """Convolution of a box with a gaussian
     """
     from scipy import special
     import numpy as np
     from scipy.sparse import dia_matrix
 
-    l/=2
-    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
-    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM/2.35)**2))
-    function = amp * (a + b) / (a + b).ptp()#+1#4 * l
+    if Smearing < 0:
+        x0 += 14
+    l /= 2
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    function = amp * (a + b) / (a + b).ptp()  # +1#4 * l
     # function = np.vstack((function,function)).T
     smearing_kernels = variable_smearing_kernels(
-        function, Smearing, SmearExpDecrement=50000)
+        function, Smearing, SmearExpDecrement=50000
+    )
     n = smearing_kernels.shape[0]
     # print(smearing_kernels.sum(axis=1))
     # print(smearing_kernels.sum(axis=1))
@@ -408,4 +530,48 @@ def smeared_slit(x, amp=y.ptp() * np.array([0.7,1.3,1]), l=[0,len(y),4], x0=len(
     )
     function = A.dot(function.ravel()).reshape(function.shape)
     # function = np.mean(function,axis=1)
-    return  function + offset
+    return function + offset
+
+
+def smeared_slit_astigm(
+    x,
+    amp=y.ptp() * np.array([0.7, 1.3, 1]),
+    l=[0.1, len(y), 4],
+    x0=len(y) * np.array([0, 1, 0.5]),
+    FWHM=[0.1, 10, 2],
+    offset=np.nanmin(y) * np.array([0.5, 3, 1]),
+    astigm=[0.1, 30, 2],
+    Smearing=[-5, 5, 0.8],
+):
+    """Convolution of a box with a gaussian
+    """
+    from scipy import special
+    import numpy as np
+    from scipy.sparse import dia_matrix
+    from scipy import signal
+
+    l /= 2
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    function = amp * (a + b) / (a + b).ptp()  # +1#4 * l
+    astigm = int(astigm)
+    if astigm > 1:
+        triang = signal.triang(astigm) / signal.triang(astigm).sum()
+        function = np.convolve(function, triang, mode="same")
+
+    # function = np.vstack((function,function)).T
+    smearing_kernels = variable_smearing_kernels(
+        function, Smearing, SmearExpDecrement=50000
+    )
+    n = smearing_kernels.shape[0]
+    # print(smearing_kernels.sum(axis=1))
+    # print(smearing_kernels.sum(axis=1))
+    A = dia_matrix(
+        (smearing_kernels.reshape((n, -1)), np.arange(n)),
+        shape=(function.size, function.size),
+    )
+    function = A.dot(function.ravel()).reshape(function.shape)
+    # function = np.mean(function,axis=1)
+
+    return function + offset
+

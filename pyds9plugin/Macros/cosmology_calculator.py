@@ -6,9 +6,8 @@ def cosmology_calculator(xpapoint=None, argv=[]):
     """
     # from dataphile.graphics.widgets import Slider
 
-    from matplotlib.widgets import Slider
     import numpy as np
-
+    from matplotlib.widgets import Slider
 
     cosmology, redshift, H0, Omega_m, Ode0, uncertainty = (
         "LambdaCDM",
@@ -46,7 +45,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         param, uncertainty = uncertainty.split(":")
         uncertainty = float(uncertainty)
         cosmo = cosmol(H0=H0, Om0=Omega_m, Ode0=Ode0)
-        #verboseprint("param, uncertainty = ", param, uncertainty)
+        # verboseprint("param, uncertainty = ", param, uncertainty)
         if param.lower() == "h0":
             cosmo1 = cosmol(H0=H0 * (1 - 0.01 * uncertainty), Om0=Omega_m, Ode0=Ode0)
             cosmo2 = cosmol(H0=H0 * (1 + 0.01 * uncertainty), Om0=Omega_m, Ode0=Ode0)
@@ -61,8 +60,8 @@ def cosmology_calculator(xpapoint=None, argv=[]):
 
         cosmo = default_cosmology.get()
         cosmo1 = cosmo2 = cosmo
-        #verboseprint(cosmo1)
-        #verboseprint(cosmo2)
+        # verboseprint(cosmo1)
+        # verboseprint(cosmo2)
     # TODO make it quicker
     info = {}
     info["luminosity_distance"] = cosmo.luminosity_distance(redshift)
@@ -94,7 +93,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         # location=[0.1, 0.14 - a, 0.8, 0.03],
         ax=plt.axes([0.1, 0.14 - a, 0.8, 0.03], facecolor="None"),
         valmin=0,
-        valmax = 6, 
+        valmax=6,
         label="z",
         # bounds=(0, 5),
         # value=redshift,
@@ -118,7 +117,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         # init_value=Omega_m,
         ax=plt.axes([0.1, 0.10 - a, 0.8, 0.03], facecolor="None"),
         valmin=0,
-        valmax = 1, 
+        valmax=1,
     )
     Ode0_ = Slider(
         figure=fig,
@@ -128,7 +127,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         # init_value=Ode0,
         ax=plt.axes([0.1, 0.08 - a, 0.8, 0.03], facecolor="None"),
         valmin=0,
-        valmax = 1, 
+        valmax=1,
     )
 
     t = "U4"
@@ -542,7 +541,8 @@ def cosmology_calculator(xpapoint=None, argv=[]):
     plt.show()
 
     # for key in info.keys():
-        #verboseprint("%s : %s" % (key, info[key]))
+    # verboseprint("%s : %s" % (key, info[key]))
     return
+
 
 cosmology_calculator()

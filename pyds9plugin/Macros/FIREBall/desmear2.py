@@ -5,11 +5,11 @@ import numpy as np
 import os
 
 # indata = data_dir+'image_CR_cube_6.fits', img_area, 'nmad', '6'
-# filename='/Users/Vincent/Downloads/Safari/image_cube_1.fits'
+filename='/Users/Vincent/Downloads/Safari/image_cube_1.fits'
 d=DS9n()
-filename=get_filename(d)
+# filename=get_filename(d)
 image_cube, img_area, method, threshold = filename, [1100,1900,1300,1600], 'nmad', '5.0'
-image_cube, img_area, method, threshold = filename, [0,1000,0,1000], 'mad', '5.0'
+# image_cube, img_area, method, threshold = filename, [0,1000,0,1000], 'mad', '5.0'
 # Read data from FITS image
 try:
     img_data,header = fits.getdata(image_cube,header=True)

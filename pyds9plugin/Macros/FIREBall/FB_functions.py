@@ -51,15 +51,15 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         fitsim = fits.open(name)[0]
         header = fitsim.header
         data = fitsim.data
-        if len(data.shape)==3:
-            im = data[0,Yinf:Ysup, Xinf:Xsup]
-            os = data[0,Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
+        if len(data.shape) == 3:
+            im = data[0, Yinf:Ysup, Xinf:Xsup]
+            os = data[0, Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
         else:
             im = data[Yinf:Ysup, Xinf:Xsup]
             os = data[Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
         median_im = np.nanmedian(im)
         min_, max_ = (np.nanpercentile(os, 0.4), np.nanpercentile(im, 99.8))
-        print( min_, max_)
+        print(min_, max_)
         val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1))
         val_os, bins_os = np.histogram(os.flatten(), bins=np.arange(min_, max_, 1))
         bins = (bins[1:] + bins[:-1]) / 2
@@ -74,7 +74,6 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
             header_exptime, header_gain = -99, -99
 
         # val *= im.size / len(im[np.isfinite(im)])
-
 
     xdata, ydata = (
         bins[np.isfinite(np.log10(val))],
@@ -101,12 +100,11 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     bias = bins_os[np.nanargmax(os_v)] + 0.5  #  #ADDED xdata[np.nanargmax(ydata)]
     # PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.nanargmax(value)],50,0])['popt'][1]
 
-
     try:
-        date = float(header['DATE'][:4])
+        date = float(header["DATE"][:4])
     except KeyError:
         try:
-            date = float(header['OBSDATE'][:4])
+            date = float(header["OBSDATE"][:4])
         except KeyError:
             date = 2023
     except TypeError:
@@ -114,7 +112,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         print("No date keeping 2022 conversion gain")
 
     # if bias > 1500:
-    if date<2020:
+    if date < 2020:
         conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
         smearing = 0.8  # 1.5  # ADDED
         RN = 60  # 45 #ADDED
@@ -134,13 +132,19 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         )["popt"][2]
         / conversion_gain
     )
-    RON = np.nanmax([RON] + [47])
+    RON = np.nanmax([RON] + [60])
     # print("bias = ", bias, xdata[np.nanargmax(ydata)])
 
     # centers = [xdata[np.nanargmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
 
     function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCDhist(
-        x, bias=Bias, RN=RN*conversion_gain, EmGain=EmGain*conversion_gain, flux=flux, smearing=smearing, sCIC=sCIC
+        x,
+        bias=Bias,
+        RN=RN * conversion_gain,
+        EmGain=EmGain * conversion_gain,
+        flux=flux,
+        smearing=smearing,
+        sCIC=sCIC,
     )
     args_number = len(inspect.getargspec(function).args) - 1
 
@@ -212,7 +216,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     lims = [
         (bins.min(), bins.min() + bins.ptp() / 2),
         (0, 300),
-        (100, 10000),#3200
+        (100, 10000),  # 3200
         (0, flux_max),
         (0, 3),
         (0, 0.1),
@@ -230,7 +234,14 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
 
     names = inspect.getargspec(function).args[1:]
     # print(names)
-    names = ["Bias (ADU)", "Read Noise (e-)", "EM gain (e-/e-)", "sCIC - Flux (e-/exp)", "Smearing (pix)", "mCIC (e-/exp)"]
+    names = [
+        "Bias (ADU)",
+        "Read Noise (e-)",
+        "EM gain (e-/e-)",
+        "sCIC - Flux (e-/exp)",
+        "Smearing (pix)",
+        "mCIC (e-/exp)",
+    ]
     plt.plot(
         xdata, ydata, "k", alpha=0.2,
     )
@@ -274,7 +285,9 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
     )
     f1 = np.convolve(function(x, *centers), np.ones(n_conv) / n_conv, mode="same")
     (l1,) = plt.plot(x, f1, "-", lw=1, label="EMCCD OS model", alpha=0.7)
-    (l2,) = plt.plot(x, f1, "-", c=l1.get_color(), lw=1)#, label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
+    (l2,) = plt.plot(
+        x, f1, "-", c=l1.get_color(), lw=1
+    )  # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))
     ax.set_ylabel("Log (Frequency of occurence)", fontsize=15)
 
@@ -332,7 +345,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
                 label=names[::-1][i],
                 valmin=lim[0],
                 valmax=lim[1],
-                valinit=(center, flux),#center + 0.1
+                valinit=(center, flux),  # center + 0.1
             )
         else:
             slid = Slider(
