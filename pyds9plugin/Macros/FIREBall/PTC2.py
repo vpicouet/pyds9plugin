@@ -71,7 +71,7 @@ def fitLine(x, y, param=None):
     return (a, b)
 
 
-def gain_calc(pathb=None, path_flat=None, n=5):
+def gain_calc(bias_pattern=None, data_pattern=None, n_images=5):
     # bias_dir = '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/W17D13/bias_T183_1MHz/'
     # # dark_dir = '/home/cheng/data/NUVU/211109/w18d7/darks_T300/'
     # data_dir = '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/W17D13/ptc_T183_1MHz_405nm/'
@@ -88,130 +88,118 @@ def gain_calc(pathb=None, path_flat=None, n=5):
 
     # images = sorted(set(glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220509/PTC_phonelight/image000*.fits")))
     # bias = sorted(set(glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220509/PTC_phonelight/image000*.fits")))
-
-    images = sorted(set(glob.glob(path_flat)))
-    bias = sorted(set(glob.glob(pathb)))
-
+    data_dir=os.path.dirname(data_pattern)
+    images = sorted(set(glob.glob(data_pattern)))
+    
+    # bias_pattern = bias_dir + 'image_0*.fits'
+    bias = sorted(set(glob.glob(bias_pattern)))
+    
     flatlist = []
-    # darklist = []
+    #darklist = []
     biaslist = []
-
-    print(len(images))
-
+    
+    # print len(images)
+    
     for image in images:
         flatlist.append(image)
-
+    
+    
     for img in bias:
         biaslist.append(img)
-
-    data_dir = os.path.commonpath(flatlist)
-
+    
+    
     gainlist = []
     readnoiselist = []
     signallist = []
     variance = []
     signal = []
+    #print biaslist
+    #print flatlist
+    
+    #exit()
     n = 100
-    yregions = np.arange(200, 1400, n)
-    xregions = [1200, 1900]
-    xregions_b = [1200, 1900]
-    xregions_b = [100, 1000]
+    yregions = np.arange(200,1400,n)
+    xregions = [1200,1900]
+    xregions_b = [200,900]
     x1 = 1300
     x2 = 1500
     j = 0
-
-    print("Number of bias used = ", len(biaslist))
-    print("Number of flat used = ", len(flatlist))
-
-    for i in range(0, (len(flatlist)), n):
-        # print i,j
-        if i >= len(flatlist) - 1:
+    
+    # print len(biaslist)
+    
+    for i in range(0,(len(flatlist)),n_images):
+        #print i,j
+        if i >= len(flatlist)-1:
             break
-        for l in range(0, 1):
+        for l in range(0,1):
             for m in range(len(yregions)):
-                if j >= len(biaslist) - 2:
+                if j >= len(biaslist)-2:
                     j = 0
-                imageb1 = np.array(
-                    fits.getdata(biaslist[j + 0])
-                )  ##modified from j to i index for one data set
-                imageb2 = np.array(fits.getdata(biaslist[j + 1]))
-                imageb1 = imageb1 * 1.0
-                imageb2 = imageb2 * 1.0
-
-                imagef1 = np.array(fits.getdata(flatlist[i + 0]))
-                imagef2 = np.array(fits.getdata(flatlist[i + 1]))
-                imagef1 = imagef1 * 1.0
-                imagef2 = imagef2 * 1.0
-                # print np.mean(imagef1)
-
-                imagef12 = np.subtract(imagef1, imagef2)
-                imageb12 = np.subtract(imageb1, imageb2)
-
-                # print np.mean(imagef12)
-                # print np.mean(imageb12)
-                # print np.max(imaged12)
-
-                imagef1_sec = imagef1[
-                    yregions[m] : yregions[m] + n, xregions[l] : xregions[l + 1]
-                ]
-                imagef2_sec = imagef2[
-                    yregions[m] : yregions[m] + n, xregions[l] : xregions[l + 1]
-                ]
-                imageb1_sec = imageb1[
-                    yregions[m] : yregions[m] + n, xregions_b[l] : xregions_b[l + 1]
-                ]
-                imageb2_sec = imageb2[
-                    yregions[m] : yregions[m] + n, xregions_b[l] : xregions_b[l + 1]
-                ]
-
-                imagef12_sec = imagef12[
-                    yregions[m] : yregions[m] + n, xregions[l] : xregions[l + 1]
-                ]
-                imageb12_sec = imageb12[
-                    yregions[m] : yregions[m] + n, xregions_b[l] : xregions_b[l + 1]
-                ]
-
+                imageb1 = np.array(fits.getdata(biaslist[j+0])) ##modified from j to i index for one data set
+                imageb2 = np.array(fits.getdata(biaslist[j+1]))
+                imageb1 = imageb1*1.0
+                imageb2 = imageb2*1.0
+                
+                imagef1 = np.array(fits.getdata(flatlist[i+0]))
+                imagef2 = np.array(fits.getdata(flatlist[i+1]))
+                imagef1 = imagef1*1.0
+                imagef2 = imagef2*1.0
+                #print np.mean(imagef1)
+                
+                
+                imagef12 = np.subtract(imagef1,imagef2)
+                imageb12 = np.subtract(imageb1,imageb2)
+                
+                #print np.mean(imagef12)
+                #print np.mean(imageb12)
+                #print np.max(imaged12)
+                
+                imagef1_sec = imagef1[yregions[m]:yregions[m]+n,xregions[l]:xregions[l+1]]
+                imagef2_sec = imagef2[yregions[m]:yregions[m]+n,xregions[l]:xregions[l+1]]
+                imageb1_sec = imageb1[yregions[m]:yregions[m]+n,xregions_b[l]:xregions_b[l+1]]
+                imageb2_sec = imageb2[yregions[m]:yregions[m]+n,xregions_b[l]:xregions_b[l+1]]
+                
+                imagef12_sec = imagef12[yregions[m]:yregions[m]+n,xregions[l]:xregions[l+1]]
+                imageb12_sec = imageb12[yregions[m]:yregions[m]+n,xregions_b[l]:xregions_b[l+1]]
+                
                 sigf1 = np.std(imagef1_sec)
                 sigb1 = np.std(imageb1_sec)
                 sigf12 = np.std(imagef12_sec)
                 sigb12 = np.std(imageb12_sec)
-                # print sigb1
-                # print sigf1
-                # print imagef1_sec[1,0]
-                # print 'space1'
-                # print imagef2_sec[1,0]
-                # print 'space2'
-                # print imagef12_sec[1,0]
-
+                #print sigb1
+                #print sigf1
+                #print imagef1_sec[1,0]
+                #print 'space1'
+                #print imagef2_sec[1,0]
+                #print 'space2'
+                #print imagef12_sec[1,0]
+                
                 mf1 = np.mean(imagef1_sec)
                 mf2 = np.mean(imagef2_sec)
                 mb1 = np.mean(imageb1_sec)
                 mb2 = np.mean(imageb2_sec)
-
-                Np = imagef1_sec.size
-                average_signal = ((mf1 - mb1) + (mf2 - mb2)) / 2
+                average_signal = ((mf1-mb1) + (mf2-mb2))/2
                 signal.append(average_signal)
-                var1 = (imagef1_sec - mb1) - (imagef2_sec - mb2)
+                var1 = (imagef1_sec-mb1)-(imagef2_sec-mb2)
+                Np = imagef1_sec.size
+                
                 var2 = np.power(var1, 2)
-                variance.append(var2.sum() / (2 * Np))
-
-                # print mf1,mf2,mb1,mb2,sigf12,sigb12
-
-                gain = (mf1 + mf2 - mb1 - mb2) / (sigf12 ** 2)  # - sigb12**2))
-                readnoise = gain * sigb1
+                
+                #print mf1,mf2,mb1,mb2,sigf12,sigb12
+                
+                gain = ((mf1+mf2-mb1-mb2)/(sigf12**2))# - sigb12**2))
+                readnoise = gain*sigb1
                 gainlist.append(gain)
                 readnoiselist.append(readnoise)
-                signallist.append((mf1 - mb1))
+                signallist.append((mf1-mb1))
+                variance.append(var2.sum() / (2 * Np))
+        
         j = j + 2
-
-    np.savetxt(data_dir + "/gainlist.txt", [gainlist], delimiter=",", fmt="%.8f")
-    np.savetxt(data_dir + "/signallist.txt", [signallist], delimiter=",", fmt="%.8f")
-    np.savetxt(
-        data_dir + "/readnoiselist.txt", [readnoiselist], delimiter=",", fmt="%.8f"
-    )
-    sig_idx = np.where(
-        np.logical_and(np.array(signallist) >= 30000, np.array(signallist) <= 55000)
-    )
+    
+    np.savetxt(data_dir + 'gainlist.txt',[gainlist],delimiter=',',fmt='%.8f')
+    np.savetxt(data_dir + 'signallist.txt',[signallist],delimiter=',',fmt='%.8f')
+    np.savetxt(data_dir + 'readnoiselist.txt',[readnoiselist],delimiter=',',fmt='%.8f')
+    sig_idx = np.where(np.logical_and(np.array(signallist)>=30000, np.array(signallist)<=55000))
     print(np.mean(np.array(gainlist)[sig_idx]))
     print(np.mean(np.array(readnoiselist)[sig_idx]))
 
@@ -256,6 +244,7 @@ def gain_plot(signallist, gainlist, sigb1):
 
 def ptc_plot(variance, signal, sigb1):
     # print np.max(variance)
+    #%%
     rms_noise = np.sqrt(np.array(variance))
 
     idx = np.array(np.argsort([signal]))
@@ -277,8 +266,8 @@ def ptc_plot(variance, signal, sigb1):
     RNoffset = 0
     RN = RN_raw + RNoffset
     print(RN)
-    val_max = 3300
-    val_min = 
+    val_max = 3800
+    val_min = 300
     readnoise_trendline = 0.00000001 * rnfit + RN_raw
 
     log_shot_noise = np.real(np.log10(np.sqrt((rms_noise_sort) ** 2 - (RN) ** 2)))
@@ -386,8 +375,9 @@ def ptc_plot(variance, signal, sigb1):
     # if not os.path.exists(fig_dir):# create data directory if needed
     #     os.makedirs(fig_dir)
 
-    plt.savefig(os.path.dirname(pathb) + "/PTC.png")
+    # plt.savefig(os.path.dirname(pathb) + "/PTC.png")
     plt.show()
+    #%%
 
     return
 
@@ -400,7 +390,8 @@ def ptc_plot(variance, signal, sigb1):
 if __name__ == "__main__":
     path = "/Volumes/GoogleDrive-105248178238021002216/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2022/Detector_Data/220618/CIT_NUVU_dither/image_000000[2345678]*.fits"
 
-    gain_calc(path,path,n=2)
+    path = "/Volumes/GoogleDrive-105248178238021002216/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2022/Detector_Data/220618/CIT_NUVU_m100_ptc/image0000[123456789]?.fits"
+    gain_calc(bias_pattern=path, data_pattern=path, n_images=3)
 
 
 # %%

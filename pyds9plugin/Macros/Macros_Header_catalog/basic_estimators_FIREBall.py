@@ -255,11 +255,22 @@ table["TopImage_median"] = (
 table["flat"] = (np.nanmedian(physical_region) - table["median_pre_scan"]) / np.nanvar(
     physical_region
 )
-
 table["flux"] = table["median_physical"] - table["median_pre_scan"]
-table["F4_slit"] = np.mean(data[1475:1495, 2045:2058] - table["median_pre_scan"])
-table["F4_smearing"] = np.mean(data[1475:1495, 2058:2065] - table["median_pre_scan"])
-table["F4_background"] = np.mean(data[1575:1595, 2058:2065] - table["median_pre_scan"])
+table["tilted_slit_214"] = np.mean(
+    data[1630:1650, 1907:1918] - table["median_pre_scan"]
+)
+table["tilted_slit_206"] = np.mean(
+    data[1630:1650, 1551:1561] - table["median_pre_scan"]
+)
+# table["tilted_smearing"] = np.mean(data[1475:1495, 2058:2065] - table["median_pre_scan"])
+table["tilted_background"] = np.mean(
+    data[1630:1650, 1760:1778] - table["median_pre_scan"]
+)
+
+# table["flux"] = table["median_physical"] - table["median_pre_scan"]
+# table["F4_slit"] = np.mean(data[1475:1495, 2045:2058] - table["median_pre_scan"])
+# table["F4_smearing"] = np.mean(data[1475:1495, 2058:2065] - table["median_pre_scan"])
+# table["F4_background"] = np.mean(data[1575:1595, 2058:2065] - table["median_pre_scan"])
 
 table["long_slit"] = np.mean(data[1908:2006, 1908:1926] - table["median_pre_scan"])
 table["long_smearing"] = np.mean(data[1908:2006, 1926:1947] - table["median_pre_scan"])

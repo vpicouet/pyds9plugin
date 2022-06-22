@@ -290,7 +290,11 @@ def yesno(d, question="", verbose=message_):
         if isinstance(d, FakeDS9):
             return input("%s [y/n]" % (question)) == "y"
         else:
-            return bool(int(d.get("analysis message yesno {%s}" % (question))))
+            try:
+                return bool(int(d.get("analysis message yesno {%s}" % (question))))
+            except (ValueError, TypeError) as e:
+                print(e)
+                return False
     else:
         return True
 
@@ -791,9 +795,9 @@ def setup(xpapoint=None, color="cool", argv=[]):
 
     try:
         image_ok = image[np.isfinite(image)]
-        print(cuts[1], np.nanpercentile(image_ok, cuts[1]))
-        print(100, np.nanpercentile(image_ok, 100))
-        print("max", np.max(image_ok))
+        # print(cuts[1], np.nanpercentile(image_ok, cuts[1]))
+        # print(100, np.nanpercentile(image_ok, 100))
+        # print("max", np.max(image_ok))
         d.set(
             "cmap %s ; scale %s ; scale limits %0.3f %0.3f  ; scale open"
             % (
@@ -2600,7 +2604,8 @@ def throughfocus_wcs(
     d.append("plot axis y grid no ")
     d.append(
         "plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "
-        % (np.nanmin(f(xtot, *opt1)), xtot[np.argmin(f(xtot, *opt1))])
+        % (np.nanmin(fwhm), x[np.argmin(fwhm)])
+        # % (np.nanmin(f(xtot, *opt1)), xtot[np.argmin(f(xtot, *opt1))])
     )
     d.append("plot title y 'FWHM' ")
     d.append("plot load /tmp/fwhm.dat xy")
@@ -2611,12 +2616,13 @@ def throughfocus_wcs(
     d.append("plot load /tmp/fwhm_fit.dat xy")
     d.append("plot line dash yes ")
     d.append("plot title legend ''")
-    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' " % (1, 1))
+    d.append("plot name 'FWHM = %i, σ  = %0.1f' " % (1, 1))
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append(
         "plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "
-        % (np.nanmax(f(xtot, *opt4)), xtot[np.argmax(f(xtot, *opt4))])
+        % (np.nanmax(maxpix), x[np.argmax(maxpix)])
+        # % (np.nanmax(f(xtot, *opt4)), xtot[np.argmax(f(xtot, *opt4))])
     )
     d.append("plot load /tmp/maxpix.dat xy")
     d.append("plot title y 'Max pix' ")
@@ -2627,12 +2633,13 @@ def throughfocus_wcs(
     d.append("plot load /tmp/maxpix_fit.dat xy")
     d.append("plot line dash yes ")
     d.append("plot title legend ''")
-    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' " % (1, 1))
+    d.append("plot name 'FWHM = %i, σ  = %0.1f' " % (1, 1))
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append(
         "plot title 'Fit: Best EE50 = %0.2f - Position = %0.2f' "
-        % (np.nanmin(f(xtot, *opt2)), xtot[np.argmin(f(xtot, *opt2))])
+        % (np.nanmin(EE50), x[np.argmin(EE50)])
+        # % (np.nanmin(f(xtot, *opt2)), xtot[np.argmin(f(xtot, *opt2))])
     )
     d.append("plot load /tmp/EE50.dat xy")
     d.append("plot title y 'Radial profile' ")
@@ -2643,12 +2650,13 @@ def throughfocus_wcs(
     d.append("plot load /tmp/EE50_fit.dat xy")
     d.append("plot line dash yes ")
     d.append("plot title legend ''")
-    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' " % (1, 1))
+    d.append("plot name 'FWHM = %i, σ  = %0.1f' " % (1, 1))
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append(
         "plot title 'Fit: Best EE80 = %0.2f - Position = %0.2f' "
-        % (np.nanmin(f(xtot, *opt3)), xtot[np.argmin(f(xtot, *opt3))])
+        % (np.nanmin(EE80), x[np.argmin(EE80)])
+        # % (np.nanmin(f(xtot, *opt3)), xtot[np.argmin(f(xtot, *opt3))])
     )
     d.append("plot load /tmp/EE80.dat xy")
     d.append("plot title y 'Radial profile' ")
@@ -2659,7 +2667,7 @@ def throughfocus_wcs(
     d.append("plot load /tmp/EE80_fit.dat xy")
     d.append("plot line dash yes ")
     d.append("plot title legend ''")
-    d.append("plot name 'FWHM = %i, FWHM_fit = %0.1f' " % (1, 1))
+    d.append("plot name 'FWHM = %i, σ  = %0.1f' " % (1, 1))
     d.append("plot layout GRID ; plot layout STRIP scale 100")
     d.append("plot font legend size 9 ")
     d.append("plot font labels size 13 ")
@@ -2791,6 +2799,7 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
     verboseprint("""\n\n\n\n      START THROUGHFOCUS \n\n\n\n""")
     d = DS9n(args.xpapoint)
     filename = get_filename(d)
+    header = fits.open(filename)[0].header
     if getregion(d, selected=True) is None:
         raise_create_region(d)
         sys.exit()
@@ -2829,6 +2838,8 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
 
     if args.value == "":
         offsets = np.arange(len(path))
+    elif args.value in list(dict.fromkeys(header.keys())):
+        offsets = np.array([fits.getheader(p)[args.value] for p in path])
     else:
         offsets = np.array(
             [float(value) for value in args.value.split(",") if value != ""]
@@ -3047,7 +3058,7 @@ def explore_throughfocus(xpapoint=None, argv=[]):
     return
 
 
-def pyvista_throughfocus(a, names):
+def pyvista_throughfocus(a, names=None):
     """Explore throughfocus using pyvista in 3d
     """
     from pyvista import Plotter, set_plot_theme  # StructuredGrid, PolyData,
@@ -3065,6 +3076,8 @@ def pyvista_throughfocus(a, names):
         splitting_position=None,
         title="Throughfocus",
     )
+    if names is None:
+        names = [name for name in a.colnames if len(a[name].shape) > 2] * 2
     verboseprint(names)
     verboseprint(a[names[0]])
     verboseprint(a[names[0]][0].shape)
@@ -3557,9 +3570,7 @@ def ds9_plot_radial_profile(
     d.append("plot legend yes ")
     d.append("plot legend position top ")
     d.append("plot title legend ''")
-    d.append(
-        "plot name 'Data: Flux = %i, FWHM_fit = %0.1f' " % (d_["Flux"], abs(popt[1]))
-    )
+    d.append("plot name 'Data: Flux = %i, σ  = %0.1f' " % (d_["Flux"], abs(popt[1])))
     # d.append("plot line shape circle ")
     d.append("plot line dash yes ")
     # d.append("plot line shape color black")
@@ -8976,7 +8987,10 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
         else:
             raise_create_plot(d)
             sys.exit()
-    if np.nanmean(y[-10:]) > np.nanmean(y[:10]):
+    if (np.nanmean(y[-10:]) > np.nanmean(y[:10])) & (
+        (args.background.lower() == "doubleexponential")
+        | (args.background.lower() == "exponential")
+    ):
         y = y[::-1]
     np.savetxt("/tmp/xy.txt", np.array([x, y]).T)
     if args.background.lower() == "exponential":
@@ -10592,14 +10606,14 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
                     )
                 d.set("regions " + reg_file)
                 # ('VIGNET' in cat_sex.colnames)
-        if ("vignet" in args.PARAMETERS_NAME) & (len(cat_sex) < 1000):
-            if yesno(d, """Do you want to plot the sources in 3D?"""):
-                explore_throughfocus(
-                    xpapoint=None, argv="-p %s" % (param_dict["CATALOG_NAME"])
-                )
-        else:
-            if yesno(d, """Do you want to parameters in 3D?"""):
-                plot_surface(cat_sex, "X_IMAGE", "Y_IMAGE", "FWHM_IMAGE")
+        # if ("vignet" in args.PARAMETERS_NAME) & (len(cat_sex) < 1000):
+        #     if yesno(d, """Do you want to plot the sources in 3D?"""):
+        #         explore_throughfocus(
+        #             xpapoint=None, argv="-p %s" % (param_dict["CATALOG_NAME"])
+        #         )
+        # else:
+        #     if yesno(d, """Do you want to parameters in 3D?"""):
+        #         plot_surface(cat_sex, "X_IMAGE", "Y_IMAGE", "FWHM_IMAGE")
 
     else:
         verboseprint("Can not find the output sextractor catalog...")
@@ -10718,10 +10732,10 @@ def BackgroundMeasurement():
     if region is None:
         image_area = [1500, 2000, 1500, 2000]
         Yinf, YID = [cat["id"]]
-        Yinf, Ysup, Xinf, Xsup = lims_from_region(None, coords=region)
-        # [131,1973,2212,2562]
-        image_area = [Yinf, Ysup, Xinf, Xsup]
-        verboseprint(Yinf, Ysup, Xinf, Xsup)
+    Yinf, Ysup, Xinf, Xsup = lims_from_region(None, coords=region)
+    # [131,1973,2212,2562]
+    image_area = [Yinf, Ysup, Xinf, Xsup]
+    verboseprint(Yinf, Ysup, Xinf, Xsup)
     if d.get("tile") == "yes":
         d.set("frame first")
         n1 = int(d.get("frame"))

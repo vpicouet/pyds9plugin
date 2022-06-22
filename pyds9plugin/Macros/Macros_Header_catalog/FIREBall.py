@@ -54,11 +54,15 @@ if date<2020:
     l1,l2 = 1053, 2133
     smearing=1.5
 else:
-    conversion_gain =  0.22#1 / 4.5# ADU/e-  0.53 
+    conversion_gain =  0.22# e-/ADU. prior controller
+    conversion_gain =  0.21# CIT controller
+    
+    
     RN=50
     # RN=20
     l1,l2 = -2133, -1053
-    smearing=0.5
+    smearing=0.5 # prior controller
+    smearing=1.4 # CIT controller
 
 
 header['EMGAIN']=8600
@@ -147,7 +151,10 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
         try:
             #to fit the overscan region  use model_to_fit or model_to_fit_os depending on the level of CIC
             # popt, pcov = curve_fit(model_to_fit,bin_center[np.isfinite(np.log10(ns[-1]))],np.log10(ns[-1][np.isfinite(np.log10(ns[-1]))]),p0=p0)
-            popt, pcov = curve_fit(model_to_fit_os,bin_center[masks[2]&np.isfinite(np.log10(ns[-1]))],np.log10(ns[-1][masks[2]&np.isfinite(np.log10(ns[-1]))]),p0=p0)
+            bounds = [[100,0],[4000,1]]
+            n_mask = 2
+            mask_ = masks[n_mask]& (np.log10(ns[-1])>0) #masks[n_mask]&np.isfinite(np.log10(ns[-1]))
+            popt, pcov = curve_fit(model_to_fit_os,bin_center[mask_],np.log10(ns[-1][mask_]),p0=p0,)#bounds=bounds)
             popt = abs(popt)
             popt_all, pcov = curve_fit(model_to_fit_all,bin_center[mask],np.log10(n[mask]),p0=p0_all)
         except (RuntimeError,ValueError) as e:
@@ -186,12 +193,16 @@ def plot_hist(bin_center, ns,filename, header, table,masks, conversion_gain=conv
 
     table['gain_ls']=popt[0] 
     table['sCIC_ls']=popt[1]
+    print("popt = ",popt)
+    print("popt_all = ", popt_all)
+    # table['flux_ls']=popt_all[1]
     # print(table['sCIC_ls'])
     model_to_fit_stochastic = lambda bin_center, EmGain,flux : EMCCDhist(bin_center,bias,ron*conversion_gain,EmGain*conversion_gain,flux,smearing,np.max([0.005,abs(popt[1])]))#+np.log10(constant_stochastic)
     popt_stoch, pcov = curve_fit(model_to_fit_stochastic,bin_center[mask],np.log10(n[mask]),p0=[popt_all[0],popt_all[1]],epsfcn=1)
     popt_stoch = abs(popt_stoch)
     ax.semilogy(bin_center, 10**model_to_fit_stochastic(bin_center,*popt_stoch), "r-", label="Least square:\nEMGain=%i\nF=%0.3f,"%(*popt_stoch,),lw=1)
 
+    # table['flux_ls_st']=popt_stoch[-1]
 
     ax.legend(loc="upper right", fontsize=10,ncol=2)
     ax.set_ylim(ymin=1e0,ymax=2.1*ns[-1].max())
@@ -320,10 +331,11 @@ try:
 except IndexError:
     limit_max_os=1e6
 n_conv=1
-mask_gain0 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<bins[np.where((bins>bias) & ( np.convolve(value,np.ones(n_conv),mode='same')==0))[0][0]])
-mask_gain1 = (bins>np.min([bias,3200])+6*ron_fixed) & (bins<limit_max)
-mask_gain2 = (bins>bias+6*ron_fixed) & (bins<bias+50*ron_fixed) #too dangerous, no values
-mask_gain3 = (bins>bias+6*ron_fixed) & (bins<bias+30*ron_fixed) #too dangerous, no values
+n_rn =3
+mask_gain0 = (bins>np.min([bias,3200])+n_rn*ron_fixed) & (bins<bins[np.where((bins>bias) & ( np.convolve(value,np.ones(n_conv),mode='same')==0))[0][0]])
+mask_gain1 = (bins>np.min([bias,3200])+n_rn*ron_fixed) & (bins<limit_max)
+mask_gain2 = (bins>bias+n_rn*ron_fixed) & (bins<bias+50*ron_fixed) #too dangerous, no values
+mask_gain3 = (bins>bias+n_rn*ron_fixed) & (bins<bias+30*ron_fixed) #too dangerous, no values
 masks = [mask_gain0,mask_gain1,mask_gain3,mask_gain2]#mask_gain0,
 for i, mask in enumerate(masks):
     try:
@@ -397,7 +409,10 @@ if Plot :
     # ax2.set_xlabel('Intensity')
     # ax2.set_ylabel('Variance')
     if (header['EMGAIN']>0):
-        plot_hist(bins,[value,value_os],filename, header, table,masks=masks,ax=None,im=physical_region)
+        ax=None
+        bin_center, ns = bins,[value,value_os]
+        im=physical_region
+        plot_hist(bins,[value,value_os],filename, header, table,masks=masks,ax=ax,im=physical_region)
     else:
         table['gain_ls']=0
         table['flux_ls']=0

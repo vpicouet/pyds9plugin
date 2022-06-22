@@ -176,11 +176,11 @@ test = False
 
 def EMCCD(
     x,
-    bias=[1000, 4000, x[np.argmax(y)]],
-    RN=[20, 350, 44],
-    EmGain=[300, 10000, 1900],
+    bias=[x.min(), x.max(), x[np.argmax(y)]],
+    RN=[5, 50, 12],
+    EmGain=[10, 2000, 1900],
     flux=[0, 0.5, 0.01],
-    smearing=[0, 1, 0.01],
+    smearing=[0, 2, 0.01],
     sCIC=[0, 1, 0],
 ):
     """EMCCD model based on convolution of distributions: Gamma(poison)xNormal

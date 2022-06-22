@@ -356,160 +356,161 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
     return cat, filename
 
 
-def plot_res(cat, filename):
-    field = os.path.basename(filename)[:2]
-    from matplotlib.colors import LogNorm
-
-    mask = (cat["fwhm_y"] > 0.5) & (
-        cat["fwhm_x"] > 0.5
-    )  # & (cat['x'] <1950)  & (cat['x'] >50) #& (cat['fwhm_x'] < 8) & (cat['fwhm_y'] < 8) & (cat['fwhm_x_unsmear'] < 8)
-    # = (cat['fwhm_x_unsmear']>0.5)&
-    fig, axes = plt.subplots(
-        2,
-        2,
-        sharex="col",
-        sharey="row",
-        gridspec_kw={"height_ratios": [1, 3], "width_ratios": [3, 1]},
-        figsize=(8, 5),
-    )
-    ax0, ax1, ax2, ax3 = axes.flatten()
-    m = "o"
-    size = 3
-    print(cat["fwhm_x_unsmear"], cat["fwhm_y"], cat["fwhm_x"])
-    print(cat["fwhm_x_unsmear"][mask])
-    norm = LogNorm(
-        vmin=np.min(cat["fwhm_x_unsmear"][mask]), vmax=np.max(cat["fwhm_y"][mask])
-    )
-    im = ax2.scatter(
-        cat["y"][mask] - 50, cat["x"][mask], c=cat["fwhm_y"][mask], s=50, norm=norm
-    )  # ,marker=',',)
-    ax2.scatter(
-        cat["y"][mask], cat["x"][mask], c=cat["fwhm_x"][mask], s=50, norm=norm
-    )  # ,vmin=3,vmax=6)
-    ax2.scatter(
-        cat["y"][mask] + 50,
-        cat["x"][mask],
-        c=cat["fwhm_x_unsmear"][mask],
-        s=50,
-        norm=norm,
-        marker=">",
-    )  # ,vmin=3,vmax=6)
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
-    from matplotlib.ticker import LogFormatter
-
-    cax = make_axes_locatable(ax2).append_axes("right", size="2%", pad=0.02)
-    fig.colorbar(
-        im,
-        cax=cax,
-        orientation="vertical",
-        ticks=[1, 2, 3, 4, 5, 6, 7],
-        format=LogFormatter(10, labelOnlyBase=False),
-    )
-
-    # cat['color'][(cat['color']==np.ma.core.MaskedConstant).mask]='green'
-    ax3.set_ylim(ax2.get_ylim())
-    # for color in ['red']:#,'yellow','green']:
-    for color in ["red", "yellow", "blue"]:
-        mask = cat["color"] == color  # .mask
-        p = ax0.plot(
-            cat[mask]["y"],
-            cat[mask]["fwhm_y"],
-            marker="s",
-            lw=0,
-            ms=size,
-            c=color.replace("yellow", "orange"),
-        )
-        fit = PlotFit1D(
-            cat[mask]["y"],
-            cat[mask]["fwhm_y"],
-            deg=2,
-            plot_=True,
-            ax=ax0,
-            c=p[0].get_color(),
-        )
-        ax0.plot(
-            cat["y"], cat["fwhm_x"], m, c=color.replace("yellow", "orange"), alpha=0.3
-        )
-        p = ax0.plot(
-            cat["y"][mask],
-            cat["fwhm_x_unsmear"][mask],
-            marker=">",
-            lw=0,
-            ms=size,
-            c=color.replace("yellow", "orange"),
-        )
-        fit = PlotFit1D(
-            cat["y"][mask],
-            cat["fwhm_x_unsmear"][mask],
-            deg=2,
-            plot_=True,
-            ax=ax0,
-            c=p[0].get_color(),
-            ls="--",
-        )
-        ax0.set_ylim((1.5, 8))
-        # c=abs(fwhm[mask]),s=np.array(ptps)[mask]*50
-        # ax2.scatter(cat['x'],cat['fwhm_y'],'.')
-        p = ax3.plot(
-            cat[mask]["fwhm_y"],
-            cat[mask]["x"],
-            m,
-            marker="s",
-            lw=0,
-            ms=size,
-            c=color.replace("yellow", "orange"),
-        )
-        fit = PlotFit1D(
-            cat[mask]["x"],
-            cat[mask]["fwhm_y"],
-            deg=1,
-            plot_=False,
-            ax=ax3,
-            c=p[0].get_color(),
-        )
-        ax3.plot(
-            fit["function"](cat["x"][mask]), cat["x"][mask], c=p[0].get_color(), ls="-"
-        )
-        # ax3.plot(cat['fwhm_x'],cat['x'],m)
-        p = ax3.plot(
-            cat[mask]["fwhm_x_unsmear"],
-            cat[mask]["x"],
-            marker=">",
-            ms=size,
-            lw=0,
-            c=color.replace("yellow", "orange"),
-        )
-        fit = PlotFit1D(
-            cat["x"][mask],
-            cat["fwhm_x_unsmear"][mask],
-            deg=1,
-            plot_=False,
-            ax=ax3,
-            c=p[0].get_color(),
-            ls="--",
-        )
-        ax3.plot(
-            fit["function"](cat["x"][mask]), cat["x"][mask], c=p[0].get_color(), ls=":"
-        )
-    ax3.set_xlim((1.5, 8))
-    ax1.axis("off")
-    ax1.plot(-1, -1, label="Spatial FWHM", marker="s", lw=0, c="k")
-    ax1.plot(-1, -1, m, label="Spectral FWHM", c="k")
-    ax1.plot(-1, -1, label="Unsmeared\nspectral FWHM", marker=">", lw=0, c="k")
-    ax1.plot(-1, -1, m, label="lambda=213", lw=0, c="r")
-    ax1.plot(-1, -1, m, label="lambda=206", c="orange")
-    ax1.plot(-1, -1, m, label="lambda=202", lw=0, c="g")
-    ax2.set_xlim((0, 2000))
-    ax0.set_ylabel("Resolution")
-    ax3.set_xlabel("Resolution")
-    ax2.set_xlabel("Y")
-    ax2.set_ylabel("X")
-    ax1.legend(fontsize=7, title=field)
-    fig.tight_layout()
-    plt.show()
-
-
 cat, filename = Measure_PSF_slits(image, regs, filename=filename)
+
+# def plot_res(cat, filename):
+#     field = os.path.basename(filename)[:2]
+#     from matplotlib.colors import LogNorm
+
+#     mask = (cat["fwhm_y"] > 0.5) & (
+#         cat["fwhm_x"] > 0.5
+#     )  # & (cat['x'] <1950)  & (cat['x'] >50) #& (cat['fwhm_x'] < 8) & (cat['fwhm_y'] < 8) & (cat['fwhm_x_unsmear'] < 8)
+#     # = (cat['fwhm_x_unsmear']>0.5)&
+#     fig, axes = plt.subplots(
+#         2,
+#         2,
+#         sharex="col",
+#         sharey="row",
+#         gridspec_kw={"height_ratios": [1, 3], "width_ratios": [3, 1]},
+#         figsize=(8, 5),
+#     )
+#     ax0, ax1, ax2, ax3 = axes.flatten()
+#     m = "o"
+#     size = 3
+#     print(cat["fwhm_x_unsmear"], cat["fwhm_y"], cat["fwhm_x"])
+#     print(cat["fwhm_x_unsmear"][mask])
+#     norm = LogNorm(
+#         vmin=np.min(cat["fwhm_x_unsmear"][mask]), vmax=np.max(cat["fwhm_y"][mask])
+#     )
+#     im = ax2.scatter(
+#         cat["y"][mask] - 50, cat["x"][mask], c=cat["fwhm_y"][mask], s=50, norm=norm
+#     )  # ,marker=',',)
+#     ax2.scatter(
+#         cat["y"][mask], cat["x"][mask], c=cat["fwhm_x"][mask], s=50, norm=norm
+#     )  # ,vmin=3,vmax=6)
+#     ax2.scatter(
+#         cat["y"][mask] + 50,
+#         cat["x"][mask],
+#         c=cat["fwhm_x_unsmear"][mask],
+#         s=50,
+#         norm=norm,
+#         marker=">",
+#     )  # ,vmin=3,vmax=6)
+#     from mpl_toolkits.axes_grid1 import make_axes_locatable
+#     from matplotlib.ticker import LogFormatter
+
+#     cax = make_axes_locatable(ax2).append_axes("right", size="2%", pad=0.02)
+#     fig.colorbar(
+#         im,
+#         cax=cax,
+#         orientation="vertical",
+#         ticks=[1, 2, 3, 4, 5, 6, 7],
+#         format=LogFormatter(10, labelOnlyBase=False),
+#     )
+
+#     # cat['color'][(cat['color']==np.ma.core.MaskedConstant).mask]='green'
+#     ax3.set_ylim(ax2.get_ylim())
+#     # for color in ['red']:#,'yellow','green']:
+#     for color in ["red", "yellow", "blue"]:
+#         mask = cat["color"] == color  # .mask
+#         p = ax0.plot(
+#             cat[mask]["y"],
+#             cat[mask]["fwhm_y"],
+#             marker="s",
+#             lw=0,
+#             ms=size,
+#             c=color.replace("yellow", "orange"),
+#         )
+#         fit = PlotFit1D(
+#             cat[mask]["y"],
+#             cat[mask]["fwhm_y"],
+#             deg=2,
+#             plot_=True,
+#             ax=ax0,
+#             c=p[0].get_color(),
+#         )
+#         ax0.plot(
+#             cat["y"], cat["fwhm_x"], m, c=color.replace("yellow", "orange"), alpha=0.3
+#         )
+#         p = ax0.plot(
+#             cat["y"][mask],
+#             cat["fwhm_x_unsmear"][mask],
+#             marker=">",
+#             lw=0,
+#             ms=size,
+#             c=color.replace("yellow", "orange"),
+#         )
+#         fit = PlotFit1D(
+#             cat["y"][mask],
+#             cat["fwhm_x_unsmear"][mask],
+#             deg=2,
+#             plot_=True,
+#             ax=ax0,
+#             c=p[0].get_color(),
+#             ls="--",
+#         )
+#         ax0.set_ylim((1.5, 8))
+#         # c=abs(fwhm[mask]),s=np.array(ptps)[mask]*50
+#         # ax2.scatter(cat['x'],cat['fwhm_y'],'.')
+#         p = ax3.plot(
+#             cat[mask]["fwhm_y"],
+#             cat[mask]["x"],
+#             m,
+#             marker="s",
+#             lw=0,
+#             ms=size,
+#             c=color.replace("yellow", "orange"),
+#         )
+#         fit = PlotFit1D(
+#             cat[mask]["x"],
+#             cat[mask]["fwhm_y"],
+#             deg=1,
+#             plot_=False,
+#             ax=ax3,
+#             c=p[0].get_color(),
+#         )
+#         ax3.plot(
+#             fit["function"](cat["x"][mask]), cat["x"][mask], c=p[0].get_color(), ls="-"
+#         )
+#         # ax3.plot(cat['fwhm_x'],cat['x'],m)
+#         p = ax3.plot(
+#             cat[mask]["fwhm_x_unsmear"],
+#             cat[mask]["x"],
+#             marker=">",
+#             ms=size,
+#             lw=0,
+#             c=color.replace("yellow", "orange"),
+#         )
+#         fit = PlotFit1D(
+#             cat["x"][mask],
+#             cat["fwhm_x_unsmear"][mask],
+#             deg=1,
+#             plot_=False,
+#             ax=ax3,
+#             c=p[0].get_color(),
+#             ls="--",
+#         )
+#         ax3.plot(
+#             fit["function"](cat["x"][mask]), cat["x"][mask], c=p[0].get_color(), ls=":"
+#         )
+#     ax3.set_xlim((1.5, 8))
+#     ax1.axis("off")
+#     ax1.plot(-1, -1, label="Spatial FWHM", marker="s", lw=0, c="k")
+#     ax1.plot(-1, -1, m, label="Spectral FWHM", c="k")
+#     ax1.plot(-1, -1, label="Unsmeared\nspectral FWHM", marker=">", lw=0, c="k")
+#     ax1.plot(-1, -1, m, label="lambda=213", lw=0, c="r")
+#     ax1.plot(-1, -1, m, label="lambda=206", c="orange")
+#     ax1.plot(-1, -1, m, label="lambda=202", lw=0, c="g")
+#     ax2.set_xlim((0, 2000))
+#     ax0.set_ylabel("Resolution")
+#     ax3.set_xlabel("Resolution")
+#     ax2.set_xlabel("Y")
+#     ax2.set_ylabel("X")
+#     ax1.legend(fontsize=7, title=field)
+#     fig.tight_layout()
+#     plt.show()
+
+
 # plot_res(cat,filename)
 # tmp_region = "/tmp/test.reg"
 # create_ds9_regions(
