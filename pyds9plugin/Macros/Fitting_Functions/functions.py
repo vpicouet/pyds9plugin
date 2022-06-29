@@ -397,12 +397,13 @@ def EMCCDhist(
         imaADU *= ConversionGain
         # smearing data
         if Smearing > 0:
+            n_smearing = 15
             smearing_kernels = variable_smearing_kernels(
                 imaADU, Smearing, SmearExpDecrement
             )
-            offsets = np.arange(6)
+            offsets = np.arange(n_smearing)
             A = dia_matrix(
-                (smearing_kernels.reshape((6, -1)), offsets),
+                (smearing_kernels.reshape((n_smearing, -1)), offsets),
                 shape=(imaADU.size, imaADU.size),
             )
             imaADU = A.dot(imaADU.ravel()).reshape(imaADU.shape)
@@ -503,7 +504,7 @@ def smeared_slit(
     x0=len(y) * np.array([0, 1, 0.5]),
     FWHM=[0.1, 10, 2],
     offset=np.nanmin(y) * np.array([0.5, 3, 1]),
-    Smearing=[-5, 5, 0.8],
+    Smearing=[-10, 10, 0.8],
 ):
     """Convolution of a box with a gaussian
     """

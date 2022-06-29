@@ -13,123 +13,124 @@ from skimage.measure import block_reduce
 import matplotlib.pyplot as plt
 import matplotlib
 import datetime
+from pyds9plugin.Macros.FIREBall.old.merge_temp import give_value_from_time
 
 
-if (int(re.findall("[0-9]+", filename)[-1]) > 16) & (
-    int(re.findall("[0-9]+", filename)[-1]) < 23
-):
-    table["CLEAN"] = False
-else:
-    table["CLEAN"] = True
+# if (int(re.findall("[0-9]+", filename)[-1]) > 16) & (
+#     int(re.findall("[0-9]+", filename)[-1]) < 23
+# ):
+#     table["CLEAN"] = False
+# else:
+#     table["CLEAN"] = True
 
 
-def FindTimeField(liste):
-    timestamps = [
-        "Datation GPS",
-        "CreationTime_ISO8601",
-        "date",
-        "Date",
-        "Time",
-        "Date_TU",
-        "UT Time",
-        "Date_Time",
-        "Time UT",
-        "DATETIME",
-    ]
-    timestamps_final = (
-        [field.upper() for field in timestamps]
-        + [field.lower() for field in timestamps]
-        + timestamps
-    )
-    try:
-        timestamps_final.remove("date")
-    except ValueError:
-        pass
-    for timename in timestamps_final:
-        if timename in liste:  # table.colnames:
-            timefield = timename
-    try:
-        print("Time field found : ", timefield)
-        return timefield
-    except UnboundLocalError as e:
-        print(e)
-        return "DATETIME"  # liste[0]  # table.colnames[0]
+# def FindTimeField(liste):
+#     timestamps = [
+#         "Datation GPS",
+#         "CreationTime_ISO8601",
+#         "date",
+#         "Date",
+#         "Time",
+#         "Date_TU",
+#         "UT Time",
+#         "Date_Time",
+#         "Time UT",
+#         "DATETIME",
+#     ]
+#     timestamps_final = (
+#         [field.upper() for field in timestamps]
+#         + [field.lower() for field in timestamps]
+#         + timestamps
+#     )
+#     try:
+#         timestamps_final.remove("date")
+#     except ValueError:
+#         pass
+#     for timename in timestamps_final:
+#         if timename in liste:  # table.colnames:
+#             timefield = timename
+#     try:
+#         print("Time field found : ", timefield)
+#         return timefield
+#     except UnboundLocalError as e:
+#         print(e)
+#         return "DATETIME"  # liste[0]  # table.colnames[0]
 
 
-def give_value_from_time(
-    cat,
-    date_time,
-    date_time_field=None,
-    timeformatImage=None,
-    TimeFieldCat=None,
-    timeformatCat=None,
-    columns=None,
-    timediff=0,
-):
-    import numpy as np
+# def give_value_from_time(
+#     cat,
+#     date_time,
+#     date_time_field=None,
+#     timeformatImage=None,
+#     TimeFieldCat=None,
+#     timeformatCat=None,
+#     columns=None,
+#     timediff=0,
+# ):
+#     import numpy as np
 
-    def RetrieveTimeFormat(time):
-        formats = [
-            "%d/%m/%Y %H:%M:%S.%f",
-            "%Y-%m-%d %H:%M:%S.%f",
-            "%Y-%m-%d %H:%M:%S",
-            "%Y-%m-%dT%H:%M:%S",
-            "%m/%d/%Y %H:%M:%S",
-            "%m/%d/%y %H:%M:%S",
-        ]
-        form = []
-        for formati in formats:
-            try:
-                datetime.datetime.strptime(time, formati)
-                form.append(True)
-            except ValueError:
-                form.append(False)
-        return formats[np.argmax(form)]
+#     def RetrieveTimeFormat(time):
+#         formats = [
+#             "%d/%m/%Y %H:%M:%S.%f",
+#             "%Y-%m-%d %H:%M:%S.%f",
+#             "%Y-%m-%d %H:%M:%S",
+#             "%Y-%m-%dT%H:%M:%S",
+#             "%m/%d/%Y %H:%M:%S",
+#             "%m/%d/%y %H:%M:%S",
+#         ]
+#         form = []
+#         for formati in formats:
+#             try:
+#                 datetime.datetime.strptime(time, formati)
+#                 form.append(True)
+#             except ValueError:
+#                 form.append(False)
+#         return formats[np.argmax(form)]
 
-    if TimeFieldCat is None:
-        TimeFieldCat = FindTimeField(cat.colnames)
-    if timeformatCat is None:
-        timeformatCat = RetrieveTimeFormat(cat[TimeFieldCat][0])
-    if date_time_field is None:
-        date_time_field = FindTimeField(date_time.colnames)
-    cat["timestamp"] = [
-        datetime.datetime.strptime(d, timeformatCat) for d in cat[TimeFieldCat]
-    ]  # .timestamp()
-    if timeformatImage is None:
-        timeformatImage = RetrieveTimeFormat(date_time[date_time_field][0])
-    # print("%s: %s is %s"%(date_time_field,date_time[date_time_field][0], timeformatImage))
-    # print("%s: %s is %s"%(TimeFieldCat,cat[TimeFieldCat][0], timeformatCat))
+#     if TimeFieldCat is None:
+#         TimeFieldCat = FindTimeField(cat.colnames)
+#     if timeformatCat is None:
+#         timeformatCat = RetrieveTimeFormat(cat[TimeFieldCat][0])
+#     if date_time_field is None:
+#         date_time_field = FindTimeField(date_time.colnames)
+#     cat["timestamp"] = [
+#         datetime.datetime.strptime(d, timeformatCat) for d in cat[TimeFieldCat]
+#     ]  # .timestamp()
+#     if timeformatImage is None:
+#         timeformatImage = RetrieveTimeFormat(date_time[date_time_field][0])
+#     # print("%s: %s is %s"%(date_time_field,date_time[date_time_field][0], timeformatImage))
+#     # print("%s: %s is %s"%(TimeFieldCat,cat[TimeFieldCat][0], timeformatCat))
 
-    if columns is None:
-        columns = cat.colnames
-        columns.remove(TimeFieldCat)
-        columns.remove("timestamp")
-    for i, column in enumerate(columns):
-        date_time[column] = np.nan
-    for j, line in enumerate(date_time):
-        timestamp_image = datetime.datetime.strptime(
-            date_time[date_time_field][j], timeformatImage
-        )
-        for i, column in enumerate(columns):
-            mask = np.isfinite(cat[column])  # .mask
-            try:
-                temp = cat[column][mask][
-                    np.argmin(
-                        abs(
-                            cat[mask]["timestamp"]
-                            + datetime.timedelta(hours=timediff)
-                            - timestamp_image
-                        )
-                    )
-                ]
-                # print(date_time[col][j])
-                date_time[column][j] = temp
-            except ValueError:
-                pass
-            # print(date_time[column])
+#     if columns is None:
+#         columns = cat.colnames
+#         columns.remove(TimeFieldCat)
+#         columns.remove("timestamp")
+#     for i, column in enumerate(columns):
+#         date_time[column] = np.nan
+#     for j, line in enumerate(date_time):
+#         timestamp_image = datetime.datetime.strptime(
+#             date_time[date_time_field][j], timeformatImage
+#         )
+#         for i, column in enumerate(columns):
+#             mask = np.isfinite(cat[column])  # .mask
+#             try:
+#                 temp = cat[column][mask][
+#                     np.argmin(
+#                         abs(
+#                             cat[mask]["timestamp"]
+#                             + datetime.timedelta(hours=timediff)
+#                             - timestamp_image
+#                         )
+#                     )
+#                 ]
+#                 # print(date_time[col][j])
+#                 date_time[column][j] = temp
+#             except ValueError:
+#                 pass
+#             # print(date_time[column])
 
-        # print(temp, type(temp))
-    return date_time
+#         # print(temp, type(temp))
+#     return date_time
 
 
 # temp_file = os.path.dirname(os.path.dirname(filename))+"/alltemps.csv"
@@ -255,28 +256,37 @@ table["TopImage_median"] = (
 table["flat"] = (np.nanmedian(physical_region) - table["median_pre_scan"]) / np.nanvar(
     physical_region
 )
-table["flux"] = table["median_physical"] - table["median_pre_scan"]
-table["tilted_slit_214"] = np.mean(
-    data[1630:1650, 1907:1918] - table["median_pre_scan"]
-)
-table["tilted_slit_206"] = np.mean(
-    data[1630:1650, 1551:1561] - table["median_pre_scan"]
-)
-# table["tilted_smearing"] = np.mean(data[1475:1495, 2058:2065] - table["median_pre_scan"])
-table["tilted_background"] = np.mean(
-    data[1630:1650, 1760:1778] - table["median_pre_scan"]
-)
+# print(region)
+# print(type(region))
+if type(region) == tuple:
+    Yinf, Ysup, Xinf, Xsup = region
+    reg = data[Xinf:Xsup, Yinf:Ysup]
+    table["mean_region"] = np.mean(reg) - table["median_pre_scan"]
+    table["median_region"] = np.median(reg) - table["median_pre_scan"]
+    table["min_region"] = np.min(reg) - table["median_pre_scan"]
+    table["region"] = Column([reg - table["median_pre_scan"]], name="region")
 
+# table["flux"] = table["median_physical"] - table["median_pre_scan"]
+# table["tilted_slit_214"] = np.mean(
+#     data[1630:1650, 1907:1918] - table["median_pre_scan"]
+# )
+# table["tilted_slit_206"] = np.mean(
+#     data[1630:1650, 1551:1561] - table["median_pre_scan"]
+# )
+# table["tilted_background"] = np.mean(
+#     data[1630:1650, 1760:1778] - table["median_pre_scan"]
+# )
+# table["long_slit"] = np.mean(data[1908:2006, 1908:1926] - table["median_pre_scan"])
+# table["long_smearing"] = np.mean(data[1908:2006, 1926:1947] - table["median_pre_scan"])
+# table["long_background"] = np.mean(
+#     data[1777:1877, 1929:1947] - table["median_pre_scan"]
+# )
+
+# table["tilted_smearing"] = np.mean(data[1475:1495, 2058:2065] - table["median_pre_scan"])
 # table["flux"] = table["median_physical"] - table["median_pre_scan"]
 # table["F4_slit"] = np.mean(data[1475:1495, 2045:2058] - table["median_pre_scan"])
 # table["F4_smearing"] = np.mean(data[1475:1495, 2058:2065] - table["median_pre_scan"])
 # table["F4_background"] = np.mean(data[1575:1595, 2058:2065] - table["median_pre_scan"])
-
-table["long_slit"] = np.mean(data[1908:2006, 1908:1926] - table["median_pre_scan"])
-table["long_smearing"] = np.mean(data[1908:2006, 1926:1947] - table["median_pre_scan"])
-table["long_background"] = np.mean(
-    data[1777:1877, 1929:1947] - table["median_pre_scan"]
-)
 
 
 # fig, (ax,ax1,ax2) = plt.subplots(1,3)

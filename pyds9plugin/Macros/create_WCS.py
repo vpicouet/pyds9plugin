@@ -106,20 +106,22 @@ header_det_sky = build_wcs_header(
     argv=[],
 )
 
-# TYPE1A = 'LINEAR  '           / Type of projection
-# CTYPE2A = 'LINEAR  '           / Type of projection
-# CRPIX1A =                   1. / Column Pixel Coordinate of Reference
-# CRPIX2A =                   1. / Row Pixel Coordinate of Reference
-# CRVAL1A =               19900. / Column pixel of Reference Pixel
-# CRVAL2A =               19900. / Row pixel of Reference Pixel
-# CUNIT1A = 'PIXEL   '           / Column unit
-# CUNIT2A = 'PIXEL   '           / Row unit
-
 header_det_mask = build_wcs_header(
     xpapoint=None,
     filename=filename,
     CRPIX=[0, 0],
     CDELT=[1.3745 * 11.7 / 1000, 1.09612142 * 11.7 / 1000],  # 2022
+    CTYPE=["LINEAR", "LINEAR"],
+    CRVAL=[1, 1],
+    argv=[],
+)
+
+
+header_dispersion = build_wcs_header(
+    xpapoint=None,
+    filename=filename,
+    CRPIX=[0, 0],
+    CDELT=[0.021, 1e-5],  # 2022
     CTYPE=["LINEAR", "LINEAR"],
     CRVAL=[1, 1],
     argv=[],
@@ -132,11 +134,19 @@ header_det_mask = build_wcs_header(
 for line in header_det_sky.cards:
     header.append((line[0], line[1]), end=True)
 
+
 header["INHERIT"] = "T"
 header["EXTTYPE"] = "PHYSICAL"
 for line in header_det_mask.cards:
     header.append((line[0] + "A", line[1]), end=True)
     # header[line[0] + "_A"] = line[1]
+header["CUNIT1A"] = "mm"
+header["CUNIT2A"] = "mm"
+
+for line in header_dispersion.cards:
+    header.append((line[0] + "B", line[1]), end=True)
+header["CUNIT1B"] = "nm"
+header["CUNIT2B"] = "nm"
 
 
 print(repr(header))

@@ -13,7 +13,7 @@ from scipy.optimize import curve_fit
 from pyds9plugin.DS9Utils import *
 
 
-def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
+def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
     """Plot EMCCD simulation
     """
     print("path = ", path)
@@ -54,9 +54,31 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         if len(data.shape) == 3:
             im = data[0, Yinf:Ysup, Xinf:Xsup]
             os = data[0, Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
+            # os = data[0, Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
         else:
-            im = data[Yinf:Ysup, Xinf:Xsup]
-            os = data[Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
+            ly, lx = data.shape
+            if lx > 2500:
+                Xinf_os, Xsup_os = Xinf + 1000, Xsup + 1000
+            else:
+                Xinf_os, Xsup_os = Xinf - 1000, Xsup - 1000
+
+            if stack:
+                paths = get(
+                    d, "Provide the path of images you want to analyze the histogram"
+                )
+                im = np.hstack(
+                    fits.open(file)[0].data[Yinf:Ysup, Xinf:Xsup]
+                    for file in globglob(paths)
+                )
+                os = np.hstack(
+                    fits.open(file)[0].data[Yinf:Ysup, Xinf_os:Xsup_os]
+                    for file in globglob(paths)
+                )
+
+            else:
+                im = data[Yinf:Ysup, Xinf:Xsup]
+                os = data[Yinf:Ysup, Xinf_os:Xsup_os]
+        print(os.shape, im.shape)
         median_im = np.nanmedian(im)
         min_, max_ = (np.nanpercentile(os, 0.4), np.nanpercentile(im, 99.8))
         print(min_, max_)
@@ -118,7 +140,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         RN = 60  # 45 #ADDED
     else:
         conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
-        smearing = 0.7  # ADDED
+        smearing = 1.3  # 0.7  # ADDED
         RN = 10
     # print("conversion_gain = ", conversion_gain)
     mask_RN_os = (bins > bias - 1 * RN) & (bins < bias + 0.8 * RN) & (val_os > 0)
@@ -132,7 +154,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         )["popt"][2]
         / conversion_gain
     )
-    RON = np.nanmax([RON] + [60])
+    RON = np.nanmax([RON] + [50])
     # print("bias = ", bias, xdata[np.nanargmax(ydata)])
 
     # centers = [xdata[np.nanargmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
@@ -219,7 +241,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[]):
         (100, 10000),  # 3200
         (0, flux_max),
         (0, 3),
-        (0, 0.1),
+        (0, 0.2),
     ]
     # (1.5e3,1.5e5),
     centers = [

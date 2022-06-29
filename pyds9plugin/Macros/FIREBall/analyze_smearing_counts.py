@@ -432,53 +432,83 @@ region = image[Yinf:Ysup, Xinf:Xsup]
 print(region.shape)
 T1, T2 = GetThreshold(region, nb=200), 7e4
 print(T1, T2)
-x, y = np.where((region > T1) & (region < region.max() - 50))
+x, y = np.where((region > T1) & (region < np.nanmax(region) - 50))
 print(len(x))
 ly, lx = region.shape
-mask = (x < lx - n) & (y < ly - n)
+n0 = 1
+mask = (x < lx - n) & (y < ly - n) & (x > n0) & (y > n0)
 x, y = x[mask], y[mask]
 a = Table([x, y, region[x, y]], names=["x", "y", "value"])
 
 a.sort("value", reverse=True)
 
 i = 0
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
+xx = np.arange(n + n0) - n0
 
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
 for i in range(len(x)):
     xi, yi = x[i], y[i]
-    line = region[xi : xi + 1, yi : yi + n].T - region[xi : xi + 1, yi : yi + n].min()
-    ax1.plot(line / line.ptp(), alpha=0.1)
-    ax2.semilogy(line / line.ptp(), alpha=0.1)
+    line = (
+        region[xi : xi + 1, yi - n0 : yi + n].T
+        - region[xi : xi + 1, yi - n0 : yi + n].min()
+    )
+    ax1.plot(xx, line / line.ptp(), alpha=0.1)
+    ax2.semilogy(xx, line / line.ptp(), alpha=0.1)
 # plt.colorbar()
+first_pix = np.array(
+    [
+        (
+            region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].T
+            - region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].min()
+        )[n0]
+        for i in range(len(x))
+    ]
+)
+print(len(x))
 stack = np.hstack(
     [
         (
-            region[x[i] : x[i] + 1, y[i] : y[i] + n].T
-            - region[x[i] : x[i] + 1, y[i] : y[i] + n].min()
+            region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].T
+            - region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].min()
         )
         / (
-            region[x[i] : x[i] + 1, y[i] : y[i] + n].T
-            - region[x[i] : x[i] + 1, y[i] : y[i] + n].min()
+            region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].T
+            - region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].min()
         ).ptp()
         for i in range(len(x))
     ]
 )
-xx = np.arange(n)
 # ax1.errorbar(x=xx,y=stack.mean(axis=0).T[0],yerr=np.std(stack,axis=0).T[0],c='k')
-ax1.plot(np.median(stack, axis=1), "r:", lw=3)
-popt = PlotFit1D(xx, stack.mean(axis=1), ax=ax1, color="k", deg="exp", lw=0.5)["popt"]
+ax1.plot(xx, np.nanmedian(stack, axis=1), "r:", lw=3)
+popt = PlotFit1D(
+    xx[xx >= 0],
+    np.nanmean(stack, axis=1)[xx >= 0],
+    ax=ax1,
+    color="k",
+    deg="exp",
+    lw=0.5,
+)["popt"]
 ax1.plot(
-    xx,
-    stack.mean(axis=1).T,
+    xx[xx >= 0],
+    np.nanmean(stack, axis=1).T[xx >= 0],
+    "-o",
     c="k",
-    label="exp: %0.2f, %i%% on second pixel" % (popt[1], 100 * stack.mean(axis=1)[1]),
+    label="Exp length =%0.2fpix\nFirst pixel keep %i%% energy\n Min,Max,mean (first pix)=%i, %i, %i"
+    % (
+        popt[1],
+        100 * np.nanmean(stack, axis=1)[n0] / (np.nanmean(stack, axis=1)[n0:].sum()),
+        first_pix.min(),
+        first_pix.max(),
+        first_pix.mean(),
+    ),
     lw=3,
 )
 # ,yerr=np.std(stack,axis=0).T[0]
-ax2.semilogy(stack.mean(axis=1), "k")
-ax2.semilogy(np.median(stack, axis=1), "r:")
-ax1.set_xlim((0, n - 1))
+ax2.semilogy(xx, np.nanmean(stack, axis=1), "k")
+ax2.semilogy(xx, np.nanmedian(stack, axis=1), "r:")
+ax1.set_xlim((-n0, n - 1))
 ax1.set_ylim((-0.1, 1.1))
+ax2.set_ylim(ymin=1e-2)
 ax1.legend()
 ax1.grid()
 ax2.set_xlabel("pixels")

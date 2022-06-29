@@ -6472,7 +6472,6 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
         metavar="",
     )
 
-    # , choices=['image','none','wcs'])#metavar='',
     args = parser.parse_args_modif(argv, required=True)
     extension = "-"
     verboseprint("info, extension = %s, %s" % (args.info, extension))
@@ -6500,6 +6499,10 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
     verboseprint(fname)
     ext = len(fits.open(files[0]))
     d = DS9n(args.xpapoint)
+    region = getregion(d, quick=True, selected=True, message=False)
+    if region is not None:
+        region = lims_from_region(None, coords=region)
+
     if ext != 1:
         if yesno(
             d,
@@ -6520,6 +6523,7 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
             info=os.path.join(
                 os.path.dirname(__file__), "Macros/Macros_Header_catalog/" + args.info,
             ),
+            reg=region,
         )
     ]
     from datetime import datetime
@@ -7180,7 +7184,7 @@ def parallelize(
             return
 
 
-def create_catalog(files, ext=[0], info=None):
+def create_catalog(files, ext=[0], info=None, reg=None):
     """Create header catalog from a list of fits file
     """
     from astropy.table import Column, vstack  # hstack,
@@ -7211,7 +7215,7 @@ def create_catalog(files, ext=[0], info=None):
     ):
         # for i in tqdm(range(len(files)), file=sys.stdout, desc="Files: ", ncols=99):
         try:
-            table = create_table_from_header(files[i], exts=ext, info=info)
+            table = create_table_from_header(files[i], exts=ext, info=info, reg=reg)
             if table is not None:
                 file_header.append(table)
                 files_name.append(files[i])
@@ -7341,7 +7345,7 @@ def remove_duplicates(hdr):
     return hdr
 
 
-def create_table_from_header(path, exts=[0], info=""):
+def create_table_from_header(path, exts=[0], info="", reg=None):
     """Create table from fits header
     """
     from astropy.table import Table, hstack
@@ -7370,11 +7374,13 @@ def create_table_from_header(path, exts=[0], info=""):
         table = hstack(tabs)
         # verboseprint(table.colnames)
         if os.path.isfile(info):
+            # region = getregion(d, selected=True)
             # if info is not None:
             fitsfile = fits.open(path)
             ldict = {
                 "fitsfile": fitsfile,
                 "header": header,
+                "region": reg,
                 "filename": path,
                 "np": np,
                 "table": table,
