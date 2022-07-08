@@ -33,6 +33,12 @@ To install pyds9plugin for general purposes use Pip:
 ```
 pip install pyds9plugin
 ```
+or 
+
+```
+pip3 install git+https://github.com/vpicouet/pyds9plugin.git
+```
+
 
 Finish the installation and see the different functions by running:
 
