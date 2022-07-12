@@ -133,20 +133,30 @@ header_dispersion = build_wcs_header(
 #%%
 for line in header_det_sky.cards:
     header.append((line[0], line[1]), end=True)
+    fits.setval(filename,line[0],value=line[1],comment="sky WCS",)
 
 
 header["INHERIT"] = "T"
 header["EXTTYPE"] = "PHYSICAL"
 for line in header_det_mask.cards:
     header.append((line[0] + "A", line[1]), end=True)
+    fits.setval(filename,line[0] + "A",value=line[1],comment="Mask mm WCS",)
     # header[line[0] + "_A"] = line[1]
-header["CUNIT1A"] = "mm"
-header["CUNIT2A"] = "mm"
+
+fits.setval(filename,"CUNIT1A",value="mm",comment="",)
+fits.setval(filename,"CUNIT2A",value="mm",comment="",)
 
 for line in header_dispersion.cards:
     header.append((line[0] + "B", line[1]), end=True)
+    fits.setval(filename,line[0] + "B",value=line[1],comment="disperison WCS",)
+
 header["CUNIT1B"] = "nm"
 header["CUNIT2B"] = "nm"
+fits.setval(filename,"CUNIT1B",value="mm",comment="",)
+fits.setval(filename,"CUNIT2B",value="mm",comment="",)
+
+
+
 
 
 print(repr(header))
@@ -154,4 +164,6 @@ print(repr(header))
 fits.HDUList([fits.PrimaryHDU(ds9, header=header)]).writeto(
     "/tmp/test.fits", overwrite=True
 )
+d.set("regions shape Ruler")
+d.set("file " + filename)
 #%%

@@ -380,50 +380,28 @@ def DetectHotPixels(image, T1=None, T2=None, nb=None):
     return {"table": cosmicRays, "region": name}
 
 
-# d = DS9n()
-# filename = get_filename(d)
-# region = get_image()[0]
-# Xinf, Xsup, Yinf, Ysup = lims_from_region(
-#     None, coords=getregion(d, quick=True, message=False)
-# )
-# area = [Xinf, Xsup, Yinf, Ysup]
-
-# cat = DetectHotPixels(region, T1=None, T2=None, nb=200)
-# table = cat["table"]
-# x, y = table["xcentroid"], table["ycentroid"]
-# # create_ds9_regions(x, y, radius=2, form="circle", save=True, color="yellow", savename="/tmp/centers")
-# x, y = x + 1, y + 1
-# # d.set("regions /tmp/centers.reg")
-# xy = (x, y)
-# # a = SmearingProfile(filename=filename, path=None, xy=xy, area=area, DS9backUp=DS9_BackUp_path, name="", Plot=True)
-
-
-# # %%
-
-
-# d = DS9n()
-# filename = get_filename(d)
-# region = fits.open(filename)[0].data
-
-# cat = DetectHotPixels(region, T1=None, T2=None, nb=200)
-# table = cat["table"]
-# table.sort("value")
-# print(table)
-# #%%
-# x, y = table["xcentroid"], table["ycentroid"]
-# # create_ds9_regions(x, y, radius=2, form="circle", save=True, color="yellow", savename="/tmp/centers")
-# x, y = x + 1, y + 1
-# # x, y = y + 1, x + 1
-# # d.set("regions /tmp/centers.reg")
-# xy = (x, y)
-# # a = SmearingProfile(filename=filename, path=None, xy=xy, area=[0,-1,0,-1], DS9backUp=DS9_BackUp_path, name="", Plot=True)
-
-
 #%%
 n = 5
 filename = get_filename(d)
 
-image = fits.open(filename)[0].data
+fitsimage = fits.open(filename)[0]
+image = fitsimage.data
+
+header = fitsimage.header
+
+try:
+    date = float(header["DATE"][:4])
+except KeyError:
+    try:
+        date = float(header["OBSDATE"][:4])
+    except KeyError:
+        date = 2023
+except TypeError:
+    date = 2023
+    print("No date keeping 2022 conversion gain")
+if date < 2020:
+    image = image[:, ::-1]
+
 
 Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=getregion(d, quick=True))
 area = [Xinf, Xsup, Yinf, Ysup]

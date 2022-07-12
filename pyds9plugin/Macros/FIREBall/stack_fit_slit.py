@@ -512,7 +512,9 @@ cat, filename = Measure_PSF_slits(image, regs, filename=filename)
 
 
 # plot_res(cat,filename)
+
 # tmp_region = "/tmp/test.reg"
+# d.set("regions delete all")
 # create_ds9_regions(
 #     [cat["X_IMAGE"]],
 #     [cat["Y_IMAGE"]],

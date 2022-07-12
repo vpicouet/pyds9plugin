@@ -13,7 +13,9 @@ from scipy.optimize import curve_fit
 from pyds9plugin.DS9Utils import *
 
 
-def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
+def emccd_model(
+    xpapoint=None, path=None, smearing=0, gain=None, argv=[], stack=False, save=False
+):
     """Plot EMCCD simulation
     """
     print("path = ", path)
@@ -30,7 +32,11 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
         os_v = np.log10(np.array(val_os, dtype=float))
         median_im = np.average(bins, weights=val)
         header = None
-        header_exptime, header_gain = -99, -99
+        # header_exptime, header_gain = -99, -99
+        header_exptime, header_gain = (
+            float(path.split("_")[-1].split(".csv")[0][:-1]),
+            float(path.split("_")[-2][:-1]),
+        )
 
     else:
         if path is None:
@@ -40,6 +46,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
         else:
             d = DS9n()
             name = path
+            save = True
 
         region = getregion(d, quick=True, message=False, selected=True)
         if region is not None:
@@ -93,7 +100,12 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
         try:
             header_exptime, header_gain = header["EXPTIME"], header["EMGAIN"]
         except:
-            header_exptime, header_gain = -99, -99
+            pass
+            # try:
+            # header_exptime, header_gain = (
+            #     path.split("_")[-1].split(".csv")[0],
+            #     path.split("_")[-2],
+            # )
 
         # val *= im.size / len(im[np.isfinite(im)])
 
@@ -119,7 +131,7 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
     # print(val_os)
     # print(np.nanargmax(val_os))
     # print(len(val_os),len(bins_os))
-    bias = bins_os[np.nanargmax(os_v)] + 0.5  #  #ADDED xdata[np.nanargmax(ydata)]
+    bias = bins_os[np.nanargmax(os_v)]  # + 0.5  #  #ADDED xdata[np.nanargmax(ydata)]
     # PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.nanargmax(value)],50,0])['popt'][1]
 
     try:
@@ -136,14 +148,18 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
     # if bias > 1500:
     if date < 2020:
         conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
-        smearing = 0.8  # 1.5  # ADDED
+        # smearing = 0.8  # 1.5  # ADDED
         RN = 60  # 45 #ADDED
     else:
         conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
-        smearing = 1.3  # 0.7  # ADDED
+        # smearing = 1.3  # 0.7  # ADDED
         RN = 10
     # print("conversion_gain = ", conversion_gain)
-    mask_RN_os = (bins > bias - 1 * RN) & (bins < bias + 0.8 * RN) & (val_os > 0)
+    lim_rn1, lim_rn2 = (
+        bias - 1 * RN / conversion_gain,
+        bias + 0.8 * RN / conversion_gain,
+    )
+    mask_RN_os = (bins > lim_rn1) & (bins < lim_rn2) & (val_os > 0)
     RON = np.abs(
         PlotFit1D(
             bins[mask_RN_os],
@@ -197,18 +213,20 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
         ]
     except (ValueError, IndexError) as e:
         upper_limit_os = np.max(bins_os)
-    mask_gain1 = (xdata > bias + 6 * RON) & (xdata < upper_limit)
-    try:
-        gain = (
-            -1
-            / np.log(10)
-            / conversion_gain
-            / PlotFit1D(xdata[mask_gain1], ydata[mask_gain1], deg=1, plot_=False,)[
-                "popt"
-            ][1]
-        )
-    except ValueError:
-        gain = 1200
+    lim_gain_1 = bias + 4 * RON
+    mask_gain1 = (xdata > lim_gain_1) & (xdata < upper_limit)
+    if gain is None:
+        try:
+            gain = (
+                -1
+                / np.log(10)
+                / conversion_gain
+                / PlotFit1D(xdata[mask_gain1], ydata[mask_gain1], deg=1, plot_=False,)[
+                    "popt"
+                ][1]
+            )
+        except ValueError:
+            gain = 1200
     # flux = np.nanmax([0.01] + [(np.nanmean(im) - bias) / (gain * conversion_gain)])
     flux = np.nanmax(
         [0.01]
@@ -267,6 +285,10 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
     plt.plot(
         xdata, ydata, "k", alpha=0.2,
     )
+    plt.plot([lim_rn1, lim_rn1], [0, 5], ":k", alpha=0.1)
+    plt.plot([lim_rn2, lim_rn2], [0, 5], ":k", alpha=0.1)
+    plt.plot([lim_gain_1, lim_gain_1], [0, 3], ":k", alpha=0.1)
+    plt.plot([upper_limit, upper_limit], [0, 3], ":k", alpha=0.1)
     n_conv = 11
     y_conv = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
     y_os_conv = np.convolve(os_v, np.ones(n_conv) / n_conv, mode="same")
@@ -280,14 +302,8 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
         label="Data: Gconv=%0.2f\ntexp=%i\nG=%i"
         % (conversion_gain, header_exptime, header_gain),
     )
-    # plt.plot(
-    #     xdata[xdata > upper_limit], ydata[xdata > upper_limit], ":", c="black",
-    # )
-    # print("y=", np.sum(10 ** ydata))
-
     plt.plot(
         bins_os[bins_os < upper_limit_os],
-        # os_v[bins_os < upper_limit_os],
         y_os_conv[bins_os < upper_limit_os],
         ":",
         c="black",
@@ -305,10 +321,14 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
     plt.plot(
         bins_os, os_v, "k", alpha=0.2,
     )
+
     f1 = np.convolve(function(x, *centers), np.ones(n_conv) / n_conv, mode="same")
+    centers_ = np.array(centers) + [0, 0, 0, flux, 0, 0]
+    # centers_[-3] = flux
+    f2 = np.convolve(function(x, *centers_), np.ones(n_conv) / n_conv, mode="same")
     (l1,) = plt.plot(x, f1, "-", lw=1, label="EMCCD OS model", alpha=0.7)
     (l2,) = plt.plot(
-        x, f1, "-", c=l1.get_color(), lw=1
+        x, f2, "-", c=l1.get_color(), lw=1
     )  # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))
     ax.set_ylabel("Log (Frequency of occurence)", fontsize=15)
@@ -321,7 +341,10 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
         plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit+smearing", color=c, hovercolor=hc,
     )
     button0 = Button(
-        plt.axes([0.67 - 0.02 * 1, 0.025, 0.1, 0.04]), "Reset", color=c, hovercolor=hc,
+        plt.axes([0.67 - 0.02 * 1, 0.025, 0.1, 0.04]),
+        "Reset smear",
+        color=c,
+        hovercolor=hc,
     )
     simplified_least_square = Button(
         plt.axes([0.57 - 0.02 * 2, 0.025, 0.1, 0.04]),
@@ -439,6 +462,23 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
 
         return
 
+    def fit0(event):
+        vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
+        vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
+        vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
+        if vals1[-2] > 0.5:
+            vals1[-2] = 0
+        else:
+            vals1[-2] = 0.8
+        for slid, val1i, val2i in zip(sliders, vals1, vals2):
+            try:
+                slid.set_val(val1i)
+            except np.AxisError:
+                slid.set_val([val1i, val2i])
+            dict_values[slid.label.get_text()] = slid.val
+
+        return
+
     def simplified_least_square_fit(event):
         vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
         vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
@@ -547,6 +587,8 @@ def emccd_model(xpapoint=None, path=None, smearing=1, argv=[], stack=False):
 
     plt.draw()
     ax.legend(loc="upper right", fontsize=12, ncol=2)
-    ax.set_title(name, fontsize=9)
+    ax.set_title("/".join(name.split("/")[-4:]), fontsize=9)
+    if ".csv" in path:
+        plt.savefig(path.replace(".csv", ".png"))
     plt.show()
-    return 1, 1
+    return 1, fig

@@ -50,6 +50,9 @@ read_noise = 50  # e-/pix * ConversionGain
 n = 15
 # --- Amplification ---#
 flux *= np.hstack([np.ones(size), np.zeros(size)])
+flux[900:1300, 500:520] = 0.7
+flux[900:1300, 1500:1520] = 0.7
+flux[100:300, 1500:1520] = 1.7
 nsize = (2000, 2000)
 imaADU = np.random.gamma(np.random.poisson(flux), abs(EmGain))
 # prob_sCIC = np.random.rand(nsize[0], nsize[1])

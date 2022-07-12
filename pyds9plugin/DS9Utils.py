@@ -2043,14 +2043,14 @@ def astrometry_net(xpapoint=None, argv=[]):
         help="Set reference point to center of image?",
         metavar="",
     )
-    parser.add_argument(
-        "--parity",
-        default="0",
-        choices=("0", "1"),
-        help="Parity (flip) of image",
-        type=str,
-        metavar="",
-    )
+    # parser.add_argument(
+    #     "--parity",
+    #     default="0",
+    #     choices=("0", "1"),
+    #     help="Parity (flip) of image",
+    #     type=str,
+    #     metavar="",
+    # )
     parser.add_argument(
         "--positional_error",
         default="",
@@ -2073,8 +2073,10 @@ def astrometry_net(xpapoint=None, argv=[]):
     verboseprint("Processing might take a few minutes ~5-10")
     PathExec = os.path.dirname(os.path.realpath(__file__)) + "/astrometry3.py"
     Newfilename = filename[:-5] + "_wcs.fits"
-    create_wcs(PathExec, filename, Newfilename, params=args, type_=type_)
+    import webbrowser
 
+    webbrowser.open("https://nova.astrometry.net/dashboard/submissions", new=2)
+    create_wcs(PathExec, filename, Newfilename, params=args, type_=type_)
     wcs_header = wcs.WCS(fits.getheader(Newfilename)).to_header()
     filename = get_filename(d)
     for key in list(dict.fromkeys(wcs_header.keys())):
@@ -2115,7 +2117,7 @@ def create_wcs(PathExec, filename, Newfilename, params, type_="Image"):
         "radius",
         "downsample",
         "crpix-center",
-        "parity",
+        # "parity",
         "positional_error",
         "tweak-order",
         #' --use_sextractor ',
@@ -2150,13 +2152,14 @@ def create_wcs(PathExec, filename, Newfilename, params, type_="Image"):
         + PathExec
         + " --apikey apfqmasixxbqxngm --wcs "
         + Newfilename
-        + " --private y "
+        + " --private n --annotate y --kmz /tmp/test.kmz " #--urlupload false
+        # + " --use_sextractor true "
         + upload
         + filename
         + " "
         + parameters
     )
-    verboseprint(executable)
+    print(executable)
     import subprocess
 
     result = subprocess.run(executable.split(), stderr=sys.stderr, stdout=sys.stderr)
@@ -2286,23 +2289,25 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
                     xc, yc, a1, b1, a2, b2, angle = coords
                 w = 2 * a2
                 h = 2 * b2
-                dat = win.get("data physical %s %s %s %s no" % (xc - a2, yc - b2, w, h))
-                X, Y, arr = parse_data(dat)
-                Xc, Yc = np.floor(xc), np.floor(yc)
-                inside = ((X - Xc) / a2) ** 2 + ((Y - Yc) / b2) ** 2 <= 1
-                if len(coords) == 5:
-                    ellipse = namedtuple(
-                        "Ellipse", "data databox inside xc yc a b angle"
-                    )
-                    return ellipse(arr, arr, inside, xc, yc, a2, b2, angle)
+                ellipse = namedtuple("Ellipse", "xc yc w h angle")
+                processed_regions.append(ellipse(xc, yc, a2, b2, angle))
+                # dat = win.get("data physical %s %s %s %s no" % (xc - a2, yc - b2, w, h))
+                # X, Y, arr = parse_data(dat)
+                # Xc, Yc = np.floor(xc), np.floor(yc)
+                # inside = ((X - Xc) / a2) ** 2 + ((Y - Yc) / b2) ** 2 <= 1
+                # if len(coords) == 5:
+                #     ellipse = namedtuple(
+                #         "Ellipse", "data databox inside xc yc a b angle"
+                #     )
+                #     return ellipse(arr, arr, inside, xc, yc, a2, b2, angle)
 
-                inside &= ((X - Xc) / a1) ** 2 + ((Y - Yc) / b1) ** 2 >= 1
-                annulus = namedtuple(
-                    "EllipticalAnnulus", "data databox inside xc yc a1 b1 a2 b2 angle",
-                )
-                processed_regions.append(
-                    annulus(arr, arr, inside, xc, yc, a1, b1, a2, b2, angle)
-                )
+                # inside &= ((X - Xc) / a1) ** 2 + ((Y - Yc) / b1) ** 2 >= 1
+                # annulus = namedtuple(
+                #     "EllipticalAnnulus", "data databox inside xc yc a1 b1 a2 b2 angle",
+                # )
+                # processed_regions.append(
+                #     annulus(arr, arr, inside, xc, yc, a1, b1, a2, b2, angle)
+                # )
             elif name == "polygon":
                 # return(coords)
                 processed_regions.append(coords)
@@ -2432,8 +2437,24 @@ def throughfocus_wcs(
     ENCa = []
     ext = fits_ext(fits.open(files[0]))
     x = offsets
-    for file in files:
-        filename = file
+    t = Table(
+        names=(
+            "name",
+            "number",
+            "offset",
+            "x",
+            "y",
+            "Sigma",
+            "EE50",
+            "EE80",
+            "Max pix",
+            "Flux",
+            "Var pix",
+        ),
+        dtype=("S15", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4",),
+    )
+
+    for i, filename in enumerate(files):
         with fits.open(filename) as f:
             fitsfile = f[ext]
             image = fitsfile.data
@@ -2477,27 +2498,60 @@ def throughfocus_wcs(
         EE80.append(d["EE80"])
         xo.append(d["Center"][0])
         yo.append(d["Center"][1])
-        maxpix.append(max20[-20:].mean())
+        maxpix.append(np.nanmean(max20[-20:]))
+        # print(subimage)
+        # print(max20[-20:])
+        # print(maxpix)
         sumpix.append(d["Flux"])
         varpix.append(subimage.var())
-
+        t.add_row(
+            (
+                os.path.basename(filename),
+                os.path.basename(filename)[5:11],
+                # t2s(h=h, m=m, s=s, d=day),
+                x[i],
+                d["Center"][0],
+                d["Center"][1],
+                d["Sigma"],
+                d["EE50"],
+                d["EE80"],
+                max20[-20:].mean(),
+                d["Flux"],
+                subimage.var(),
+                # min(fwhm),
+                # min(EE50),
+                # min(EE80),
+                # min(maxpix),
+                # min(sumpix),
+                # max(varpix),
+            )
+        )
+    maxpix = np.array(maxpix) / np.max(maxpix)
     def f(x, a, b, c):
         return a * (x - b) ** 2 + c
+    import matplotlib
+    matplotlib.use("TkAgg")
+    import matplotlib.pyplot as plt
+    n=int(len(files)/3)+1
+    fig, axes = plt.subplots(3,n,sharex=True,sharey=True,figsize=(4*n,3*4))
+    for i, ax in enumerate(axes.flatten()):
+        if i<len(files):
+            ax.imshow(images[i])
+            ax.text(0.1, 0.1, "σ=%0.1f\nEE50=%0.1f\nEE80=%0.1f"%(fwhm[i],EE80[i],EE50[i]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
+            ax.set_title("%0.2f"%(x[i]))
+            # ax.legend()
+        else:
+            try:
+                ax.text(0.1, 0.1, "x=%0.1f\ny=%0.1f\nA=%0.2f\nB=%0.2f\nC=%0.2f\nN=%i\nname=%s"%(center[0],center[1],header["LINAENC"],header["LINBENC"],header["LINCENC"],header["FRAMESTA"],files[0].split("/")[-2]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
+            except KeyError:
+                pass
+            ax.axis("off")
+    fig.tight_layout()
+    fig.savefig(os.path.dirname(files[0])+"/tf.png")
+    plt.close()
 
     xtot = np.linspace(x.min(), x.max(), 200)
-    # if Type == "guider":
-    #     x = np.array(ENCa)
-    #     xtot = np.linspace(x.min(), x.max(), 200)
-    #     ENC = lambda x, a: x
-    # if Type == "detector":
-    #     x = np.arange(len(files))
-    #     xtot = np.linspace(x.min(), x.max(), 200)
-    #     if len(ENCa) == 0:
-    #         ENC = lambda x, a: 0
-    #     else:
-    #         ENC = (
-    #             lambda x, a: (ENCa[-1] - ENCa[0]) / (len(ENCa) - 1) * x + ENCa[0]
-    #         )
+
     try:
         opt1, cov1 = curve_fit(f, x, fwhm)
         bestx1 = xtot[np.argmin(f(xtot, *opt1))]
@@ -2539,75 +2593,48 @@ def throughfocus_wcs(
         opt6 = [0, 0, 0]
         bestx6 = np.nan
         pass
-    # mean = np.nanmean(
-    #     np.array(
-    #         [
-    #             enc(bestx1, ENCa),
-    #             enc(bestx2, ENCa),
-    #             enc(bestx3, ENCa),
-    #             enc(bestx4, ENCa),
-    #             enc(bestx6, ENCa),
-    #         ]
-    #     )
-    # )
     name = "%s - %i - %i - %s " % (
         os.path.basename(filename),
         int(center_pix[0]),
         int(center_pix[1]),
         0,
     )
-    # verboseprint(name)
-    t = Table(
-        names=(
-            "name",
-            "number",
-            "x",
-            "y",
-            "Sigma",
-            "EE50",
-            "EE80",
-            "Max pix",
-            "Flux",
-            "Var pix",
-        ),
-        dtype=("S15", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4",),
-    )
-    t.add_row(
-        (
-            os.path.basename(filename),
-            os.path.basename(filename)[5:11],
-            # t2s(h=h, m=m, s=s, d=day),
-            d["Center"][0],
-            d["Center"][1],
-            min(fwhm),
-            min(EE50),
-            min(EE80),
-            min(maxpix),
-            min(sumpix),
-            max(varpix),
-        )
-    )
+    # t.add_row(
+    #     (
+    #         os.path.basename(filename),
+    #         os.path.basename(filename)[5:11],
+    #         # t2s(h=h, m=m, s=s, d=day),
+    #         d["Center"][0],
+    #         d["Center"][1],
+    #         min(fwhm),
+    #         min(EE50),
+    #         min(EE80),
+    #         min(maxpix),
+    #         min(sumpix),
+    #         max(varpix),
+    #     )
+    # )
     np.savetxt("/tmp/fwhm.dat", np.array([x, fwhm]).T)
     np.savetxt("/tmp/EE50.dat", np.array([x, EE50]).T)
     np.savetxt("/tmp/EE80.dat", np.array([x, EE80]).T)
     np.savetxt("/tmp/maxpix.dat", np.array([x, maxpix]).T)
-    try:
-        OldTable = Table.read(os.path.dirname(filename) + "/Throughfocus.csv")
-    except IOError as e:
-        logger.warning(e)
-        t.write(os.path.dirname(filename) + "/Throughfocus.csv")
-    else:
-        t = vstack((OldTable, t))
-        t.write(os.path.dirname(filename) + "/Throughfocus.csv", overwrite=True)
+    # try:
+    #     OldTable = Table.read(os.path.dirname(filename) + "/Throughfocus.csv")
+    # except IOError as e:
+    #     logger.warning(e)
+    #     t.write(os.path.dirname(filename) + "/Throughfocus.csv")
+    # else:
+    #     t = vstack((OldTable, t))
+    t.write(os.path.dirname(filename) + "/Throughfocus.csv", overwrite=True)
     d = []
     d.append("plot line open")  # d.append("plot axis x grid no ")
     d.append("plot axis y grid no ")
     d.append(
-        "plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "
+        "plot title 'Fit: Best σ = %0.2f - Position = %0.2f' "
         % (np.nanmin(fwhm), x[np.argmin(fwhm)])
         # % (np.nanmin(f(xtot, *opt1)), xtot[np.argmin(f(xtot, *opt1))])
     )
-    d.append("plot title y 'FWHM' ")
+    d.append("plot title y 'σ' ")
     d.append("plot load /tmp/fwhm.dat xy")
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
@@ -2620,7 +2647,7 @@ def throughfocus_wcs(
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append(
-        "plot title 'Fit: Best FWHM = %0.2f - Position = %0.2f' "
+        "plot title 'Fit: Best max = %0.2f - Position = %0.2f' "
         % (np.nanmax(maxpix), x[np.argmax(maxpix)])
         # % (np.nanmax(f(xtot, *opt4)), xtot[np.argmax(f(xtot, *opt4))])
     )
@@ -2637,12 +2664,12 @@ def throughfocus_wcs(
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append(
-        "plot title 'Fit: Best EE50 = %0.2f - Position = %0.2f' "
+        "plot title 'Fit: Best EE80 = %0.2f - Position = %0.2f' "
         % (np.nanmin(EE50), x[np.argmin(EE50)])
         # % (np.nanmin(f(xtot, *opt2)), xtot[np.argmin(f(xtot, *opt2))])
     )
     d.append("plot load /tmp/EE50.dat xy")
-    d.append("plot title y 'Radial profile' ")
+    d.append("plot title y 'EE80' ")
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
     d.append("plot line shape color black")  # d.append("plot legend yes ")
@@ -2654,12 +2681,12 @@ def throughfocus_wcs(
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append(
-        "plot title 'Fit: Best EE80 = %0.2f - Position = %0.2f' "
+        "plot title 'Fit: Best EE50 = %0.2f - Position = %0.2f' "
         % (np.nanmin(EE80), x[np.argmin(EE80)])
         # % (np.nanmin(f(xtot, *opt3)), xtot[np.argmin(f(xtot, *opt3))])
     )
     d.append("plot load /tmp/EE80.dat xy")
-    d.append("plot title y 'Radial profile' ")
+    d.append("plot title y 'EE50' ")
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
     d.append("plot line shape color black")  # d.append("plot legend yes ")
@@ -2671,6 +2698,7 @@ def throughfocus_wcs(
     d.append("plot layout GRID ; plot layout STRIP scale 100")
     d.append("plot font legend size 9 ")
     d.append("plot font labels size 13 ")
+    d.append("plot export "+os.path.dirname(files[0])+"/TF.jpeg")
     ds9 = DS9n()
     ds9.set(" ; ".join(d))
     return images  # fwhm, EE50, EE80
@@ -2819,14 +2847,14 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
         path.sort()
 
     try:
-        ENCa_center, pas = np.array(args.value.split("-"), dtype=float)
+        ENCa_center, pas = np.array(args.value.split(","), dtype=float)
     except ValueError as e:
         logger.warning(e)
-        verboseprint("No actuator given, taking header ones for guider images")
+        verboseprint("No value given, taking header ones for guider images")
         ENCa_center, pas = None, None
     except IndexError as e:
         logger.warning(e)
-        verboseprint("No actuator given, taking header ones for guider images")
+        verboseprint("No value given, taking header ones for guider images")
         ENCa_center, pas = None, None
     x = np.arange(len(path))
     if len(path) < 3:
@@ -2900,6 +2928,18 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
     datc = [convolve(data, Gaussian2DKernel(x_stddev=1)) for data in dat]
     ptp = [data.ptp() for data in dat]
     a = Table([dat, datc, ptp], names=("VIGNET1", "VIGNET2", "AMPLITUDE"))
+    names = [name for name in a.colnames if len(a[name].shape) > 2] * 2
+    for name in names:
+        # print("\n\n\n", name)
+        a[name] = [(data - np.nanmin(data)) for data in a[name]]
+        a[name + " smoothed"] = [
+            convolve(data, Gaussian2DKernel(x_stddev=1)) for data in a[name]
+        ]
+    a["AMPLITUDE"] = [data.ptp() for data in a[names[0]]]
+    # if args.sort != "":
+    #     a.sort(args.sort)
+    # names = [name for name in a.colnames if len(a[name].shape) > 2] * 2
+
     pyvista_throughfocus(a)
 
 
@@ -3047,6 +3087,7 @@ def explore_throughfocus(xpapoint=None, argv=[]):
     # )
     a = a[mask]
     for name in names:
+        # print("\n\n\n",name)
         a[name] = [(data - np.nanmin(data)) for data in a[name]]
         a[name + " smoothed"] = [
             convolve(data, Gaussian2DKernel(x_stddev=1)) for data in a[name]
@@ -3054,6 +3095,7 @@ def explore_throughfocus(xpapoint=None, argv=[]):
     a["AMPLITUDE"] = [data.ptp() for data in a[names[0]]]
     if args.sort != "":
         a.sort(args.sort)
+    names = [name for name in a.colnames if len(a[name].shape) > 2] * 2
     pyvista_throughfocus(a, names)
     return
 
@@ -4599,6 +4641,12 @@ def execute_command(
                 verbose="1",
             )
     ds9 = new_dict["ds9"]
+    # try:
+    #     od_data = fitsimage.data
+    #     old_header =
+    # except AttributeError:
+    #     same = None #np.ones((10, 10))
+
     same = fitsimage.data == ds9
     if type(same) is not bool:
         same = same.all()
@@ -4960,25 +5008,30 @@ def stack_images_path(
                 verboseprint(e)
                 n -= 1
         stack = stack / n
-    else:
-        array3d = np.array([fits.open(file)[i].data for file in paths[index]])
-        # print(paths)
-        # print(array3d)
-        stack = np.array(getattr(np, Type)(array3d, axis=0,), dtype=dtype,)
 
-    # elif Type == "nanmedian":
-    #     stack = np.array(
-    #         getattr(np, Type)(
-    #             np.array([fits.open(file)[i].data for file in paths[index]]), axis=0,
-    #         ),
-    #         dtype=dtype,
-    #     )
-    # else:
-    #     stack = getattr(np, Type)(
-    #         np.array([fits.open(file)[i].data for file in paths[index]]),
-    #         dtype=dtype,
-    #         axis=0,
-    #     )
+    else:
+        array3d = [fits.open(file)[i].data for file in paths[index]]
+        if (
+            np.isfinite(np.array(array3d)).all()
+            & (Type != "mean")
+            & (Type != "nanmean")
+        ):
+            dtype = int
+        if Type == "counting":
+            bins = np.linspace(1000, 1500, 100)
+            hists = [
+                np.histogram(frame[:, :1000].flatten(), bins=bins)[1]
+                for frame in array3d
+            ]
+            biases = [bins[np.argmax(hist)] for hist in hists]
+            array3d = [frame > b + 5.5 * 10 for frame, b in zip(array3d, biases)]
+            stack = np.array(
+                getattr(np, "sum")(np.array(array3d), axis=0,), dtype=dtype,
+            )
+        else:
+            stack = np.array(
+                getattr(np, Type)(np.array(array3d), axis=0,), dtype=dtype,
+            )
 
     try:
         numbers = [
@@ -4992,6 +5045,11 @@ def stack_images_path(
     new_fitsfile = fitsfile[i]
     new_fitsfile.data = stack
     new_fitsfile.header["STK_NB"] = images
+    if dtype == int:
+        print("dtype=", dtype)
+        new_fitsfile.header["BITPIX"] = 16
+        new_fitsfile.data = np.uint16(new_fitsfile.data)
+
     if name is None:
         try:
             name = "{}/stack{}_{}-{}.fits".format(
@@ -5016,12 +5074,15 @@ def stack_images_path(
     verboseprint("Image saved : %s" % (name))
     print("write here", name)
     try:
-        name = fitswrite(new_fitsfile, name)
+        print(new_fitsfile.header["BITPIX"])
+        # name = fitswrite(new_fitsfile, name)
+        new_fitsfile.writeto(name, overwrite=True)
     # except OSError:
     #     print('System seems read only... trying to save in upper directory')
     #     name=os.path.join(os.path.dirname(os.path.dirname(name)), os.path.basename(name) )
     #     fitswrite(new_fitsfile, name)
     except RuntimeError as e:
+        print("WTF")
         verboseprint("Unknown error to be fixed: ", e)
         name = fitswrite(new_fitsfile.data, name)
     return fitsfile, name
@@ -5045,6 +5106,16 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
         type=str,
         metavar="",
     )
+    parser.add_argument(
+        "-o",
+        "--offset",
+        default="",
+        help="Offsets of the dithering ",
+        type=str,
+        metavar="",
+    )
+ 
+ 
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
@@ -5067,12 +5138,16 @@ def light_curve(xpapoint=None, DS9backUp=DS9_BackUp_path, argv=[]):
             int(a.xc) - radius : int(a.xc) + radius,
         ]
         background = estimate_background(image, [a.xc, a.yc], radius=30, n=1.8)
-        flux = np.nansum(
-            subimage - background
-        )  # - estimate_background(image, center, radius, n_bg)
+        flux = np.nansum(subimage - background) 
+        # - estimate_background(image, center, radius, n_bg)
         fluxes.append(flux)
-    fluxesn = (fluxes - min(fluxes)) / max(fluxes - min(fluxes))
-    x = np.arange(len(path)) + 1
+    print(fluxes)
+    fluxesn = (fluxes - np.nanmin(fluxes)) / np.nanmax(fluxes - np.nanmin(fluxes))
+    if args.offset=="":
+        x = np.arange(len(path)) + 1
+    else:
+         x = np.array(args.offset.split(","), dtype=float)
+    print(x, fluxesn)
     popt, pcov = curve_fit(Gaussian, x, fluxesn, p0=[1, x.mean(), 3, 0])
     xl = np.linspace(x.min(), x.max(), 100)
     maxf = xl[
@@ -5411,16 +5486,16 @@ def give_value(x):
     return x
 
 
-def convolve_box_psf(x, amp=1, l=40, x0=0, sigma2=40, offset=0):
-    """Convolution of a box with a gaussian
-    """
-    from scipy import special
-    import numpy as np
+# def convolve_box_psf(x, amp=1, l=40, x0=0, sigma2=40, offset=0):
+#     """Convolution of a box with a gaussian
+#     """
+#     from scipy import special
+#     import numpy as np
 
-    a = special.erf((l - (x - x0)) / np.sqrt(2 * sigma2))
-    b = special.erf((l + (x - x0)) / np.sqrt(2 * sigma2))
-    function = amp * (a + b) / 4 * l
-    return offset + function
+#     a = special.erf((l - (x - x0)) / np.sqrt(2 * sigma2))
+#     b = special.erf((l + (x - x0)) / np.sqrt(2 * sigma2))
+#     function = amp * (a + b) / 4 * l
+#     return offset + function
 
 
 def center_region(xpapoint=None, plot_=True, argv=[]):
@@ -5464,6 +5539,7 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
 
     for region in regions:
         if hasattr(region, "h"):
+            from pyds9plugin.Macros.Fitting_Functions.functions import slit as model
             xc, yc, h, w = (
                 int(region.xc),
                 int(region.yc),
@@ -5483,26 +5559,39 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
             data = d.get_pyfits()[0].data
             imagex = data[x_inf - 15 : x_sup + 15, y_inf:y_sup].sum(axis=1)
             imagey = data[x_inf:x_sup, y_inf - 15 : y_sup + 15].sum(axis=0)
-            model = convolve_box_psf
+            # model = convolve_box_psf
             x = np.arange(-len(imagex) / 2, len(imagex) / 2)
             y = np.arange(-len(imagey) / 2, len(imagey) / 2)
+            import matplotlib.pyplot as plt
+
+            fig, axes = plt.subplots(2, 1, sharex=True)
+            axes[0].plot(x, imagex, "bo", label="Spatial direction")
+            axes[1].plot(y, imagey, "ro", label="Spectral direction")
+            axes[0].set_ylabel("Spatial direction")
+            axes[1].set_ylabel("Spectral direction")
+
             try:
                 poptx, pcovx = curve_fit(
                     model,
                     x,
                     imagex,
-                    p0=[imagex.max(), 20, 0.0, 10.0, np.median(imagex)],
+                    p0=[imagex.ptp(), 20, 0.0, 10.0, np.median(imagex)],
                 )  # ,  bounds=bounds)
                 popty, pcovy = curve_fit(
                     model,
                     y,
                     imagey,
-                    p0=[imagey.max(), 10, 0.0, 10.0, np.median(imagey)],
+                    p0=[imagey.ptp(), 10, 0.0, 10.0, np.median(imagey)],
                 )  # ,  bounds=bounds)
                 ampx, lx, x0x, sigma2x, offsetx = poptx
                 ampy, ly, x0y, sigma2y, offsety = popty
             except RuntimeError as e:
+                print(e)
+                x0x, x0y = 0,0 
                 verboseprint(e)
+                axes[0].plot(x, model(x, *[imagex.ptp(), 20, 0.0, 10.0, np.median(imagex),]), color="b")
+                axes[1].plot(y, model(y, *[imagey.ptp(), 10, 0.0, 10.0, np.median(imagey),]), color="r")
+                plt.show()
             else:
                 verboseprint("Poptx = %s" % (poptx))
                 verboseprint("Popty = %s" % (popty))
@@ -5529,15 +5618,9 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
             d.set("regions %s" % (tmp_region))
             # import matplotlib
             # matplotlib.use("TkAgg")
-            import matplotlib.pyplot as plt
 
-            fig, axes = plt.subplots(2, 1, sharex=True)
-            axes[0].plot(x, imagex, "bo", label="Spatial direction")
-            axes[1].plot(y, imagey, "ro", label="Spectral direction")
             axes[0].plot(x, model(x, *poptx), color="b")
             axes[1].plot(y, model(y, *popty), color="r")
-            axes[0].set_ylabel("Spatial direction")
-            axes[1].set_ylabel("Spectral direction")
             axes[0].plot(
                 x,
                 Gaussian(x, imagex.max() - offsetx, x0x, sigma2x, offsetx),
@@ -5550,6 +5633,8 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
                 2000,
             )
             xcc = x - x0x
+            lx/=2
+            ly/=2
             axes[0].plot(
                 x,
                 np.piecewise(
@@ -5559,7 +5644,7 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
                 ),
                 ":b",
                 label="Slit size",
-            )  # slit (UnitBox)
+            )
             axes[0].plot([x0x, x0x], [imagex.min(), imagex.max()])
             axes[1].plot(
                 y,
@@ -5920,6 +6005,7 @@ def save_region_as_catalog(xpapoint=None, name=None, new_name=None, argv=[]):
     """
     import numpy as np
     from astropy.table import Table
+    from astropy.io import fits
 
     parser = create_parser(get_name_doc())
     parser.add_argument(
@@ -5934,7 +6020,8 @@ def save_region_as_catalog(xpapoint=None, name=None, new_name=None, argv=[]):
     verboseprint(new_name)
 
     d = DS9n(args.xpapoint)
-    image = d.get_pyfits()[0].data
+
+    # image = fits.open(get_filename(d))[0].data
 
     if new_name is None:
         new_name = args.path
@@ -5965,24 +6052,24 @@ def save_region_as_catalog(xpapoint=None, name=None, new_name=None, argv=[]):
         )
     cat = Table((x - 1, y - 1, r1, r2), names=("x", "y", "w", "h"))
     verboseprint(cat)
-    images = []
-    w = int(cat[0]["w"])
-    h = int(cat[0]["h"])
-    for x, y in zip(cat["x"].astype(int), cat["y"].astype(int)):
-        im = image[x - w : x + w, y - h : y + h]
-        if im.size == 4 * w * h:
-            images.append(im)
-        else:
-            images.append(np.nan * np.zeros((2 * w, 2 * h)))  # *np.nan)
+    # images = []
+    # w = int(cat[0]["w"])
+    # h = int(cat[0]["h"])
+    # for x, y in zip(cat["x"].astype(int), cat["y"].astype(int)):
+    #     im = image[x - w : x + w, y - h : y + h]
+    #     if im.size == 4 * w * h:
+    #         images.append(im)
+    #     else:
+    #         images.append(np.nan * np.zeros((2 * w, 2 * h)))  # *np.nan)
 
-    images = np.array(images)
-    verboseprint(images)
-    cat["var"] = np.nanvar(images, axis=(1, 2))
-    cat["std"] = np.nanstd(images, axis=(1, 2))
-    cat["mean"] = np.nanmean(images, axis=(1, 2))
-    cat["median"] = np.nanmedian(images, axis=(1, 2))
-    cat["min"] = np.nanmin(images, axis=(1, 2))
-    cat["max"] = np.nanmax(images, axis=(1, 2))
+    # images = np.array(images)
+    # verboseprint(images)
+    # cat["var"] = np.nanvar(images, axis=(1, 2))
+    # cat["std"] = np.nanstd(images, axis=(1, 2))
+    # cat["mean"] = np.nanmean(images, axis=(1, 2))
+    # cat["median"] = np.nanmedian(images, axis=(1, 2))
+    # cat["min"] = np.nanmin(images, axis=(1, 2))
+    # cat["max"] = np.nanmax(images, axis=(1, 2))
     if new_name is None:
         new_name = "/tmp/regions.csv"
     verboseprint(new_name)

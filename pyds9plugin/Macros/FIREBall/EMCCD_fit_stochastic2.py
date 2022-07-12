@@ -11,4 +11,4 @@ if "FIREBall.py" in __file__:  # or (function == "execute_command")
 else:
     pass
 
-emccd_model(xpapoint=None, path=filename, smearing=1, argv=[])
+emccd_model(xpapoint=None, path=filename, smearing=0, argv=[])

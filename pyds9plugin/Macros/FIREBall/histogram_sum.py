@@ -1,3 +1,4 @@
+#%%
 from pyds9plugin.DS9Utils import *
 import sys, glob
 import matplotlib.pyplot as plt
@@ -32,6 +33,8 @@ def HistogramSums(path=[]):
         Yinf, Ysup, Xinf, Xsup = [1130, 1430, 1300, 1900]
         Yinf, Ysup, Xinf, Xsup = [1300, 1900, 1130, 1430]
         Yinf, Ysup, Xinf, Xsup = [30, 530, 1500, 2100]
+        Yinf, Ysup, Xinf, Xsup = [1600, 1900, 1150, 1600]
+        Yinf, Ysup, Xinf, Xsup = [800, 1200, 1150, 1600]
     else:
         Yinf, Ysup, Xinf, Xsup = lims_from_region(None, coords=region)
         # image_area = [Yinf, Ysup,Xinf, Xsup]
@@ -108,41 +111,59 @@ def HistogramSums(path=[]):
     # print(path)
     # plt.savefig(os.path.dirname(path[0]) + "/HistogramSum.png" )#% (datetime.datetime.now().strftime("%y%m%d-%HH%M")))  # piki
     # plt.show()
+    try:
+        TEMPB = float(fitsfile.header["TEMPB"])
+    except (KeyError,ValueError) as e:
+        print(e)
+        TEMPB = 0
+    print(TEMPB)
     csvwrite(
         Table(np.vstack((bins_c, value, value_os)).T),
-        os.path.dirname(path[0]) + "/Histogram_%s_%sG_%is.csv" % (date, daq, exptime),
+        os.path.dirname(path[0]) + "/Histogram_%s_%iT_%sG_%is.csv" % (date, float(TEMPB), daq, exptime),
     )
     csvwrite(
         Table(np.vstack((bins_c, value, value_os)).T),
-        "/tmp" + "/Histogram_%s_%sG_%is.csv" % (date, daq, exptime),
+        "/tmp" + "/Histogram_%s_%iT_%sG_%is.csv" % (date, float(TEMPB), daq, exptime),
     )
 
-    emccd_model(
+    a, fig = emccd_model(
         xpapoint=None,
         path=os.path.dirname(path[0])
-        + "/Histogram_%s_%sG_%is.csv" % (date, daq, exptime),
-        smearing=1,
+        + "/Histogram_%s_%iT_%sG_%is.csv" % (date, float(TEMPB), daq, exptime),
+        smearing=0.9,
+        # gain=3000,
         argv=[],
     )
     return
 
 
-if "" in sys.argv:
-    sys.argv.remove("")
-path = sys.argv[1:]
-HistogramSums(path=path)
+## %%
+# if "" in sys.argv:
+#     sys.argv.remove("")
+# path = sys.argv[1:]
+# HistogramSums(path=path)
 # HistogramSums(path=glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220512/EMgain_gillian_-100/220512_15H02m48/Directory_EMgain_gillian_-100/EMGAIN_9230/EXPTIME_0.0/*.fits"))
 # for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/7000/220329_18H54m27/EMGAIN_7000.0/*'):
 # for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/6800/220330_09H27m13/EMGAIN_6800/*'):
 # for folder in glob.glob('/Volumes/Vincent/FIREBall_Data/190223/lowsignalT_113/220329_17H18m24/EMGAIN_9200/*'):
-# for fold in glob.glob('/Users/Vincent/DS9QuickLookPlugIn/subsets/220328_12H41m59/Directory_darks_T95/*'):
-#     for folder in glob.glob(fold+'/*'):
-#         if os.path.isdir(folder):
-#             print(folder)
-#             path = glob.glob(folder + '/image*.fits')
-#             print(path)
-#             HistogramSums(path=path[1:10])
-# sys.exit()
+# for fold in glob.glob(
+#     "/Volumes/ExtremePro/LAM/FIREBALL/2022/DetectorData/220623/cit_darks_T92/11168/*"
+# ):
+for fold in glob.glob(
+    "/Volumes/ExtremePro/LAM/FIREBALL/2022/DetectorData/220619/CIT_NUVU_m100_darks/220619_19H04m40/*"
+):
+    
+    
+    for folder in glob.glob(fold + "/*"):
+        if os.path.isdir(folder):
+            print(folder)
+            path = glob.glob(folder + "/image*.fits")[:5]
+            print(path)
+            HistogramSums(path=path[1:10])
+            # sys.exit()
+    sys.exit()
+# %%
+
 #%%
 
 # from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist, EMCCD
@@ -295,14 +316,14 @@ HistogramSums(path=path)
 #     return np.log10(y)
 
 
-plot(
-    EMCCDhist(
-        np.arange(3000),
-        bias=1000,
-        RN=100,
-        EmGain=1000,
-        flux=0.1,
-        smearing=0.7,
-        sCIC=0.01,
-    )
-)
+# plot(
+#     EMCCDhist(
+#         np.arange(3000),
+#         bias=1000,
+#         RN=100,
+#         EmGain=1000,
+#         flux=0.1,
+#         smearing=0.7,
+#         sCIC=0.01,
+#     )
+# )

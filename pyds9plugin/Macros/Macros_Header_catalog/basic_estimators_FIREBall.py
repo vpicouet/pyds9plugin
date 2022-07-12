@@ -261,10 +261,16 @@ table["flat"] = (np.nanmedian(physical_region) - table["median_pre_scan"]) / np.
 if type(region) == tuple:
     Yinf, Ysup, Xinf, Xsup = region
     reg = data[Xinf:Xsup, Yinf:Ysup]
+    n = 20
+    big_reg = data[Xinf - n : Xsup + n, Yinf - n : Ysup + n]
+    column = np.mean(data[Xinf - n : Xsup + n, Yinf:Ysup], axis=1)
+    line = np.mean(data[Xinf:Xsup, Yinf - n : Ysup + n], axis=0)
     table["mean_region"] = np.mean(reg) - table["median_pre_scan"]
     table["median_region"] = np.median(reg) - table["median_pre_scan"]
     table["min_region"] = np.min(reg) - table["median_pre_scan"]
-    table["region"] = Column([reg - table["median_pre_scan"]], name="region")
+    table["region"] = Column([big_reg - table["median_pre_scan"]])
+    table["column"] = Column([column - table["median_pre_scan"]])
+    table["line"] = Column([line - table["median_pre_scan"]])
 
 # table["flux"] = table["median_physical"] - table["median_pre_scan"]
 # table["tilted_slit_214"] = np.mean(
@@ -345,38 +351,41 @@ mask_RN = (bins > bias - 1 * RN) & (bins < bias + 0.8 * RN) & (value > 0)
 mask_RN_os = (
     (bins_os > bias_os - 1 * RN) & (bins_os < bias_os + 0.8 * RN) & (value_os > 0)
 )
-popt = PlotFit1D(
-    bins_os[mask_RN_os],
-    value_os[mask_RN_os],
-    deg="gaus",
-    plot_=False,
-    P0=[1, bias, 50, 0],
-)["popt"]
-table["Amp"] = popt[0]
-table["bias_fit"] = popt[1]
-ron = np.abs(
-    PlotFit1D(
+if data.ptp() > 200:  # check if counting image
+    popt = PlotFit1D(
         bins_os[mask_RN_os],
         value_os[mask_RN_os],
         deg="gaus",
         plot_=False,
         P0=[1, bias, 50, 0],
-    )["popt"][2]
-    / conversion_gain
-)
-if ron == 0.0:
-    table["bias_fit"] = table["median_pre_scan"]  # bins[0]
-table["RON"] = np.max([40, np.min([ron, 120])])
-table["RON_os"] = np.abs(
-    PlotFit1D(
-        bins_os[mask_RN_os],
-        value_os[mask_RN_os],
-        deg="gaus",
-        plot_=False,
-        P0=[1, bias_os, RN, 0],
-    )["popt"][2]
-    / conversion_gain
-)
+    )["popt"]
+    table["Amp"] = popt[0]
+    table["bias_fit"] = popt[1]
+    ron = np.abs(
+        PlotFit1D(
+            bins_os[mask_RN_os],
+            value_os[mask_RN_os],
+            deg="gaus",
+            plot_=False,
+            P0=[1, bias, 50, 0],
+        )["popt"][2]
+        / conversion_gain
+    )
+    if ron == 0.0:
+        table["bias_fit"] = table["median_pre_scan"]  # bins[0]
+    table["RON"] = np.max([40, np.min([ron, 120])])
+    table["RON_os"] = np.abs(
+        PlotFit1D(
+            bins_os[mask_RN_os],
+            value_os[mask_RN_os],
+            deg="gaus",
+            plot_=False,
+            P0=[1, bias_os, RN, 0],
+        )["popt"][2]
+        / conversion_gain
+    )
+else:
+    ron, table["RON"], table["RON_os"] = -99, -99, -99
 
 ron_fixed = table["RON"]  # np.max([30,np.min([table['RON'],120])])
 try:

@@ -286,6 +286,13 @@ hmenu 1. Generic Functions
 	menu
 	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
 
+
+	Open region
+	*
+	bind R
+	DS9Utils open_file -x $xpa_method  $param(openR); -p $dir/regions/$path    | $text
+
+
 # ds9=np.array([fits.open(f)[0].data for f in glob.glob('/tmp/?.fits')])
 # ds9 = np.array([fits.open(f)[0].data for f in glob.glob('/private/tmp/test.?.corr.fits')])
 
@@ -394,6 +401,7 @@ hmenu 2. Instrumentation - AIT
 		DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $diam    | $text
 
 
+
 #		Visualisation Throughfocus
 #		*
 #		menu
@@ -463,7 +471,7 @@ hmenu 2. Instrumentation - AIT
 	*
 	menu
 	#DS9Utils light_curve -x $xpa_method  $param(Click-Enter-For-Only-DS9-Image); $all $b $e $list "$path"    | $text
-	DS9Utils light_curve -x $xpa_method  $param(Images-to-analyze); "$path"    | $text
+	DS9Utils light_curve -x $xpa_method  $param(Images-to-analyze); -p "$path" -o  "$offset"  | $text
 
 
 
@@ -503,7 +511,7 @@ hmenu 3. Astronomical Softwares
 	Astrometric Calibration (astrometry.net)
 	*
 	menu
-	DS9Utils astrometry_net -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); --type $Image --scale-units "$scale_units" --scale-lower "$scale_lower" --scale-upper "$scale_upper" --scale-est "$scale_est" --scale-err "$scale_err" --ra  "$center_ra" --dec "$center_dec" --radius "$radius"  --downsample "$downsample_factor" --tweak-order "$tweak_order" --crpix-center $crpix_center --parity  $parity --positional_error "$positional_error"   | $text
+	DS9Utils astrometry_net -x $xpa_method   $message(okcancel,You are about to run an astrometric analysis. This function will send the image to the astrometry.net server and run an astrometric algorithm to generate a WCS header. Please note that this function requires an internet connection and that processing might take a few minutes and might not converge. DS9 will let you know if it converges and the WCS header will be added to the image header.)  $param(LostInSpace); --type $Image --scale-units "$scale_units" --scale-lower "$scale_lower" --scale-upper "$scale_upper" --scale-est "$scale_est" --scale-err "$scale_err" --ra  "$center_ra" --dec "$center_dec" --radius "$radius"  --downsample "$downsample_factor" --tweak-order "$tweak_order" --crpix-center $crpix_center --positional_error "$positional_error"   | $text  #--parity  $parity 
 
 	MaxiMask
 	*
@@ -844,7 +852,6 @@ CRVAL entry {CRVAL} 1,1 {Coordinate value at reference point [in degrees]}
 endparam
 
 
-
 param open
 path open {Path of the image(s) to open}    {} #NORMAL
 #clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
@@ -852,6 +859,10 @@ type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|IMPORT-3D|PRIS
 endparam
 
 
+
+param openR
+path combobox {Path of the image(s) to open}  axis_det.reg|F1_2018.reg|F3_2018.reg|F3_2018.reg|F4_2018.reg|QSO_2022_6_-100.reg|F1_2022_6_-100.reg|F2_2022_6_-100.reg|F3_2022_6_-100.reg|F4_2022_6_-100.reg {} 
+endparam
 
 # param opentest
 # path open {Path of the image(s) to open}  $dir/Images/stack????????.fits  {} #NORMAL
@@ -1165,7 +1176,8 @@ endparam
 
 
 param Images-to-analyze
-path entry {RegExp Path} $filename {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+path entry {RegExp Path} "" {Paths of the images you want to analyse. Use global pattern matching (*/?/[9-16], etc)}
+offset entry {offsets} "" {Offsets of the dithering}
 endparam
 
 param Trimming
@@ -1265,26 +1277,26 @@ endparam
 
 param LostInSpace
 Image menu {Type} Image|XY-catalog {If Image, upload the image, else upload the used defined DS9 regions as jsoned fits catalog!}
-scale_units menu {scale_units} |degwidth|arcminwidth|arcsecperpix|focalmm {The units for the scale_lower and scale_upper arguments becomes the scale-units argument to solve-field on the server side}
+scale_units menu {scale_units} arcsecperpix|degwidth|arcminwidth|focalmm {The units for the scale_lower and scale_upper arguments becomes the scale-units argument to solve-field on the server side}
 #scale_type menu {scale_type} ul|ev {Set ul if you are going to provide scale_lower and scale_upper arguments, or ev if you are going to provide scale_est and scale_err error percentage  arguments.}
-scale_lower entry {scale_lower} "" {The lower-bound of the scale of the image.}
-scale_upper entry {scale_upper} "" {The upper-bound of the scale of the image.}
+scale_lower entry {scale_lower} "0.87" {The lower-bound of the scale of the image.}#0.3
+scale_upper entry {scale_upper} "0.93" {The upper-bound of the scale of the image.}#0.35
 
 scale_est entry {scale_estimate} "" {The estimated scale of the image.}
 scale_err entry {scale_error} "" {0 to 100. The error (percentage) on the estimated scale of the image.}
 center_ra entry {center_ra} "" {float, 0 to 360, in degrees. The position of the center of the image}
 center_dec entry {center_dec} "" {float, -90 to 90, in degrees. The position of the center of the image}
+radius entry {radius} "2" {Search radius around RA,Dec center}
 
-radius entry {radius} "" {float, in degrees.}
 downsample_factor entry {downsample_factor} "" {float, >1. Downsample (bin) your image by this factor before performing source detection. This often helps with saturated images, noisy images, and large images. 2 and 4 are commonly-useful values.}
 tweak_order menu {tweak_order} 2|1|3|4|5 {Polynomial degree order for distortion correction. Orders>2 may produce totally bogus results high-order polynomials are strange beasts.}
 #use_sextractor menu {use_sextractor} True|False {Use the SourceExtractor program to detect stars, not our built-in program.}
 
 crpix_center menu {crpix_center} False|True {Set the WCS reference position to be the center pixel in the image. By default the center is the center of the quadrangle of stars used to identify the image.}
-parity checkbox {parity} 0 {0 means that the sign of the determinant of the WCS CD matrix is positive, 1 means negative.}
+# parity checkbox {parity} 1 {0 means that the sign of the determinant of the WCS CD matrix is positive, 1 means negative.}
 #image_width entry {image_width} "" {int, only necessary if you are submitting an x,y list of source positions}
 #image_height entry {image_height} "" {int, ditto.}
-positional_error entry {positional_error} "" {float, expected error on the positions of stars in your image}
+positional_error entry {positional_error} "10" {How many pixels a star may be from where it should be}
 #test $filedialog(open) {fielane} 0 {float}
 endparam
 
@@ -1526,7 +1538,7 @@ param Python-Command-P
 #exp menu {Expression} EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py {Python expression for exec method or python macro path in pyds9plugin Macro directory}#. See doc for exemples (convolution, adding noise, masking, trimming).
 # exp combobox {Expression} {EMCCD_fit_stochastic2.py|EMCCD_fit_analytical2.py|EMCCD_fit_stochastic.py|EMCCD_simulator.py|fireball_functions.py|Mask_cosmic_rays.py|OScorrection.py|Stack_from_header_catalog.py|FIREBall.py|add_slits_for_snr.py|Mask_cosmic_rays.py|histogram_sum.py|remove_hot_pixels.py|mask_hot_pixels.py|smear.py|desmear.py|lasso_masking.py} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 # . See doc for exemples (convolution, adding noise, masking, trimming).
-exp combobox {Expression} {FIREBall/EMCCD_fit_stochastic2.py|FIREBall/hist_stack_fit.py|FIREBall/EMCCD_fit_analytical2.py|FIREBall/merge_log_in_header.py|FIREBall/EMCCD_fit_stochastic.py|FIREBall/stack_fit_slit.py|FIREBall/interpolate_table_in_header.py|FIREBall/EMCCD_simulator.py|FIREBall/fireball_functions.py|FIREBall/Mask_cosmic_rays.py|FIREBall/OScorrection.py|FIREBall/Stack_from_header_catalog.py|FIREBall/FIREBall.py|FIREBall/add_slits_for_snr.py|FIREBall/Mask_cosmic_rays.py|FIREBall/histogram_sum.py|FIREBall/remove_hot_pixels.py|FIREBall/smear.py|FIREBall/desmear.py|FIREBall/lasso_masking.py|FIREBall/smearing_evolution.py|FIREBall/plot_spectral_direction.py|FIREBall/analyze_smearing_counts.py|cosmology_calculator.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|join_DS9_plots.py|create_WCS.py} {Python expression for exec method or python macro path}
+exp combobox {Expression} {FIREBall/EMCCD_fit_stochastic2.py|FIREBall/hist_stack_fit.py|FIREBall/EMCCD_fit_analytical2.py|FIREBall/merge_log_in_header.py|FIREBall/EMCCD_fit_stochastic.py|FIREBall/stack_fit_slit.py|FIREBall/interpolate_table_in_header.py|FIREBall/EMCCD_simulator.py|FIREBall/fireball_functions.py|FIREBall/Mask_cosmic_rays.py|FIREBall/OScorrection.py|FIREBall/Stack_from_header_catalog.py|FIREBall/FIREBall.py|FIREBall/add_slits_for_snr.py|FIREBall/Mask_cosmic_rays.py|FIREBall/histogram_sum.py|FIREBall/remove_hot_pixels.py|FIREBall/smear.py|FIREBall/desmear.py|FIREBall/lasso_masking.py|FIREBall/smearing_evolution.py|FIREBall/plot_spectral_direction.py|FIREBall/analyze_smearing_counts.py|FIREBall/radec_from_altaz.py|FIREBall/plot_distortion_astrometry.py|cosmology_calculator.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|join_DS9_plots.py|create_WCS.py} {Python expression for exec method or python macro path}
 path open {RegExp Path} ""  {Write a regexp if you want to run the above expression on multiple images matching this pattern.}
 #overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
