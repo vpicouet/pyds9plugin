@@ -18,13 +18,14 @@ requires = [
     "pyds9",
     "photutils",
     "tqdm",
-    # "pyvista",  # ==0.25.3
     "datetime",
     "pandas",
     "argparse",
-    # "PyQt5",
-    # "dataphile",
-    # "sep",
+
+    "pyvista",  # ==0.25.3
+    "PyQt5",
+    "dataphile",
+    "sep",
 ]
 
 entry_points = {}
@@ -53,7 +54,7 @@ data = {
 
 MAJOR = "3"
 MINOR = "0"
-MICRO = "1dev7"
+MICRO = "1dev8"
 version = "%s.%s%s" % (MAJOR, MINOR, MICRO)
 
 

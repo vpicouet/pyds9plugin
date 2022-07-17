@@ -89,7 +89,11 @@ def build_wcs_header(
 # w.wcs.cdelt = np.array([-0.0235, 0.0235])
 # w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
 
-
+a = yesno(d,"Do you want to use the on sky WCS? No will lead to autocoll WCS.")
+if a:
+    factor=1
+else:
+    factor=2
 # 1.271 1.106
 # filename = "/Volumes/GoogleDrive-105248178238021002216/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2022/Detector_Data/220621/CIT_NUVU_platescale/image000049.fits"
 header_det_sky = build_wcs_header(
@@ -97,7 +101,8 @@ header_det_sky = build_wcs_header(
     filename=filename,
     CRPIX=[0, 0],
     # CDELT=[1.106 / 3600, 1.271 / 3600], #2018
-    CDELT=[1.3745 / 3600, 1.09612142 / 3600],  # 2022
+    # CDELT=[1.3745 / 3600, 1.09612142 / 3600],  # 2022
+    CDELT=[1.3745 / 3600/factor, 1.09612142 / 3600/factor],  # 2022
     # CDELT=[1, 1],
     # CTYPE=["RA---AIR", "DEC--AIR"],
     CTYPE=["RA---TAN", "DEC--TAN"],

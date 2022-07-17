@@ -52,7 +52,10 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
     )
     for region in tqdm(regs[:]):
         x, y = int(region.xc), int(region.yc)
-        w, h = int(region.w), int(region.h)
+        try:
+            w, h = int(region.w), int(region.h)
+        except AttributeError:
+            break
         if (x > 1200) & (y < 1950) & (y > 250) & (x < 2050):
             # if x > 0:  # & (y < 1950) & (y > 250) & (x < 2050):
             x_inf, x_sup, y_inf, y_sup = lims_from_region(region=region, coords=None)
@@ -358,6 +361,23 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
 
 cat, filename = Measure_PSF_slits(image, regs, filename=filename)
 
+
+# tmp_region = "/tmp/test.reg"
+d.set("regions delete all")
+create_ds9_regions(
+    [cat["X_IMAGE"]],
+    [cat["Y_IMAGE"]],
+    # radius=[table_to_array(cat["h", "w"]).T],
+    radius=[np.array(cat["lx_unsmear"]), np.array(cat["ly"])],
+    save=True,
+    savename= filename.replace(".fits","_c.reg"),
+    form=["box"],
+    color=cat["color"],
+    ID=None,  # cat["name"],
+)
+d.set("regions %s" % (filename.replace(".fits","_c.reg")))
+
+
 # def plot_res(cat, filename):
 #     field = os.path.basename(filename)[:2]
 #     from matplotlib.colors import LogNorm
@@ -513,20 +533,7 @@ cat, filename = Measure_PSF_slits(image, regs, filename=filename)
 
 # plot_res(cat,filename)
 
-# tmp_region = "/tmp/test.reg"
-# d.set("regions delete all")
-# create_ds9_regions(
-#     [cat["X_IMAGE"]],
-#     [cat["Y_IMAGE"]],
-#     # radius=[table_to_array(cat["h", "w"]).T],
-#     radius=[np.array(cat["lx_unsmear"]), np.array(cat["ly"])],
-#     save=True,
-#     savename=tmp_region,
-#     form=["box"],
-#     color=cat["color"],
-#     ID=None,  # cat["name"],
-# )
-# d.set("regions %s" % (tmp_region))
+
 
 # sys.exit()
 

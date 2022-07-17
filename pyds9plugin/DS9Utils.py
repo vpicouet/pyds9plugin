@@ -4866,6 +4866,9 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
         verboseprint(e)
         paths = []
     # verboseprint(file, paths)
+    if file =="all":
+       return get_filename(d, All=True, sort=False)
+
     if (len(paths) == 0) & ("[" in file) and ("]" in file):
         verboseprint("Go in loop")
         a, between = file.split("[")
@@ -5536,8 +5539,8 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
         d = DS9n(args.xpapoint)
         raise_create_region(d)
         sys.exit()
-
-    for region in regions:
+    centers=np.zeros((2,len(regions)))
+    for i, region in enumerate(regions):
         if hasattr(region, "h"):
             from pyds9plugin.Macros.Fitting_Functions.functions import slit as model
             xc, yc, h, w = (
@@ -5782,7 +5785,8 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
                 os.remove(tmp_region)
             except OSError:
                 pass
-
+            centers[0,i] = newCenterx - 1
+            centers[1,i] = newCentery - 1
             create_ds9_regions(
                 [newCenterx - 1],
                 [newCentery - 1],
@@ -5804,6 +5808,13 @@ def center_region(xpapoint=None, plot_=True, argv=[]):
                 ID=[["%0.2f - %0.2f" % (newCenterx, newCentery)]],
             )
             d.set("regions %s" % (tmp_region))
+    print(centers)
+    import pandas as pd
+    tab = pd.DataFrame(centers.T, columns=["x_det_obs","y_det_obs"])
+    tab.to_clipboard()
+
+    print(tab)
+
     return newCenterx, newCentery
 
 
@@ -10646,7 +10657,7 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
                                  ellipse  ; catalog symbol Size
                                  "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol
                                  Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog
-                                 symbol angle "$THETA_IMAGE" ; mode catalog """
+                                 symbol angle "$THETA_IMAGE" ; catalog symbol Text "$FLUX_MAX" ; mode catalog;  """
                     d.set(f_string(command % (param_dict["CATALOG_NAME"], x, y)))
                 except ValueError as e:
                     verboseprint(e)

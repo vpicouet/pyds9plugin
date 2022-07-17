@@ -73,9 +73,9 @@ for i in range(x.size):
     ax1.plot(xxd[i,:], yyd[i,:],'b' )
     ax1.plot(xxd[:,i], yyd[:,i], 'b' )
 if "ROTENC" in list(dict.fromkeys(header.keys())):
-    ax1.set_title("PA = %0.1f"%(header["ROTENC"]))
+    ax1.set_title("PA = %0.1f - %s"%(header["ROTENC"],header["COMMENT"][-12]))
 else:
-    ax0.set_title("%s"%(os.path.basename(filename)))
+    ax1.set_title("%s"%(os.path.basename(filename)))
 ax1.set_xlabel("X")
 ax1.fill_between([0,shadow],[header["NAXIS2"],header["NAXIS2"]],color="k",alpha=0.2)
 # try:
@@ -86,6 +86,7 @@ ax1.fill_between([0,shadow],[header["NAXIS2"],header["NAXIS2"]],color="k",alpha=
 #     print(e)
 
 fig.tight_layout()
+fig.savefig(filename.replace(".fits",".png"))
 plt.show()
 
 # %%
