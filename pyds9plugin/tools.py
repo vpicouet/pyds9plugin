@@ -948,5 +948,197 @@ class HistogramFitter(widgets.HBox):
                     self.ax.set_ylim(ymax=1.1 * self.y_os.max())
             self.file = self.pre_path + file
 
+def addAtPos(M1, M2, center):
+    """Add a matrix in a higher dimension matric at a given position
+    """
+    size_x, size_y = np.shape(M2)
+    coor_x, coor_y = center
+    end_x, end_y = (coor_x + size_x), (coor_y + size_y)
+    try:
+        M1[coor_x:end_x, coor_y:end_y] = M1[coor_x:end_x, coor_y:end_y] + M2
+    except ValueError:
+        pass
+    return M1
+
+def variable_smearing_kernels(
+        image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
+    ):
+        """Creates variable smearing kernels for inversion
+        """
+        import numpy as np
+
+        n = 15
+        smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+        if type_ == "exp":
+            smearing_kernels = np.exp(
+                -np.arange(n)[:, np.newaxis, np.newaxis] / smearing_length
+            )
+        else:
+            assert 0 <= Smearing <= 1
+            smearing_kernels = np.power(Smearing, np.arange(n))[
+                :, np.newaxis, np.newaxis
+            ] / np.ones(smearing_length.shape)
+        smearing_kernels /= smearing_kernels.sum(axis=0)
+        return smearing_kernels
+
+
+def SimulateFIREBallemCCDImage(
+#     ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=1, p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Spectra", Rx=8, Ry=8, size=[3216, 2069], OSregions=[1066, 2124], name="Auto", spectra="-", cube="-", n_registers=604, save=False
+    ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=0.0005, p_sCIC=0, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Slit", Rx=8, Ry=8, size=[100, 100], OSregions=[0, -1], name="Auto", spectra="-", cube="-", n_registers=604, sky=0,save=False,stack=1,readout_time=1.5, cosmic_ray_loss=None):
+
+    from astropy.modeling.functional_models import Gaussian2D
+    from scipy.sparse import dia_matrix
+
+    OS1, OS2 = OSregions
+    ConversionGain=1
+    Bias=0
+    image = np.zeros((size[1], size[0]), dtype="float64")
+    image_stack = np.zeros((size[1], size[0]), dtype="float64")
+
+    # dark & flux
+    source_im = 0 * image[:, OSregions[0] : OSregions[1]]
+    lx, ly = source_im.shape
+    y = np.linspace(0, lx - 1, lx)
+    x = np.linspace(0, ly - 1, ly)
+    x, y = np.meshgrid(x, y)
+
+    # Source definition. For now the flux is not normalized at all, need to fix this
+    # Cubes still needs to be implememted, link to detector model or putting it here?
+    # if os.path.isfile(cube):
+    if source == "Flat-field":
+        source_im += flux
+    elif source == "Dirac":
+        source_im += Gaussian2D.evaluate(x, y,  flux, ly / 2, lx / 2, Ry, Rx, 0)
+    elif source == "Spectra":
+        source_im += Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
+    elif source == "Slit":
+        ConvolveSlit2D_PSF_75muWidth = lambda xy, amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
+        source_im += ConvolveSlit2D_PSF_75muWidth((x, y), flux , 9, ly / 2, lx / 2, Rx, Ry).reshape(lx, ly)
+    elif source == "Fibre":
+        #print("Create fibre source, FWHM: ", 2.353 * Rx, 2.353 * Ry)
+        fibre = convolvePSF(radius_hole=10, fwhmsPSF=[2.353 * Rx, 2.353 * Ry], unit=1, size=(201, 201), Plot=False)  # [:,OSregions[0]:OSregions[1]]
+        source_im = addAtPos(source_im, fibre, (int(lx / 2), int(ly / 2)))
+        #print("Done")
+    elif source[:5] == "Field":
+        ConvolveSlit2D_PSF_75muWidth = lambda xy, amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
+        ws = [2025, 2062, 2139]
+        # x, y = [], []
+        # for i, w in enumerate(ws):
+            # slits = returnXY(source[0].lower() + source[-1], w=w, frame="observedframe")
+        file = '/Users/Vincent/Github/fireball2-etc/notebooks/10pc/cube_204nm_guidance0.5arcsec_slit100um_total_fc_rb_detected.fits'#%(pc,wave,slit)
+        gal=fits.open(file)[0].data * 0.7 #cf athmosphere was computed at 45km
+
+        slits = Table.read("/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/targets_F1.csv")
+        xs = slits["Y_IMAGE"]
+        ys = slits["X_IMAGE"]
+        index = (ys > OS1) & (ys < OS2)
+        verboseprint(xs, ys)
+        for yi, xi in zip(np.array(ys[index]) - OS1, xs[index]):
+            verboseprint(xi, yi)
+            source_im = addAtPos(source_im, 1*gal, [int(xi), int(yi)])
+            #TODO take into account the redshift and type of the source
+            #TODO take into account magnitude
+            #TODO add the atmosphere absorption/emission features
+            #TODO add the stacking 
+            # source_im += ConvolveSlit2D_PSF_75muWidth((x, y), 40000 * flux, 9, yi, xi, Rx, Ry).reshape(lx, ly)
+    else:
+        
+        # from .FitsCube import FitsCube
+        # cube='/Users/Vincent/Downloads/Safari/lya_cube_merged_with_artificial_source_CU_1pc.fits'
+        # source_im = FitsCube(filename=cube)
+        # print(source.split('='))
+        pc = int(float(source.split('=')[1].split('%')[0]))
+        wave = int(float(source.split('=')[3]))
+        slit = int(float(source.split('=')[2].split('mu')[0]))
+        file = '%spc/cube_%snm_guidance0.5arcsec_slit%sum_total_fc_rb_detected.fits'%(pc,wave,slit)
+        source_im+=fits.open(file)[0].data * 0.7 #cf athmosphere was computed at 45km
+    # Poisson realisation
+    # print( source_im.shape , sky.shape)
+    source_im = (Dark + source_im + sky) * int(exposure)
+    y_pix=1000
+    # print(len(source_im),source_im.shape)
+    
+    if readout_time > 10:
+        cube = np.array([(readout_time/exposure/y_pix)*np.vstack((np.zeros((i,len(source_im))),source_im[::-1,:][:-i,:]))[::-1,:] for i in np.arange(1,len(source_im))],dtype=float)
+        source_im = source_im+np.sum(cube,axis=0)
+    if cosmic_ray_loss is None:
+        cosmic_ray_loss = np.minimum(0.005*(exposure+readout_time/2),1)#+readout_time/2
+    # print(cosmic_ray_loss)
+    n_smearing=6
+    # image[:, OSregions[0] : OSregions[1]] += source_im
+    image[:, OSregions[0] : OSregions[1]] += np.random.gamma( np.random.poisson(source_im) + np.array(np.random.rand(size[1], OSregions[1]-OSregions[0])<p_pCIC,dtype=int) , EmGain)
+    # take into acount CR losses
+    image_stack[:, OSregions[0] : OSregions[1]] = np.nanmean([np.where(np.random.rand(size[1], OSregions[1]-OSregions[0]) < cosmic_ray_loss/n_smearing,np.nan,1) * (np.random.gamma(np.random.poisson(source_im)  + np.array(np.random.rand(size[1], OSregions[1]-OSregions[0])<p_pCIC,dtype=int) , EmGain)) for i in range(int(stack))],axis=0)
+ 
+    # Addition of the phyical image on the 2 overscan regions
+#     image += source_im2
+    image +=  np.random.gamma( np.array(np.random.rand(size[1], size[0])<p_sCIC,dtype=int) , np.random.randint(1, n_registers, size=image.shape))
+    image_stack += np.random.gamma( np.array(np.random.rand(size[1], size[0])<int(stack)*p_sCIC,dtype=int) , np.random.randint(1, n_registers, size=image.shape))
+ 
+                           #     if EmGain > 1:
+
+#         # addition of pCIC (stil need to add sCIC before EM registers)
+#         prob_pCIC = np.random.rand(size[1], size[0])  # Draw a number prob in [0,1]
+#         image[prob_pCIC < p_pCIC] += 1
+#         source_im2_stack[prob_pCIC < p_pCIC*stack] += 1
+
+#         # EM amp (of source + dark + pCIC)
+#         id_nnul = image != 0
+#         image[id_nnul] = np.random.gamma(image[id_nnul], EmGain)
+
+        # Addition of sCIC inside EM registers (ie partially amplified)
+#         prob_sCIC = np.random.rand(size[1], size[0])  # Draw a number prob in [0,1]
+#         id_scic = prob_sCIC < p_sCIC  # sCIC positions
+#         # partial amplification of sCIC
+#         register = np.random.randint(1, n_registers, size=id_scic.sum())  # Draw at which stage of the EM register the electorn is created
+#         image[id_scic] += np.random.exponential(np.power(EmGain, register / n_registers))
+
+    # semaring post EM amp (sgest noise reduction)
+    if Smearing > 0:
+        # smearing dependant on flux
+        smearing_kernels = variable_smearing_kernels(image, Smearing, SmearExpDecrement)
+        offsets = np.arange(n_smearing)
+        A = dia_matrix((smearing_kernels.reshape((n_smearing, -1)), offsets), shape=(image.size, image.size))
+
+        image = A.dot(image.ravel()).reshape(image.shape)
+        image_stack = A.dot(image_stack.ravel()).reshape(image_stack.shape)
+
+#     if readout_time > 0:
+#         # smearing dependant on flux
+#         smearing_kernels = variable_smearing_kernels(image.T, readout_time, SmearExpDecrement)#.swapaxes(1,2)
+#         offsets = np.arange(n_smearing)
+#         A = dia_matrix((smearing_kernels.reshape((n_smearing, -1)), offsets), shape=(image.size, image.size))#.swapaxes(0,1)
+
+#         image = A.dot(image.ravel()).reshape(image.shape)#.T
+#         image_stack = A.dot(image_stack.ravel()).reshape(image_stack.shape)#.T
+        
+        
+    # read noise
+    readout = np.random.normal(Bias, RN, (size[1], size[0]))
+    readout_stack = np.random.normal(Bias, RN/np.sqrt(int(stack)), (size[1], size[0]))
+    # print((np.random.rand(source_im.shape[0], source_im.shape[1]) < cosmic_ray_loss).mean())
+    #TOKEEP  for cosmic ray masking readout[np.random.rand(source_im.shape[0], source_im.shape[1]) < cosmic_ray_loss]=np.nan
+
+    #print(np.max(((image + readout) * ConversionGain).round()))
+#     if np.max(((image + readout) * ConversionGain).round()) > 2 ** 15:
+    type_ = "int32"
+    type_ = "float64"
+#     else:
+#         type_ = "int16"
+    #print("Flux = %0.3f, gamma scale = %0.1f, RN = %0.1f" % (Dark * exposure, EmGain, RN))
+    #print("Saving data in type " + type_)
+
+    imaADU_wo_RN = (image * ConversionGain).round().astype(type_)
+    imaADU_RN = (readout * ConversionGain).round().astype(type_)
+    imaADU = ((image + 0*readout) * ConversionGain).round().astype(type_)
+    imaADU_stack = ((image_stack + 0*readout_stack) * ConversionGain).round().astype(type_)
+
+    # Not sure why now, but several events much higher than 2**16 -> put then to 0 for now...
+#     id_null = np.array((image + readout) * ConversionGain, dtype="int16") < 0
+#     image[id_null] = 0
+    # print(np.isfinite(imaADU).mean())
+    return imaADU, imaADU_stack, source_im#imaADU_wo_RN, imaADU_RN
+
+
 
 # %%
