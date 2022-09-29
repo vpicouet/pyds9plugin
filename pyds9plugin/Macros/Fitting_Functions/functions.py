@@ -16,6 +16,39 @@ except OSError:
 #%%
 
 
+def variable_smearing_kernels(
+    image, Smearing=0.7, SmearExpDecrement=50000, ratio=1, type_="exp"
+):
+    """Creates variable smearing kernels for inversion
+    """
+    import numpy as np
+
+    n = 15
+    smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
+    # smearing_length = Smearing * np.ones(image.shape)#np.exp(-image / SmearExpDecrement)
+    if type_ == "exp":
+        try:
+            x = np.arange(n)[
+                :: int(np.sign(smearing_length[0])), np.newaxis, np.newaxis
+            ]
+        except ValueError:
+            x = np.arange(n)[:, np.newaxis, np.newaxis]
+        smearing_kernels = ratio * np.exp(-x / abs(smearing_length))
+        if ratio != 1:
+            smearing_kernels[0, :, :] = 1
+        # smearing_kernels = amp*np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / abs(smearing_length))
+        # smearing_kernels[0,:,:] = 1
+
+    else:
+        assert 0 <= Smearing <= 1
+        smearing_kernels = np.power(Smearing, np.arange(n))[
+            :, np.newaxis, np.newaxis
+        ] / np.ones(smearing_length.shape)
+    smearing_kernels /= smearing_kernels.sum(axis=0)
+    return smearing_kernels
+
+
+
 def slit(
     x,
     amp=y.ptp() * np.array([0, 1.3, 1]),
@@ -338,7 +371,7 @@ def EMCCDhist(
         """
         import numpy as np
 
-        n = 15
+        n = 30
         smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
         if type_ == "exp":
             smearing_kernels = np.exp(
@@ -397,10 +430,10 @@ def EMCCDhist(
         imaADU *= ConversionGain
         # smearing data
         if Smearing > 0:
-            n_smearing = 15
             smearing_kernels = variable_smearing_kernels(
                 imaADU, Smearing, SmearExpDecrement
             )
+            n_smearing = smearing_kernels.shape[0]
             offsets = np.arange(n_smearing)
             A = dia_matrix(
                 (smearing_kernels.reshape((n_smearing, -1)), offsets),
@@ -431,37 +464,6 @@ def EMCCDhist(
     # y = y / (x[1] - x[0])
     return np.log10(y)
 
-
-def variable_smearing_kernels(
-    image, Smearing=0.7, SmearExpDecrement=50000, ratio=1, type_="exp"
-):
-    """Creates variable smearing kernels for inversion
-    """
-    import numpy as np
-
-    n = 15
-    smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-    # smearing_length = Smearing * np.ones(image.shape)#np.exp(-image / SmearExpDecrement)
-    if type_ == "exp":
-        try:
-            x = np.arange(n)[
-                :: int(np.sign(smearing_length[0])), np.newaxis, np.newaxis
-            ]
-        except ValueError:
-            x = np.arange(n)[:, np.newaxis, np.newaxis]
-        smearing_kernels = ratio * np.exp(-x / abs(smearing_length))
-        if ratio != 1:
-            smearing_kernels[0, :, :] = 1
-        # smearing_kernels = amp*np.exp(-np.arange(n)[:, np.newaxis, np.newaxis] / abs(smearing_length))
-        # smearing_kernels[0,:,:] = 1
-
-    else:
-        assert 0 <= Smearing <= 1
-        smearing_kernels = np.power(Smearing, np.arange(n))[
-            :, np.newaxis, np.newaxis
-        ] / np.ones(smearing_length.shape)
-    smearing_kernels /= smearing_kernels.sum(axis=0)
-    return smearing_kernels
 
 
 def smeared_slit_ratio(

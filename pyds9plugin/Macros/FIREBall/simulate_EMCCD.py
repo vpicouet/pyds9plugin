@@ -188,26 +188,7 @@ def ConvolveSlit2D_PSF(xy=np.meshgrid(np.linspace(-20, 20, 100), np.linspace(-20
     return function.ravel()
 
 
-# def Smearing2Noise(exp_coeff=1.5):
-#     """
-#     """
-#     # try:
-#     #     noisePath = resource_filename("pyds9fb", "CSVs")
-#     # except:
-#     noisePath = os.path.join(os.path.dirname(os.path.realpath(__file__)), "CSVs")
-#     coeff1 = np.loadtxt(os.path.join(noisePath, "GainHistVSsmearing.csv"), delimiter=",")
-#     coeff2 = np.loadtxt(os.path.join(noisePath, "GainVarVSsmearing.csv"), delimiter=",")
-#     x1, y1 = coeff1.T
-#     x2, y2 = coeff2.T
-#     Hist_smear = PlotFit1D(x1, y1, deg=6, plot_=False)["popt"]
-#     # y = [1/Smearing2Noise(a) for a in np.linspace(0,2,100)]
-#     # plot(np.linspace(0,2,100),y)
-#     #    n=100
-#     #    x = np.linspace(0,n,n+1)
-#     #    y = np.exp(-x/exp_coeff) *(1-np.exp(-1/exp_coeff))
-#     #    return np.sqrt(np.square(y).sum())**2
-#     Var_smear = PlotFit1D(x2, y2, deg=6, plot_=False)["popt"]
-#     return {"Hist_smear": 1 / Hist_smear(exp_coeff), "Var_smear": 1 / Var_smear(exp_coeff)}
+
 
 def variable_smearing_kernels(
         image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
@@ -236,6 +217,12 @@ def SimulateFIREBallemCCDHist(ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, 
     imaADU, imaADU_wo_RN, imaADU_RN = SimulateFIREBallemCCDImage(ConversionGain=ConversionGain, EmGain=EmGain, Bias=Bias, RN=RN, p_pCIC=p_pCIC, p_sCIC=p_sCIC, Dark=Dark, Smearing=Smearing, SmearExpDecrement=SmearExpDecrement, exposure=exposure, n_registers=n_registers, save=False)
     # n, bins = np.histogram(imaADU[:,1066:2124].flatten(),range=[0,2**16], bins = int(2**16/2**2))#, range=(-200,11800))
     return imaADU[:, 1066:2124]  # n#, (bins[:-1]+bins[1:])/2
+
+
+#TODO take into account the redshift and type of the source
+#TODO take into account magnitude
+#TODO add the atmosphere absorption/emission features
+#TODO add the stacking 
 
 
 # def SimulateFIREBallemCCDImage(
@@ -300,10 +287,6 @@ def SimulateFIREBallemCCDHist(ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, 
 #         for yi, xi in zip(np.array(ys[index]) - OS1, xs[index]):
 #             verboseprint(xi, yi)
 #             source_im = addAtPos(source_im, 10*gal, [int(xi), int(yi)])
-#             #TODO take into account the redshift and type of the source
-#             #TODO take into account magnitude
-#             #TODO add the atmosphere absorption/emission features
-#             #TODO add the stacking 
 #             # source_im += ConvolveSlit2D_PSF_75muWidth((x, y), 40000 * flux, 9, yi, xi, Rx, Ry).reshape(lx, ly)
 
 #     # Poisson realisation
@@ -385,14 +368,6 @@ def SimulateFIREBallemCCDHist(ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, 
 #     image[id_null] = 0
 
 #     return imaADU, imaADU_wo_RN, imaADU_RN
-
-
-
-# def VariableSmearingKernels(image, Smearing=1.5, SmearExpDecrement=50000):
-#     smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
-#     smearing_kernels = np.exp(-np.arange(6)[:, np.newaxis, np.newaxis] / smearing_length)
-#     smearing_kernels /= smearing_kernels.sum(axis=0)
-#     return smearing_kernels
 
 
 

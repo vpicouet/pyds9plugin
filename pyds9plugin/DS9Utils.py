@@ -13274,16 +13274,17 @@ def python_command(xpapoint=None, argv=[]):
         help="Number of processors to use for multiprocessing analysis. Default use your total number of processors - 2.",
         metavar="",
     )
+    
     args = parser.parse_args_modif(argv, required=True)
 
     d = DS9n(args.xpapoint)
 
-    path2remove, exp, eval_ = args.other_image, args.exp, 0
+    path2remove, exp, eval_ = args.other_image, args.exp.replace("$exp"," & "), 0
     verboseprint("Expression to be evaluated: %s" % (exp))
     path = globglob(args.path, args.xpapoint)
     verboseprint("path: %s" % (path))
     write = bool(int(args.overwrite))
-
+    modified = False
     if ((int(d.get("block")) > 1) | (d.get("smooth") == "yes")) & (len(path) == 1):
         if yesno(
             d,
@@ -13299,6 +13300,7 @@ def python_command(xpapoint=None, argv=[]):
                 new_path = path[0].replace(".fits", "_.fits")
                 path = [new_path]
                 fitswrite(fitsimage, new_path)
+                modified = True
             except TypeError:
                 pass
 
@@ -13331,6 +13333,8 @@ def python_command(xpapoint=None, argv=[]):
             action_to_paralize=path,
             number_of_thread=args.number_processors,
         )
+    if modified:
+        os.remove(new_path)
     return
 
 

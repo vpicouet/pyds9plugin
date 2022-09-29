@@ -994,6 +994,7 @@ def SimulateFIREBallemCCDImage(
     Bias=0
     image = np.zeros((size[1], size[0]), dtype="float64")
     image_stack = np.zeros((size[1], size[0]), dtype="float64")
+    cube_stack = np.zeros((int(stack),size[1], size[0]), dtype="float64")
 
     # dark & flux
     source_im = 0 * image[:, OSregions[0] : OSregions[1]]
@@ -1029,13 +1030,22 @@ def SimulateFIREBallemCCDImage(
         gal=fits.open(file)[0].data * 0.7 #cf athmosphere was computed at 45km
 
         slits = Table.read("/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/targets_F1.csv")
+        trans = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/transmission_pix_resolution.csv")
+        slits = slits[(slits["Z"]>0.5)&(slits["Z"]<0.8)]
+        slits["wave"] = (1+slits["Z"]) * 121.6
         xs = slits["Y_IMAGE"]
         ys = slits["X_IMAGE"]
         index = (ys > OS1) & (ys < OS2)
         verboseprint(xs, ys)
-        for yi, xi in zip(np.array(ys[index]) - OS1, xs[index]):
+        for yi, xi, centre in zip(np.array(ys[index]) - OS1, xs[index],slits["wave"][index]):
             verboseprint(xi, yi)
-            source_im = addAtPos(source_im, 1*gal, [int(xi), int(yi)])
+            i = np.argmin(abs(centre-trans["col1"]))
+            print(i)
+            gal2 = gal*trans["trans_conv"][i-50:i+50]
+            plt.figure()
+            plt.imshow(gal2)
+            plt.show()
+            source_im = addAtPos(source_im, 1*gal2, [int(xi), int(yi)])
             #TODO take into account the redshift and type of the source
             #TODO take into account magnitude
             #TODO add the atmosphere absorption/emission features
@@ -1052,6 +1062,7 @@ def SimulateFIREBallemCCDImage(
         slit = int(float(source.split('=')[2].split('mu')[0]))
         file = '%spc/cube_%snm_guidance0.5arcsec_slit%sum_total_fc_rb_detected.fits'%(pc,wave,slit)
         source_im+=fits.open(file)[0].data * 0.7 #cf athmosphere was computed at 45km
+        # source_im = np.ones(source_im.shape) * np.linspace(source_im.min(),10*source_im.max(),source_im.shape[0] )
     # Poisson realisation
     # print( source_im.shape , sky.shape)
     source_im = (Dark + source_im + sky) * int(exposure)
@@ -1069,12 +1080,13 @@ def SimulateFIREBallemCCDImage(
     image[:, OSregions[0] : OSregions[1]] += np.random.gamma( np.random.poisson(source_im) + np.array(np.random.rand(size[1], OSregions[1]-OSregions[0])<p_pCIC,dtype=int) , EmGain)
     # take into acount CR losses
     image_stack[:, OSregions[0] : OSregions[1]] = np.nanmean([np.where(np.random.rand(size[1], OSregions[1]-OSregions[0]) < cosmic_ray_loss/n_smearing,np.nan,1) * (np.random.gamma(np.random.poisson(source_im)  + np.array(np.random.rand(size[1], OSregions[1]-OSregions[0])<p_pCIC,dtype=int) , EmGain)) for i in range(int(stack))],axis=0)
- 
+    cube_stack[:, OSregions[0] : OSregions[1]] = np.where(np.random.rand(int(stack),size[1], OSregions[1]-OSregions[0]) < cosmic_ray_loss/n_smearing,np.nan,1) * np.array([ (np.random.gamma(np.random.poisson(source_im)  + np.array(np.random.rand(size[1], OSregions[1]-OSregions[0])<p_pCIC,dtype=int) , EmGain))  for i in range(int(stack))])
+  
     # Addition of the phyical image on the 2 overscan regions
 #     image += source_im2
     image +=  np.random.gamma( np.array(np.random.rand(size[1], size[0])<p_sCIC,dtype=int) , np.random.randint(1, n_registers, size=image.shape))
     image_stack += np.random.gamma( np.array(np.random.rand(size[1], size[0])<int(stack)*p_sCIC,dtype=int) , np.random.randint(1, n_registers, size=image.shape))
- 
+    cube_stack += np.random.gamma( np.array(np.random.rand(int(stack),size[1], size[0])<int(stack)*p_sCIC,dtype=int) , np.random.randint(1, n_registers, size=image.shape))
                            #     if EmGain > 1:
 
 #         # addition of pCIC (stil need to add sCIC before EM registers)
@@ -1094,6 +1106,7 @@ def SimulateFIREBallemCCDImage(
 #         image[id_scic] += np.random.exponential(np.power(EmGain, register / n_registers))
 
     # semaring post EM amp (sgest noise reduction)
+    #TODO must add smearing for cube!
     if Smearing > 0:
         # smearing dependant on flux
         smearing_kernels = variable_smearing_kernels(image, Smearing, SmearExpDecrement)
@@ -1116,6 +1129,8 @@ def SimulateFIREBallemCCDImage(
     # read noise
     readout = np.random.normal(Bias, RN, (size[1], size[0]))
     readout_stack = np.random.normal(Bias, RN/np.sqrt(int(stack)), (size[1], size[0]))
+    readout_cube = np.random.normal(Bias, RN, (int(stack),size[1], size[0]))
+
     # print((np.random.rand(source_im.shape[0], source_im.shape[1]) < cosmic_ray_loss).mean())
     #TOKEEP  for cosmic ray masking readout[np.random.rand(source_im.shape[0], source_im.shape[1]) < cosmic_ray_loss]=np.nan
 
@@ -1130,14 +1145,15 @@ def SimulateFIREBallemCCDImage(
 
     imaADU_wo_RN = (image * ConversionGain).round().astype(type_)
     imaADU_RN = (readout * ConversionGain).round().astype(type_)
-    imaADU = ((image + 0*readout) * ConversionGain).round().astype(type_)
-    imaADU_stack = ((image_stack + 0*readout_stack) * ConversionGain).round().astype(type_)
+    imaADU = ((image + 1*readout) * ConversionGain).round().astype(type_)
+    imaADU_stack = ((image_stack + 1*readout_stack) * ConversionGain).round().astype(type_)
+    imaADU_cube = ((cube_stack + 1*readout_cube) * ConversionGain).round().astype(type_)
 
     # Not sure why now, but several events much higher than 2**16 -> put then to 0 for now...
 #     id_null = np.array((image + readout) * ConversionGain, dtype="int16") < 0
 #     image[id_null] = 0
     # print(np.isfinite(imaADU).mean())
-    return imaADU, imaADU_stack, source_im#imaADU_wo_RN, imaADU_RN
+    return imaADU, imaADU_stack, cube_stack, source_im#imaADU_wo_RN, imaADU_RN
 
 
 
