@@ -1386,7 +1386,7 @@ moffats menu {Number of Moffats} 0|1|2|3 {Number of features to be fitted by a m
 voight menu {Number of Voight} 0|1|2|3 {Number of features to be fitted by a voight}
 #sinusoid menu {Number of Sinusoids} 0|1|2 {Add sinusoids to the fitting signal}
 # other menu {Other features} None|User-defined-interactively|Import-from-Macros {If import, function needs to be written in pyds9plugin/Macros/Fitting_Functions/functions.py}
-other combobox {Other features} None|slit|smeared_slit|slit_astigmatism|smeared_slit_astigm|fiber_radial_profile|moffat_profile|gaussian_profile|EMCCDhist|EMCCD|defocused_gaussian {Any function implemented $dir/Macros/Fitting_Functions/functions.py}
+other combobox {Other features} None|slit|smeared_slit|slit_astigmatism|smeared_slit_astigm|fiber_radial_profile|moffat_profile|gaussian_flux|EMCCDhist|EMCCD|defocused_gaussian {Any function implemented $dir/Macros/Fitting_Functions/functions.py}
 #kernel entry {kernel} 1 {int, Convolution kenel}
 #Value menu {Value} Linear|Log {Fit in linear or log value}
 endparam

@@ -986,7 +986,7 @@ def SimulateFIREBallemCCDImage(
 #     ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=1, p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Spectra", Rx=8, Ry=8, size=[3216, 2069], OSregions=[1066, 2124], name="Auto", spectra="-", cube="-", n_registers=604, save=False
     ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=0.0005, p_sCIC=0, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Slit", Rx=8, Ry=8, size=[100, 100], OSregions=[0, -1], name="Auto", spectra="-", cube="-", n_registers=604, sky=0,save=False,stack=1,readout_time=1.5, cosmic_ray_loss=None):
 
-    from astropy.modeling.functional_models import Gaussian2D
+    from astropy.modeling.functional_models import Gaussian2D, Gaussian1D
     from scipy.sparse import dia_matrix
 
     OS1, OS2 = OSregions
@@ -1010,8 +1010,19 @@ def SimulateFIREBallemCCDImage(
         source_im += flux
     elif source == "Dirac":
         source_im += Gaussian2D.evaluate(x, y,  flux, ly / 2, lx / 2, Ry, Rx, 0)
-    elif source == "Spectra":
-        source_im += Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
+    elif "Spectra" in source:
+        mag=float(source.split("m=")[-1])
+        wavelength=2000
+        flux = 10**(-(mag-20.08)/2.5)*2.06*1E-16/((6.62E-34*300000000/(wavelength*0.0000000001)/0.0000001))
+        throughput = 0.13*0.9
+        atm = 0.45
+        detector = 0.45
+        area = 7854
+        dispersion = 46.6/10
+        elec_pix = flux * throughput * atm * detector * area /dispersion# should not be multiplied by exposure time here
+        # source_im[50:55,:] += elec_pix #Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
+        source_im[:,:] += elec_pix* Gaussian1D.evaluate(np.arange(100),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(100),  1,  50, Rx).sum()
+        source_im = source_im.T
     elif source == "Slit":
         ConvolveSlit2D_PSF_75muWidth = lambda xy, amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
         source_im += ConvolveSlit2D_PSF_75muWidth((x, y), flux , 9, ly / 2, lx / 2, Rx, Ry).reshape(lx, ly)

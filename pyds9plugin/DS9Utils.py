@@ -8327,8 +8327,17 @@ def gaussian_2dim(xy, amplitude, xo, yo, sigma_x, sigma_y, angle=0, offset=0):
 functions = ["interactive_plotter", "Function", "fit_ds9_plot", "ComputeEmGain"]
 if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
 
-    from dataphile.demos.auto_gui import Demo
+    from dataphile.datasets import SyntheticDataset
+    # from dataphile.demos.auto_gui import Demo
     import numpy as np
+    
+    class Demo:
+        """Base class for Demo classes."""
+        def __init__(self, *args, **kwargs):
+            """Generate SyntheticDataset(*args, **kwargs)."""
+            self.dataset = SyntheticDataset(*args, **kwargs)
+            self.xdata, self.ydata = self.dataset.generate()
+
 
     class GeneralFitNew(Demo):
 

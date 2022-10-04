@@ -113,14 +113,14 @@ def moffat_profile(
     return amp * np.power((1 + np.square((x - x0) / σ)), -alpha) + offset
 
 
-def gaussian_profile(
-    x,
-    amp=y.ptp() * np.array([0, 1.3, 1]),
-    FWHM=[0.01, 50, 2],
-    offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
-):
-    FWHM /= 2.35
-    return offset + amp * np.exp(-np.square(x / FWHM) / 2)
+# def gaussian_profile(
+#     x,
+#     amp=y.ptp() * np.array([0, 1.3, 1]),
+#     FWHM=[0.01, 50, 2],
+#     offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
+# ):
+#     FWHM /= 2.35
+#     return offset + amp * np.exp(-np.square(x / FWHM) / 2)
 
 
 def fiber_radial_profile(
@@ -157,15 +157,24 @@ def fiber_radial_profile(
 #%%
 
 
-def gaussian(x, a=[0, 100], xo=[0, 100], sigma=[0, 10]):
+# def gaussian_flux(x, Flux=[0, np.nansum(y)], xo=[0, 1.5*len(x)], sigma=[0, 10]):
+#     """Defines a gaussian function with offset
+#     """
+#     import numpy as np
+#     xo = float(xo)
+#     g = np.exp(-0.5 * (np.square(x - xo) / sigma ** 2))
+#     g *= Flux / g.sum()
+#     return g.ravel()
+
+
+def gaussian_flux(x, Flux=[0, np.nansum(y[y>0])], xo=[0, 1.5*len(x)], sigma=[0, 10],off=[np.nanmin(y),np.nanmax(y),np.nanmean(y)]):
     """Defines a gaussian function with offset
     """
     import numpy as np
-
     xo = float(xo)
-    g = a * np.exp(-0.5 * (np.square(x - xo) / sigma ** 2))
-    return g.ravel()
-
+    g = np.exp(-0.5 * (np.square(x - xo) / sigma ** 2))
+    g *= Flux / g.sum()
+    return g.ravel()+off
 
 def defocused_gaussian(
     x, amp=[0, 1000], amp_2=[0, 1000], xo=[0, 100], sigma=[0, 10], sigma_2=[0, 10],
