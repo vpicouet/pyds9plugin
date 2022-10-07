@@ -798,13 +798,16 @@ def setup(xpapoint=None, color="cool", argv=[]):
         # print(cuts[1], np.nanpercentile(image_ok, cuts[1]))
         # print(100, np.nanpercentile(image_ok, 100))
         # print("max", np.max(image_ok))
+        lim1, lim2 = np.nanpercentile(image_ok, cuts[0]), np.nanpercentile(image_ok, cuts[1]) 
+        if lim1==lim2:
+            lim2 = abs(1.1*lim1)
         d.set(
             "cmap %s ; scale %s ; scale limits %0.3f %0.3f  ; scale open"
             % (
                 args.color,
                 args.scale,
-                np.nanpercentile(image_ok, cuts[0]),
-                np.nanpercentile(image_ok, cuts[1]),
+                lim1,
+                lim2,
             )
         ),
     except ValueError as e:

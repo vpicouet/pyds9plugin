@@ -218,6 +218,42 @@ def SimulateFIREBallemCCDHist(ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, 
     # n, bins = np.histogram(imaADU[:,1066:2124].flatten(),range=[0,2**16], bins = int(2**16/2**2))#, range=(-200,11800))
     return imaADU[:, 1066:2124]  # n#, (bins[:-1]+bins[1:])/2
 
+#+ "image000001_emgain%i_RON%i_CIC%0.0E_Dark%0.0E_Exp%i_Smearing%0.1E_ExpSmear%0.1E_.fits" % (EmGain, RN, Decimal(pCIC), Decimal(Dark), exposure, Decimal(Smearing), Decimal(SmearExp))
+from pyds9plugin.tools import SimulateFIREBallemCCDImage
+name_source =  "/tmp/source.fits" 
+name_single =  "/tmp/single.fits" 
+name_stack =  "/tmp/stack.fits" 
+name_counting =  "/tmp/counting.fits" 
+#%%
+# %load_ext line_profiler
+RN=60
+size=[1058, 2069]
+OSregions=[0, 1058]
+#69 sec without OS, 1.5 sec without stack, 37 sec sithout OS, 20% due to CR, 16% due to cube RN, 40% due to counting
+# 23 sec withotu OS and CR, 19 % cube + 20% cube + 30% cube, 30% stack
+# 7 sec without counting: 84 ims atck, 7% smearing
+#%lprun -f SimulateFIREBallemCCDImage 
+imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(source="Field", size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,stack=int(200*1/50),RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
+
+print(cube_stack.min(),cube_stack.max())
+#%%
+
+fits.HDUList(fits.HDUList([fits.PrimaryHDU(imaADU_stack)])[0]).writeto(name_stack,overwrite=True)
+fits.HDUList(fits.HDUList([fits.PrimaryHDU(imaADU)])[0]).writeto(name_single,overwrite=True)
+fits.HDUList(fits.HDUList([fits.PrimaryHDU(source_im)])[0]).writeto(name_source,overwrite=True)
+threshold=5.5
+
+stacked_image = np.nansum(cube_stack>threshold*RN,axis=0)
+fits.HDUList(fits.HDUList([fits.PrimaryHDU(stacked_image)])[0]).writeto(name_counting,overwrite=True)
+# im0 = self.ax0.imshow(stacked_image, aspect="auto",cmap=self.current_cmap)
+
+
+d=DS9n()
+d.set("frame new ; file " + name_source)
+d.set("frame new ; file " + name_single)
+d.set("frame new ; file " + name_stack)
+d.set("frame new ; file " + name_counting)
+
 
 #TODO take into account the redshift and type of the source
 #TODO take into account magnitude
@@ -398,14 +434,9 @@ def SimulateFIREBallemCCDHist(ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, 
     # name = DS9backUp + "CreatedImages/" + name
 # image, image_woRN, ReadNOise = SimulateFIREBallemCCDImage(ConversionGain=ConversionGain,EmGain=EmGain,Bias=Bias,RN=RN,p_pCIC=pCIC,p_sCIC=sCIC,Dark=Dark,Smearing=Smearing,SmearExpDecrement=SmearExpDecrement,exposure=exposure,flux=flux,source=source,Rx=Rx / 2.335,n_registers=n_registers,Ry=Ry / 2.353,size=(lx, ly),spectra=spectra,cube=cube,OSregions=(OS1, OS2),name=name,)
 # if __name__ == "__main__":
-from pyds9plugin.tools import SimulateFIREBallemCCDImage
-name =  "/tmp/test.fits" #+ "image000001_emgain%i_RON%i_CIC%0.0E_Dark%0.0E_Exp%i_Smearing%0.1E_ExpSmear%0.1E_.fits" % (EmGain, RN, Decimal(pCIC), Decimal(Dark), exposure, Decimal(Smearing), Decimal(SmearExp))
-imaADU, imaADU_stack, source_im = SimulateFIREBallemCCDImage(source="Field", size=[3216, 2069], OSregions=[1066, 2124],cosmic_ray_loss=0,stack=3600*2/55)
-fitsimage = fits.HDUList([fits.PrimaryHDU(imaADU_stack)])[0]
-fits.HDUList(fitsimage).writeto(name,overwrite=True)
 
-d=DS9n()
-d.set("frame new ; file " + name)
+
+
 # fitsimage.header["CONVGAIN"] = (float(ConversionGain), "Conversion Gain")
 # fitsimage.header["EMGAIN"] = (float(EmGain), "Amplification gain")
 # fitsimage.header["BIAS"] = (Bias, "Detector bias")
