@@ -152,9 +152,8 @@ def fiber_radial_profile(
     return offset + amp * integ
 
 
-# plt.plot(fiber_radial_profile(np.linspace(0,15,100),1,2,3,0))
-
-#%%
+def madau(z,rho=[0.001,0.01],n=[2,3],n2=[2,3],pow=[2,7]):
+    return np.log10((rho * (1 + z/10) ** n / (1 + ((1 + z/10) / n2) ** pow)))
 
 
 # def gaussian_flux(x, Flux=[0, np.nansum(y)], xo=[0, 1.5*len(x)], sigma=[0, 10]):
@@ -419,6 +418,7 @@ def EMCCDhist(
         n = 1
         im = np.zeros(int(n_pix))  #
         im = np.zeros((1000, int(n_pix / 1000)))
+        print(flux)
         imaADU = np.random.gamma(
             np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain)
         )

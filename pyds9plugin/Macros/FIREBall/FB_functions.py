@@ -366,8 +366,9 @@ def emccd_model(
             dict_values[slid.label.get_text()] = slid.val
 
         x = dict_values["x"]
-        v1 = [v if type(v) != np.ndarray else v[0] for v in vals1]
-        v2 = [v if type(v) != np.ndarray else v[1] for v in vals1]
+        v1 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[0] for v in vals1]
+        v2 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[1] for v in vals1]
+        
         l1.set_ydata(
             np.convolve(function(x, *v1), np.ones(n_conv) / n_conv, mode="same")
         )
