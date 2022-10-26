@@ -952,7 +952,8 @@ def addAtPos(M1, M2, center):
     """Add a matrix in a higher dimension matric at a given position
     """
     size_x, size_y = np.shape(M2)
-    coor_x, coor_y = center
+    coor_x, coor_y = center 
+    coor_x, coor_y = coor_x - int(size_x/2), coor_y - int(size_y/2)
     end_x, end_y = (coor_x + size_x), (coor_y + size_y)
     try:
         M1[coor_x:end_x, coor_y:end_y] = M1[coor_x:end_x, coor_y:end_y] + M2
