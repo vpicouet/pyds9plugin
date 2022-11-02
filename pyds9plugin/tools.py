@@ -40,7 +40,7 @@ The fact that you are presently reading this means that you have had
 knowledge of the CeCILL-B license and that you accept its terms.
 """
 
-from pyds9plugin.DS9Utils import verboseprint
+# from pyds9plugin.DS9Utils import #verboseprint
 import numpy as np
 from astropy.table import Table
 import matplotlib.pyplot as plt
@@ -74,15 +74,15 @@ def AddFieldAftermatching(
             ColumnCat = Table.read(path2)
         except:
             ColumnCat = Table.read(path2, format="ascii")
-    verboseprint("cat 1 : %i lines" % (len(FinalCat)))
-    verboseprint("cat 2 : %i lines" % (len(ColumnCat)))
+    # #verboseprint("cat 1 : %i lines" % (len(FinalCat)))
+    # #verboseprint("cat 2 : %i lines" % (len(ColumnCat)))
     # print(ColumnCat['ZFLAG'])
-    verboseprint(ColumnCat)
+    # #verboseprint(ColumnCat)
     if query is not None:
         ColumnCat = apply_query(
             cat=ColumnCat, query=query, path=None, new_path=None, delete=True
         )
-        verboseprint(ColumnCat)
+        #verboseprint(ColumnCat)
         mask = np.isfinite(ColumnCat[radec2[0]]) & np.isfinite(ColumnCat[radec2[1]])
         ColumnCat = ColumnCat[mask]
     # print(ColumnCat['ZFLAG'])
@@ -101,11 +101,11 @@ def AddFieldAftermatching(
         except Exception:
             catalog = SkyCoord(ra=FinalCat[radec1[0]], dec=FinalCat[radec1[1]])
         #        idx, d2d, d3d = catalog.match_to_catalog_sky(c[mask])
-        verboseprint(catalog)
-        verboseprint(c)
+        # #verboseprint(catalog)
+        # #verboseprint(c)
         idx, d2d, d3d = catalog.match_to_catalog_sky(c)
         mask = 3600 * np.array(d2d) < distance
-        verboseprint("Number of matches < %0.2f arcsec :  %i " % (distance, mask.sum()))
+        # #verboseprint("Number of matches < %0.2f arcsec :  %i " % (distance, mask.sum()))
 
     elif len(radec1) == 1:
         import pandas as pd
@@ -128,7 +128,7 @@ def AddFieldAftermatching(
         new_field = field
     idx_ = idx[mask]
     for fieldi, new_field in zip(field, new_field):
-        verboseprint("Adding field " + fieldi + " " + new_field)
+        # #verboseprint("Adding field " + fieldi + " " + new_field)
         if new_field not in FinalCat.colnames:
             if type(ColumnCat[fieldi][0]) == np.ndarray:
                 FinalCat[new_field] = (
@@ -136,19 +136,19 @@ def AddFieldAftermatching(
                 )
             else:
                 FinalCat[new_field] = -99.00
-        verboseprint(FinalCat[new_field])
+        # #verboseprint(FinalCat[new_field])
         FinalCat[new_field][mask] = ColumnCat[fieldi][idx_]
-        # verboseprint(FinalCat[new_field])
+        # #verboseprint(FinalCat[new_field])
     return FinalCat
 
 
 #%%
 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from pyds9plugin.DS9Utils import PlotFit1D
 
 
 def init_values(bins, val, val_os, plot_=False):
+    from pyds9plugin.DS9Utils import PlotFit1D
     bins_os = bins
     os_v = val_os
     bias = bins_os[np.nanargmax(val_os)] + 0.5  #  #ADDED xdata[np.nanargmax(ydata)]
@@ -955,10 +955,13 @@ def addAtPos(M1, M2, center):
     coor_x, coor_y = center 
     coor_x, coor_y = coor_x - int(size_x/2), coor_y - int(size_y/2)
     end_x, end_y = (coor_x + size_x), (coor_y + size_y)
-    try:
-        M1[coor_x:end_x, coor_y:end_y] = M1[coor_x:end_x, coor_y:end_y] + M2
-    except ValueError:
-        pass
+    # try:
+        
+    sx, sy =  np.shape(M1[coor_x:end_x, coor_y:end_y])
+    a = M1[coor_x:end_x, coor_y:end_y] + M2[:sx,:sy]
+    M1[coor_x:end_x, coor_y:end_y] = a
+    # except ValueError:
+    #     pass
     return M1
 
 def variable_smearing_kernels(
@@ -1069,16 +1072,21 @@ def SimulateFIREBallemCCDImage(
 
         slits = Table.read("/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/targets_F2.csv")
         trans = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/transmission_pix_resolution.csv")
-        trans["trans_conv"] = np.convolve(trans["col2"],5,mode="same")
-        slits = slits[(slits["Z"]>0.5)&(slits["Z"]<0.8)]
+        trans["trans_conv"] = np.convolve(trans["col2"],np.ones(5)/5,mode="same")
+        plt.plot( trans["col1"], trans["trans_conv"])
+        slits = slits[((slits["Z"]>0.5)&(slits["Z"]<0.8))|(slits["Z"]==0)]
         slits["wave"] = (1+slits["Z"]) * 121.6
+        slits["wave"][slits["Z"]==0] = 200
         xs = slits["Y_IMAGE"] 
         ys = slits["X_IMAGE"] - 1066 + OSregions[0]
         index = (ys > OS1) & (ys < OS2)
-        verboseprint(xs, ys)
-        factor_lya = 0.1#7
-        for yi, xi, centre,mag in zip(np.array(ys[index]) - OS1, xs[index],slits["wave"][index],slits["nuv_mag"][index][:]):
+        #verboseprint(xs, ys)
+        for i in range((len(ys[index]))):
             # xi =
+            yi, xi, centre,mag = np.array(ys[index][i]) - OS1, xs[index][i],slits["wave"][index][i],slits["nuv_mag"][index][i]
+            z = slits["Z"][index][i]
+            factor_lya = 0.05 if z>0 else 0
+
             if 1==1:
                 wavelength=2000
                 flux = 10**(-(mag-20.08)/2.5)*2.06*1E-16/((6.62E-34*300000000/(wavelength*0.0000000001)/0.0000001))
@@ -1089,7 +1097,7 @@ def SimulateFIREBallemCCDImage(
                 dispersion = 46.6/10
                 elec_pix = flux * throughput * atm * detector * area /dispersion# should not be multiplied by exposure time here
                 # source_im[50:55,:] += elec_pix #Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
-                n = 100
+                n = 300
                 gal = np.zeros((n,n))
                 cont = Gaussian1D.evaluate(np.arange(n),  1,  int(n/2), Rx) 
                 new_cont = cont/cont.sum()
@@ -1098,10 +1106,13 @@ def SimulateFIREBallemCCDImage(
                 line /= line.sum()
                 profile_line =  factor_lya * (3700/1)*elec_pix* line * cont.sum()
                 gal[:,:] += profile_cont+profile_line
-                source_im = addAtPos(source_im, 1*gal.T, [int(xi), int(yi)])
+                j = np.argmin(abs(centre-trans["col1"]))
+                gal_absorbed = gal.T*trans["trans_conv"][j-int(n/2):j+int(n/2)]
+                source_im = addAtPos(source_im, 1*gal_absorbed, [int(xi), int(yi)])
+                # imshow(gal.T)
                 # source_im = addAtPos(source_im, 1*profile_line, [int(xi), int(yi)])
             else:
-                verboseprint(xi, yi)
+                #verboseprint(xi, yi)
                 i = np.argmin(abs(centre-trans["col1"]))
                 print(i)
                 gal2 = gal*trans["trans_conv"][i-50:i+50]

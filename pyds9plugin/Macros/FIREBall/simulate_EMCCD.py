@@ -233,7 +233,7 @@ OSregions=[0, 1058]
 # 23 sec withotu OS and CR, 19 % cube + 20% cube + 30% cube, 30% stack
 # 7 sec without counting: 84 ims atck, 7% smearing
 #%lprun -f SimulateFIREBallemCCDImage 
-imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(source="Field", size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,stack=int(200*1/50),RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
+imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(source="Field",stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
 
 print(cube_stack.min(),cube_stack.max())
 #%%
@@ -252,7 +252,7 @@ d=DS9n()
 d.set("frame new ; file " + name_source)
 d.set("frame new ; file " + name_single)
 d.set("frame new ; file " + name_stack)
-d.set("frame new ; file " + name_counting)
+# d.set("frame new ; file " + name_counting)
 
 
 #TODO take into account the redshift and type of the source
