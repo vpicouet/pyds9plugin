@@ -13337,6 +13337,7 @@ def python_command(xpapoint=None, argv=[]):
             path[0], path2remove, exp, xpapoint, bool(int(eval_)), write, d,
         )
         if result is not None:
+            # if same & (fitsimage.header == header):
             d.set("frame new ; tile yes ; file " + name)
     else:
         result, name = parallelize(

@@ -38,7 +38,7 @@ def MaskCosmicRaysCS(image, cosmics, all=False, size=None):
             mask = (y > cosmics[i]["min_y"]) & (y < cosmics[i]["max_y"]) & (x < cosmics[i]["max_x"] + cosmics[i]["size_opp"]) & (x > -size + cosmics[i]["max_x"])
             # if len(image[mask])<50*3000:
             image[mask] = np.nan
-    print(image[mask])
+    # print(image[mask])
     return image
 
 # fitsimage = fits.open(filename)[0]

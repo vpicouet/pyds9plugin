@@ -988,7 +988,7 @@ def variable_smearing_kernels(
 
 def SimulateFIREBallemCCDImage(
 #     ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=1, p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Spectra", Rx=8, Ry=8, size=[3216, 2069], OSregions=[1066, 2124], name="Auto", spectra="-", cube="-", n_registers=604, save=False
-    ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=0.0005, p_sCIC=0, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Slit", Rx=8, Ry=8, size=[100, 100], OSregions=[0, -1], name="Auto", spectra="-", cube="-", n_registers=604, sky=0,save=False,stack=1,readout_time=1.5, cosmic_ray_loss=None, counting=True):
+    ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=0.0005, p_sCIC=0, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Slit", Rx=8, Ry=8, size=[100, 100], OSregions=[0, -1], name="Auto", spectra="-", cube="-", n_registers=604, sky=0,save=False,stack=1,readout_time=1.5, cosmic_ray_loss=None, counting=True, QE=0.45):
     #%%
     # imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(source="Field", size=[3216, 2069], OSregions=[1066, 2124],p_pCIC=0.0005,exposure=50,Dark=0.5/3600,cosmic_ray_loss=0,Smearing=0.3,stack=3600*2/55,RN=RN,Rx=5,Ry=5,readout_time=5)
 
@@ -1047,10 +1047,10 @@ def SimulateFIREBallemCCDImage(
         flux = 10**(-(mag-20.08)/2.5)*2.06*1E-16/((6.62E-34*300000000/(wavelength*0.0000000001)/0.0000001))
         throughput = 0.13*0.9
         atm = 0.45
-        detector = 0.45
+        # detector = QE#0.45
         area = 7854
         dispersion = 46.6/10
-        elec_pix = flux * throughput * atm * detector * area /dispersion# should not be multiplied by exposure time here
+        elec_pix = flux * throughput * atm * QE * area /dispersion# should not be multiplied by exposure time here
         # source_im[50:55,:] += elec_pix #Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
         profile =  elec_pix* Gaussian1D.evaluate(np.arange(100),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(100),  1,  50, Rx).sum()
         source_im[:,:] += profile
@@ -1060,10 +1060,9 @@ def SimulateFIREBallemCCDImage(
         ConvolveSlit2D_PSF_75muWidth = lambda xy, amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
         source_im += ConvolveSlit2D_PSF_75muWidth((x, y), flux , 9, ly / 2, lx / 2, Rx, Ry).reshape(lx, ly)
     elif source == "Fibre":
-        #print("Create fibre source, FWHM: ", 2.353 * Rx, 2.353 * Ry)
         fibre = convolvePSF(radius_hole=10, fwhmsPSF=[2.353 * Rx, 2.353 * Ry], unit=1, size=(201, 201), Plot=False)  # [:,OSregions[0]:OSregions[1]]
         source_im = addAtPos(source_im, fibre, (int(lx / 2), int(ly / 2)))
-        #print("Done")
+ 
     elif source[:5] == "Field":
         ConvolveSlit2D_PSF_75muWidth = lambda xy, amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
         ws = [2025, 2062, 2139]
@@ -1092,10 +1091,9 @@ def SimulateFIREBallemCCDImage(
                 flux = 10**(-(mag-20.08)/2.5)*2.06*1E-16/((6.62E-34*300000000/(wavelength*0.0000000001)/0.0000001))
                 throughput = 0.13*0.9
                 atm = 0.45
-                detector = 0.45
                 area = 7854
                 dispersion = 46.6/10
-                elec_pix = flux * throughput * atm * detector * area /dispersion# should not be multiplied by exposure time here
+                elec_pix = flux * throughput * atm * QE * area /dispersion# should not be multiplied by exposure time here
                 # source_im[50:55,:] += elec_pix #Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
                 n = 300
                 gal = np.zeros((n,n))
@@ -1118,8 +1116,6 @@ def SimulateFIREBallemCCDImage(
                 gal2 = gal*trans["trans_conv"][i-50:i+50]
                 source_im = addAtPos(source_im, 1*gal2, [int(xi), int(yi)])
 
-            #TODO take into account the redshift and type of the source
-            #TODO take into account magnitude
             #TODO add the atmosphere absorption/emission features
             #TODO add the stacking 
             # source_im += ConvolveSlit2D_PSF_75muWidth((x, y), 40000 * flux, 9, yi, xi, Rx, Ry).reshape(lx, ly)
