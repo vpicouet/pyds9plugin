@@ -4664,10 +4664,11 @@ def execute_command(
             fitsimage.data = np.int16(fitsimage.data)
             fitsimage.header["BITPIX"] = 16
         # if overwrite is False:
+        ext = filename.split(".")[-1]
         if write:
-            name = filename[:-5] + "_modified.fits"
+            name = filename.replace("."+ext,  "_modified.fits")
         else:
-            name = "/tmp/" + os.path.basename(filename)[:-5] + "_modified.fits"
+            name = "/tmp/" + os.path.basename(filename).replace("."+ext,  "_modified.fits")
         # else:
         #     name = filename
         fitsimage.header["DS9"] = filename
@@ -5022,7 +5023,7 @@ def stack_images_path(
             & (Type != "mean")
             & (Type != "nanmean")
         ):
-            dtype = int
+            dtype = float# type(array3d[0][0,0])
         if Type == "counting":
             bins = np.linspace(1000, 1500, 100)
             hists = [

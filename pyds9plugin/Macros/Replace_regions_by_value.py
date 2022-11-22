@@ -9,6 +9,7 @@ print(ds9[0,0])
 ds9 = ds9#.astype(float).copy()
 print(ds9[0,0])
 # verboseprint(regions)
+
 try:
     xc, yc, h, w = int(regions.xc), int(regions.yc), int(regions.h), int(regions.w)
     verboseprint("Only one region found...")
@@ -18,10 +19,18 @@ try:
     Xsup = int(np.ceil(yc + h / 2 - 1))
     Yinf = int(np.floor(xc - w / 2 - 1))
     Ysup = int(np.ceil(xc + w / 2 - 1))
+    
     if np.ndim(ds9) == 3:
-        ds9[:,Xinf : Xsup + 1, Yinf : Ysup + 2] = value  # np.nan
+        z, x, y = np.indices(ds9.shape)
+        mask = (x > Xinf) & (x < Xsup + 1) & (y > Yinf) & (y < Ysup + 1)
+        ds9[mask] = value  # np.nan
+        # ds9[:,Xinf : Xsup + 1, Yinf : Ysup + 2] = value  # np.nan
     if np.ndim(ds9) == 2:
-        ds9[Xinf : Xsup + 1, Yinf : Ysup + 2] = value  # np.nan
+        x, y = np.indices(ds9.shape)
+        mask = (x > Xinf) & (x < Xsup + 1) & (y > Yinf) & (y < Ysup + 1)
+        other_mask = get(d, 'Other mask to apply', exit_=True)
+        ds9[mask & eval(other_mask)] = value  # np.nan
+        # ds9[Xinf : Xsup + 1, Yinf : Ysup + 2] = value  # np.nan
 except AttributeError:
     verboseprint("Several regions found...")
     for region in regions:
@@ -41,7 +50,9 @@ except AttributeError:
             Yinf = int(np.floor(xc - w / 2 - 1))
             Ysup = int(np.ceil(xc + w / 2 - 1))
             mask = (x > Xinf) & (x < Xsup + 1) & (y > Yinf) & (y < Ysup + 1)
-        ds9[mask] = value  # np.nan
+        other_mask = get(d, 'Other mask to apply', exit_=True)
+        print(mask, other_mask)
+        ds9[(mask) & (eval(other_mask))] = value  # np.nan
 # print(ds9[0,0])
 # fitsimage.data=ds9
 # fitsimage.writeto('/tmp/test.fits',overwrite=True)
