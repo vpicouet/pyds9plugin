@@ -5980,8 +5980,10 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
         d.set("regions system wcs ; regions sky fk5 ; regions skyformat degrees")
         system = "fk5"
         size = float(size)
-        size *= abs(wcs.wcs.cd[0][0])
-
+        try:
+            size *= abs(wcs.wcs.cd[0][0])
+        except AttributeError:
+            size *= 0.001
     verboseprint(cat)
     if (ID == "") or (ID is None):
         create_ds9_regions(
@@ -5997,21 +5999,37 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
         )
     else:
         # cat["id"] = [cat[l].astype(str) + ", " for l in ID.split(",")]
-        create_ds9_regions(
-            [cat[x]],
-            [cat[y]],
-            radius=np.ones(len(cat)) * float(size),
-            form=[form],
-            save=True,
-            color=["yellow"],
-            # ID=[np.round(np.array(cat[ID], dtype=float), 1)],
-            ID=[["%0.3f" % (a) for a in cat[ID]]],
-            # ID=[cat["id"]],
-            # ID=[cat[ID]],
-            savename=tmp_region,
-            system=system,
-        )
-    d.set("regions %s" % (tmp_region))
+        try:
+            create_ds9_regions(
+                [cat[x]],
+                [cat[y]],
+                radius=np.ones(len(cat)) * float(size),
+                form=[form],
+                save=True,
+                color=["yellow"],
+                # ID=[np.round(np.array(cat[ID], dtype=float), 1)],
+                ID=[["%0.3f" % (a) for a in cat[ID]]],
+                # ID=[cat["id"]],
+                # ID=[cat[ID]],
+                savename=tmp_region,
+                system=system,
+            )
+        except TypeError:
+            create_ds9_regions(
+                [cat[x]],
+                [cat[y]],
+                radius=np.ones(len(cat)) * float(size),
+                form=[form],
+                save=True,
+                color=["yellow"],
+                # ID=[np.round(np.array(cat[ID], dtype=float), 1)],
+                ID=[["%s" % (a) for a in cat[ID]]],
+                # ID=[cat["id"]],
+                # ID=[cat[ID]],
+                savename=tmp_region,
+                system=system,
+            )
+        d.set("regions %s" % (tmp_region))
     return cat, tmp_region
 
 
@@ -6126,7 +6144,7 @@ def mask_regions(xpapoint=None, length=20, argv=[]):
             right=right,
         )
     if len(path) < 2:
-        d.set("frame new ; tile yes ; file %s" % (name))
+        d.set("frame new ; tile no ; file %s" % (name))
     return fitsimage, name
 
 
@@ -6424,7 +6442,7 @@ def trim(xpapoint=None, all_ext=False, argv=[]):
                 all_ext=False,
             )
     if len(path) < 2:
-        d.set("frame new ; tile yes ; file %s" % (name))
+        d.set("frame new ; tile no ; file %s" % (name))
     return
 
 
@@ -12137,7 +12155,7 @@ def ds9_stiff(xpapoint=None, filename=None, argv=[]):
                               (shift+V) for more precision about the error.""",
                 )
                 sys.exit()
-            d.set("frame new")
+            d.set("frame new ; tile no ")
             verboseprint(param_dict["OUTFILE_NAME"])
             d.set(
                 "tiff %s"
@@ -12716,7 +12734,7 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
     i += 2
 
     wait_for_n(xpapoint)
-    d.set("frame delete all ; frame new")
+    d.set("frame delete all ; frame new ; tile no ")
     verboseprint(
         """%i/%i - Then paste it in the RegExp path field and let Type=Slice
 * If you do not see any image, the cuts might not be right,
@@ -13563,7 +13581,7 @@ BG  %0.7f""" % (
                 a.writeto(file.replace(".fits", ".masks.fits"), overwrite=True)
             except Exception as e:
                 verboseprint(e)
-            d.set("frame new")
+            d.set("frame new ; tile no ")
             d.set("file %s" % (file.replace(".fits", ".masks.fits")))
         #        d.set('multiframe %s'%(path.replace('.fits','.mask.fits')))
         except Exception as e:
@@ -13609,7 +13627,7 @@ def maxi_mask_cc(path=None, xpapoint=None):
             a.writeto(path.replace(".fits", ".masks.fits"), overwrite=True)
         except Exception as e:
             verboseprint(e)
-        d.set("frame new")
+        d.set("frame new ; tile no ")
         d.set("file %s" % (path.replace(".fits", ".masks.fits")))
     except Exception as e:
         print(e)

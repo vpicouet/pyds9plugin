@@ -4,11 +4,16 @@ if getregion(d, selected=True) is None:
     d.set("analysis message {It seems that you did not create or select the region. Please make sure to click on the region after creating it and re-run the analysis.}")
     sys.exit()
 value = get(d, 'Value to replace in the regions (eg. inf, nan, 0.1, -2)', exit_=True)
-print(ds9[0,0])
+# print(ds9[0,0])
 # overwrite = bool(int(args.overwrite))
 ds9 = ds9#.astype(float).copy()
-print(ds9[0,0])
+# print(ds9[0,0])
 # verboseprint(regions)
+other_mask = get(d, 'Other mask to apply', exit_=True)
+if other_mask=="":
+    print("no other mask")
+    other_mask=True
+print( other_mask)
 
 try:
     xc, yc, h, w = int(regions.xc), int(regions.yc), int(regions.h), int(regions.w)
@@ -28,7 +33,6 @@ try:
     if np.ndim(ds9) == 2:
         x, y = np.indices(ds9.shape)
         mask = (x > Xinf) & (x < Xsup + 1) & (y > Yinf) & (y < Ysup + 1)
-        other_mask = get(d, 'Other mask to apply', exit_=True)
         ds9[mask & eval(other_mask)] = value  # np.nan
         # ds9[Xinf : Xsup + 1, Yinf : Ysup + 2] = value  # np.nan
 except AttributeError:
@@ -50,8 +54,7 @@ except AttributeError:
             Yinf = int(np.floor(xc - w / 2 - 1))
             Ysup = int(np.ceil(xc + w / 2 - 1))
             mask = (x > Xinf) & (x < Xsup + 1) & (y > Yinf) & (y < Ysup + 1)
-        other_mask = get(d, 'Other mask to apply', exit_=True)
-        print(mask, other_mask)
+        # other_mask = get(d, 'Other mask to apply', exit_=True)
         ds9[(mask) & (eval(other_mask))] = value  # np.nan
 # print(ds9[0,0])
 # fitsimage.data=ds9
