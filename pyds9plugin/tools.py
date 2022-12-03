@@ -988,7 +988,7 @@ def variable_smearing_kernels(
 
 def SimulateFIREBallemCCDImage(
 #     ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=1, p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Spectra", Rx=8, Ry=8, size=[3216, 2069], OSregions=[1066, 2124], name="Auto", spectra="-", cube="-", n_registers=604, save=False
-    ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=0.0005, p_sCIC=0, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Slit", Rx=8, Ry=8, size=[100, 100], OSregions=[0, -1], name="Auto", spectra="-", cube="-", n_registers=604, sky=0,save=False,stack=1,readout_time=1.5, cosmic_ray_loss=None, counting=True, QE=0.45):
+    ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=0.0005, p_sCIC=0, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Slit", Rx=8, Ry=8, size=[100, 100], OSregions=[0, -1], name="Auto", spectra="-", cube="-", n_registers=604, sky=0,save=False,stack=1,readout_time=1.5, cosmic_ray_loss=None, counting=True, QE=0.45, field="targets_F2.csv"):
     #%%
     # imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(source="Field", size=[3216, 2069], OSregions=[1066, 2124],p_pCIC=0.0005,exposure=50,Dark=0.5/3600,cosmic_ray_loss=0,Smearing=0.3,stack=3600*2/55,RN=RN,Rx=5,Ry=5,readout_time=5)
 
@@ -1042,20 +1042,35 @@ def SimulateFIREBallemCCDImage(
     elif source == "Dirac":
         source_im += Gaussian2D.evaluate(x, y,  flux, ly / 2, lx / 2, Ry, Rx, 0)
     elif "Spectra" in source:
-        mag=float(source.split("m=")[-1])
         wavelength=2000
-        flux = 10**(-(mag-20.08)/2.5)*2.06*1E-16/((6.62E-34*300000000/(wavelength*0.0000000001)/0.0000001))
         throughput = 0.13*0.9
         atm = 0.45
-        # detector = QE#0.45
         area = 7854
         dispersion = 46.6/10
-        elec_pix = flux * throughput * atm * QE * area /dispersion# should not be multiplied by exposure time here
-        # source_im[50:55,:] += elec_pix #Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
-        profile =  elec_pix* Gaussian1D.evaluate(np.arange(100),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(100),  1,  50, Rx).sum()
-        source_im[:,:] += profile
-        # print(exposure*profile.max(), exposure*profile.sum())
-        source_im = source_im.T
+        if "0044p030" in source:
+            a = Table.read("/Users/Vincent/Downloads/Safari/h_0044p030fos_spc.fits")
+            #%%
+            source_im=np.zeros((100,100))
+            a["photons"] = a["FLUX"]/9.93E-12   
+            a["e_pix_exp"]  = a["photons"] * exposure * throughput * atm * QE * area /dispersion
+            mask = (a["WAVELENGTH"]>1960) & (a["WAVELENGTH"]<1980)
+            # plt.plot(a["WAVELENGTH"][mask],a["e_pix_exp"][mask])
+            profile =   Gaussian1D.evaluate(np.arange(100),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(100),  1,  50, Rx).sum()
+            i = np.argmin(abs(a["WAVELENGTH"]-1960))
+
+            source_im[:,:] +=   profile
+            source_im = source_im.T*a["e_pix_exp"][i:i+100]
+                        
+        #%%
+        else:
+            mag=float(source.split("m=")[-1])
+            flux = 10**(-(mag-20.08)/2.5)*2.06*1E-16/((6.62E-34*300000000/(wavelength*0.0000000001)/0.0000001))
+            elec_pix = flux * throughput * atm * QE * area /dispersion# should not be multiplied by exposure time here
+            # source_im[50:55,:] += elec_pix #Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
+            profile =  elec_pix* Gaussian1D.evaluate(np.arange(100),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(100),  1,  50, Rx).sum()
+            source_im[:,:] += profile
+            # print(exposure*profile.max(), exposure*profile.sum())
+            source_im = source_im.T
     elif source == "Slit":
         ConvolveSlit2D_PSF_75muWidth = lambda xy, amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
         source_im += ConvolveSlit2D_PSF_75muWidth((x, y), flux , 9, ly / 2, lx / 2, Rx, Ry).reshape(lx, ly)
@@ -1069,7 +1084,7 @@ def SimulateFIREBallemCCDImage(
         file = '/Users/Vincent/Github/fireball2-etc/notebooks/10pc/cube_204nm_guidance0.5arcsec_slit100um_total_fc_rb_detected.fits'#%(pc,wave,slit)
         gal=fits.open(file)[0].data * 0.7 #cf athmosphere was computed at 45km
 
-        slits = Table.read("/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/targets_F2.csv")
+        slits = Table.read("/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/" + field)
         trans = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/transmission_pix_resolution.csv")
         trans["trans_conv"] = np.convolve(trans["col2"],np.ones(5)/5,mode="same")
         plt.plot( trans["col1"], trans["trans_conv"])
@@ -1082,7 +1097,7 @@ def SimulateFIREBallemCCDImage(
         #verboseprint(xs, ys)
         for i in range((len(ys[index]))):
             # xi =
-            yi, xi, centre,mag = np.array(ys[index][i]) - OS1, xs[index][i],slits["wave"][index][i],slits["nuv_mag"][index][i]
+            yi, xi, centre,mag = np.array(ys[index][i]) - OS1, xs[index][i],slits["wave"][index][i],slits["NUV_ned"][index][i]
             z = slits["Z"][index][i]
             factor_lya = 0.05 if z>0 else 0
 
