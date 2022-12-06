@@ -220,40 +220,49 @@ def SimulateFIREBallemCCDHist(ConversionGain, EmGain, Bias, RN, p_pCIC, p_sCIC, 
 
 #+ "image000001_emgain%i_RON%i_CIC%0.0E_Dark%0.0E_Exp%i_Smearing%0.1E_ExpSmear%0.1E_.fits" % (EmGain, RN, Decimal(pCIC), Decimal(Dark), exposure, Decimal(Smearing), Decimal(SmearExp))
 from pyds9plugin.tools import SimulateFIREBallemCCDImage
-name_source =  "/tmp/source.fits" 
-name_single =  "/tmp/single.fits" 
-name_stack =  "/tmp/stack.fits" 
-name_counting =  "/tmp/counting.fits" 
+
 #%%
 # %load_ext line_profiler
 RN=60
 size=[1058, 2069]
 OSregions=[0, 1058]
-#69 sec without OS, 1.5 sec without stack, 37 sec sithout OS, 20% due to CR, 16% due to cube RN, 40% due to counting
-# 23 sec withotu OS and CR, 19 % cube + 20% cube + 30% cube, 30% stack
-# 7 sec without counting: 84 ims atck, 7% smearing
-#%lprun -f SimulateFIREBallemCCDImage 
-imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(field="targets_QSO.csv",source="Field",stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
-
-print(cube_stack.min(),cube_stack.max())
-#%%
-
-fits.HDUList(fits.HDUList([fits.PrimaryHDU(imaADU_stack)])[0]).writeto(name_stack,overwrite=True)
-fits.HDUList(fits.HDUList([fits.PrimaryHDU(imaADU)])[0]).writeto(name_single,overwrite=True)
-fits.HDUList(fits.HDUList([fits.PrimaryHDU(source_im)])[0]).writeto(name_source,overwrite=True)
-threshold=5.5
-
-stacked_image = np.nansum(cube_stack>threshold*RN,axis=0)
-fits.HDUList(fits.HDUList([fits.PrimaryHDU(stacked_image)])[0]).writeto(name_counting,overwrite=True)
-# im0 = self.ax0.imshow(stacked_image, aspect="auto",cmap=self.current_cmap)
-
-
+field="PG0044p030.csv"
+field="targets_F2.csv"
+path="/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Simulation_fields"
+path="/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Simulation_fields/no_atm"
+for field in ["targets_F1.csv","targets_F2.csv","targets_F3.csv","targets_F4.csv","targets_QSO.csv","PG0044p030.csv","PG1538p477.csv"]:
+    print(field)
+    name_source =  "/%s/source_%s.fits"%(path,field)
+    name_single =  "/%s/single_%s.fits" %(path,field)
+    name_stack =  "/%s/stack_%s.fits" %(path,field)
+    name_counting =  "/%s/counting_%s.fits"%(path,field) #69 sec without OS, 1.5 sec without stack, 37 sec sithout OS, 20% due to CR, 16% due to cube RN, 40% due to counting
+    # 23 sec withotu OS and CR, 19 % cube + 20% cube + 30% cube, 30% stack
+    # 7 sec without counting: 84 ims atck, 7% smearing
+    #%lprun -f SimulateFIREBallemCCDImage 
+    # imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(field="targets_F3.csv",source="Field",stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
+    imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(field=field,source="Field",stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
+    # imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(field="PG1538p477.csv",source="Field",stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
+    
+    print(cube_stack.min(),cube_stack.max())
+    
+    
+    fits.HDUList(fits.HDUList([fits.PrimaryHDU(imaADU_stack)])[0]).writeto(name_stack,overwrite=True)
+    fits.HDUList(fits.HDUList([fits.PrimaryHDU(imaADU)])[0]).writeto(name_single,overwrite=True)
+    fits.HDUList(fits.HDUList([fits.PrimaryHDU(source_im)])[0]).writeto(name_source,overwrite=True)
+    threshold=5.5
+    
+    stacked_image = np.nansum(cube_stack>threshold*RN,axis=0)
+    fits.HDUList(fits.HDUList([fits.PrimaryHDU(stacked_image)])[0]).writeto(name_counting,overwrite=True)
+    # im0 = self.ax0.imshow(stacked_image, aspect="auto",cmap=self.current_cmap)
+    
+    
 d=DS9n()
 d.set("frame new ; file " + name_source)
 d.set("frame new ; file " + name_single)
 d.set("frame new ; file " + name_stack)
 # d.set("frame new ; file " + name_counting)
 
+#%%
 
 #TODO take into account the redshift and type of the source
 #TODO take into account magnitude
