@@ -1590,7 +1590,6 @@ def create_ds9_regions(
                 regions += "{}({:.6f},{:.6f},".format(form[i], x + 0, y + 0) + rest
                 if ID is not None:
                     regions += " text={{{}}}".format(ID[i][j])
-                    # print(ID[i][j])
                 regions += "\n"
         except ValueError as e:
             logger.warning(e)

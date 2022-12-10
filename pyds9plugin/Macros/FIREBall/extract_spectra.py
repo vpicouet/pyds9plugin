@@ -1,3 +1,6 @@
+import numpy as np
+from pyds9plugin.DS9Utils import verboseprint, DS9n, create_ds9_regions, lims_from_region, getregion
+import os
 
 def returnXY(field, w=2060, frame="observed", keyword="Lya_Gal", mag_min=None, mag_max=None):
     """Return redshift, position of the slit, wavelength used for each mask
@@ -6,7 +9,7 @@ def returnXY(field, w=2060, frame="observed", keyword="Lya_Gal", mag_min=None, m
     from astropy.table import Table
 
     #    try:
-    from .mapping import Mapping
+    # from .mapping import Mapping
 
     #    except ValueError:
     #        from Calibration.mapping import Mapping
@@ -17,56 +20,59 @@ def returnXY(field, w=2060, frame="observed", keyword="Lya_Gal", mag_min=None, m
     w *= 1e-4
     verboseprint("Selected Line is : %0.4f microns" % (w))
 
-    try:
-        # slit_dir = resource_filename('pyds9plugin', 'Slits')
-        Target_dir = resource_filename("pyds9plugin", "Targets")
-        Mapping_dir = resource_filename("pyds9plugin", "Mappings")
-    except:
-        # slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
-        Target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Targets")
-        Mapping_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Mappings")
+    # try:
+    #     # slit_dir = resource_filename('pyds9plugin', 'Slits')
+    #     Target_dir = resource_filename("pyds9plugin", "Targets")
+    #     # Mapping_dir = resource_filename("pyds9plugin", "Mappings")
+    # except:
+    #     # slit_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Slits')
+    #     Target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Targets")
+        # Mapping_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Mappings")
 
-    if ("f1" in field) or ("119" in field):
-        # csvfile = os.path.join(slit_dir,'F1_119.csv')
-        targetfile = os.path.join(Target_dir, "targets_F1.txt")
-        mappingfile = os.path.join(Mapping_dir, "mapping-mask-det-w-1806012-F1.pkl")  # mapping-mask-det-180612-F1.pkl
-    if ("f2" in field) or ("161" in field):
-        # csvfile = os.path.join(slit_dir,'F2_-161.csv')
-        targetfile = os.path.join(Target_dir, "targets_F2.csv")
-        mappingfile = os.path.join(Mapping_dir, "mapping-mask-det-w-1806012-F2.pkl")
-    if ("f3" in field) or ("121" in field):
-        # csvfile = os.path.join(slit_dir,'F3_-121.csv')
-        targetfile = os.path.join(Target_dir, "targets_F3.txt")
-        mappingfile = os.path.join(Mapping_dir, "mapping-mask-det-w-1806012-F3.pkl")
-    if ("f4" in field) or ("159" in field):
-        # csvfile = os.path.join(slit_dir,'F4_159.csv')
-        targetfile = os.path.join(Target_dir, "targets_F4.txt")
-        mappingfile = os.path.join(Mapping_dir, "mapping-mask-det-w-1806012-F4.pkl")
+    targetfile = "/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/targets_%s.csv"%(field.split("_")[0])
+    
+    xfield, yfield = "x_mm","y_mm" 
+    # if ("f1" in field) or ("119" in field):
+    #     # csvfile = os.path.join(slit_dir,'F1_119.csv')
+    #     targetfile = os.path.join(Target_dir, "targets_F1.txt")
+    #     # mappingfile = os.path.join(Mapping_dir, "mapping-mask-det-w-1806012-F1.pkl")  # mapping-mask-det-180612-F1.pkl
+    # if ("f2" in field) or ("161" in field):
+    #     # csvfile = os.path.join(slit_dir,'F2_-161.csv')
+    #     targetfile = os.path.join(Target_dir, "targets_F2.csv")
+    #     # mappingfile = os.path.join(Mapping_dir, "mapping-mask-det-w-1806012-F2.pkl")
+    # if ("f3" in field) or ("121" in field):
+    #     # csvfile = os.path.join(slit_dir,'F3_-121.csv')
+    #     targetfile = os.path.join(Target_dir, "targets_F3.txt")
+    #     # mappingfile = os.path.join(Mapping_dir, "mapping-mask-det-w-1806012-F3.pkl")
+    # if ("f4" in field) or ("159" in field):
+    #     # csvfile = os.path.join(slit_dir,'F4_159.csv')
+    #     targetfile = os.path.join(Target_dir, "targets_F4.txt")
+    #     # mappingfile = os.path.join(Mapping_dir, "mapping-mask-det-w-1806012-F4.pkl")
     verboseprint(field)
     if "none" in field.lower():
         return [], [], [], [], [], []
     # print('Selected field in : ', csvfile)
     verboseprint("targetfile = ", targetfile)
-    mapping = Mapping(filename=mappingfile)
+    # mapping = Mapping(filename=mappingfile)
 
     try:
         target_table = Table.read(targetfile)  # , format='ascii')
     except:
         target_table = Table.read(targetfile, format="ascii", delimiter="\t")
 
-    if "f1" in field:
-        idok = (target_table["slit_length_right"] != 0) & (target_table["slit_length_left"] != 0)
-        target_table = target_table[idok]
-        xmask = target_table["xmask"] + (target_table["slit_length_right"] - target_table["slit_length_left"]) / 2.0
-        ymask = target_table["ymask"] + target_table["offset"]
-        z = target_table["z"]
-        internalCount = target_table["Internal-count"]
+    # if "f1" in field:
+    #     idok = (target_table["slit_length_right"] != 0) & (target_table["slit_length_left"] != 0)
+    #     target_table = target_table[idok]
+    #     xmask = target_table["xmask"] + (target_table["slit_length_right"] - target_table["slit_length_left"]) / 2.0
+    #     ymask = target_table["ymask"] + target_table["offset"]
+    #     z = target_table["z"]
+    #     internalCount = target_table["Internal-count"]
 
-    else:
-        xmask = target_table["xmm"]
-        ymask = target_table["ymm"]
-        internalCount = target_table["Internal-count"]
-        z = target_table["Z"]
+    # else:
+    xmask = target_table[xfield]
+    ymask = target_table[yfield]
+    internalCount = target_table["Internal-count"]
+    z = target_table["Z"]
     redshift = z
     slit = internalCount
 
@@ -74,10 +80,14 @@ def returnXY(field, w=2060, frame="observed", keyword="Lya_Gal", mag_min=None, m
         verboseprint("Working in rest frame wevelength")
         # w = 1215.67
         wavelength = (1 + redshift) * w  # * 1e-4
-        y, x = mapping.map(wavelength, xmask, ymask, inverse=False)
+        y, x =  target_table["X_IMAGE_line"],  target_table["Y_IMAGE"]
+        x, y =  target_table["X_IMAGE_line"],  target_table["Y_IMAGE"]
+        # y, x = mapping.map(wavelength, xmask, ymask, inverse=False)
     if frame.lower() == "observedframe":
         verboseprint("Working in observed frame wevelength")
-        y, x = mapping.map(w, xmask, ymask, inverse=False)
+        y, x =  target_table["X_IMAGE"],  target_table["Y_IMAGE"]
+        x, y =  target_table["X_IMAGE"],  target_table["Y_IMAGE"]
+        # y, x = mapping.map(w, xmask,  ymask, inverse=False)
     w *= 1e4
 
     # print(x[0],y[0])
@@ -105,12 +115,14 @@ def returnXY(field, w=2060, frame="observed", keyword="Lya_Gal", mag_min=None, m
         return x[index], y[index], redshift[index], slit[index], np.zeros(len(slit[index])), w  # [index]
 
 
-def DS9plot_spectra(xpapoint, w=None, n=4, rapport=1.8, continuum=False, DS9backUp=DS9_BackUp_path, Lya=False):
+
+
+def DS9plot_spectra(xpapoint=None, n=4, rapport=1.8, continuum=False, Lya=False, field="F1_119", Frame="observedframe", w=1216, kernel=8, threshold=5, ObjType="All", magnitude="15,23"):
     """Plot spectra in local frame
     """
     import matplotlib.pyplot as plt
 
-    field, Frame, w, kernel, threshold, ObjType, magnitude = sys.argv[3:]  #'f3 names'#sys.argv[3]
+    # field, Frame, w, kernel, threshold, ObjType, magnitude = sys.argv[3:]  #'f3 names'#sys.argv[3]
     kernel, threshold = int(kernel), int(threshold)
     mag_min, mag_max = np.array(magnitude.split(","), dtype=float)
     verboseprint("Field, Frame, w, kernel = ", field, Frame, w, kernel)
@@ -121,7 +133,7 @@ def DS9plot_spectra(xpapoint, w=None, n=4, rapport=1.8, continuum=False, DS9back
     image = fitsfile[0].data
     x, y, redshift, slit, mag, w = returnXY(field, w=w, frame=Frame, keyword=ObjType, mag_min=mag_min, mag_max=mag_max)
 
-    create_ds9_regions(y, x, radius=10, form="box", save=True, color="yellow", savename="/tmp/centers")
+    create_ds9_regions([y], [x], radius=10, form=["box"], save=True, color="yellow", savename="/tmp/centers")
     verboseprint("x = ", x)
     verboseprint("y = ", y)
     # print('redshift = ', redshift)
@@ -147,12 +159,12 @@ def DS9plot_spectra(xpapoint, w=None, n=4, rapport=1.8, continuum=False, DS9back
     sup = 2100  # 2133
     inf = 1100  # 1053
     x2w = 10.0 / 46
-    flag_visible = (y > inf) & (y < sup) & (x > 0) & (x < 2070)
-    if Frame == "RestFrame":
+    flag_visible = x>0#(y > inf) & (y < sup) & (x > 0) & (x < 2070)
+    if Frame.lower() == "restframe":
         lya_z = 0.7
         Lya = True
         nb_gaussian = 1
-    if Frame == "ObservedFrame":
+    if Frame.lower() == "observedframe":
         lya_z = 0
         nb_gaussian = 3
         redshift = np.zeros(len(redshift))
@@ -176,7 +188,7 @@ def DS9plot_spectra(xpapoint, w=None, n=4, rapport=1.8, continuum=False, DS9back
 
     spectras = []
     for i, ax in enumerate(axes.ravel()[1 : len(imagettes) + 1]):
-        spectra = imagettes[i][:, ::-1].mean(axis=0)
+        spectra = imagettes[i][:, ::-1].mean(axis=0 )
         spectra[: xinf[i]] = np.nan
         spectra[xsup[i] :] = np.nan
         spectras.append(spectra)
@@ -206,7 +218,7 @@ def DS9plot_spectra(xpapoint, w=None, n=4, rapport=1.8, continuum=False, DS9back
     detectLine2(xaxis[kernel:-kernel], stack[kernel:-kernel], clipping=threshold, window=20, savename=filename[:-5] + "_StackedSpectra.png", Lya=Lya, nb_gaussian=nb_gaussian)
     plt.show()
 
-    csvwrite(np.vstack((xaxis, stack)).T, DS9backUp + "CSVs/%s_SpectraBigRange.csv" % (datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss")))
+    csvwrite(np.vstack((xaxis, stack)).T,  "/tmp/CSVs/%s_SpectraBigRange.csv" % (datetime.datetime.now().strftime("%y%m%d-%HH%Mm%Ss")))
     csvwrite(np.vstack((xaxis, stack)).T, filename[:-5] + "_SpectraBigRange.csv")
 
     return imagettes
@@ -216,7 +228,6 @@ def detectLine(x, y, clipping=10, window=20, savename="/tmp/stacked_spectrum.png
     """Fit a gaussian
     interger the flux on 1/e(max-min) and then add the few percent calculated by the gaussian at 1/e
     """
-    # x, y = Table.read('/Users/Vincent/DS9BackUp/CSVs/190510-11H14_SpectraBigRange.csv')['col0'][8:-8],Table.read('/Users/Vincent/DS9BackUp/CSVs/190508-16H24_SpectraBigRange.csv')['col1'][8:-8]
     import matplotlib
 
     matplotlib.use("TkAgg")
@@ -272,7 +283,6 @@ def detectLine2(x, y, clipping=10, window=20, savename="/tmp/stacked_spectrum.pn
     """Fit a gaussian
     interger the flux on 1/e(max-min) and then add the few percent calculated by the gaussian at 1/e
     """
-    # x, y = Table.read('/Users/Vincent/DS9BackUp/CSVs/190510-11H14_SpectraBigRange.csv')['col0'][8:-8],Table.read('/Users/Vincent/DS9BackUp/CSVs/190508-16H24_SpectraBigRange.csv')['col1'][8:-8]
     from .dataphile.demos import auto_gui
 
     import matplotlib
@@ -294,3 +304,5 @@ def detectLine2(x, y, clipping=10, window=20, savename="/tmp/stacked_spectrum.pn
 
 
     return obj
+
+DS9plot_spectra()

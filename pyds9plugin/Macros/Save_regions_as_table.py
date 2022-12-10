@@ -1,16 +1,13 @@
 from astropy.table import Table
+from pyds9plugin.DS9Utils import blockshaped
 
 
 new_name = get(d, 'Path where you want to save the region catalog.', exit_=True)
 verboseprint(new_name)
 
-# d = DS9n(args.xpapoint)
 image = d.get_pyfits()[0].data
 
-# if new_name is None:
-#     new_name = args.path
-# if name is not None:
-#     d.set("regions " + name)
+
 d.set("regions select all")
 regions = getregion(d, all=False, quick=False, selected=True)
 if regions is None:
@@ -53,7 +50,23 @@ cat["max"] = np.nanmax(images, axis=(1, 2))
 if new_name is None:
     new_name = "/tmp/regions.csv"
 verboseprint(new_name)
+# long = True
+
+# appertures = blockshaped(physical_region-table['pre_scan'] , 40, 40)
+# vars_ = n/p.nanvar(appertures,axis=(1,2))
+# xprofile = [np.nanmean(im,axis=1) for im in images]
+# yprofile = [np.nanmean(im,axis=2) for im in images]
+# if long:
+#     cat["x_profile"] =  Column([xprofile], name="x_profile")   
+#     cat["y_profile"] =  Column([xprofile], name="y_profile")   
+
+# if 1==1:
+#     print("match with target file")
+
+
+
+
 if 'csv' in new_name:
-    cat.write(new_name, overwrite=True, format="csv")
+    cat.write(new_name, overwrite=True)#, format="ecsv")
 else:
     cat.write(new_name, overwrite=True)
