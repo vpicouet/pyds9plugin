@@ -7,7 +7,7 @@ for i, name in enumerate(names):
 
 
 d.set("plot all")
-colors = ["red", "blue", "green", "black"]
+colors = ["red", "blue", "green", "black","orange"]*5
 for i, (name, c) in enumerate(zip(names, colors)):
     filename = "/tmp/test_%s.dat" % (len(names)-i-1)
     # a = Table.read(filename,format='ascii')

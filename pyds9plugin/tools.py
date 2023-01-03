@@ -1076,7 +1076,7 @@ def SimulateFIREBallemCCDImage(
             subim = np.zeros((nsize2,nsize))
             wavelengths = np.linspace(lmax-nsize2/2/dispersion,lmax+nsize2/2/dispersion,nsize2)
 
-            if 1==1:
+            if 1==0:
                 # source_im=np.zeros((100,100))
                 # # plt.plot(a["WAVELENGTH"][mask],a["e_pix_exp"][mask])
                 # profile =   Gaussian1D.evaluate(np.arange(100),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(100),  1,  50, Rx).sum()

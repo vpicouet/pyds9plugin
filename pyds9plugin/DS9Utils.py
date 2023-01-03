@@ -8466,20 +8466,25 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             a = popt.coef[::-1][0]
             b = popt.coef[::-1][1]
             if self.background == 2:
-                c, b, a = np.poly1d(np.polyfit(x, y, deg=2))
+                c, _, a = np.poly1d(np.polyfit(x, y, deg=2))
                 fb, fa, fc = 10, 10, 5
+                # if b > 0:
+                #     boundsb =  (2 * (b / fb - 1), 2 * (fb * b + 1))
+                # else:
+                #     boundsb =  (2 * (fb * b - 1), 2 * (b / fb + 1))
                 if b > 0:
-                    boundsb = (b / fb - 1, fb * b + 1)
+                    boundsb = (- b * fb, fb * b )
                 else:
-                    boundsb = (fb * b - 1, b / fb + 1)
+                    boundsb = ( b * fb, fb * -b )
+                    # boundsb =  (2 * (fb * b - 1), 2 * (b / fb + 1))
                 if a > 0:
-                    boundsa = (a / fa, fa * a)
+                    boundsa =  (2 * a / fa, 2 * fa * a)
                 else:
-                    boundsa = (a * fa, a / fa)
+                    boundsa =  (2 * a * fa, 2 * a / fa)
                 if c > 0:
-                    boundsc = (-1 * fc * c, fc * c)
+                    boundsc =  (-2 * fc * c, 2 * fc * c)
                 else:
-                    boundsc = (fc * c, -1 * fc * c)
+                    boundsc =  (2 * fc * c, -2 * fc * c)
             else:
                 c = 0
                 fb, fa, fc = 10, 10, 2
@@ -8487,8 +8492,8 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                     boundsb = (b / fb, fb * b)
                 else:
                     boundsb = (fb * b, b / fb)
+                boundsb = ((y.min() - a) / x.max(), (y.max() - a) / x.min())
             boundsa = (a - (y.max() - y.min()), a + (y.max() - y.min()))
-            boundsb = ((y.min() - a) / x.max(), (y.max() - a) / x.min())
             if boundsb[1] < boundsb[0]:
                 boundsb = boundsb[::-1]
             Models = []
@@ -8740,8 +8745,8 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                             bounds=(np.nanmin(y), np.nanmax(y)),
                             label="scale",
                         ),
-                        Parameter(value=0, bounds=(-0.5, 0.5), label="slope"),
-                        Parameter(value=0, bounds=(-5e-5, 5e-5), label="gradient"),
+                        Parameter(value=0, bounds=boundsb, label="slope"),#(-0.5, 0.5)
+                        Parameter(value=0, bounds=boundsc, label="gradient"),#(-5e-5, 5e-5)
                         label="Background",
                     )
                 )
@@ -8757,9 +8762,19 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                         else:
                             bounds1.append(-np.inf)
                             bounds2.append(np.inf)
-                    popt, pcov = curve_fit(
-                        function, x, y, p0, bounds=[bounds1, bounds2]
-                    )
+                    try:
+                        popt, pcov = curve_fit(
+                            function, x, y, p0, bounds=[bounds1, bounds2]
+                        )
+                    except ValueError:
+                        for i in range(len(p0)-len(bounds1)):
+                            bounds1.append(-np.inf)
+                            bounds2.append(np.inf)
+
+                        popt, pcov = curve_fit(
+                            function, x, y, p0, bounds=[bounds1, bounds2]
+                        )
+
                 else:
                     popt, pcov = curve_fit(function, x, y, p0)
                 return popt, pcov
@@ -9114,6 +9129,8 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             x, y = x[mask], y[mask]
             if x_scale == "yes":
                 x = np.log10(x)
+            else:
+                x -= x.ptp()/2
             if y_scale == "yes":
                 y = np.log10(y)
             index = (np.isfinite(y)) & (np.isfinite(x)) & (y != 0)
@@ -13786,6 +13803,7 @@ fk5
     d.set("regions delete all")
     d.set("regions " + name)
     return
+
 
 
 # @fn_timer

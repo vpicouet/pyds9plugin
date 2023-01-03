@@ -2,22 +2,22 @@ from astropy.io import fits
 import re
 from astropy.table import Table
 import matplotlib.pyplot as plt
-# global np
-# global image
-# image = ds9
+
+
 area=[0,-1,0,-1]
 verboseprint("area=", area)
 threshold = 40000
-# n = 1#masking_factor
-# global n
-n=1
+
+#masking_factor
+if yesno(d, "Do you want to apply a strong but conservative madking?"):
+    n = 4
+else:
+    n = 3
 size=0
 
 def MaskCosmicRaysCS(image, cosmics, all=False, size=None):
     """Replace pixels impacted by cosmic rays by NaN values
     """
-    # global np
-    # import numpy as np
     from tqdm import tqdm, tqdm_gui
     y, x = np.indices((image.shape))
     ly, lx = image.shape
@@ -52,7 +52,6 @@ ax = plt.gca()
 cr_places = np.array(ds9 > threshold, dtype=int)
 CS = ax.contour(cr_places, levels=1)
 plt.close()
-print('Numbe of cosmics = ', len(CS.allsegs[0]))
 names = ("id", "sizex", "sizey", "len_contour", "max_x", "min_y", "max_y")
 cosmics = Table(np.zeros((len(CS.allsegs[0]), len(names))), names=names)
 cosmics["id"] = np.arange(len(CS.allsegs[0]))
@@ -96,11 +95,17 @@ cosmics["size"][mask2] = n * 200
 cosmics["size"][mask3] = n * 3000
 if size > 1000:
     cosmics["size"] = n * 3000  # [ n*3000   for cs in CS.allsegs[0] ]
-cosmics["size_opp"][mask4] = n * 3000
+cosmics["size_opp"][mask3 | mask4] = n * 3000
 cosmics["min_y"][(cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)] -= n * 20
 cosmics["max_y"][(cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)] += n * 20
 a = cosmics
 ds9 = MaskCosmicRaysCS(ds9, cosmics=cosmics)
+print('Numbe of cosmics = ', len(CS.allsegs[0]))
+if ds9.shape[1]>2000:
+    print('Fraction of image lost = ', np.mean(np.isfinite(ds9[:,1000:-1000]).mean()))
+else:
+    print('Fraction of image lost = ', np.mean(np.isfinite(ds9).mean()))
+
 # savename = DS9backUp + "CSVs/Cosmics_" + os.path.basename(filename)[:-5] + ".csv"
 # csvwrite(a, savename)
 #

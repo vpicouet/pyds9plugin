@@ -13,8 +13,11 @@ try:
 except OSError:
     x, y = np.array([0, 1]), np.array([0, 1])
 
-#%%
 
+
+dispersion = 4.6
+vf = dispersion /2060
+ 
 
 def variable_smearing_kernels(
     image, Smearing=0.7, SmearExpDecrement=50000, ratio=1, type_="exp"
@@ -47,6 +50,19 @@ def variable_smearing_kernels(
     smearing_kernels /= smearing_kernels.sum(axis=0)
     return smearing_kernels
 
+
+
+#defocused_gaussian
+def line_analysis(
+    x, amp=y.ptp() * np.array([-1.3, 1.3, 1]), amp_2=y.ptp() * np.array([-1.3, 1.3, -0.5]), sigma=[0, 100,50], sigma_2=[0, 100,3], v1=[x.min()/vf,x.max()/vf,x[np.argmax(y)],0],v2=[x.min()/vf,x.max()/vf,10]
+):
+    """Defines a gaussian function with offset
+    """
+    import numpy as np
+    # xo = float(xo)
+    g = amp * np.exp(-0.5 * (np.square(x - v1*vf) / sigma ** 2))
+    g2 = amp_2 * np.exp(-0.5 * (np.square(x - v2*vf) / sigma_2 ** 2))
+    return (g + g2).ravel()
 
 
 def slit(
@@ -166,26 +182,16 @@ def madau(z,rho=[0.001,0.01],n=[2,3],n2=[2,3],pow=[2,7]):
 #     return g.ravel()
 
 
-def gaussian_flux(x, Flux=[0, np.nansum(y[y>0])], xo=[0, 1.5*len(x)], sigma=[0, 10],off=[np.nanmin(y),np.nanmax(y),np.nanmean(y)]):
+def gaussian_flux(x, Flux=len(y)*y.ptp() * np.array([-2, 2, 1]), xo=[-0.5*len(x), 1.5*len(x),0.5*len(x)], sigma=[0, len(x),len(x)/2],off=[np.nanmin(y)-y.ptp(),np.nanmax(y)+ y.ptp(),np.nanmean(y)]):
     """Defines a gaussian function with offset
     """
     import numpy as np
     xo = float(xo)
     g = np.exp(-0.5 * (np.square(x - xo) / sigma ** 2))
     g *= Flux / g.sum()
-    return g.ravel()+off
+    return g.ravel()#+off
 
-def defocused_gaussian(
-    x, amp=[0, 1000], amp_2=[0, 1000], xo=[0, 100], sigma=[0, 10], sigma_2=[0, 10],
-):
-    """Defines a gaussian function with offset
-    """
-    import numpy as np
 
-    xo = float(xo)
-    g = amp * np.exp(-0.5 * (np.square(x - xo) / sigma ** 2))
-    g2 = amp_2 * np.exp(-0.5 * (np.square(x - xo) / sigma_2 ** 2))
-    return (g - g2).ravel()
 
 
 def schechter(x, phi=[1e-3, 1e-2], m=[16, 22], alpha=[-2, -1]):
