@@ -98,7 +98,17 @@ def compute_local_background(ima):
     
     
 def process_image(ima, with_prior=False):
-    
+
+
+    # if hdr[my_conf.gain[0]] == 0:
+    #     EMgain = 1
+    # if hdr[my_conf.gain[0]] == 9000:
+    #     EMgain = 235
+    # if hdr[my_conf.gain[0]] == 9200:
+    #     EMgain = 470
+    # if hdr[my_conf.gain[0]] == 9400:
+    #     EMgain = 700
+
     EMgain = 470.
     ADU2e = .53
     
