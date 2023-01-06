@@ -5,8 +5,8 @@ def FindPixelsPositionsOnVector(vector):
     """
     """
     xc, yc, length, angle = vector.data, vector.databox, vector.inside, vector.xc
-    xs = xc + np.linspace(0, length, length) * np.cos(np.pi * angle / 180)
-    ys = yc + np.linspace(0, length, length) * np.sin(np.pi * angle / 180)
+    xs = xc + np.linspace(0, length, int(length)+1) * np.cos(np.pi * angle / 180)
+    ys = yc + np.linspace(0, length, int(length)+1) * np.sin(np.pi * angle / 180)
     return xs, ys, angle
 
 
@@ -14,7 +14,7 @@ def RecrateArrayFromIndexList(xs, ys, angle, image):
     """
     """
     xs, ys = xs.astype(int), ys.astype(int)
-    n1, n2 = xs.min() - (xs.max() - xs.min()) / 2, 2936 - xs.max() - (xs.max() - xs.min()) / 2  # int(1500 - (xs.max()-xs.min())/2)
+    n1, n2 = xs.min() - (xs.max() - xs.min()) / 2, 3937 - xs.max() - (xs.max() - xs.min()) / 2  # int(1500 - (xs.max()-xs.min())/2)
     # a = array[ys[0]-20:ys[0]+20,xs[0]-n:xs[0]+n]
     n1, n2 = 700, 700
     a = image[ys[0], xs[0] - n1 : xs[0] + n2]
@@ -60,6 +60,7 @@ def DS9realignImage(xpapoint):
     return
 
 vector = getregion(d)
-xs, ys, angle = FindPixelsPositionsOnVector(vector)
+print(vector)
+xs, ys, angle = FindPixelsPositionsOnVector(vector[0])
 ds9 = RecrateArrayFromIndexList(xs, ys, angle, ds9)
 

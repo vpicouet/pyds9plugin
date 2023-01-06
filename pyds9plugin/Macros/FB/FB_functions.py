@@ -85,6 +85,8 @@ def emccd_model(
             else:
                 im = data[Yinf:Ysup, Xinf:Xsup]
                 os = data[Yinf:Ysup, Xinf_os:Xsup_os]
+        im_nan_fraction = np.isfinite(im).mean()
+        os_nan_fraction = np.isfinite(os).mean()
         print(os.shape, im.shape)
         median_im = np.nanmedian(im)
         min_, max_ = (np.nanpercentile(os, 0.4), np.nanpercentile(im, 99.8))
@@ -92,10 +94,10 @@ def emccd_model(
         val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1))
         val_os, bins_os = np.histogram(os.flatten(), bins=np.arange(min_, max_, 1))
         bins = (bins[1:] + bins[:-1]) / 2
-        val = np.array(val, dtype=float)
-        os_v = np.log10(
-            np.array(val_os, dtype=float) * os.size / len(os[np.isfinite(os)])
-        )  # TODO take care of this factor
+        t=1#2.5
+        val = np.array(val, dtype=float) *t/ im_nan_fraction 
+        os_v = np.log10(np.array(val_os *t/ os_nan_fraction, dtype=float)) #* os.size / len(os[np.isfinite(os)])) 
+        # TODO take care of this factor
         bins_os, os_v = bins[np.isfinite(os_v)], os_v[np.isfinite(os_v)]
         try:
             header_exptime, header_gain = header["EXPTIME"], header["EMGAIN"]
@@ -106,7 +108,7 @@ def emccd_model(
             #     path.split("_")[-1].split(".csv")[0],
             #     path.split("_")[-2],
             # )
-
+        # val_os = val_os / t  / os_nan_fraction
         # val *= im.size / len(im[np.isfinite(im)])
 
     xdata, ydata = (

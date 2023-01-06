@@ -475,9 +475,9 @@ ax1.plot(
     % (
         popt[1],
         100 * np.nanmean(stack, axis=1)[n0] / (np.nanmean(stack, axis=1)[n0:].sum()),
-        first_pix.min(),
-        first_pix.max(),
-        first_pix.mean(),
+        np.nanmin(first_pix),
+        np.nanmax(first_pix),
+        np.nanmeanfirst_pix),
     ),
     lw=3,
 )

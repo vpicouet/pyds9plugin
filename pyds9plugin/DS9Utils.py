@@ -4580,10 +4580,11 @@ def execute_command(
         "Gaussian2DKernel": Gaussian2DKernel,
         "d": d,
         "function": "execute_command",
+        "__name__":"__main__"
     }
     new_dict = {}
-    new_dict.update(ldict)
     new_dict.update(globals())
+    new_dict.update(ldict)
     try:
         if os.path.isfile(exp):
             verboseprint("Executing file %s" % (exp))
@@ -4649,7 +4650,7 @@ def execute_command(
     # except AttributeError:
     #     same = None #np.ones((10, 10))
 
-    same = fitsimage.data == ds9
+    same = fitsimage.data[np.isfinite(fitsimage.data)] == ds9[np.isfinite(ds9)]
     if type(same) is not bool:
         same = same.all()
 
@@ -4686,7 +4687,28 @@ def execute_command(
         except RuntimeError:
             fitswrite(ds9, name)
         return fitsimage.data, name
-
+        # if ~same:
+        #     try:
+        #         fitsimage.header["COMMAND"] = exp
+        #     except ValueError as e:
+        #         verboseprint(e)
+        #         verboseprint(len(exp))
+        #         fitsimage.header.remove("COMMAND")
+        # try:
+        #     if ("NAXIS3" in header) & (header["NAXIS"] == 2):
+        #         # fits.delval(filename, "NAXIS3")
+        #         del header["NAXIS3"]
+        #     fitsimage.writeto(name, overwrite=True)
+        # except RuntimeError:
+        #     fitswrite(ds9, name)
+        # if ~same:
+        #     d=DS9n()
+        #     print((fitsimage.data == ds9))
+        #     d.set_np2arr(np.array(fitsimage.data == ds9,dtype=int))
+        #     print(np.nanmean(fitsimage.data != ds9))
+        #     return fitsimage.data, name
+        # else:
+        #     return None, filename
 
 def fitswrite(fitsimage, filename, verbose=True, header=None):
     """Write fits image function with different tests
@@ -8465,7 +8487,7 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             popt = np.poly1d(z)
             a = popt.coef[::-1][0]
             b = popt.coef[::-1][1]
-            if self.background == 2:
+            if self.background > 1 :
                 c, _, a = np.poly1d(np.polyfit(x, y, deg=2))
                 fb, fa, fc = 10, 10, 5
                 # if b > 0:
@@ -8485,6 +8507,14 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                     boundsc =  (-2 * fc * c, 2 * fc * c)
                 else:
                     boundsc =  (2 * fc * c, -2 * fc * c)
+                if self.background == 3:
+                    # if np.array(boundsb).ptp() > np.array(boundsc).ptp():
+                    #     boundsc = boundsb
+                    #     boundsd = boundsb
+                    # else:
+                    #     boundsb = boundsc
+                    boundsd = boundsc
+
             else:
                 c = 0
                 fb, fa, fc = 10, 10, 2
@@ -8493,7 +8523,7 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 else:
                     boundsb = (fb * b, b / fb)
                 boundsb = ((y.min() - a) / x.max(), (y.max() - a) / x.min())
-            boundsa = (a - (y.max() - y.min()), a + (y.max() - y.min()))
+            boundsa = (np.nanmin(y) - y.ptp(), np.nanmax(y) + y.ptp())#, (a - (y.max() - y.min()), a + (y.max() - y.min()))
             if boundsb[1] < boundsb[0]:
                 boundsb = boundsb[::-1]
             Models = []
@@ -8740,17 +8770,23 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 Models.append(
                     Model(
                         polynomial1D,
-                        Parameter(
-                            value=np.nanmean(y),
-                            bounds=(np.nanmin(y), np.nanmax(y)),
-                            label="scale",
-                        ),
-                        Parameter(value=0, bounds=boundsb, label="slope"),#(-0.5, 0.5)
-                        Parameter(value=0, bounds=boundsc, label="gradient"),#(-5e-5, 5e-5)
+                        Parameter(value=np.nanmean(y),bounds=boundsa,label="constant"),
+                        Parameter(value=0, bounds=boundsb, label="slope"),
+                        Parameter(value=0, bounds=boundsc, label="quadratic"),
                         label="Background",
                     )
                 )
-
+            if self.background == 3:
+                Models.append(
+                    Model(
+                        polynomial1D,
+                        Parameter(value=np.nanmean(y),bounds=boundsa,label="constant"),
+                        Parameter(value=0, bounds=boundsb, label="slope"),
+                        Parameter(value=0, bounds=boundsc, label="quadratic"),
+                        Parameter(value=0, bounds=boundsd, label="cubic"),
+                        label="Background",
+                    )
+                )
             def curve_fit_with_bounds(function, x, y, p0):
                 bounds1 = []
                 bounds2 = []
@@ -9040,6 +9076,7 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             "Exponential",
             "DoubleExponential",
             "polynom",
+            "quadratic",
             "Logarithmic",
         ],
     )
@@ -9096,8 +9133,10 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
         bckgd = 1
     elif args.background.lower() == "none":
         bckgd = -1
-    elif args.background.lower() == "polynom":
+    elif args.background.lower() == "quadratic":
         bckgd = 2
+    elif args.background.lower() == "polynom":
+        bckgd = 3
     else:
         bckgd = 0
     try:
@@ -13175,6 +13214,412 @@ region after creating it and hit n""",
     return
 
 
+
+
+def fb_tutorial(xpapoint=None, i=0, n=1):
+    """Launches the fb_tutorial on DS9
+    """
+    d = DS9n(xpapoint)
+    verboseprint(
+        """
+              *******************************************
+              *              FIREBall Tutorial          *
+              *******************************************
+
+* This tutorial will show you several 
+* advantage of very useful 
+* functions: Interactive 1D 
+                                [Next]""",
+        verbose="1",
+    )
+    wait_for_n(xpapoint)
+    message(d, """Now, let us try some flight quick look tools:""")
+
+    d.set("frame new")
+    d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/2018_images/image000388_dark.fits")   
+    message(d, """Now, First some cosmic ray masking:""")
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/Mask_cosmic_rays.py"%(xpapoint))
+
+    message(d, """Let's use the first image to analyze the histogram""")
+    d.set("frame first")
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_stochastic2.py"%(xpapoint))
+
+    # message(d, """We could also just create a region... Click N when region is created""")
+    # wait_for_n(xpapoint)
+    # python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_stochastic2.py"%(xpapoint))
+    message(d, """Let's use calibration box data to analyze resolution...""")
+    wait_for_n(xpapoint)
+    d.set("frame new")
+    d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/Calib_box/image000026_ZN_9900.fits")   
+    d.set("regions /Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/F3_2022_6_-106.reg")   
+    message(d, """Delete the regions you won't use, copy paste the rest and displace it to center it on the slits""")
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/stack_fit_slit.py"%(xpapoint))
+    now = Table.read("/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/Calib_box/image000026_ZN_9900.csv")
+    #%%
+    old = Table.read("/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/F3/F3_2022_6_-106.csv")
+    old = old[old["l214"]=="True"]
+    old = old[[old["name"][i] in now["name"] for i in range(len(old))]]
+    new_now = now[[now["name"][i] in old["name"] for i in range(len(now))]]
+    fig, (a0,a1,a2) = plt.subplots(1,3,figsize=(12,4))
+    a0.plot(now["fwhm_x"],now["fwhm_y"],"o",c="k")     
+    a0.plot(now["fwhm_x_unsmear"],now["fwhm_y"],"P",c="k")     
+    a0.plot(old["fwhm_x"],old["fwhm_y"],"o",c="r")     
+    a0.plot(old["fwhm_x_unsmear"],old["fwhm_y"],"P",c="r")     
+    a1.plot(now["lx"],now["ly"],"o",c="k")     
+    a1.plot(old["lx_unsmear"],old["ly"],"P",c="k")     
+    a1.plot(old["lx"],old["ly"],"o",c="r")     
+    a1.plot(now["lx_unsmear"],now["ly"],"P",c="r")     
+    a2.plot(new_now["X_IMAGE"] - old["X_IMAGE"],new_now["Y_IMAGE"] - old["Y_IMAGE"] ,"o",c="k") 
+    a0.set_xlabel("Spectral resolution")
+    a0.set_ylabel("Spatial resolution")
+    a1.set_xlabel("Slit width")
+    a1.set_ylabel("Slit length")
+    a2.set_xlabel("Shift in spectra direction")
+    a2.set_ylabel("Shift in spatial direction")
+    fig.tight_layout()
+    # a2.plot(new_now["X_IMAGE_unsmear"] - old["X_IMAGE_unsmear"],new_now["Y_IMAGE"] - old["Y_IMAGE"] ,"P",c="k")     
+    plt.show()
+    #%%
+    
+    message(d, """Now let's analyze the smearing...""")
+    
+    
+    
+    return
+
+
+
+def jesaispas():
+    d.set('analysis task "Interactive 1D Fitting On Plot"')
+    
+    
+    verboseprint(
+        """********************************************************************************
+                             Interactive 1D Fitting On Plot
+    Generic functions -> Image Processing -> Interactive 1D Fitting On Plot
+********************************************************************************
+
+* As a >5 pameters fit is unlikely to converge without a close initial,
+* this package allows you to perform interactive 1D fitting
+* with user adjustment of the initial fitting parameters!
+* You might need to hit [Shift+S] to make appear some features in the image.
+* You can check the log box on the plot window to have a logarithmic y scale.
+* This function works on any DS9 plot (histograms or even plots generated by
+  by this plugin like a radial profile or la light curve
+
+%i/%i - Create a projection (Region->Shape->Projection) on a shape you want
+         to fit. Move it until you have a fittable feature (several gaussians,
+         slope, exponential or sum of them...). You can stack the projection
+         with the small square on the center of your line!
+%i/%i - When you are happy with the shape you have hit Next to run the function!
+"""
+        % (i, n, i + 1, n),
+        verbose="1",
+    )
+    i += 2
+
+    wait_for_n(xpapoint)
+    while d.get("plot") == "":
+        message(
+            d,
+            """Please create a plot by creating a
+                          Region->Shape->Projection to run this function.
+                          Hit n when it is done.""",
+        )
+        wait_for_n(xpapoint)
+    verboseprint(
+        """%i/%i - Choose the background and the number of gaussians you want
+         to fit the data with.
+%i/%i - Now, you adjust each parameter of each feature! Change by hand the
+         different parameters to fit the data and then click on Fit to run the
+         fitting least square function. Then you can read the parameters of the
+         features that can help you asses image quality or other information.
+* When you are done, close the fitting figure and click on [Next]."""
+        % (i, n, i + 1, n),
+        verbose="1",
+    )
+    i += 2
+    d.set('analysis task "Interactive 1D Fitting On Plot"')
+    wait_for_n(xpapoint)
+    message(d, """Now let us use a basic python interpretor!""")
+    verboseprint(
+        """********************************************************************************
+                             Execute Python Command
+        Generic functions -> Image Processing -> Execute Python Command
+********************************************************************************
+
+* This command allows you to modify your image by interpreting a python command
+* Enter a basic command in the Expression field such as:
+*    ds9=ds9[:100,:100]                           -> Trim the image
+*    ds9+=np.random.normal(0,0.5*ds9.std(),size=ds9.shape)  -> Add noise to the image
+*    ds9[ds9>2]=np.nan                            -> Mask a part of the image
+*    ds9=1/ds9, ds9+=1, ds9-=1                    -> Different basic expressions
+*    ds9=convolve(ds9,np.ones((1,9)))[1:-1,9:-9]  -> Convolve unsymetrically
+*    ds9+=np.linspace(0,1,ds9.size).reshape(ds9.shape) -> Add background
+*    ds9+=30*(ds9-gaussian_filter(ds9, 1))        -> Sharpening
+*    ds9=np.hypot(sobel(ds9,axis=0,mode='constant'),sobel(ds9,axis=1,mode='constant')) -> Edge Detection
+*    ds9=np.abs(fftshift(fft2(ds9)))**2           -> FFT
+*    ds9=correlate2d(ds9.astype('uint64'),ds9,boundary='symm',mode='same') -> Autocorr
+*    ds9=interpolate_replace_nans(ds9, Gaussian2DKernel(x_stddev=5, y_stddev=5)) -> Interpolate NaNs
+
+
+
+%i/%i - Copy the expression you want to test. [Next]"""
+        % (i, n),
+        verbose="1",
+    )
+    i += 1
+
+    wait_for_n(xpapoint)
+    verboseprint(
+        """%i/%i - Paste it in the expression field (or invent your own)
+           Do not put anything in the other fields."""
+        % (i, n),
+        verbose="1",
+    )
+    i += 1
+
+    d.set('analysis task "Python Command/Macro"')
+    verboseprint(
+        """Well Done!
+* You also have the possibility to run a python macro. Several example Macros
+* are available here (copy it):
+%s
+* But you can also write your own
+* The image is avilable via 'ds9' variable, you can open other images in the
+* python file if needed and import any package your want.
+
+%i/%i - Test one of the Macros avilable in the path above.
+                     [Next]"""
+        % (resource_filename("pyds9plugin", "Macros"), i, n),
+        verbose="1",
+    )
+
+    wait_for_n(xpapoint)
+
+    d.set('analysis task "Python Command/Macro"')
+
+    verboseprint(
+        """* Great!
+%i/%i - The last field is to apply your python expression to several images!
+        To do so, you can write their a regular expression matching the files on
+        which you want to run the command! Try it or [Next]."""
+        % (i, n),
+        verbose="1",
+    )
+    i += 1
+
+    wait_for_n(xpapoint)
+    return
+
+
+def generic_tools_tutorial(xpapoint=None, i=0, n=1):
+    """Launches the generic_tools_tutorial on DS9
+    """
+    d = DS9n(xpapoint)
+    d.set("nan black")
+
+    verboseprint(
+        """              *******************************************
+              *          Generic Tools Tutorial         *
+              *******************************************
+
+* This tutorial will show you a few functions that will help you interacting
+* with your fits images. It will go through the following functions:
+* Change Display Parameters - Plot Region In 3D
+* Create Header Catalog  - Filtering & organizing images
+
+Please take some time to adjust the scale/threshold/color to improve the image
+rendering in order to the objects in the image. When it is done,
+                                [Next]""",
+        verbose="1",
+    )
+    wait_for_n(xpapoint)
+    message(
+        d,
+        """Now let me show you a much easier and quicker way to change
+the display settings at once! This function will make
+you gain a lot of time.""",
+    )
+
+    verboseprint(
+        """********************************************************************************
+                               Change settings at once
+  (Analysis->)Generic functions->Setup->Change display parameters [or Shift+S]
+********************************************************************************\n
+ %i/%i - First, click on OK to run the function with the default parameters."""
+        % (i, n),
+        verbose="1",
+    )
+    i += 1
+
+    d.set('analysis task "Change Display Parameters (S) "')
+
+    verboseprint(
+        """ %i/%i - Now create a region in a dark area, SELECT IT!
+        and re-run the function (Shift+S). As you will see, the scale's
+        thresholds for the image will be computed based on the encircled data!
+
+
+         If you want to continue changing the parameters, re-run the function.
+         (If you want to fo back to previous thresholds, unselect the region
+         before runing it).
+         Else [Next]"""
+        % (i, n),
+        verbose="1",
+    )
+    i += 1
+
+    wait_for_n(xpapoint)
+    d.set("pan to 630 230 ; zoom to 1")
+
+    verboseprint(
+        """********************************************************************************
+                               Plot Region In 3D
+                   Generic functions -> Plot Region In 3D
+********************************************************************************
+* Colormaps can sometimes be misleading, this function will plot in 3D
+* the data you encircle with a region to help you see the variations.
+* You can check the log box on the plot window to have a logarithmic z scale.
+ %i/%i - Please create & select a relatively small region (d<500p), then [Next]"""
+        % (i, n),
+        verbose="1",
+    )
+    i += 1
+
+    wait_for_n(xpapoint)
+    while getregion(d, selected=True) is None:
+        message(
+            d,
+            """It seems that you did not create or select the region
+before hitting n. Please make sure to click on the
+region after creating it and hit n""",
+        )
+        wait_for_n(xpapoint)
+    a = d.set('analysis task "Plot Region In 3D"')  # ;time.sleep(3)
+    wait_for_n(xpapoint)
+    # plot_3d(d)
+    verboseprint(
+        """* Well done!
+* If you smooth the image in DS9 is it will plot it as it is displayed!
+* You can use this function on circle or box regions.
+*If you run it on a 3D image, it will create a 3D plot color coded with the flux.
+ %i/%i - Please create a reagion """
+        % (i, n),
+        verbose="1",
+    )
+    i += 1
+    reg = resource_filename("pyds9plugin", "Images")
+    if os.path.exists(os.path.join(reg, "m33_hi.fits")) is False:
+        a = download(
+            url="https://people.lam.fr/picouet.vincent/pyds9plugin/m33_hi.fits",
+            file=os.path.join(reg, "m33_hi.fits"),
+        )
+    if a:
+        d.set("frame delete ; file " + os.path.join(reg, "m33_hi.fits"))
+        d.set("scale 99.5")
+        wait_for_n(xpapoint)
+        while getregion(d, selected=True) is None:
+            message(
+                d,
+                """It seems that you did not create or select the region
+before hitting n. Please make sure to click on the
+region after creating it and hit n""",
+            )
+            wait_for_n(xpapoint)
+        d.set('analysis task "Plot Region In 3D"')
+        time.sleep(2)
+    else:
+        message(
+            d,
+            "An error occured while dowloading the 3D image. Next time, make sure you have a good internet connection. Going to next function.",
+        )
+
+    verboseprint(
+        """Well done!
+
+********************************************************************************
+                             Create Header Catalog
+         Generic functions -> Header & Data Base ->  Create Header Catalog
+********************************************************************************
+* The following function will take all the images matching the given pattern
+* and will concatenate all the header information in a csv catalog.
+* It will also add other info: pathm, name, directory, creation date, size.
+* You can either give it a folder where you put (a subset of) your images
+* or even search your whole documents folder: %s
+* If you do not have any fit[s] file here you can use the one of this plugin:
+    %s
+* Do not worry if you have too many files, we will only take the first 200.
+%i/%i - Copy the path you want to use and hit n when you are ready."""
+        % (
+            os.environ["HOME"] + "/Documents/**/*.fit*",
+            os.path.join(resource_filename("pyds9plugin", "**/*.fits")),
+            i,
+            n,
+        ),
+        verbose="1",
+    )
+    i += 1
+
+    wait_for_n(xpapoint)
+    verboseprint(
+        """%i/%i - Paste the path in the Regexp Path entry.""" % (i, n), verbose="1",
+    )
+    i += 1
+    d.set('analysis task "Create Header Data Base"')
+    verboseprint(
+        """* Great!
+%i/%i - You can open the above catalog & analyse it with TOPCAT.
+         Please copy this path, you will need it!
+%i/%i - Hit n when you are ready to use it!"""
+        % (i, n, i + 1, n),
+        verbose="1",
+    )
+    i += 2  # The master header catalog has been saved here: %s
+    wait_for_n(xpapoint)
+    verboseprint(
+        """********************************************************************************
+                             Filtering & organizing images
+       Generic functions -> Header & Data Base ->  Filtering & organizing images
+********************************************************************************
+* We are now gonna use the very last function that will help you arrange all
+* your fits/fit/FIT images very simply. I will basically use the header catalog
+* to arrange your files verifying some conditions and orders!
+* Do not worry, we will not displace your files, just create some symbolic links
+* to help you see all the images you have!
+%i/%i - Paste your header catalog path in the first field.
+%i/%i - In the second one enter the way you want to order your images based on
+         the fields (floats) that are in the header, eg:
+* NAXIS,Directory      -> Differentiate images/cubes and order them by folder
+* CTYPE1,CreationDate  -> Differentiate WCS types and order them by dates
+
+%i/%i - In the last one, write the selection that you want to apply to the
+        catalog, for instance, eg:
+* NAXIS==2  [NAXIS==3/0]        -> Take only images [or cube/table respectively]
+* BITPIX==-64 \| NAXIS2>1000    -> Certain bibpix and image heights>10000
+* FileSize_Mo>10  \& WCSAXES>1  -> Big images containing WCS header
+* EMGAIN>9000 \& EXPTIME<10     -> Likely photon starving images
+
+%i/%i - Check ok when you are ready
+* Note that you must use & for AND and \| for OR! """
+        % (i, n, i + 1, n, i + 2, n, i + 3, n),
+        verbose="1",
+    )
+    i += 4
+    d.set('analysis task "Filtering & organizing images"')
+
+    verboseprint(
+        """%i/%i - Go to %s and enjoy your well ordered files!
+%i/%i - You can copy paste these instructions somewhere if you want to keep it!
+    """
+        % (i, n, os.environ["HOME"] + "/DS9QuickLookPlugIn/Subsets", i + 1, n),
+        verbose="1",
+    )
+    i += 2
+
+    return
+
+
 def test_suite(xpapoint=None, argv=[]):
     """Test suite: run several fucntions in DS9 [DS9 required]
     """
@@ -13193,6 +13638,7 @@ def test_suite(xpapoint=None, argv=[]):
             "3-Image-Quality-Assesment",
             "4-Image-Processing",
             "5-All-In-One",
+            "fb",
         ],
         required=True,
     )
@@ -13219,8 +13665,10 @@ def test_suite(xpapoint=None, argv=[]):
         tutorial_number += "3"
     elif tutorial == "4-Image-Processing":
         tutorial_number += "4"
-    if tutorial == "5-All-In-One":
+    elif tutorial == "5-All-In-One":
         tutorial_number = "1234"
+    elif tutorial == "fb":
+        tutorial_number = "5"
     d.set("nan black")
     message(
         d,
@@ -13247,8 +13695,9 @@ Next Button (or hit N on the  DS9 window) so that you go to the next function.
         verbose="1",
     )
     wait_for_n(xpapoint)
-    im = os.path.join(resource_filename("pyds9plugin", "Images"), "stack.fits")
-    d.set("frame new ; tile no ; file %s ; zoom to fit" % (im))
+    if tutorial_number!="5":
+        im = os.path.join(resource_filename("pyds9plugin", "Images"), "stack.fits")
+        d.set("frame new ; tile no ; file %s ; zoom to fit" % (im))
     i = 1
     if "1" in tutorial_number:
         generic_tools_tutorial(xpapoint, i=i, n=13)
@@ -13260,6 +13709,8 @@ Next Button (or hit N on the  DS9 window) so that you go to the next function.
         imag_quality_assesment(xpapoint, i=i, n=12)
     if "4" in tutorial_number:
         image_processing_tutorial(xpapoint, i=i, n=15)
+    if "5" in tutorial_number:
+        fb_tutorial(xpapoint, i=i, n=50)
     if tutorial == "5-All-In-One":
         verboseprint(
             """
@@ -13350,6 +13801,11 @@ def python_command(xpapoint=None, argv=[]):
                 modified = True
             except TypeError:
                 pass
+    #hack for me
+    if "pyds9plugin/pyds9plugin/Macros//" in exp:
+        exp = "/" + exp.split("pyds9plugin/pyds9plugin/Macros//")[-1]
+        # exp.replace("/Users/Vincent/Github/pyds9plugin/pyds9plugin/","",1)
+
 
     # if (".fit" not in path[0]) & (len(path) == 1):
     #     try:

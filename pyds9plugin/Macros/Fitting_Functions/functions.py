@@ -65,6 +65,52 @@ def line_analysis(
     return (g + g2).ravel()
 
 
+#TODO Throughput should be the real throughput when we know exposure time and all
+#TODO add an offset in wavelegth for the QE and atm?
+def fit_spectra(x,lmax=[1900,2130,2060],dispersion=[0.8,1.2,1],throughput=[0,y.ptp(),y.ptp()/100], qe=[0,1.5,0.5],atm=[0,25,0.5], noise=[0,1,1]): #spectral_res=[1,15,5]
+    from astropy.modeling.functional_models import Gaussian2D, Gaussian1D
+    from scipy.interpolate import interp1d
+    from astropy.table import Table
+    from scipy.ndimage import gaussian_filter1d
+    # spectral_res = 5
+    # throughput=1
+    area=7854
+    dispersion *= 46.6/10
+    Rx=5
+    spectral_res=5
+    wavelengths = np.linspace(lmax-len(x)/2/dispersion,lmax+len(x)/2/dispersion,len(x))
+    # a=Table.read("/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Simulation_fields/h_1821p643fos_spc.fits")
+    a=Table.read("/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Simulation_fields/h_1538p477fos_spc.fits")
+    trans = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/transmission_pix_resolution.csv")
+    QE = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/PSFDetector/efficiencies/QE_2022.csv")
+    # QE = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/PSFDetector/efficiencies/5LayerModel_refl.txt")
+    QE = interp1d(QE["wave"]*10,QE["QE_corr"])#
+    trans["trans_conv"] = gaussian_filter1d(trans["col2"], spectral_res)# np.convolve(trans["col2"],np.ones(5)/5,mode="same")
+    trans = trans[5:-5]
+    atm_trans =  interp1d([1500,2500]+list(trans["col1"]*10),[0,0] + list(trans["trans_conv"]))#
+
+    a["photons"] = a["FLUX"]/9.93E-12   
+    a["e_pix_sec"]  = a["photons"] * throughput  * area /dispersion #* atm 
+    nsize,nsize2 = 100,500
+    source_im=np.zeros((nsize,nsize2))
+    source_im_wo_atm=np.zeros((nsize2,nsize))
+    mask = (a["WAVELENGTH"]>1960) & (a["WAVELENGTH"]<2280)
+    lmax = a["WAVELENGTH"][mask][np.argmax( a["e_pix_sec"][mask])]
+    # plt.plot( a["WAVELENGTH"],a["e_pix_sec"])
+    # plt.plot( a["WAVELENGTH"][mask],a["e_pix_sec"][mask])
+    f = interp1d(a["WAVELENGTH"],a["e_pix_sec"])#
+    profile =   Gaussian1D.evaluate(np.arange(nsize),  1,  nsize/2, Rx) /Gaussian1D.evaluate(np.arange(nsize),  1,  nsize/2, Rx).sum()
+    # subim = np.zeros((nsize2,nsize))
+    # print(f(wavelengths))
+    final_QE = qe*QE(wavelengths) + (1-qe)*np.ones(len(QE(wavelengths)))
+    final_atm = atm*atm_trans(wavelengths) + (1-atm)*np.ones(len(atm_trans(wavelengths)))
+    f_final = noise*f(wavelengths) + (1-noise)*np.ones(len(f(wavelengths)))
+    final = f_final * final_atm * final_QE
+    return throughput*final-np.nanmin(final)/np.ptp(final-np.nanmin(final))
+    
+
+
+
 def slit(
     x,
     amp=y.ptp() * np.array([0, 1.3, 1]),
@@ -418,13 +464,15 @@ def EMCCDhist(
         # recover number of pixels to generate distributions
         try:
             y = globals()["y"]
-            n_pix = np.nansum(10 ** y[np.isfinite(10 ** y)])  # 1e6#
+            n_pix = np.nansum(10 ** y[np.isfinite(y)])  # 1e6#
+            print(1, n_pix)
         except TypeError:
             n_pix = 10 ** 6.3
+            print(2)
         n = 1
         im = np.zeros(int(n_pix))  #
         im = np.zeros((1000, int(n_pix / 1000)))
-        print(flux)
+        # print(flux)
         imaADU = np.random.gamma(
             np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain)
         )
@@ -461,6 +509,7 @@ def EMCCDhist(
         imaADU += read_noise
         range = [np.nanmin(x), np.nanmax(x)]
         n, bins = np.histogram(imaADU.flatten(), bins=[x[0] - 1] + list(x))
+        # print(np.nansum(n))
         return n
 
     y = simulate_fireball_emccd_hist(
@@ -476,7 +525,8 @@ def EMCCDhist(
         sCIC=sCIC,
     )
     y[y == 0] = 1.0
-    # y = y / (x[1] - x[0])
+    y = y / (x[1] - x[0])
+    # print(np.nansum(y))
     return np.log10(y)
 
 

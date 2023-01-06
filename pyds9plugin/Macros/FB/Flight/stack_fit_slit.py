@@ -322,16 +322,18 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
                 ax2.set_xlim((x_spatial_c.min(), x_spatial_c.max()))
                 ax3.set_xlim((x_spectral_c.min(), x_spectral_c.max()))
                 fig.tight_layout()
+                if os.path.exists(os.path.dirname(filename) + "/fits/"):
+                    path = os.path.dirname(filename) + "/fits/"
+                else:
+                    path = "/tmp/"
                 if region.id == "":
                     plt.savefig(
-                        os.path.dirname(filename)
-                        + "/fits/%s_%s.png"
+                        path + "%s_%s.png"
                         % (os.path.basename(filename).split(".fits")[0], int(region.yc))
                     )
                 else:
                     plt.savefig(
-                        os.path.dirname(filename)
-                        + "/fits/%s_%s_%s.png"
+                        path + "%s_%s_%s.png"
                         % (
                             region.id,
                             line,
@@ -373,7 +375,7 @@ create_ds9_regions(
     savename= filename.replace(".fits","_c.reg"),
     form=["box"],
     color=cat["color"],
-    ID=None,  # cat["name"],
+    ID=[cat["name"]],#None,  # cat["name"],
 )
 d.set("regions %s" % (filename.replace(".fits","_c.reg")))
 

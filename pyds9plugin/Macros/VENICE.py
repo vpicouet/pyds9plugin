@@ -1,6 +1,12 @@
 from astropy.table import Table
 from astropy.table import Column
 import numpy as np
+from tqdm import tqdm
+###
+from pyds9plugin.DS9Utils import DS9n
+import os
+###
+
 
 def GenerateMask(path, path2=None, ra="RA", dec="DEC", flag="flag", mask="/Users/Vincent/Nextcloud/LAM/Work/CLAUDS/CLAUDS/ZphotCatalogs/DS9Regions/regVenice/VeniceAndMine2.reg"):
     import subprocess
@@ -14,9 +20,10 @@ def GenerateMask(path, path2=None, ra="RA", dec="DEC", flag="flag", mask="/Users
     return
 
 
-from tqdm import tqdm
 
 d=DS9n()
+ds9 = d.get_pyfits()[0].data
+header = d.get_pyfits()[0].header
 regs = d.get("regions").split("\n")
 regs.remove("")
 print(regs)
