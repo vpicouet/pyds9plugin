@@ -987,11 +987,8 @@ def variable_smearing_kernels(
 
 
 def SimulateFIREBallemCCDImage(
-#     ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=1, p_sCIC=1, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Spectra", Rx=8, Ry=8, size=[3216, 2069], OSregions=[1066, 2124], name="Auto", spectra="-", cube="-", n_registers=604, save=False
     ConversionGain=0.53, EmGain=1500, Bias="Auto", RN=80, p_pCIC=0.0005, p_sCIC=0, Dark=5e-4, Smearing=0.7, SmearExpDecrement=50000, exposure=50, flux=1e-3, source="Slit", Rx=8, Ry=8, size=[100, 100], OSregions=[0, -1], name="Auto", spectra="-", cube="-", n_registers=604, sky=0,save=False,stack=1,readout_time=1.5, cosmic_ray_loss=None, counting=True, QE=0.45, field="targets_F2.csv",QElambda=True,atmlambda=True):
     #%%
-    # imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(source="Field", size=[3216, 2069], OSregions=[1066, 2124],p_pCIC=0.0005,exposure=50,Dark=0.5/3600,cosmic_ray_loss=0,Smearing=0.3,stack=3600*2/55,RN=RN,Rx=5,Ry=5,readout_time=5)
-
     # ConversionGain=0.53
     # EmGain=1500
     # Bias="Auto"
@@ -1024,7 +1021,7 @@ def SimulateFIREBallemCCDImage(
 
 
     OS1, OS2 = OSregions
-    ConversionGain=1
+    # ConversionGain=1
     Bias=0
     image = np.zeros((size[1], size[0]), dtype="float64")
     image_stack = np.zeros((size[1], size[0]), dtype="float64")
@@ -1118,10 +1115,11 @@ def SimulateFIREBallemCCDImage(
             flux = 10**(-(mag-20.08)/2.5)*2.06*1E-16/((6.62E-34*300000000/(wavelength*0.0000000001)/0.0000001))
             elec_pix = flux * throughput * atm * QE * area /dispersion# should not be multiplied by exposure time here
             # source_im[50:55,:] += elec_pix #Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
-            profile =  elec_pix* Gaussian1D.evaluate(np.arange(100),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(100),  1,  50, Rx).sum()
-            source_im[:,:] += profile
-            # print(exposure*profile.max(), exposure*profile.sum())
+            profile =  elec_pix* Gaussian1D.evaluate(np.arange(size[1]),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(size[1]),  1,  50, Rx).sum()
             source_im = source_im.T
+            source_im[:,:] += profile
+            source_im = source_im.T
+            # print(exposure*profile.max(), exposure*profile.sum())
     elif source == "Slit":
         ConvolveSlit2D_PSF_75muWidth = lambda xy, amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
         source_im += ConvolveSlit2D_PSF_75muWidth((x, y), flux , 9, ly / 2, lx / 2, Rx, Ry).reshape(lx, ly)
@@ -1274,7 +1272,8 @@ def SimulateFIREBallemCCDImage(
         wave = int(float(source.split('=')[3]))
         slit = int(float(source.split('=')[2].split('mu')[0]))
         file = '%spc/cube_%snm_guidance0.5arcsec_slit%sum_total_fc_rb_detected.fits'%(pc,wave,slit)
-        source_im+=fits.open(file)[0].data * 0.7 #cf athmosphere was computed at 45km
+        fitsim = fits.open(file)[0].data * 0.7 #cf athmosphere was computed at 45km
+        source_im[:fitsim.shape[0],:fitsim.shape[1]]+=fitsim
 
         
     source_im = (Dark + source_im + sky) * int(exposure)

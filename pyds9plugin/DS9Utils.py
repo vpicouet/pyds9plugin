@@ -4962,8 +4962,10 @@ def stack_images(xpapoint=None, std=False, clipping=None, argv=[]):
         default="median",
         help="Type of the merge",
         type=str,
-        choices=["mean", "median", "std"],
+        # choices=["mean", "median", "std"],
     )
+
+
     parser.add_argument(
         "-c", "--clip", default="100", help="Clip the images", type=str,
     )
@@ -4973,19 +4975,19 @@ def stack_images(xpapoint=None, std=False, clipping=None, argv=[]):
     paths = globglob(args.path)
 
     dtype = "float"
-    if "std" in args.type:
-        std = True
-    if "median" in args.type:
-        Type = np.nanmedian
-    else:
-        Type = np.nanmean
+    # if "std" in args.type:
+    #     std = True
+    # if "median" in args.type:
+    #     Type = np.nanmedian
+    # else:
+    #     Type = np.nanmean
     image, name = stack_images_path(
         paths,
-        Type=Type,
+        Type=args.type,
         clipping=float(args.clip),
         dtype=dtype,
         std=std,
-        name=os.path.dirname(paths[0]) + "stack_image.fits",
+        name=os.path.dirname(paths[0]) + "/stack_image.fits",
     )
     d.set("tile yes ; frame new ; file {}".format(name))
     try:
@@ -4993,7 +4995,15 @@ def stack_images(xpapoint=None, std=False, clipping=None, argv=[]):
     except ValueError:
         pass
     return
-
+#TODO add these possibilities
+# - np.sum
+# - np.mean
+# - np.nanmedian
+# - np.ptp()
+# - np.std()
+# - min max
+# - nanpercentile
+# - np.nansum((images<5.5 *np.nanstd(x) +  np.nanmedind(x)))
 
 def stack_images_path(
     paths, Type="nanmean", clipping=3, dtype=float, fname="", std=False, name=None,
@@ -5038,6 +5048,7 @@ def stack_images_path(
         stack = stack / n
 
     else:
+        # print(Type)
         array3d = [fits.open(file)[i].data for file in paths[index]]
         if (
             np.isfinite(np.array(array3d)).all()
@@ -8427,7 +8438,11 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             # from dataphile.statistics.distributions import uniform
             from scipy.optimize import curve_fit
             import matplotlib.pyplot as plt
-
+            if check_appearance():
+                plt.style.use('dark_background')
+                color="white"
+            else:
+                color="k"
             verboseprint(
                 "nb_gaussians,  nb_moffats ,nb_voigt1D,nb_sinusoid = ",
                 nb_gaussians,
@@ -8470,7 +8485,7 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             self.ax.scatter(
                 xdata_i,
                 ydata_i,
-                color="black",
+                color=color,
                 marker=marker,
                 label="data",
                 lw=linewidth,
@@ -9232,20 +9247,21 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             linewidth=1,
             function=function,
         )
-    if args.other_features != "User-defined-interactively":
-        rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor="None")
-        for edge in "left", "right", "top", "bottom":
-            rax.spines[edge].set_visible(False)
-        scale = CheckButtons(rax, ["log"])
+    # if args.other_f%matplotlibeatures != "User-defined-interactively":
+        # TODO deleted because not usefull
+        # rax = plt.axes([0.01, 0.8, 0.1, 0.15], facecolor="None")
+        # for edge in "left", "right", "top", "bottom":
+        #     rax.spines[edge].set_visible(False)
+        # scale = CheckButtons(rax, ["log"])
 
-        def scalefunc(label):
-            if gui.ax.get_yscale() == "linear":
-                gui.ax.set_yscale("log")
-            elif gui.ax.get_yscale() == "log":
-                gui.ax.set_yscale("linear")
-            gui.figure.canvas.draw_idle()
+        # def scalefunc(label):
+        #     if gui.ax.get_yscale() == "linear":
+        #         gui.ax.set_yscale("log")
+        #     elif gui.ax.get_yscale() == "log":
+        #         gui.ax.set_yscale("linear")
+        #     gui.figure.canvas.draw_idle()
 
-        scale.on_clicked(scalefunc)
+        # scale.on_clicked(scalefunc)
 
         # rax = plt.axes([0.1, 0.05-0.035*0, 0.2, 0.25])
         # for edge in "left", "right", "top", "bottom":
@@ -12301,9 +12317,11 @@ def wait_for_n(xpapoint=None):
     while True:
         try:
             d = DS9n(xpapoint, stop=True)
-            while d.get("nan") != "grey":
+            # while d.get("nan") != "grey":
+            while d.get("wcs skyformat") != "sexagesimal":
                 time.sleep(0.1)
-            d.set("nan black")
+            # d.set("nan black")
+            d.set("wcs degrees")
             return
         except TypeError:
             continue
@@ -12352,7 +12370,8 @@ def next_step(xpapoint=None, argv=[]):
     args = parser.parse_args_modif(argv, required=False)
 
     d = DS9n(args.xpapoint)
-    d.set("nan grey")
+    # d.set("nan grey")
+    d.set("wcs sexagesimal")
     sys.exit()
     return
 
@@ -13215,45 +13234,78 @@ region after creating it and hit n""",
 
 
 
+def check_appearance():
+    """Checks DARK/LIGHT mode of macos."""
+    from sys import platform
+    if platform == "darwin":
+        import subprocess
+        cmd = 'defaults read -g AppleInterfaceStyle'
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, shell=True)
+        return bool(p.communicate()[0])
+    else:
+        return False
 
 def fb_tutorial(xpapoint=None, i=0, n=1):
     """Launches the fb_tutorial on DS9
     """
+    from astropy.table import Table
+    path = "/Users/Vincent/Github/pyds9plugin/pyds9plugin"
     d = DS9n(xpapoint)
-    verboseprint(
-        """
-              *******************************************
-              *              FIREBall Tutorial          *
-              *******************************************
+#     verboseprint(
+#         """
+#               *******************************************
+#               *              FIREBall Tutorial          *
+#               *******************************************
 
-* This tutorial will show you several 
-* advantage of very useful 
-* functions: Interactive 1D 
-                                [Next]""",
-        verbose="1",
-    )
+# * This tutorial will show you several 
+# * advantage of very useful 
+# * functions: Interactive 1D 
+#                                 [Next]""",
+#         verbose="1",
+#     )
     wait_for_n(xpapoint)
-    message(d, """Now, let us try some flight quick look tools:""")
+    message(d, """Now, let us try some flight quick look toolsf FIREBall""")
 
+    d.set("frame delete all")
     d.set("frame new")
-    d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/2018_images/image000388_dark.fits")   
+    # d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/2018_images/image000388_dark.fits")   
+    # d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/2018_images/image000352.fits")   
+    d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/2018_images/image000390.fits")   
+    
     message(d, """Now, First some cosmic ray masking:""")
-    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/Mask_cosmic_rays.py"%(xpapoint))
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/CR_masking.py"%(xpapoint, path))
+
+    wait_for_n(xpapoint)
+    message(d, """When CR are masked we can do the OS correction. Carefull about the size of the OS/image""")
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/OS_correction.py"%(xpapoint, path))
+
+    wait_for_n(xpapoint)
 
     message(d, """Let's use the first image to analyze the histogram""")
-    d.set("frame first")
-    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_stochastic2.py"%(xpapoint))
+    d.set("frame previous")
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/EMCCD_fit.py"%(xpapoint, path))
 
     # message(d, """We could also just create a region... Click N when region is created""")
     # wait_for_n(xpapoint)
     # python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/EMCCD_fit_stochastic2.py"%(xpapoint))
-    message(d, """Let's use calibration box data to analyze resolution...""")
+    
+    
+    
+    message(d, """Now let's analyze the smearing... Create a region and click next""")
+    wait_for_n(xpapoint)
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/smear_profile.py"%(xpapoint, path))
+
+    
+    message(d, """Let's use calibration box data to analyze resolution... click next""")
     wait_for_n(xpapoint)
     d.set("frame new")
     d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/Calib_box/image000026_ZN_9900.fits")   
     d.set("regions /Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/F3_2022_6_-106.reg")   
-    message(d, """Delete the regions you won't use, copy paste the rest and displace it to center it on the slits""")
-    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FIREBall/stack_fit_slit.py"%(xpapoint))
+    message(d, """Delete the regions you won't use, copy paste the rest and displace it to center it on the slits. Then click next""")
+    wait_for_n(xpapoint)
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/stack_fit_slit.py"%(xpapoint, path))
+    
     now = Table.read("/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/Calib_box/image000026_ZN_9900.csv")
     #%%
     old = Table.read("/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/F3/F3_2022_6_-106.csv")
@@ -13261,9 +13313,9 @@ def fb_tutorial(xpapoint=None, i=0, n=1):
     old = old[[old["name"][i] in now["name"] for i in range(len(old))]]
     new_now = now[[now["name"][i] in old["name"] for i in range(len(now))]]
     fig, (a0,a1,a2) = plt.subplots(1,3,figsize=(12,4))
-    a0.plot(now["fwhm_x"],now["fwhm_y"],"o",c="k")     
+    a0.plot(now["fwhm_x"],now["fwhm_y"],"o",c="k",label="Flight calib box images")     
     a0.plot(now["fwhm_x_unsmear"],now["fwhm_y"],"P",c="k")     
-    a0.plot(old["fwhm_x"],old["fwhm_y"],"o",c="r")     
+    a0.plot(old["fwhm_x"],old["fwhm_y"],"o",c="r",label="post XY calib box images")     
     a0.plot(old["fwhm_x_unsmear"],old["fwhm_y"],"P",c="r")     
     a1.plot(now["lx"],now["ly"],"o",c="k")     
     a1.plot(old["lx_unsmear"],old["ly"],"P",c="k")     
@@ -13277,140 +13329,61 @@ def fb_tutorial(xpapoint=None, i=0, n=1):
     a2.set_xlabel("Shift in spectra direction")
     a2.set_ylabel("Shift in spatial direction")
     fig.tight_layout()
-    # a2.plot(new_now["X_IMAGE_unsmear"] - old["X_IMAGE_unsmear"],new_now["Y_IMAGE"] - old["Y_IMAGE"] ,"P",c="k")     
+    a1.set_title("Slits image evolution pre / during flight")
+    # a2.plot(new_now["X_IMAGE_unsmear"] - old["X_IMAGE_unsmear"],new_now["Y_IMAGE"] - old["Y_IMAGE"] ,"P",c="k")   
+    fig.savefig("/tmp/test.png")
     plt.show()
     #%%
     
-    message(d, """Now let's analyze the smearing...""")
+    
+    
+    message(d, """And do UV continuum through focus""")
+    files = glob.glob("/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/TF_UV_continuum/*.fits")
+    files.sort()
+    d.set("frame delete all")
+    for f in files:
+        d.set("frame new")
+        d.set(" file " + f)
+    wait_for_n(xpapoint)
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/continuum_photometry.py"%(xpapoint, path))
+
+    message(d, """And do UV continuum through focus""")
+    wait_for_n(xpapoint)
+
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/TF_continuum.py"%(xpapoint, path))
+        
+    
+    
+    ####
+    d.set("frame new")
+    d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/Calib_box/image000015_D2.fits")
+    message(d, """Testing detector flat correction""")
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/Flat_correction.py"%(xpapoint, path))
+    wait_for_n(xpapoint)
+    
+    message(d, """Simulate observation""")
+    wait_for_n(xpapoint)
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/test/simulate_EMCCD.py.py"%(xpapoint, path))
+    message(d, """Extract spectra""")
+    wait_for_n(xpapoint)
+    python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/FB/Flight/extract_spectra_new.py"%(xpapoint, path))
+    wait_for_n(xpapoint)
     
     
     
+    
+    # python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/pFlight/photon_counting.py"%(path, xpapoint))
+    # python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/pFlight/multiple_threshold.py"%(path, xpapoint))
+    # python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/pFlight/remove_hot_pixels.py"%(path, xpapoint))
+
+    
+    # python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/test/unsmear_arctipy.py"%(path, xpapoint))
+
     return
 
 
 
-def jesaispas():
-    d.set('analysis task "Interactive 1D Fitting On Plot"')
-    
-    
-    verboseprint(
-        """********************************************************************************
-                             Interactive 1D Fitting On Plot
-    Generic functions -> Image Processing -> Interactive 1D Fitting On Plot
-********************************************************************************
 
-* As a >5 pameters fit is unlikely to converge without a close initial,
-* this package allows you to perform interactive 1D fitting
-* with user adjustment of the initial fitting parameters!
-* You might need to hit [Shift+S] to make appear some features in the image.
-* You can check the log box on the plot window to have a logarithmic y scale.
-* This function works on any DS9 plot (histograms or even plots generated by
-  by this plugin like a radial profile or la light curve
-
-%i/%i - Create a projection (Region->Shape->Projection) on a shape you want
-         to fit. Move it until you have a fittable feature (several gaussians,
-         slope, exponential or sum of them...). You can stack the projection
-         with the small square on the center of your line!
-%i/%i - When you are happy with the shape you have hit Next to run the function!
-"""
-        % (i, n, i + 1, n),
-        verbose="1",
-    )
-    i += 2
-
-    wait_for_n(xpapoint)
-    while d.get("plot") == "":
-        message(
-            d,
-            """Please create a plot by creating a
-                          Region->Shape->Projection to run this function.
-                          Hit n when it is done.""",
-        )
-        wait_for_n(xpapoint)
-    verboseprint(
-        """%i/%i - Choose the background and the number of gaussians you want
-         to fit the data with.
-%i/%i - Now, you adjust each parameter of each feature! Change by hand the
-         different parameters to fit the data and then click on Fit to run the
-         fitting least square function. Then you can read the parameters of the
-         features that can help you asses image quality or other information.
-* When you are done, close the fitting figure and click on [Next]."""
-        % (i, n, i + 1, n),
-        verbose="1",
-    )
-    i += 2
-    d.set('analysis task "Interactive 1D Fitting On Plot"')
-    wait_for_n(xpapoint)
-    message(d, """Now let us use a basic python interpretor!""")
-    verboseprint(
-        """********************************************************************************
-                             Execute Python Command
-        Generic functions -> Image Processing -> Execute Python Command
-********************************************************************************
-
-* This command allows you to modify your image by interpreting a python command
-* Enter a basic command in the Expression field such as:
-*    ds9=ds9[:100,:100]                           -> Trim the image
-*    ds9+=np.random.normal(0,0.5*ds9.std(),size=ds9.shape)  -> Add noise to the image
-*    ds9[ds9>2]=np.nan                            -> Mask a part of the image
-*    ds9=1/ds9, ds9+=1, ds9-=1                    -> Different basic expressions
-*    ds9=convolve(ds9,np.ones((1,9)))[1:-1,9:-9]  -> Convolve unsymetrically
-*    ds9+=np.linspace(0,1,ds9.size).reshape(ds9.shape) -> Add background
-*    ds9+=30*(ds9-gaussian_filter(ds9, 1))        -> Sharpening
-*    ds9=np.hypot(sobel(ds9,axis=0,mode='constant'),sobel(ds9,axis=1,mode='constant')) -> Edge Detection
-*    ds9=np.abs(fftshift(fft2(ds9)))**2           -> FFT
-*    ds9=correlate2d(ds9.astype('uint64'),ds9,boundary='symm',mode='same') -> Autocorr
-*    ds9=interpolate_replace_nans(ds9, Gaussian2DKernel(x_stddev=5, y_stddev=5)) -> Interpolate NaNs
-
-
-
-%i/%i - Copy the expression you want to test. [Next]"""
-        % (i, n),
-        verbose="1",
-    )
-    i += 1
-
-    wait_for_n(xpapoint)
-    verboseprint(
-        """%i/%i - Paste it in the expression field (or invent your own)
-           Do not put anything in the other fields."""
-        % (i, n),
-        verbose="1",
-    )
-    i += 1
-
-    d.set('analysis task "Python Command/Macro"')
-    verboseprint(
-        """Well Done!
-* You also have the possibility to run a python macro. Several example Macros
-* are available here (copy it):
-%s
-* But you can also write your own
-* The image is avilable via 'ds9' variable, you can open other images in the
-* python file if needed and import any package your want.
-
-%i/%i - Test one of the Macros avilable in the path above.
-                     [Next]"""
-        % (resource_filename("pyds9plugin", "Macros"), i, n),
-        verbose="1",
-    )
-
-    wait_for_n(xpapoint)
-
-    d.set('analysis task "Python Command/Macro"')
-
-    verboseprint(
-        """* Great!
-%i/%i - The last field is to apply your python expression to several images!
-        To do so, you can write their a regular expression matching the files on
-        which you want to run the command! Try it or [Next]."""
-        % (i, n),
-        verbose="1",
-    )
-    i += 1
-
-    wait_for_n(xpapoint)
-    return
 
 
 def generic_tools_tutorial(xpapoint=None, i=0, n=1):
@@ -13670,32 +13643,34 @@ def test_suite(xpapoint=None, argv=[]):
     elif tutorial == "fb":
         tutorial_number = "5"
     d.set("nan black")
-    message(
-        d,
-        """Test suite for beginners: This help will go through most of
-the must-know functions of this plug-in. Between each function
-some message will appear to explain you the purpose of these
-functions and give you some instructions.""",
-    )
 
-    verboseprint(
-        """********************************************************************************
-                               General Instructions
-********************************************************************************\n
-I will follow you during this tutorial so move me next to the DS9 window but
-please do not close me. You can increase the fontsize of this window.
-
-After a function has run you can run it again with different parameters
-by launching it from the Analysis menu [always explicited under function's name]
-
-[Next]: When you followed the instruction and I write [Next] please click on the
-Next Button (or hit N on the  DS9 window) so that you go to the next function.
-
-                 Please [Next]""",
-        verbose="1",
-    )
-    wait_for_n(xpapoint)
     if tutorial_number!="5":
+        message(
+            d,
+            """Test suite for beginners: This help will go through most of
+    the must-know functions of this plug-in. Between each function
+    some message will appear to explain you the purpose of these
+    functions and give you some instructions.""",
+        )
+
+        verboseprint(
+            """********************************************************************************
+                                   General Instructions
+    ********************************************************************************\n
+    I will follow you during this tutorial so move me next to the DS9 window but
+    please do not close me. You can increase the fontsize of this window.
+    
+    After a function has run you can run it again with different parameters
+    by launching it from the Analysis menu [always explicited under function's name]
+    
+    [Next]: When you followed the instruction and I write [Next] please click on the
+    Next Button (or hit N on the  DS9 window) so that you go to the next function.
+    
+                     Please [Next]""",
+            verbose="1",
+        )
+        wait_for_n(xpapoint)
+
         im = os.path.join(resource_filename("pyds9plugin", "Images"), "stack.fits")
         d.set("frame new ; tile no ; file %s ; zoom to fit" % (im))
     i = 1
@@ -13873,7 +13848,8 @@ def button(xpapoint=None):
 
         @pyqtSlot()
         def handleButtonNext(self):
-            self.d.set("nan grey")
+            # self.d.set("nan grey")
+            self.d.set("wcs sexagesimal")
 
         @pyqtSlot()
         def handleButtonQuit(self):
@@ -14008,7 +13984,7 @@ BG  %0.7f""" % (
         command = (
             """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
             % (
-                "/Users/Vincent/opt/anaconda3/bin/python",
+                "/Users/Vincent/opt/anaconda3/envs/py38/bin/python",
                 resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),
                 bool(int(single)),
                 size,
@@ -14273,7 +14249,6 @@ def main():
 
     # "PlotSpectraDataCube": PlotSpectraDataCube,#
     # "StackDataDubeSpectrally": StackDataDubeSpectrally,#
-    # "stack_images": stack_images,#stack
     # ,'NextButton':NextButton
     # "build_wcs_header": build_wcs_header,#build_wcs_header
     # "check_file": check_file,#
@@ -14313,6 +14288,7 @@ def main():
         "BackgroundMeasurement": BackgroundMeasurement,
         # "compute_gain": compute_gain,
         "LoadDS9QuickLookPlugin": LoadDS9QuickLookPlugin,
+        "stack_images": stack_images,#stack
     }
     dict_function_ait = {
         "center_region": center_region,

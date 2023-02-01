@@ -10,7 +10,7 @@ try:
     x, y = np.loadtxt("/tmp/xy.txt").T
     # x, y =  np.array(x), np.array(y)
     # print(np.log10(np.sum(10**y)))
-except OSError:
+except (OSError, ValueError) as e:
     x, y = np.array([0, 1]), np.array([0, 1])
 
 
@@ -465,10 +465,10 @@ def EMCCDhist(
         try:
             y = globals()["y"]
             n_pix = np.nansum(10 ** y[np.isfinite(y)])  # 1e6#
-            print(1, n_pix)
+            # print(1, n_pix)
         except TypeError:
             n_pix = 10 ** 6.3
-            print(2)
+            # print(2)
         n = 1
         im = np.zeros(int(n_pix))  #
         im = np.zeros((1000, int(n_pix / 1000)))
@@ -568,7 +568,9 @@ def smeared_slit(
     x,
     amp=y.ptp() * np.array([0.7, 1.3, 1]),
     l=[0.1, len(y), 4],
-    x0=len(y) * np.array([0, 1, 0.5]),
+    # x0=len(y) * np.array([0, 1, 0.5]),
+    x0=[x.min(),x.max(),(x.min()+x.max())/2],
+
     FWHM=[0.1, 10, 2],
     offset=np.nanmin(y) * np.array([0.5, 3, 1]),
     Smearing=[-10, 10, 0.8],
@@ -605,7 +607,8 @@ def smeared_slit_astigm(
     x,
     amp=y.ptp() * np.array([0.7, 1.3, 1]),
     l=[0.1, len(y), 4],
-    x0=len(y) * np.array([0, 1, 0.5]),
+    # x0=len(y) * np.array([0, 1, 0.5]),
+    x0=[x.min(),x.max(),(x.min()+x.max())/2],
     FWHM=[0.1, 10, 2],
     offset=np.nanmin(y) * np.array([0.5, 3, 1]),
     astigm=[0.1, 30, 2],

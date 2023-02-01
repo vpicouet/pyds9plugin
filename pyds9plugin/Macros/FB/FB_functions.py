@@ -12,6 +12,12 @@ from astropy.io import fits
 from scipy.optimize import curve_fit
 from pyds9plugin.DS9Utils import *
 
+if check_appearance():
+    plt.style.use('dark_background')
+    color="white"
+else:
+    color="k"
+
 
 def emccd_model(
     xpapoint=None, path=None, smearing=0, gain=None, argv=[], stack=False, save=False
@@ -47,52 +53,60 @@ def emccd_model(
             d = DS9n()
             name = path
             save = True
+        fitsim = fits.open(name)
+        if len(fitsim)>1:
+            fitsim = fitsim[2]
+        else:
+            fitsim = fitsim[0]
+
+        header = fitsim.header
+        data = fitsim.data
+        if len(data.shape) == 3:
+            data = data[0,:,:]
+        ly, lx = data.shape
 
         region = getregion(d, quick=True, message=False, selected=True)
         if region is not None:
             Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
-        else:
+        elif lx > 1500:
             Xinf, Xsup, Yinf, Ysup = [1130, 1430, 1300, 1900]
+        else:
+            Xinf, Xsup, Yinf, Ysup = [0, -1, 0, -1]
+
         # os = data[Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
 
-        fitsim = fits.open(name)[0]
-        header = fitsim.header
-        data = fitsim.data
-        if len(data.shape) == 3:
-            im = data[0, Yinf:Ysup, Xinf:Xsup]
-            os = data[0, Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
-            # os = data[0, Yinf:Ysup, Xinf + 1000 : Xsup + 1000]
+        if lx > 2500:
+            Xinf_os, Xsup_os = Xinf + 1000, Xsup + 1000
+        elif lx > 1500:
+            Xinf_os, Xsup_os = Xinf - 1000, Xsup - 1000
         else:
-            ly, lx = data.shape
-            if lx > 2500:
-                Xinf_os, Xsup_os = Xinf + 1000, Xsup + 1000
-            else:
-                Xinf_os, Xsup_os = Xinf - 1000, Xsup - 1000
+            Xinf_os, Xsup_os = Xinf, Xsup
 
-            if stack:
-                paths = get(
-                    d, "Provide the path of images you want to analyze the histogram"
-                )
-                im = np.hstack(
-                    fits.open(file)[0].data[Yinf:Ysup, Xinf:Xsup]
-                    for file in globglob(paths)
-                )
-                os = np.hstack(
-                    fits.open(file)[0].data[Yinf:Ysup, Xinf_os:Xsup_os]
-                    for file in globglob(paths)
-                )
-
-            else:
-                im = data[Yinf:Ysup, Xinf:Xsup]
-                os = data[Yinf:Ysup, Xinf_os:Xsup_os]
+        if stack:
+            paths = get(
+                d, "Provide the path of images you want to analyze the histogram"
+            )
+            im = np.hstack(
+                fits.open(file)[0].data[Yinf:Ysup, Xinf:Xsup]
+                for file in globglob(paths)
+            )
+            os = np.hstack(
+                fits.open(file)[0].data[Yinf:Ysup, Xinf_os:Xsup_os]
+                for file in globglob(paths)
+            )
+        else:
+            im = data[Yinf:Ysup, Xinf:Xsup]
+            os = data[Yinf:Ysup, Xinf_os:Xsup_os]
         im_nan_fraction = np.isfinite(im).mean()
         os_nan_fraction = np.isfinite(os).mean()
         print(os.shape, im.shape)
         median_im = np.nanmedian(im)
         min_, max_ = (np.nanpercentile(os, 0.4), np.nanpercentile(im, 99.8))
-        print(min_, max_)
+        # print(im.shape,os.shape)
+        # print(min_, max_,np.nanpercentile(im[np.isfinite(im)], 99.8),np.nanpercentile(im[np.isfinite(im)], 0.4),np.nanpercentile(im[np.isfinite(im)], 40))
         val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1))
         val_os, bins_os = np.histogram(os.flatten(), bins=np.arange(min_, max_, 1))
+        print(val_os,min_, max_,os)
         bins = (bins[1:] + bins[:-1]) / 2
         t=1#2.5
         val = np.array(val, dtype=float) *t/ im_nan_fraction 
@@ -102,6 +116,7 @@ def emccd_model(
         try:
             header_exptime, header_gain = header["EXPTIME"], header["EMGAIN"]
         except:
+            header_exptime, header_gain = -99, -99
             pass
             # try:
             # header_exptime, header_gain = (
@@ -251,10 +266,10 @@ def emccd_model(
         flux_max = 25
     elif (median_im - bias) > 2e2:
         flux_max = 3  # ADDED
-    elif (median_im - bias) > 1e2:
+    else:# (median_im - bias) > 1e2:
         flux_max = 1  # ADDED
-    else:
-        flux_max = 0.8  # ADDED
+    # else:
+    #     flux_max = 0.8  # ADDED
     lims = [
         (bins.min(), bins.min() + bins.ptp() / 2),
         (0, 300),
@@ -285,12 +300,12 @@ def emccd_model(
         "mCIC (e-/exp)",
     ]
     plt.plot(
-        xdata, ydata, "k", alpha=0.2,
+        xdata, ydata, "grey", alpha=0.2,
     )
-    plt.plot([lim_rn1, lim_rn1], [0, 5], ":k", alpha=0.1)
-    plt.plot([lim_rn2, lim_rn2], [0, 5], ":k", alpha=0.1)
-    plt.plot([lim_gain_1, lim_gain_1], [0, 3], ":k", alpha=0.1)
-    plt.plot([upper_limit, upper_limit], [0, 3], ":k", alpha=0.1)
+    plt.plot([lim_rn1, lim_rn1], [0, 5], ":", c="grey", alpha=0.7)
+    plt.plot([lim_rn2, lim_rn2], [0, 5], ":", c="grey", alpha=0.7)
+    plt.plot([lim_gain_1, lim_gain_1], [0, 3], ":", c="grey", alpha=0.7)
+    plt.plot([upper_limit, upper_limit], [0, 3], ":", c="grey", alpha=0.7)
     n_conv = 11
     y_conv = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
     y_os_conv = np.convolve(os_v, np.ones(n_conv) / n_conv, mode="same")
@@ -300,7 +315,7 @@ def emccd_model(
         # ydata[xdata < upper_limit],
         y_conv[xdata < upper_limit],
         "-",
-        c="black",
+        c=color,
         label="Data: Gconv=%0.2f\ntexp=%i\nG=%i"
         % (conversion_gain, header_exptime, header_gain),
     )
@@ -308,7 +323,7 @@ def emccd_model(
         bins_os[bins_os < upper_limit_os],
         y_os_conv[bins_os < upper_limit_os],
         ":",
-        c="black",
+        c=color,
         label="OS",
         alpha=1,
     )
@@ -320,24 +335,22 @@ def emccd_model(
     #     alpha=0.4,
     # )
 
-    plt.plot(
-        bins_os, os_v, "k", alpha=0.2,
-    )
+    plt.plot(bins_os, os_v, color, alpha=0.2)
 
     f1 = np.convolve(function(x, *centers), np.ones(n_conv) / n_conv, mode="same")
     centers_ = np.array(centers) + [0, 0, 0, flux, 0, 0]
     # centers_[-3] = flux
     f2 = np.convolve(function(x, *centers_), np.ones(n_conv) / n_conv, mode="same")
     (l1,) = plt.plot(x, f1, "-", lw=1, label="EMCCD OS model", alpha=0.7)
-    (l2,) = plt.plot(
-        x, f2, "-", c=l1.get_color(), lw=1
-    )  # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
+    (l2,) = plt.plot(x, f2, "-", c=l1.get_color(), lw=1)
+      # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))
     ax.set_ylabel("Log (Frequency of occurence)", fontsize=15)
 
     ax.margins(x=0)
 
     c = "white"
+    c =  '#FF000000'
     hc = "0.975"
     button = Button(
         plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit+smearing", color=c, hovercolor=hc,
@@ -591,7 +604,7 @@ def emccd_model(
     plt.draw()
     ax.legend(loc="upper right", fontsize=12, ncol=2)
     ax.set_title("/".join(name.split("/")[-4:]), fontsize=9)
-    if ".csv" in path:
+    if (".fit" not in path) & (".csv" in path):
         plt.savefig(path.replace(".csv", ".png"))
     plt.show()
     return 1, fig

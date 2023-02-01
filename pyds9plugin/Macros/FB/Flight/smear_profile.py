@@ -477,10 +477,7 @@ ax1.plot(
         100 * np.nanmean(stack, axis=1)[n0] / (np.nanmean(stack, axis=1)[n0:].sum()),
         np.nanmin(first_pix),
         np.nanmax(first_pix),
-        np.nanmeanfirst_pix),
-    ),
-    lw=3,
-)
+        np.nanmean(first_pix)), lw=3)
 # ,yerr=np.std(stack,axis=0).T[0]
 ax2.semilogy(xx, np.nanmean(stack, axis=1), "k")
 ax2.semilogy(xx, np.nanmedian(stack, axis=1), "r:")

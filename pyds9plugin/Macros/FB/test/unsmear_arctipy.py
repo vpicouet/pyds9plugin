@@ -15,8 +15,16 @@ register (where CTI has the most effect) is used for this example.
 #         fits.setval('/Users/Vincent/Github/arcticpy/examples/acs/StackedImage_24-42-NoDark_modified.fits', a, value=header[a], comment="")
 #     except ValueError:
 #         pass
-sys.path.append('/Users/Vincent/Github/arcticpy')
-import arcticpy as ac
+from astropy.io import fits
+fitsimage = fits.open('/Users/Vincent/Github/arcticpy/examples/acs/jc0a01h8q_raw.fits')[1]
+ds9, header = fitsimage.data, fitsimage.header
+# sys.path.append('/Users/Vincent/Github/arcticpy')
+
+sys.path.append('/Users/Vincent/Github/arctic/python')
+
+import arcticpy 
+
+test=arcticpy.add_cti(numpy.zeros((5,5)))
 # from arcticpy.roe import ROE, ROETrapPumping
 # from arcticpy import model_for_FIREBall
 import os
@@ -27,7 +35,6 @@ from astropy.io import fits
 
 from arcticpy.roe import ROE, ROETrapPumping
 from arcticpy.ccd import CCD, CCDPhase
-from arcticpy.trap_managers import AllTrapManager
 from arcticpy.traps import TrapInstantCapture
 
 
@@ -47,17 +54,21 @@ from arcticpy.traps import TrapInstantCapture
 # # name='hot_pix2'
 # name="slits_modified"
 
-# frame = ac.acs.FrameACS.from_fits(file_path=f"{path}/{name}.fits", quadrant_letter="A")
+# frame = ac.acs.FrameACS.from_fits(file_path=f"/Users/Vincent/Github/arcticpy/examples/acs/jc0a01h8q_raw.fits", quadrant_letter="A")
 # exposure = frame.exposure_info.modified_julian_date
-# mask =
+# # mask =
 # row_start, row_end, column_start, column_end = -70, -40, -205, -190
-ly,lx = ds9.shape
+
+
+ly,lx = frame.shape
 if ly>lx:
-    frame=region[::-1,:].T
-    parallel_offset=int(getregion(d)[0].xc+1000)
+    frame=frame[::-1,:].T
+    # parallel_offset=int(getregion(d)[0].xc+1000)
 else:
-    frame=region
-    parallel_offset=int(getregion(d)[0].yc+1000)
+    frame=frame
+    # parallel_offset=int(getregion(d)[0].yc+1000)
+# frame=ds9
+
 
     #fits.open(f"{path}/{name}.fits")[0].data
 # exposure = 56571.277233796296
@@ -141,22 +152,22 @@ ds9 = ac.remove_cti(
     parallel_offset=1000,
     parallel_express=2,
 )
-#
-#
-#
-# fig, (ax0,ax1,ax2) = plt.subplots(1,3,figsize=(10,3))
-# plt.figure()
-# im = ax0.imshow(X=frame[2:], aspect="equal")#, vmax=6600)#, vmin=2300, vmax=2800)
-#
-# im = ax1.imshow(X=image_cti_removed[2:], aspect="equal")#, vmin=2300, vmax=2800)
-# # plt.colorbar(im)
-# ax0.set_title("Original image")
-# ax1.set_title("Corrected image")
-# ax2.set_title("Profile")
-# ax2.plot(frame.mean(axis=axis)[2:],label='non corrected')
-# ax2.plot(image_cti_removed.mean(axis=axis)[2:],'--',label='corrected')
-# ax2.legend()
-# # plt.axis("off")
-# fig.tight_layout()
-# fig.savefig(f"{path}/{name}_corrected_d%0.1f_t%0.1f.png"%(traps[0].density,traps[0].release_timescale), dpi=400)
-# print(f"Saved {path}/{name}_corrected.png")
+
+
+
+fig, (ax0,ax1,ax2) = plt.subplots(1,3,figsize=(10,3))
+plt.figure()
+im = ax0.imshow(X=frame[2:], aspect="equal")#, vmax=6600)#, vmin=2300, vmax=2800)
+
+im = ax1.imshow(X=image_cti_removed[2:], aspect="equal")#, vmin=2300, vmax=2800)
+# plt.colorbar(im)
+ax0.set_title("Original image")
+ax1.set_title("Corrected image")
+ax2.set_title("Profile")
+ax2.plot(frame.mean(axis=axis)[2:],label='non corrected')
+ax2.plot(image_cti_removed.mean(axis=axis)[2:],'--',label='corrected')
+ax2.legend()
+# plt.axis("off")
+fig.tight_layout()
+fig.savefig(f"{path}/{name}_corrected_d%0.1f_t%0.1f.png"%(traps[0].density,traps[0].release_timescale), dpi=400)
+print(f"Saved {path}/{name}_corrected.png")

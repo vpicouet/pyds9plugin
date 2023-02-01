@@ -1,4 +1,4 @@
-from pyds9plugin.Macros.FIREBall.FB_functions import emccd_model
+from pyds9plugin.Macros.FB.FB_functions import emccd_model
 
 # This was just to run the FIREBall.py macro function
 # if "FIREBall.py" in __file__:  # or (function == "execute_command")

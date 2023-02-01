@@ -224,7 +224,9 @@ from pyds9plugin.tools import SimulateFIREBallemCCDImage
 #%%
 # %load_ext line_profiler
 d=DS9n()
-RN=60
+ConversionGain=1/4.5
+RN=60*ConversionGain
+EmGain = 1500*ConversionGain
 size=[1058, 2069]
 OSregions=[0, 1058]
 field="PG0044p030.csv"
@@ -232,9 +234,9 @@ field="PG0044p030.csv"
 field="PG0044p030_decenter.csv"
 field="PG1538p477.csv"
 field="targets_F2.csv"
-path="/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Simulation_fields"
+path="/Users/Vincent/Nextcloud/LAM/Work/FIREBall/FB_Images/Simulation_fields"
 # path="/Users/Vincent/Nextcloud/LAM/Work/FIREBall/Simulation_fields/no_atm"
-for field in ["PG0044p030.csv","PG1538p477.csv","IRAS18216.csv","targets_F2.csv","targets_QSO.csv","targets_F1.csv","targets_F3.csv","targets_F4.csv"][:]:
+for field in ["PG0044p030.csv","PG1538p477.csv","IRAS18216.csv","targets_F2.csv","targets_QSO.csv","targets_F1.csv","targets_F3.csv","targets_F4.csv"][:1]:
     print(field)
     # name_source =  "%s/source_%s.fits"%(path,field)
     # name_single =  "%s/single_%s.fits" %(path,field)
@@ -244,7 +246,7 @@ for field in ["PG0044p030.csv","PG1538p477.csv","IRAS18216.csv","targets_F2.csv"
     # 7 sec without counting: 84 ims atck, 7% smearing
     #%lprun -f SimulateFIREBallemCCDImage 
     # imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(field="targets_F3.csv",source="Field",stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
-    imaADU, imaADU_stack, cube_stack, source_im, source_im_wo_atm = SimulateFIREBallemCCDImage(field=field,source="Field",stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
+    imaADU, imaADU_stack, cube_stack, source_im, source_im_wo_atm = SimulateFIREBallemCCDImage(field=field,source="Field",ConversionGain=1,EmGain=EmGain,stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=1.5,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
     # imaADU, imaADU_stack, cube_stack, source_im = SimulateFIREBallemCCDImage(field="PG1538p477.csv",source="Field",stack=int(3600*1/50), size=size, OSregions=OSregions,p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
     
     print(cube_stack.min(),cube_stack.max())
@@ -311,7 +313,11 @@ for field in ["PG0044p030.csv","PG1538p477.csv","IRAS18216.csv","targets_F2.csv"
     # d.set("regions %s" % ("%s/line_%s.reg"%(path,field)))
     # d.set("regions %s" % ("%s/slit_%s.reg"%(path,field)))
     d.set("regions %s" % ("%s/spectra_%s.fits"%(path,field)))
-
+    # try:
+    #     d.set("regions %s" % ("%s/spectra_%s.fits"%(path,field)))
+    # except ValueError:
+    #     d.set("regions %s" % ("%s/%s.fits"%(path,field)))
+        
 #should stack 
 # should save observed wavelgth, restframe wavelength, ca
 
@@ -321,8 +327,8 @@ for field in ["PG0044p030.csv","PG1538p477.csv","IRAS18216.csv","targets_F2.csv"
 
 #%%
 
-for spec in ['Spectra 0044p030',"Spectra mrk509","Spectra 2344p092","Spectra 1637p574","Spectra 1538p477","Spectra 1115p080","Spectra 0414m060","Spectra 0115p027","Spectra 2251p113","Spectra 2201p315","Spectra 1928p738","Spectra 1821p643","Spectra 1700p518"]:
-    imaADU, imaADU_stack, cube_stack, source_im, source_im_wo_atm = SimulateFIREBallemCCDImage(field=field,source=spec,stack=int(3600*1/50),size=[500, 100], OSregions=[0, 500],p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.3,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
+for spec in ['Spectra 0044p030',"Spectra mrk509","Spectra 2344p092","Spectra 1637p574","Spectra 1538p477","Spectra 1115p080","Spectra 0414m060","Spectra 0115p027","Spectra 2251p113","Spectra 2201p315","Spectra 1928p738","Spectra 1821p643","Spectra 1700p518"][:1]:
+    imaADU, imaADU_stack, cube_stack, source_im, source_im_wo_atm = SimulateFIREBallemCCDImage(field=field,source=spec,stack=int(3600*1/50),size=[500, 100], OSregions=[0, 500],p_pCIC=0.0005,exposure=50,Dark=1/3600,cosmic_ray_loss=None,Smearing=0.8,RN=RN,Rx=5,Ry=5,readout_time=5,counting=True)
 
 
 #%%
