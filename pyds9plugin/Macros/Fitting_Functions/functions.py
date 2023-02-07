@@ -51,6 +51,25 @@ def variable_smearing_kernels(
     return smearing_kernels
 
 
+def slit(
+    x,
+    amp=y.ptp() * np.array([0, 1.3, 1]),
+    l=len(y) * np.array([0, 1, 0.2]),
+    x0=len(y) * np.array([0, 1, 0.5]),
+    FWHM=[0.1, 35, 2],
+    offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
+):
+    """Convolution of a box with a gaussian
+    """
+    from scipy import special
+    import numpy as np
+
+    l /= 2
+    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
+    function = amp * (a + b) / (a + b).ptp()  # 4 * l
+    return function + offset
+
 
 #defocused_gaussian
 def line_analysis(
@@ -111,24 +130,6 @@ def fit_spectra(x,lmax=[1900,2130,2060],dispersion=[0.8,1.2,1],throughput=[0,y.p
 
 
 
-def slit(
-    x,
-    amp=y.ptp() * np.array([0, 1.3, 1]),
-    l=len(y) * np.array([0, 1, 0.2]),
-    x0=len(y) * np.array([0, 1, 0.5]),
-    FWHM=[0.1, 35, 2],
-    offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
-):
-    """Convolution of a box with a gaussian
-    """
-    from scipy import special
-    import numpy as np
-
-    l /= 2
-    a = special.erf((l - (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
-    b = special.erf((l + (x - x0)) / np.sqrt(2 * (FWHM / 2.35) ** 2))
-    function = amp * (a + b) / (a + b).ptp()  # 4 * l
-    return function + offset
 
 
 #%%

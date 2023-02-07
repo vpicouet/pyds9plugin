@@ -607,4 +607,13 @@ def emccd_model(
     if (".fit" not in path) & (".csv" in path):
         plt.savefig(path.replace(".csv", ".png"))
     plt.show()
+
+    n = int(os.path.basename(name).split("image")[-1].split(".fits")[0])
+    import pandas as pd
+    try:
+        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain])])
+    except Exception as e:
+        print(e)
+        df = pd.DataFrame([np.array([sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val])])
+    df.to_clipboard(index=False,header=False)
     return 1, fig

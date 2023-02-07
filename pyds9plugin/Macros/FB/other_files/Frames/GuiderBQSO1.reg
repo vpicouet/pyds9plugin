@@ -1,0 +1,5 @@
+# Region file format: DS9 version 4.1
+global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+fk5
+box(275.48,64.36,2160",1080",70) # width=4 text={UV BQSO1}
+box(275.0797404, 64.2943494,1150",1275",70) # width=4 text={Guider} dash=1
