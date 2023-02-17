@@ -2745,8 +2745,8 @@ def analyze_spot(
             profile,
             p0=[1, fiber, 2, np.nanmean(profile)],
             bounds=(
-                [0, 0.95 * fiber - 1e-5, 1, -1],
-                [2, 1.05 * fiber + 1e-5, SigmaMax, 1],
+                [0, 1, 0.95 * fiber - 1e-5, -1],
+                [2, SigmaMax, 1.05 * fiber + 1e-5, 1],
             ),
         )
     EE_interp = interpolate.interp1d(rsurf[:size], EE[:size], kind="cubic")
@@ -3302,7 +3302,8 @@ def radial_profile(xpapoint=None, plot_=True, fibersize=None, argv=[]):
             size=int(a.r),
             ds9=d,
         )  # int(a.r))
-    except AttributeError:
+    except AttributeError as e:
+        print(e)
         message(
             d,
             """Please define a circle region and select it. The radius
@@ -3441,7 +3442,7 @@ def estimate_background(data, center, radius=30, n=1.8):
     return fond
 
 
-def convolve_diskgaus_2d(r, amp=2, RR=4, sig=4 / 2.35, offset=0):
+def convolve_diskgaus_2d(r, amp=2, sig=4 / 2.35, RR=4, offset=0):
     """Convolution of a disk with a gaussian to simulate the image of a fiber
     """
     from scipy.integrate import quad
@@ -3519,6 +3520,7 @@ def ds9_plot_radial_profile(
         except RuntimeError:
             popt_m = [profile.max(), 4, 2.5]
     else:
+        stdev = fiber/2
         stddev /= profile.max()
         profile /= profile.max()
         popt_m, pcov_m = curve_fit(
@@ -3528,19 +3530,19 @@ def ds9_plot_radial_profile(
             convolve_diskgaus_2d,
             rmean[:size],
             profile,
-            p0=[np.nanmax(profile), fiber, 2, np.nanmin(profile)],
+            p0=[np.ptp(profile), stdev, fiber/2, np.nanmin(profile)],
             bounds=(
                 [
-                    1e-3 * (profile.max() - profile.min()),
-                    0.8 * fiber,
-                    1,
-                    profile.min(),
+                    1e-3 * np.ptp(profile),
+                    stdev/10,
+                    0.8 * fiber/2,
+                    np.nanmin(profile),
                 ],
                 [
-                    1e3 * (profile.max() - profile.min()),
-                    1.2 * fiber,
-                    SigmaMax,
-                    profile.max(),
+                    1e3 * np.ptp(profile),
+                    stdev*10,
+                    1.2 * fiber/2,
+                    np.nanmax(profile),
                 ],
             ),
         )
@@ -8438,11 +8440,10 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             # from dataphile.statistics.distributions import uniform
             from scipy.optimize import curve_fit
             import matplotlib.pyplot as plt
-            if check_appearance():
-                plt.style.use('dark_background')
-                color="white"
-            else:
-                color="k"
+            color="k"
+            # if check_appearance():
+            #     plt.style.use('dark_background')
+            #     color="white"
             verboseprint(
                 "nb_gaussians,  nb_moffats ,nb_voigt1D,nb_sinusoid = ",
                 nb_gaussians,
@@ -9183,8 +9184,9 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             x, y = x[mask], y[mask]
             if x_scale == "yes":
                 x = np.log10(x)
-            else:
-                x -= x.ptp()/2
+            #TODO can be important
+            # else:
+            #     x -= x.ptp()/2
             if y_scale == "yes":
                 y = np.log10(y)
             index = (np.isfinite(y)) & (np.isfinite(x)) & (y != 0)
@@ -12473,9 +12475,14 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                         d.set("tiff {}".format(filename))  #
                     elif filename[-4:].lower() == ".gif":
                         d.set("gif {}".format(filename))  #
+                    elif ".bmp" in os.path.basename(filename):
+                        import imageio
+                        image= imageio.imread(filename)
+                        d.set_np2arr(image.mean(axis=2))
                     else:
                         d.set("fits new {}".format(filename))
-                except ValueError:
+                except ValueError as e:
+                    print(e)
                     message(
                         d,
                         "Could not open %s as slice. Please verify your file."

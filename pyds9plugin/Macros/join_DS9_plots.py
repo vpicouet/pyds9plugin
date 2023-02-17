@@ -1,3 +1,4 @@
+from astropy.table import Table
 # d=DS9n()
 names = d.get('plot').split()
 name = names[0]
@@ -13,7 +14,12 @@ for i, (name, c) in enumerate(zip(names, colors)):
     # a = Table.read(filename,format='ascii')
     # a['col2'] = (a['col2']-a['col2'].min()) / (a['col2']-a['col2'].min()).ptp()
     # a.write(filename,overwrite=True,format='ascii',names=[None,None] )
-    d.set("plot load  /tmp/test_%s.dat xy" % (len(names)-i-1))
+    if len(Table.read(filename,format="ascii").colnames)==2:
+        d.set("plot load %s xy" % (filename)
+    elif en(Table.read(filename,format="ascii").colnames)==3:
+        d.set("plot load %s xyey" % (filename)
+    elif en(Table.read(filename,format="ascii").colnames)==4:
+        d.set("plot load %s xyexey" % (filename)
     d.set("plot line color %s" % (c))
 
 d.set("plot legend yes")

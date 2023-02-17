@@ -1,4 +1,4 @@
-
+from astropy.table import Table
 fields = get(d, "What field do you want to plot? Possibilities = F1,F2,F3,F4,QSO1,QSO2,QSO3,QSO4,BQSO1,BQSO2,BQSO3").rstrip().split(",")
 
 # print(fields)
@@ -56,7 +56,7 @@ def DS9plot_field(field):
         d.set(command)
     except ValueError:
         pass
-    d.set("catalog close")
+    # d.set("catalog close")
 
 # d=DS9n()
 # for field in ["F1","F2","F3","F4"][:1]:

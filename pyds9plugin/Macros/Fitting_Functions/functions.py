@@ -51,12 +51,37 @@ def variable_smearing_kernels(
     return smearing_kernels
 
 
+
+def convolve_diskgaus_2d(x, amp=y.ptp() * np.array([0, 1.3, 1]), R=x.ptp() * np.array([0, 1, 0.1]), σ=x.ptp() * np.array([0, 1, 0.1]), offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)])):
+    """Convolution of a disk with a gaussian to simulate the image of a fiber
+    """
+    from scipy.integrate import quad
+    from scipy import special
+    import numpy as np
+
+    integrand = (
+        lambda eta, r_: special.iv(0, r_ * eta / np.square(σ))
+        * eta
+        * np.exp(-np.square(eta) / (2 * np.square(σ)))
+    )
+    integ = [
+        quad(integrand, 0, R, args=(r_,))[0]
+        * np.exp(-np.square(r_) / (2 * np.square(σ)))
+        / (np.pi * np.square(R * σ))
+        for r_ in x
+    ]
+    print(integ)
+    integ = np.array(integ)
+    integ /= integ.ptp()
+    print(integ)
+    return offset + amp * integ
+
 def slit(
     x,
     amp=y.ptp() * np.array([0, 1.3, 1]),
     l=len(y) * np.array([0, 1, 0.2]),
     x0=len(y) * np.array([0, 1, 0.5]),
-    FWHM=[0.1, 35, 2],
+    FWHM=len(y) * np.array([0, 1/2, 2/len(y)]),
     offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
 ):
     """Convolution of a box with a gaussian
@@ -229,7 +254,7 @@ def madau(z,rho=[0.001,0.01],n=[2,3],n2=[2,3],pow=[2,7]):
 #     return g.ravel()
 
 
-def gaussian_flux(x, Flux=len(y)*y.ptp() * np.array([-2, 2, 1]), xo=[-0.5*len(x), 1.5*len(x),0.5*len(x)], sigma=[0, len(x),len(x)/2]):#off=[np.nanmin(y)-y.ptp(),np.nanmax(y)+ y.ptp(),np.nanmean(y)]
+def gaussian_flux(x, Flux=len(y)*y.ptp() * np.array([-2, 2, 1]), xo=[-0.5*len(x), 1.5*len(x),0.5*len(x)], sigma=[0, x.ptp(),x.ptp()/2]):#off=[np.nanmin(y)-y.ptp(),np.nanmax(y)+ y.ptp(),np.nanmean(y)]
     """Defines a gaussian function with offset
     """
     import numpy as np

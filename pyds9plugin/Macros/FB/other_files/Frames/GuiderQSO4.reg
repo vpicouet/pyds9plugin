@@ -2,4 +2,4 @@
 global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
 fk5
 box(351.8533,-1.8553,2160",1080",0) # width=4 text={UV QSO4}
-box(351.8533,-2.0053,1150",1275",0) # width=4 text={Guider} dash=1
+box(351.8533,-2.0053,948.8",1129",0) # width=4 text={Guider} dash=1
