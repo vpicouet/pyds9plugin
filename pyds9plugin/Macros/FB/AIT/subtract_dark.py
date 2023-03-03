@@ -5,6 +5,8 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import re
+from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
 
 flux, dark, name = sys.argv[-3:]
 # flux, dark = sys.argv[-2:]
@@ -12,20 +14,20 @@ flux, dark, name = sys.argv[-3:]
 # print(sys.argv)
 # print(globglob(sys.argv[-2]))
 # print(globglob(sys.argv[-1]))
-def subtract_dark(flux, dark, name):
-    if len(globglob(flux)) > 1:
+def subtract_dark(flux_, dark_, name):
+    if len(globglob(flux_)) > 1:
         flux, flux_name = stack_images_path(
-            paths=globglob(flux), Type="nanmean", clipping=3, dtype=float, std=False,
+            paths=globglob(flux_), Type="nanmean", clipping=3, dtype=float, std=False,
         )
     else:
-        flux, flux_name = fits.open(flux), flux
+        flux, flux_name = fits.open(flux_), flux_
 
-    if len(globglob(dark)) > 1:
+    if len(globglob(dark_)) > 1:
         dark, dark_name = stack_images_path(
-            paths=globglob(dark), Type="nanmean", clipping=3, dtype=float, std=False,
+            paths=globglob(dark_), Type="nanmean", clipping=3, dtype=float, std=False,
         )
     else:
-        dark, dark_name = fits.open(dark), dark
+        dark, dark_name = fits.open(dark_), dark_
     # print(sys.argv[-2])
     # flux[0].header["FLUXPATH"] = flux
     # flux[0].header["DARKPATH"] = dark
@@ -33,11 +35,17 @@ def subtract_dark(flux, dark, name):
     try:
         flux_numbers = np.array(flux[0].header["STK_NB"].split(" - "), dtype=int)
     except KeyError:
-        flux_numbers=np.zeros(1)
+        if len(globglob(flux_))==1:
+            flux_numbers=np.array(re.findall(r'\d+',os.path.basename(flux_)),dtype=int)
+        else:
+            flux_numbers=np.zeros(1)
     try:
         dark_numbers = np.array(dark[0].header["STK_NB"].split(" - "), dtype=int)
     except KeyError:
-        dark_numbers=np.zeros(1)
+        if len(globglob(dark_))==1:
+            dark_numbers=np.array(re.findall(r'\d+',os.path.basename(dark_)),dtype=int)
+        else:
+            dark_numbers=np.zeros(1)
 
     filename = os.path.dirname(flux_name) + "/%s_flux_%i-%i_dark_%i-%i.fits" % (
         name,
@@ -48,7 +56,8 @@ def subtract_dark(flux, dark, name):
     )
     # print(dark_name, filename)
     # sys.exit()
-    a = flux[0].data - dark[0].data
+    a = np.array(flux[0].data - dark[0].data,dtype=np.int16)
+    
     fits.HDUList([fits.PrimaryHDU(a, header=flux[0].header)]).writeto(filename, overwrite=True)
 
 
@@ -73,10 +82,18 @@ def subtract_dark(flux, dark, name):
     # plt.show()
     return filename
 
-filename = subtract_dark(flux, dark, name)
-d = DS9n()
 
+
+
+# DS9Utils maxi_mask -x none -t 0 -b 8 -m 0 -n 0  -f 0-0-$F3-$F4-$F5-$F6-$F7-$F8-$F9-$F_10-$F_11-$F_12-$F_13-$F_14 -P $P1-$P2-$P3-$P4-$P5-$P6-$P7-$P8-$P9-$P_10-$P_11-$P_12-$P_13-$P_14  -T $T1-$T2-$T3-$T4-$T5-$T6-$T7-$T8-$T9-$T_10-$T_11-$T_12-$T_13-$T_14    | $text
+
+
+
+d = DS9n()
+filename = subtract_dark(flux, dark, name)
 d.set("frame new ; file " + filename)
+# corr_name = reduce_dark(filename)
+# d.set("frame new ; file " + corr_name)
 
 
 

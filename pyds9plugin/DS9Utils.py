@@ -2241,12 +2241,16 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
 
     for i, region in enumerate(regions):
         try:
+            # print("test")
+            print(region)
             name, info = region.split("(")
-        except ValueError:
+        except ValueError as e:
             if message:
                 d = win
                 raise_create_region(d)
                 sys.exit()
+            else:
+                print(e,region,1)
         coords = [float(c) for c in info.split(")")[0].split(",")]
         if "text={" in info:
             id = info.split("text={")[-1][:-1]
@@ -2331,60 +2335,72 @@ def getregion(
     message=True,
     system="Image",
     dtype=int,
+    file=None
 ):
     """ Read a region from a ds9 instance.
     Returns a tuple with the data in the region.
     """
     win.set("regions format ds9 ; regions system %s" % (system))
-    if all is False:
-        regions = win.get("regions selected")
-        if len([row for row in regions.split("\n")]) >= 3:
-            rows = regions
-        elif selected is False:
-            verboseprint("no region selected")
+    if file is not None:
+        # print(1)
+        if os.path.isfile(file):
+            # print(2)
+            with open(file, 'r') as file:
+                rows = file.read()
+            rows = rows.split("\n")
+            # print(rows[3:])
+            print(rows[3:-1])
+            return process_region(rows[3:], win, quick=quick, message=message)
+    else:
+        if all is False:
+            regions = win.get("regions selected")
+            if len([row for row in regions.split("\n")]) >= 3:
+                rows = regions
+            elif selected is False:
+                verboseprint("no region selected")
+                try:
+                    rows = win.get("regions all")
+                except TypeError:
+                    if message:  # maybe to delete
+                        raise_create_region(win)
+                        sys.exit()
+                    return None
+            else:
+                return None
+    
+        else:
+            verboseprint("Taking all regions")
+            rows = win.get("regions all")
             try:
                 rows = win.get("regions all")
             except TypeError:
-                if message:  # maybe to delete
-                    raise_create_region(win)
-                    sys.exit()
-                return None
+                raise_create_region(win)
+                sys.exit()
+    
+        rows = [row for row in rows.split("\n")]
+        if len(rows) < 3:
+            verboseprint("No regions found")
+        if all or selected:
+            if (
+                ("circle" in rows[2])
+                | ("box" in rows[2])
+                | ("projection" in rows[2])
+                | ("ellipse" in rows[2])
+            ):
+                region = process_region(
+                    rows[2:], win, quick=quick, message=message, dtype=dtype
+                )
+            else:
+                region = process_region(
+                    rows[3:], win, quick=quick, message=message, dtype=dtype
+                )
+            if type(region) == list:
+                return region
+            else:
+                return [region]
+    
         else:
-            return None
-
-    else:
-        verboseprint("Taking all regions")
-        rows = win.get("regions all")
-        try:
-            rows = win.get("regions all")
-        except TypeError:
-            raise_create_region(win)
-            sys.exit()
-
-    rows = [row for row in rows.split("\n")]
-    if len(rows) < 3:
-        verboseprint("No regions found")
-    if all or selected:
-        if (
-            ("circle" in rows[2])
-            | ("box" in rows[2])
-            | ("projection" in rows[2])
-            | ("ellipse" in rows[2])
-        ):
-            region = process_region(
-                rows[2:], win, quick=quick, message=message, dtype=dtype
-            )
-        else:
-            region = process_region(
-                rows[3:], win, quick=quick, message=message, dtype=dtype
-            )
-        if type(region) == list:
-            return region
-        else:
-            return [region]
-
-    else:
-        return process_region([rows[-1]], win, quick=quick, message=message)
+            return process_region([rows[-1]], win, quick=quick, message=message)
 
 
 def enc(x, ENCa):
@@ -12481,6 +12497,9 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                         d.set_np2arr(image.mean(axis=2))
                     else:
                         d.set("fits new {}".format(filename))
+                        if os.path.isfile(filename.replace(".fits",".reg")):
+                            d.set("regions " + filename.replace(".fits",".reg"))
+                            
                 except ValueError as e:
                     print(e)
                     message(
@@ -13992,6 +14011,7 @@ BG  %0.7f""" % (
             """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
             % (
                 "/Users/Vincent/opt/anaconda3/envs/py38/bin/python",
+                # "/Users/Vincent/miniconda3/bin/python",
                 resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),
                 bool(int(single)),
                 size,
@@ -14000,13 +14020,17 @@ BG  %0.7f""" % (
             )
         )
     else:
-        outfile = open("/tmp/files_maxi_mask.list", "w")
-        print >> outfile, "\n".join(str(i) for i in path)
-        outfile.close()
+        # outfile = open("/tmp/files_maxi_mask.txt", "w")
+        with open('/tmp/files_maxi_mask.list', 'w') as f:
+            for i in path:
+                f.write(f"{i}\n")
+        # print >> outfile, "\n".join(str(i) for i in path)
+        # outfile.close()
         command = (
             """%s %s  -v --single_mask %s --batch_size %i --proba_thresh %s --prior_modif  True  %s"""
             % (
-                "/Users/Vincent/opt/anaconda3/bin/python",
+                "/Users/Vincent/opt/anaconda3/envs/py38/bin/python",
+                # "/Users/Vincent/miniconda3/bin/python",
                 resource_filename("pyds9plugin", "MaxiMask-1.1/maximask.py"),
                 bool(int(single)),
                 size,
@@ -14021,6 +14045,7 @@ BG  %0.7f""" % (
     try:
         a = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
+        print(e)
         raise RuntimeError(
             "command '{}' return with error (code {}): {}".format(
                 e.cmd, e.returncode, e.output

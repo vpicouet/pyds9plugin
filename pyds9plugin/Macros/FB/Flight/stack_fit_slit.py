@@ -13,10 +13,8 @@ def change_val_list(popt, val, new_val):
     popt1 = list(map(lambda item: new_val if item == val else item, popt))
     return popt1
 
+#possibility 1
 
-d = DS9n()
-regs = getregion(d, selected=True)
-image = d.get_pyfits()[0].data
 # xx,yy,fwhm=[],[],[]
 # names=[]
 # ptps=[]
@@ -361,23 +359,48 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
     return cat, filename
 
 
-cat, filename = Measure_PSF_slits(image, regs, filename=filename)
 
 
-# tmp_region = "/tmp/test.reg"
-d.set("regions delete all")
-create_ds9_regions(
-    [cat["X_IMAGE"]],
-    [cat["Y_IMAGE"]],
-    # radius=[table_to_array(cat["h", "w"]).T],
-    radius=[np.array(cat["lx_unsmear"]), np.array(cat["ly"])],
-    save=True,
-    savename= filename.replace(".fits","_c.reg"),
-    form=["box"],
-    color=cat["color"],
-    ID=[cat["name"]],#None,  # cat["name"],
-)
-d.set("regions %s" % (filename.replace(".fits","_c.reg")))
+
+
+
+d = DS9n()
+# d.set("frame first")
+
+# for i in range(number_ds9_frames()):
+if 1==0:
+    d.set("regions select all")
+    regs = getregion(d, selected=True)
+    image = d.get_pyfits()[0].data
+    filename = get_filename(d)
+    cat, filename = Measure_PSF_slits(image, regs, filename=filename)
+    # d.set("frame next")
+
+else:
+    image = fits.open(filename)[0].data
+    # regs = getregion(d,file=filename.replace".fits",".reg"),message=False)
+    regs = getregion(d,file=filename.replace(".fits",".reg"),message=False)
+    cat, filename = Measure_PSF_slits(image, regs, filename=filename)
+
+
+
+
+
+
+
+    # d.set("regions delete all")
+    # create_ds9_regions(
+    #     [cat["X_IMAGE"]],
+    #     [cat["Y_IMAGE"]],
+    #     # radius=[table_to_array(cat["h", "w"]).T],
+    #     radius=[np.array(cat["lx_unsmear"]), np.array(cat["ly"])],
+    #     save=True,
+    #     savename= filename.replace(".fits","_c.reg"),
+    #     form=["box"],
+    #     color=cat["color"],
+    #     ID=[cat["name"]],#None,  # cat["name"],
+    # )
+    # d.set("regions %s" % (filename.replace(".fits","_c.reg")))
 
 
 # def plot_res(cat, filename):
