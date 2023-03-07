@@ -11,12 +11,10 @@ from matplotlib.widgets import Slider, RangeSlider
 from astropy.io import fits
 from scipy.optimize import curve_fit
 from pyds9plugin.DS9Utils import *
-
-if check_appearance():
-    plt.style.use('dark_background')
-    color="white"
-else:
-    color="k"
+color="k"
+# if check_appearance():
+#     plt.style.use('dark_background')
+#     color="white"
 
 
 def emccd_model(
@@ -267,13 +265,13 @@ def emccd_model(
     elif (median_im - bias) > 2e2:
         flux_max = 3  # ADDED
     else:# (median_im - bias) > 1e2:
-        flux_max = 1  # ADDED
+        flux_max = 100  # ADDED
     # else:
     #     flux_max = 0.8  # ADDED
     lims = [
         (bins.min(), bins.min() + bins.ptp() / 2),
         (0, 300),
-        (100, 10000),  # 3200
+        (10, 10000),  # 3200
         (0, flux_max),
         (0, 3),
         (0, 0.2),
@@ -608,8 +606,9 @@ def emccd_model(
         plt.savefig(path.replace(".csv", ".png"))
     plt.show()
 
-    n = int(os.path.basename(name).split("image")[-1].split(".fits")[0])
     import pandas as pd
+    import os
+    n = int(os.path.basename(name).split("image")[-1].split(".fits")[0])
     try:
         df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain])])
     except Exception as e:
