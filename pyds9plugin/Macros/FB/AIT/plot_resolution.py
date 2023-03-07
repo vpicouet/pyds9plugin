@@ -108,8 +108,8 @@ else:
     # ax2.plot([4.5, 5.5], 13 * np.array([3.5, 7]), linewidth=l, color="k")
     ax2.plot([4.5, 5.5], [1150,1600], linewidth=l, color="k")
     
-ax1.quiver(1, 2, 0, 3)
-ax1.text(1, 3.5, "?", fontsize=15)
+# ax1.quiver(1, 2, 0, 3)
+# ax1.text(1, 3.5, "?", fontsize=15)
 # plt.hlines(FC_2022_2mm_center, 1.5, 2.5, linewidth=1, color="k", alpha=1)
 
 # plt.hlines(FC_2022_4mm_avg, 1.5, 2.5, linewidth=l, color="k", alpha=1)
@@ -154,21 +154,27 @@ ax1.set_title(r"FIREBall-2 resolution", fontsize=ft + 2)
 ax1.set_xticks(
     np.arange(6),
     (
-        "guider",
+        "Guidance\nperf",
         "Large\noptics",
         "Focal\nCorrector",
         "Spectro:\nspatial",
-        "Detector",
+        "Detector\nsampling",
         "Spectro:\nspectral",
     ),
     fontsize=ft,
 )
 ax2.set_ylabel("Y2-axis", fontsize=ft)
-ax2.set_ylabel(r"$\lambda/d\lambda$ Resolution [compact vs diffuse]", fontsize=ft)
+ax2.set_ylabel(r"$\lambda/d\lambda$ Resolution [diffuse vs compact]", fontsize=ft)
+ax2.text(5.4,2000,"Specs",color="g")
+ax2.text(5,1000,"       Min.\nrequirements",color="r")
+
+ax1.text(-1,5,"Specs",color="g")
+ax1.text(-1,7.7,"       Min.\nrequirements",color="r")
+
 ax1.set_xlim((-1, 5.8))
-ax1.set_ylim((-0.5, 8))
+ax1.set_ylim((-0.5, 9))
 ax2.set_ylim((2700, 0))
-ax1.legend(loc="lower left", framealpha=1, fontsize=8)  # loc=(0.6, 0.12)
+ax1.legend(loc="lower left", framealpha=1, fontsize=10)  # loc=(0.6, 0.12)
 # plt.savefig('/Users/Vincent/Nextcloud/Work/MyPapers/2019/ESA_FB_performance_Short/latex/resolution5.png')
 ax1.grid()
 plt.show()
