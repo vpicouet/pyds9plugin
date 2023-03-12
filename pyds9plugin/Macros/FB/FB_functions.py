@@ -4,6 +4,7 @@ import inspect
 from astropy.table import Table
 from matplotlib.widgets import Button
 import numpy as np
+from matplotlib.widgets import CheckButtons
 
 # from dataphile.graphics.widgets import Slider
 from matplotlib.widgets import Slider, RangeSlider
@@ -265,7 +266,7 @@ def emccd_model(
     elif (median_im - bias) > 2e2:
         flux_max = 3  # ADDED
     else:# (median_im - bias) > 1e2:
-        flux_max = 100  # ADDED
+        flux_max = 1  # ADDED
     # else:
     #     flux_max = 0.8  # ADDED
     lims = [
@@ -291,7 +292,7 @@ def emccd_model(
     # print(names)
     names = [
         "Bias (ADU)",
-        "Read Noise (e-)",
+        "Read Noise (ADU)",
         "EM gain (e-/e-)",
         "sCIC - Flux (e-/exp)",
         "Smearing (pix)",
@@ -304,7 +305,7 @@ def emccd_model(
     plt.plot([lim_rn2, lim_rn2], [0, 5], ":", c="grey", alpha=0.7)
     plt.plot([lim_gain_1, lim_gain_1], [0, 3], ":", c="grey", alpha=0.7)
     plt.plot([upper_limit, upper_limit], [0, 3], ":", c="grey", alpha=0.7)
-    n_conv = 11
+    n_conv = 21
     y_conv = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
     y_os_conv = np.convolve(os_v, np.ones(n_conv) / n_conv, mode="same")
     y = function(x, *centers)
@@ -422,6 +423,52 @@ def emccd_model(
     for slider in sliders:
         slider.on_changed(update)
 
+
+    rax = plt.axes([0, 0.08 - 0.035 * 0, 0.1, 0.2])
+    # rax = plt.axes([0.5, 0.05-0.035*0, 0.1, 0.15])
+    for edge in "left", "right", "top", "bottom":
+        rax.spines[edge].set_visible(False)
+    check = CheckButtons(rax, ["Bias","RN","Gain","Flux","Smearing","mCIC" ],actives=[True]*6) # ,"sCIC"
+    def func(label):
+        fig.canvas.draw_idle()
+    check.on_clicked(func)
+
+
+
+    def curve_fit_with_bounds(function, x, y, p0,checks=check,epsfcn=None,check=check):
+        bounds1 = []
+        bounds2 = []
+        # if hasattr(self, "check"):
+        for i, p in enumerate(checks.get_status()):
+            if p:
+                bounds1.append(p0[i] - 1e-5)
+                bounds2.append(p0[i] + 1e-5)
+            else:
+                bounds1.append(-np.inf)
+                bounds2.append(np.inf)
+        print("bounds = ",bounds1,bounds2)
+        try:
+            popt, pcov = curve_fit(
+                function, x, y, p0, bounds=[bounds1, bounds2]
+            )
+        except ValueError:
+            for i in range(len(p0)-len(bounds1)):
+                bounds1.append(-np.inf)
+                bounds2.append(np.inf)
+            print("bounds = ",bounds1,bounds2)
+            popt, pcov = curve_fit(
+                function, x, y, p0, bounds=[bounds1, bounds2],
+            epsfcn=epsfcn)
+
+        # else:
+        #     popt, pcov = curve_fit(function, x, y, p0)
+        return popt, pcov
+        # model = CompositeModel(
+    #         *Models, label="General fit", optimizer=curve_fit_with_bounds
+    #     )
+
+
+
     def fit(event):
         vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
         vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
@@ -464,68 +511,130 @@ def emccd_model(
             dict_values[slid.label.get_text()] = slid.val
         return
 
-    def fit0(event):
-        vals1 = centers
-        vals2 = np.array(centers) + 0.1
-        for slid, val1i, val2i in zip(sliders, vals1, vals2):
-            try:
-                slid.set_val(val1i)
-            except np.AxisError:
-                slid.set_val([val1i, val2i])
-            dict_values[slid.label.get_text()] = slid.val
+    # def fit0(event):
+    #     vals1 = centers
+    #     vals2 = np.array(centers) + 0.1
+    #     for slid, val1i, val2i in zip(sliders, vals1, vals2):
+    #         try:
+    #             slid.set_val(val1i)
+    #         except np.AxisError:
+    #             slid.set_val([val1i, val2i])
+    #         dict_values[slid.label.get_text()] = slid.val
 
-        return
+    #     return
 
-    def fit0(event):
-        vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
-        vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
-        vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
-        if vals1[-2] > 0.5:
-            vals1[-2] = 0
-        else:
-            vals1[-2] = 0.8
-        for slid, val1i, val2i in zip(sliders, vals1, vals2):
-            try:
-                slid.set_val(val1i)
-            except np.AxisError:
-                slid.set_val([val1i, val2i])
-            dict_values[slid.label.get_text()] = slid.val
+    # def fit0(event):
+    #     vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
+    #     vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
+    #     vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
+    #     if vals1[-2] > 0.5:
+    #         vals1[-2] = 0
+    #     else:
+    #         vals1[-2] = 0.8
+    #     for slid, val1i, val2i in zip(sliders, vals1, vals2):
+    #         try:
+    #             slid.set_val(val1i)
+    #         except np.AxisError:
+    #             slid.set_val([val1i, val2i])
+    #         dict_values[slid.label.get_text()] = slid.val
 
-        return
+    #     return
+
+    # def simplified_least_square_fit(event):
+    #     vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
+    #     vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
+    #     vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
+    #     function = lambda x, RN, EmGain, flux: np.convolve(
+    #         EMCCDhist(
+    #             x,
+    #             bias=vals1[0],
+    #             RN=RN,
+    #             EmGain=EmGain,
+    #             flux=flux,
+    #             smearing=vals1[4],
+    #             sCIC=vals1[5],
+    #         ),
+    #         np.ones(n_conv) / n_conv,
+    #         mode="same",
+    #     )
+    #     # f1 = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
+
+    #     p0 = [vals2[1], vals2[2], vals2[3]]  # , vals[4]
+    #     # bounds = [[], []]
+    #     # bounds = np.array([(0, 300), (100, 2200), (0.001, 6), (0, 3)]).T
+    #     popt, pcov = curve_fit(
+    #         function,
+    #         xdata[xdata < upper_limit],
+    #         y_conv[xdata < upper_limit],
+    #         p0=p0,
+    #         epsfcn=1,
+    #     )
+    #     print(p0)
+    #     print(popt)
+    #     vals2[1], vals2[2], vals2[3] = popt  # , vals[4]
+    #     vals2[1], vals2[2] = popt[:-1]  # , vals[4]
+    #     print(popt)
+
+    #     l2.set_ydata(
+    #         np.convolve(
+    #             EMCCDhist(x, *vals2[:args_number]),
+    #             np.ones(n_conv) / n_conv,
+    #             mode="same",
+    #         )
+    #     )
+    #     l1.set_ydata(
+    #         np.convolve(
+    #             EMCCDhist(x, *vals1[:args_number]),
+    #             np.ones(n_conv) / n_conv,
+    #             mode="same",
+    #         )
+    #     )
+
+    #     # l2.set_ydata(function(x, *vals2[:args_number]))
+    #     # l1.set_ydata(function(x, *vals1[:args_number]))
+    #     plt.draw()
+    #     for slid, val1i, val2i in zip(sliders, vals1, vals2):
+    #         try:
+    #             slid.set_val(val2i)
+    #         except np.AxisError:
+    #             slid.set_val([val1i, val2i])
+    #         dict_values[slid.label.get_text()] = slid.val
+    #     return
 
     def simplified_least_square_fit(event):
         vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
-        vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
-        vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
-        function = lambda x, RN, EmGain, flux: np.convolve(
+        vals1 = [v if type(v) != tuple else v[0] for v in vals_tot]
+        vals2 = [v if type(v) != tuple else v[1] for v in vals_tot]
+        function = lambda x, bias,RN, EmGain, flux, smearing, sCIC: np.convolve(
             EMCCDhist(
                 x,
-                bias=vals1[0],
+                bias=bias,
                 RN=RN,
                 EmGain=EmGain,
                 flux=flux,
-                smearing=vals1[4],
-                sCIC=vals1[5],
+                smearing=smearing,
+                sCIC=sCIC,
             ),
             np.ones(n_conv) / n_conv,
             mode="same",
         )
-        # f1 = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
 
-        p0 = [vals2[1], vals2[2], vals2[3]]  # , vals[4]
-        # bounds = [[], []]
-        # bounds = np.array([(0, 300), (100, 2200), (0.001, 6), (0, 3)]).T
-        popt, pcov = curve_fit(
+        p0 = vals2#[vals2[1], vals2[2], vals2[3]]  # , vals[4]
+        print("p0=",p0)
+        xmin,xmax = ax.get_xlim()
+        popt, pcov = curve_fit_with_bounds(
             function,
-            xdata[xdata < upper_limit],
-            y_conv[xdata < upper_limit],
+            # xdata[xdata < upper_limit],
+            # y_conv[xdata < upper_limit],
+            xdata[(xdata > xmin) & (xdata < xmax) & (xdata < upper_limit)],
+            y_conv[(xdata > xmin) & (xdata < xmax) & (xdata < upper_limit)],
             p0=p0,
-            epsfcn=1,
+            # epsfcn=1#,optimizer=curve_fit_with_bounds
         )
-        print(p0)
-        print(popt)
-        vals2[1], vals2[2], vals2[3] = popt  # , vals[4]
-        vals2[1], vals2[2] = popt[:-1]  # , vals[4]
+        print("p0 - popt=",np.array(p0) - np.array(popt))
+        # vals2[1], vals2[2], vals2[3] = popt  # , vals[4]
+        vals2 = popt  # , vals[4]
+        # vals2[1], vals2[2] = popt[:-1]  # , vals[4]
         print(popt)
 
         l2.set_ydata(
@@ -553,50 +662,49 @@ def emccd_model(
                 slid.set_val([val1i, val2i])
             dict_values[slid.label.get_text()] = slid.val
         return
+    # def fit_os(event):
+    #     vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
+    #     vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
+    #     vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
 
-    def fit_os(event):
-        vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
-        vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
-        vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
+    #     vals1[3] = 0
+    #     function = lambda x, bias, RN, cic: EMCCDhist(
+    #         x,
+    #         bias=bias,
+    #         RN=RN,
+    #         EmGain=vals1[2],
+    #         flux=vals1[3],
+    #         smearing=vals1[4],
+    #         sCIC=cic,
+    #     )
+    #     p0 = [vals1[0], vals1[1], vals1[-1]]
 
-        vals1[3] = 0
-        function = lambda x, bias, RN, cic: EMCCDhist(
-            x,
-            bias=bias,
-            RN=RN,
-            EmGain=vals1[2],
-            flux=vals1[3],
-            smearing=vals1[4],
-            sCIC=cic,
-        )
-        p0 = [vals1[0], vals1[1], vals1[-1]]
+    #     popt, pcov = curve_fit(
+    #         function,
+    #         bins_os[(bins_os < upper_limit_os)],
+    #         os_v[(bins_os < upper_limit_os)],
+    #         p0=p0,
+    #         epsfcn=1,
+    #     )
+    #     print("vals1 = ", vals1)
+    #     vals1[0], vals1[1], vals1[-1] = popt
+    #     vals2[0], vals2[1], vals2[-1] = popt
+    #     l1.set_ydata(EMCCDhist(x, *vals1[:args_number]))
+    #     l2.set_ydata(EMCCDhist(x, *vals2[:args_number]))
+    #     print("p0 = ", p0)
+    #     print("vals1 = ", vals1)
+    #     plt.draw()
+    #     for i, (slid, vali) in enumerate(zip(sliders, vals1)):
+    #         try:
+    #             slid.set_val(vals1[i])
+    #         except np.AxisError:
+    #             slid.set_val([vals1[i], vals2[i]])
+    #         dict_values[slid.label.get_text()] = slid.val
+    #     return
 
-        popt, pcov = curve_fit(
-            function,
-            bins_os[(bins_os < upper_limit_os)],
-            os_v[(bins_os < upper_limit_os)],
-            p0=p0,
-            epsfcn=1,
-        )
-        print("vals1 = ", vals1)
-        vals1[0], vals1[1], vals1[-1] = popt
-        vals2[0], vals2[1], vals2[-1] = popt
-        l1.set_ydata(EMCCDhist(x, *vals1[:args_number]))
-        l2.set_ydata(EMCCDhist(x, *vals2[:args_number]))
-        print("p0 = ", p0)
-        print("vals1 = ", vals1)
-        plt.draw()
-        for i, (slid, vali) in enumerate(zip(sliders, vals1)):
-            try:
-                slid.set_val(vals1[i])
-            except np.AxisError:
-                slid.set_val([vals1[i], vals2[i]])
-            dict_values[slid.label.get_text()] = slid.val
-        return
-
-    button0.on_clicked(fit0)
-    button.on_clicked(fit)
-    fit_os_button.on_clicked(fit_os)
+    # button0.on_clicked(fit0)
+    # button.on_clicked(fit)
+    # fit_os_button.on_clicked(fit_os)
     simplified_least_square.on_clicked(simplified_least_square_fit)
 
     plt.draw()
@@ -608,9 +716,16 @@ def emccd_model(
 
     import pandas as pd
     import os
-    n = int(os.path.basename(name).split("image")[-1].split(".fits")[0])
+    n = int(os.path.basename(name).split("image")[-1].split(".")[0])
     try:
-        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain])])
+        ncr = int(header["N_CR"])
+        mask = float(header["MASK"])
+    except KeyError:
+        ncr = np.nan
+        mask = np.nan
+
+    try:                              
+        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,ncr,mask])])
     except Exception as e:
         print(e)
         df = pd.DataFrame([np.array([sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val])])

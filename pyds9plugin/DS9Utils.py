@@ -8434,6 +8434,7 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             linestyle="dotted",
             function=None,
             sigma=None,
+            fitter="curve_fit"
         ):
             """Create synthetic dataset, plots, and AutoGUI."""
             from matplotlib.widgets import CheckButtons
@@ -8704,11 +8705,11 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 for edge in "left", "right", "top", "bottom":
                     rax.spines[edge].set_visible(False)
                 self.check = CheckButtons(rax, names)  # , visibility)
-                # self.check = CheckButtons(rax, [""]*len(names))  # , visibility)
                 def func(label):
                     self.figure.canvas.draw_idle()
-
                 self.check.on_clicked(func)
+
+
                 # xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i) * 100)
             else:
                 xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i) * 100)
@@ -9146,14 +9147,14 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
         help="Other features to fit",
         metavar="",
         type=str,
-        # choices=[
-        #     "None",
-        #     "Import-from-Macros",
-        #     "User-defined-interactively",
-        #     "Schechter",
-        #     "Double-Schechter",
-        #     "User-defined",
-        # ],
+    )
+    parser.add_argument(
+        "-f",
+        "--fitter",
+        default="curve_fit",
+        help="Fitter to use to fit",
+        metavar="",
+        type=str,
     )
     args = parser.parse_args_modif(argv)
 
@@ -9263,7 +9264,7 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             marker=".",
             linestyle="dotted",
             linewidth=1,
-            function=function,
+            function=function,fitter=args.fitter
         )
     # if args.other_f%matplotlibeatures != "User-defined-interactively":
         # TODO deleted because not usefull

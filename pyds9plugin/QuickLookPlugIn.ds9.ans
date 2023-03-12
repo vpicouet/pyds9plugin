@@ -32,7 +32,7 @@ DS9Utils plot_3d -x $xpa_method  | $text
 Interactive Fitting
 *
 button
-DS9Utils fit_ds9_plot -x $xpa_method   $param(Background-Fit-1D); -b $background -g $gaussians -m $moffats -v $voight -o $other  | $text
+DS9Utils fit_ds9_plot -x $xpa_method   $param(Background-Fit-1D); -b $background -g $gaussians -m $moffats -v $voight -o $other -f $curve_fit | $text
 
 
 Python
@@ -1387,6 +1387,8 @@ voight menu {Number of Voight} 0|1|2|3 {Number of features to be fitted by a voi
 #sinusoid menu {Number of Sinusoids} 0|1|2 {Add sinusoids to the fitting signal}
 # other menu {Other features} None|User-defined-interactively|Import-from-Macros {If import, function needs to be written in pyds9plugin/Macros/Fitting_Functions/functions.py}
 other combobox {Other features} None|slit|smeared_slit|slit_astigmatism|smeared_slit_astigm|fiber_radial_profile|moffat_profile|gaussian_flux|EMCCDhist|EMCCD|defocused_gaussian {Any function implemented $dir/Macros/Fitting_Functions/functions.py}
+curve_fit combobox {Other features} curve_fit|curve_fit_w_bounds {Any function implemented $dir/Macros/Fitting_Functions/functions.py}
+
 #kernel entry {kernel} 1 {int, Convolution kenel}
 #Value menu {Value} Linear|Log {Fit in linear or log value}
 endparam
