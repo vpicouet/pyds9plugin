@@ -296,11 +296,11 @@ test = False
 def EMCCD(
     x,
     bias=[x.min(), x.max(), x[np.argmax(y)]],
-    RN=[5, 50, 12],
+    RN=[5, 350, 12],
     EmGain=[10, 2000, 1900],
-    flux=[0, 0.5, 0.01],
-    smearing=[0, 2, 0.01],
-    sCIC=[0, 1, 0],
+    flux=[0, 1, 0.01],
+    smearing=[0, 3, 0.01],
+    sCIC=[0, 2, 0],
 ):
     """EMCCD model based on convolution of distributions: Gamma(poison)xNormal
     First attempt to add smearing

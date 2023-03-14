@@ -20,7 +20,7 @@ def change_val_list(popt, val, new_val):
 # ptps=[]
 
 
-def Measure_PSF_slits(image, regs, plot_=True, filename=None):
+def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=7,ds=1):
     cat = Table(
         names=[
             "name",
@@ -76,19 +76,25 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
             else:
                 ax2 = None
                 ax3 = None
+            if slit_width is None:
+                slit_min, slit_max, slit_med = 0,len(y_spectral), 3.3
+            else:
+                slit_min, slit_max, slit_med = slit_width-ds,slit_width+ds,slit_width
+
             P0 = [
                 y_spectral.ptp(),
-                3.3,
+                slit_med,
                 len(y_spectral) / 2,
                 1.7,
                 np.median(y_spectral),
                 -1.2,
             ]
             bounds = [
-                [0.7 * y_spectral.ptp(), 0, 0, 0, np.nanmin(y_spectral), -6],
+                [0.7 * y_spectral.ptp(), slit_min, 0, 0, np.nanmin(y_spectral), -6],
                 [
                     y_spectral.ptp(),
-                    len(y_spectral),
+                    # len(y_spectral),
+                    slit_max,
                     len(y_spectral),
                     10,
                     np.nanmax(y_spectral),
@@ -96,9 +102,7 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
                 ],
             ]
             try:
-                popt_spectral_deconvolved, pcov = curve_fit(
-                    smeared_slit, x_spectral, y_spectral, p0=P0, bounds=bounds
-                )  # ,bounds=bounds
+                popt_spectral_deconvolved, pcov = curve_fit(smeared_slit, x_spectral, y_spectral, p0=P0, bounds=bounds)
             except (ValueError, RuntimeError) as e:
                 popt_spectral_deconvolved = [0.1] * 6
             # print(popt_spectral_deconvolved)
@@ -134,8 +138,8 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
                     bounds=bounds,
                 )["popt"]
                 bounds = [
-                    [0.7 * y_spectral.ptp(), 3, 0, 0, np.nanmin(y_spectral)],
-                    [y_spectral.ptp(), 10, len(y_spectral), 15, np.nanmax(y_spectral)],
+                    [0.7 * y_spectral.ptp(), slit_min, 0, 0, np.nanmin(y_spectral)],
+                    [y_spectral.ptp(), slit_max, len(y_spectral), 15, np.nanmax(y_spectral)],
                 ]
                 popt_spectral = PlotFit1D(
                     x_spectral,
@@ -145,7 +149,7 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
                     ax=ax3,
                     P0=[
                         y_spectral.ptp(),
-                        4,
+                        slit_med,
                         x_spectral.mean() + 1,
                         2,
                         y_spectral.min(),
@@ -157,8 +161,8 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None):
                 )["popt"]
                 popt_spatial = abs(np.array(popt_spatial))
                 popt_spectral = abs(np.array(popt_spectral))
-            except ValueError:
-                print("error: ", region.id)
+            except ValueError as e:
+                print("error: ", region.id, e)
                 popt_spatial, popt_spectral = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
             if region.color == "red":
                 line = 214

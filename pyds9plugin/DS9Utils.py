@@ -8488,6 +8488,7 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             self.background = background
             self.exp = exp
             self.double_exp = double_exp
+            self.fitter = fitter
             xdata_i = self.xdata
             ydata_i = self.ydata
 
@@ -8690,6 +8691,7 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                     else p_[p].default[2]
                     for p in names
                 ]
+                self.bounds = [(p_[p].default[0], p_[p].default[1]) for p, v in zip(names, values)]
                 params = [
                     Parameter(
                         value=v, bounds=(p_[p].default[0], p_[p].default[1]), label=p,
@@ -8701,7 +8703,6 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 xsample = np.linspace(xdata_i.min(), xdata_i.max(), len(xdata_i))
 
                 rax = plt.axes([0.1, 0.05 - 0.035 * 0, 0.15, 0.2])
-                # rax = plt.axes([0.5, 0.05-0.035*0, 0.1, 0.15])
                 for edge in "left", "right", "top", "bottom":
                     rax.spines[edge].set_visible(False)
                 self.check = CheckButtons(rax, names)  # , visibility)
@@ -8829,16 +8830,24 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                             bounds1.append(p0[i] - 1e-5)
                             bounds2.append(p0[i] + 1e-5)
                         else:
-                            bounds1.append(-np.inf)
-                            bounds2.append(np.inf)
+                            if self.fitter=="curve_fit":
+                                bounds1.append(-np.inf)
+                                bounds2.append(np.inf)
+                            else:
+                                bounds1.append(self.bounds[i][0])
+                                bounds2.append(self.bounds[i][1])
                     try:
                         popt, pcov = curve_fit(
                             function, x, y, p0, bounds=[bounds1, bounds2]
                         )
                     except ValueError:
                         for i in range(len(p0)-len(bounds1)):
-                            bounds1.append(-np.inf)
-                            bounds2.append(np.inf)
+                            if self.fitter=="curve_fit":
+                                bounds1.append(-np.inf)
+                                bounds2.append(np.inf)
+                            else:
+                                bounds1.append(self.bounds[i][0])
+                                bounds2.append(self.bounds[i][1])
 
                         popt, pcov = curve_fit(
                             function, x, y, p0, bounds=[bounds1, bounds2]
@@ -8854,14 +8863,10 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             curves = []
             for modeli in Models:
                 curves.append(a)
-            # print(model)
-            # print(Models)
-            # print(model(xsample))
 
             (model_curve,) = self.ax.plot(
                 xsample, model(xsample), color="steelblue", label="model"
             )
-            # self.ax.legend(loc="upper right")
             self.ax.set_xlim((x_inf, x_sup))
             self.ax.set_ylim((y_inf, y_sup))
             verboseprint("autogui")

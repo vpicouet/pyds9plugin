@@ -1015,6 +1015,7 @@ def SimulateFIREBallemCCDImage(
 
     # size=[3216, 2069]
     # OSregions=[1066, 2124]
+    # EmGain=1500; Bias=0; RN=80; p_pCIC=1; p_sCIC=0; Dark=1/3600; Smearing=1; SmearExpDecrement=50000; exposure=50; flux=1; sky=4; source="Spectra m=17"; Rx=8; Ry=8;  size=[100, 100]; OSregions=[0, 120]; name="Auto"; spectra="Spectra m=17"; cube="-"; n_registers=604; save=False;readout_time=5;stack=100;QE=0.5
     from astropy.modeling.functional_models import Gaussian2D, Gaussian1D
     from scipy.sparse import dia_matrix
     from scipy.interpolate import interp1d
@@ -1042,13 +1043,13 @@ def SimulateFIREBallemCCDImage(
     area = 7854
     dispersion = 46.6/10
     wavelength=2000
+            #%%
     if source == "Flat-field":
         source_im += flux
     elif source == "Dirac":
         source_im += Gaussian2D.evaluate(x, y,  flux, ly / 2, lx / 2, Ry, Rx, 0)
     elif "Spectra" in source:
         if "m=" not in source:
-            #%%
             # for file in glob.glob("/Users/Vincent/Downloads/FOS_spectra/FOS_spectra_for_FB/CIV/*.fits"):
             a = Table.read("/Users/Vincent/Github/notebooks/Spectra/h_%sfos_spc.fits"%(source.split(" ")[-1]))
             slits = Table.read("/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/" + field).to_pandas()
@@ -1105,11 +1106,12 @@ def SimulateFIREBallemCCDImage(
             source_im[:,:] +=  (subim+profile).T*f(wavelengths) * atm_trans * QE
             # source_im_wo_atm[:,:] +=  (subim+profile).T*f(wavelengths) #* atm_trans(wavelengths)
         else:
+            #%%
             mag=float(source.split("m=")[-1])
             factor_lya = 0.05 
             flux = 10**(-(mag-20.08)/2.5)*2.06*1E-16/((6.62E-34*300000000/(wavelength*0.0000000001)/0.0000001))
             elec_pix = flux * throughput * atm * QE * area /dispersion# should not be multiplied by exposure time here
-            with_line = elec_pix*(1-factor_lya) + factor_lya * (3700/1)*elec_pix* Gaussian1D.evaluate(np.arange(size[0]),  1,  size[0]/2, 8)
+            with_line = elec_pix*(1-factor_lya) + factor_lya * (3700/1)*elec_pix* Gaussian1D.evaluate(np.arange(size[0]),  1,  size[0]/2, Ry)/ Gaussian1D.evaluate(np.arange(size[0]),  1,  size[0]/2, Ry).sum()
             # source_im[50:55,:] += elec_pix #Gaussian2D.evaluate(x, y, flux, ly / 2, lx / 2, 100 * Ry, Rx, 0)
             profile =  np.outer(with_line,Gaussian1D.evaluate(np.arange(size[1]),  1,  50, Rx) /Gaussian1D.evaluate(np.arange(size[1]),  1,  50, Rx).sum())
             source_im = source_im.T
@@ -1125,7 +1127,7 @@ def SimulateFIREBallemCCDImage(
             # source_im[int(xi-nsize/2):int(xi+nsize/2), OSregions[0] : OSregions[1]] +=  (subim+profile).T*f(wavelengths) * atm_trans(wavelengths) * QE(wavelengths)
             # source_im_wo_atm[int(xi-nsize/2):int(xi+nsize/2), OSregions[0] : OSregions[1]] +=  (subim+profile).T*f(wavelengths) #* atm_trans(wavelengths)
 
-
+#%%
             # print(exposure*profile.max(), exposure*profile.sum())
     elif source == "Slit":
         ConvolveSlit2D_PSF_75muWidth = lambda xy, amp, L, xo, yo, sigmax2, sigmay2: ConvolveSlit2D_PSF(xy, amp, 2.5, L, xo, yo, sigmax2, sigmay2)
