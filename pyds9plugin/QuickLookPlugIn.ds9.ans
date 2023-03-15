@@ -76,6 +76,10 @@ verbose
 bind B
 DS9Utils BackgroundMeasurement
 
+verbose
+*
+bind A
+DS9Utils next_image -x $xpa_method
 
 
 hmenu Quick Look Plugin

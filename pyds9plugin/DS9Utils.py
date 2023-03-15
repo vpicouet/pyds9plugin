@@ -12919,6 +12919,8 @@ Fit Gaussian 2D - Radial Profile -  Lock / Unlock Frames - Throughfocus
     return
 
 
+
+
 def image_processing_tutorial(xpapoint=None, i=0, n=1):
     """Launches the image_processing_tutorial on DS9
     """
@@ -14076,6 +14078,26 @@ BG  %0.7f""" % (
     return
 
 
+def next_image(xpapoint=None):
+    """Load the next alphanumerical image in DS9
+    """
+    from pathlib import Path
+    d = DS9n(xpapoint)
+    filename = d.get("file")
+    files = glob.glob(os.path.dirname(filename) + "/*.fits")
+    files.sort(key=lambda x: os.path.getmtime(x))
+    index = files.index(filename)
+    verboseprint(files, filename, index)
+    # d.set("tile no")
+    # try:
+    d.set("frame new")
+    d.set("file {}".format(files[-1]))
+    # except IndexError:
+    #     verboseprint("No more files")
+    #     sys.exit()
+    return
+
+
 def maxi_mask_cc(path=None, xpapoint=None):
     """ Runs MaxiMask processing tool on image
     """
@@ -14327,6 +14349,7 @@ def main():
         # "compute_gain": compute_gain,
         "LoadDS9QuickLookPlugin": LoadDS9QuickLookPlugin,
         "stack_images": stack_images,#stack
+        "next_image":next_image,
     }
     dict_function_ait = {
         "center_region": center_region,

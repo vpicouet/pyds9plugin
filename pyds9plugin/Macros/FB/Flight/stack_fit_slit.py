@@ -20,7 +20,7 @@ def change_val_list(popt, val, new_val):
 # ptps=[]
 
 
-def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=7,ds=1):
+def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=1):
     cat = Table(
         names=[
             "name",
@@ -77,7 +77,7 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=7,ds=1):
                 ax2 = None
                 ax3 = None
             if slit_width is None:
-                slit_min, slit_max, slit_med = 0,len(y_spectral), 3.3
+                slit_min, slit_max, slit_med = 5,12, 5.5
             else:
                 slit_min, slit_max, slit_med = slit_width-ds,slit_width+ds,slit_width
 
