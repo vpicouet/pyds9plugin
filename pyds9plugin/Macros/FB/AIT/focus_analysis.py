@@ -71,8 +71,8 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
     else:
         ps_spatial = 1
         ps_spectral = 1
-        ylim_spatial = (0,17)
-        ylim_spectral = (1,14)
+        ylim_spatial = (0,20)
+        ylim_spectral = (1,23)
         unit_spatial = ' [pix]'
         unit_spectral = ' [pix]'
     
@@ -98,7 +98,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
         try:
             t = fits.open(file.replace(".csv",".fits"))[0].header["TEMPB"]
             print(t)
-        except FileNotFoundError as e:
+        except (FileNotFoundError,KeyError) as e:
             print(e)
             t=""
         mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) #& (cat["line"]==214) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
@@ -144,6 +144,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
         g.plot_2d([samples], x, 'fwhm_y', filled=True,ax=ax[0],add_legend_proxy=False,colors=["r"],alphas=[alpha])
+        
         g.plot_2d([samples], x, 'fwhm_x', filled=True,ax=ax[1],colors=["r"],alphas=[alpha])
         ax[0].plot(cat[mask][x],cat[mask]["fwhm_y"],'.r',label=label)
         ax[1].plot(cat[mask][x],cat[mask]["fwhm_x"],'.r',label=label)
@@ -201,6 +202,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
     return
     
 
+analyze_focus(path=cold_3, path1=cold_4,path2=None,name="T" ,pixel=True, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
 
 
 # 
@@ -220,13 +222,16 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
 
 
 # # FTS 4 warm cold 
-# path1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_4_-70.csv"; 
-# path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_4_-105.csv";  title="2022 iteration 4, T-105 , -70"
 
 # path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_4_-1*.csv"; title="2022 iteration 4"
 # path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_1*.csv";  title="2022 iteration 1"
-#%%
+
 FTS2022_6 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_6_-100*.csv";  
+
+FTS_4_2022_70 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_4_-70.csv"; 
+FTS_4_2022_105 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_4_-105.csv";  title="2022 iteration 4, T-105 , -70"
+
+analyze_focus(path=FTS_4_2022_105, path1=FTS_4_2022_70,path2=None,name="T" ,pixel=False, x="y",fit=True,title=None,slit_size=True,order=[-1,-2,0,3,1,2])
 
 
 
@@ -257,12 +262,16 @@ cool_down3 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-
 
 
 
-
+cold_4 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/2023/8_cold_230315/*.csv"
 cold_2 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/2023/6_cold_230310/*.csv"; title="iteration 1(blue) vs 2(red) - cold - Caltech"
 cold_3= "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/2023/7_cold_230314/*.csv"
 cold_1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/2023/5_cold_230307/*.csv"
 
 
+analyze_focus(path=cold_2, path1=cold_3,path2=UA4,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
+
+
+#%%
 analyze_focus(path=cool_down3, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=True,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
 
 # analyze_focus(path=cold_3, path1=UA4,path2=UA1,name="T" ,pixel=False, x="y",fit=False,title="Blue=#3 cold caltech, Red=#1 cold caltech",slit_size=False,order=[-1,-2,0,3,1,2])
@@ -283,7 +292,8 @@ analyze_focus(path=UA4, path1=cold_1,path2=None,name="T" ,pixel=False, x="y",fit
 
 analyze_focus(path=cold_1, path1=cold_2,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
 
-analyze_focus(path=cold_2, path1=cold_3,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
+analyze_focus(path=cold_2, path1=cold_3,path2=None,name="T" ,pixel=True, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
+analyze_focus(path=cold_3, path1=cold_4,path2=None,name="T" ,pixel=True, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
 
 #%%
 

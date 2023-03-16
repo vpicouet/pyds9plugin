@@ -139,7 +139,7 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
                 )["popt"]
                 bounds = [
                     [0.7 * y_spectral.ptp(), slit_min, 0, 0, np.nanmin(y_spectral)],
-                    [y_spectral.ptp(), slit_max, len(y_spectral), 15, np.nanmax(y_spectral)],
+                    [y_spectral.ptp(), slit_max, len(y_spectral), 20, np.nanmax(y_spectral)],
                 ]
                 popt_spectral = PlotFit1D(
                     x_spectral,

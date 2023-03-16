@@ -19,7 +19,7 @@ color="k"
 
 
 def emccd_model(
-    xpapoint=None, path=None, smearing=0, gain=None, argv=[], stack=False, save=False
+    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False
 ):
     """Plot EMCCD simulation
     """
