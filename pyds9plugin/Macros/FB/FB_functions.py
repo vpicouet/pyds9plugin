@@ -170,6 +170,7 @@ def emccd_model(
         conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
         # smearing = 1.3  # 0.7  # ADDED
         RN = 10
+    conversion_gain=1
     # print("conversion_gain = ", conversion_gain)
     lim_rn1, lim_rn2 = (
         bias - 1 * RN / conversion_gain,
@@ -184,13 +185,13 @@ def emccd_model(
             plot_=False,
             P0=[1, bias, RN, 0],
         )["popt"][2]
-        / conversion_gain
+        # / conversion_gain
     )
-    RON = np.nanmax([RON] + [50])
+    RON = np.nanmax([RON] + [0])
     # print("bias = ", bias, xdata[np.nanargmax(ydata)])
 
     # centers = [xdata[np.nanargmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
-
+    # print("RN",RN,RN * conversion_gain,RON,RON/conversion_gain)
     function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCDhist(
         x,
         bias=Bias,
@@ -272,7 +273,7 @@ def emccd_model(
     lims = [
         (bins.min(), bins.min() + bins.ptp() / 2),
         (0, 300),
-        (10, 10000),  # 3200
+        (10, 4000),  # 3200
         (0, flux_max),
         (0, 3),
         (0, 0.2),
@@ -280,7 +281,7 @@ def emccd_model(
     # (1.5e3,1.5e5),
     centers = [
         bias,  # ADDED
-        RON,
+        RON/ conversion_gain,
         # RN / conversion_gain,
         gain,
         0,  # ADDED
@@ -292,7 +293,7 @@ def emccd_model(
     # print(names)
     names = [
         "Bias (ADU)",
-        "Read Noise (ADU)",
+        "Read Noise (e-)",
         "EM gain (e-/e-)",
         "sCIC - Flux (e-/exp)",
         "Smearing (pix)",
