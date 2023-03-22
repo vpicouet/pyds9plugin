@@ -764,9 +764,14 @@ def setup(xpapoint=None, color="cool", argv=[]):
 
     try:
         fitsimage = fits.open(get_filename(d))
-    except FileNotFoundError:
-        fitsimage = d.get_pyfits()
-    fitsimage = fitsimage[fits_ext(fitsimage)].data
+        fitsimage = fitsimage[fits_ext(fitsimage)].data
+    except FileNotFoundError as e:
+        print(e)
+        fitsimage = d.get_pyfits()    
+        fitsimage = fitsimage[fits_ext(fitsimage)].data
+    except OSError as e:
+        print(e)
+        fitsimage = d.get_arr2np()
     ly, lx = fitsimage.shape[0], fitsimage.shape[1]
     if region is not None:
         image_area = lims_from_region(None, coords=region)

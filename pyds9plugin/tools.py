@@ -45,7 +45,7 @@ import numpy as np
 from astropy.table import Table
 import matplotlib.pyplot as plt
 import sys
-from pyds9plugin.DS9Utils import create_ds9_regions, DS9n
+# from pyds9plugin.DS9Utils import create_ds9_regions, DS9n
 def AddFieldAftermatching(
     FinalCat=None,
     ColumnCat=None,
@@ -1051,10 +1051,16 @@ def SimulateFIREBallemCCDImage(
     elif "Spectra" in source:
         if "m=" not in source:
             # for file in glob.glob("/Users/Vincent/Downloads/FOS_spectra/FOS_spectra_for_FB/CIV/*.fits"):
-            a = Table.read("/Users/Vincent/Github/notebooks/Spectra/h_%sfos_spc.fits"%(source.split(" ")[-1]))
-            slits = Table.read("/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/" + field).to_pandas()
-            trans = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/transmission_pix_resolution.csv")
-            QE = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/PSFDetector/efficiencies/QE_2022.csv")
+            try:
+                a = Table.read("Spectra/h_%sfos_spc.fits"%(source.split(" ")[-1]))
+                slits = None#Table.read("Targets/2022/" + field).to_pandas()
+                trans = Table.read("transmission_pix_resolution.csv")
+                QE = Table.read("QE_2022.csv")
+            except FileNotFoundError: 
+                a = Table.read("/Users/Vincent/Github/notebooks/Spectra/h_%sfos_spc.fits"%(source.split(" ")[-1]))
+                slits = Table.read("/Users/Vincent/Github/FireBallPipe/Calibration/Targets/2022/" + field).to_pandas()
+                trans = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/transmission_pix_resolution.csv")
+                QE = Table.read("/Users/Vincent/Github/FIREBall_IMO/Python Package/FireBallIMO-1.0/FireBallIMO/PSFDetector/efficiencies/QE_2022.csv")
             QE = interp1d(QE["wave"]*10,QE["QE_corr"])#
             trans["trans_conv"] = np.convolve(trans["col2"],np.ones(5)/5,mode="same")
             trans = trans[:-5]

@@ -134,7 +134,8 @@ def emccd_model(
     import sys
 
     sys.path.append("../../../../pyds9plugin")
-    from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist, EMCCD
+    from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist as EMCCD
+    from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD
 
     n = np.log10(np.sum([10 ** yi for yi in ydata]))
     lims = np.array([0, 2])
@@ -170,7 +171,7 @@ def emccd_model(
         conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
         # smearing = 1.3  # 0.7  # ADDED
         RN = 10
-    conversion_gain=1
+    # conversion_gain=1
     # print("conversion_gain = ", conversion_gain)
     lim_rn1, lim_rn2 = (
         bias - 1 * RN / conversion_gain,
@@ -192,7 +193,7 @@ def emccd_model(
 
     # centers = [xdata[np.nanargmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
     # print("RN",RN,RN * conversion_gain,RON,RON/conversion_gain)
-    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCDhist(
+    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCD(
         x,
         bias=Bias,
         RN=RN * conversion_gain,
@@ -310,7 +311,7 @@ def emccd_model(
     y_conv = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
     y_os_conv = np.convolve(os_v, np.ones(n_conv) / n_conv, mode="same")
     y = function(x, *centers)
-    (datal,) = plt.plot(
+    (datal,) = ax.plot(
         xdata[xdata < upper_limit],
         # ydata[xdata < upper_limit],
         y_conv[xdata < upper_limit],
@@ -319,7 +320,7 @@ def emccd_model(
         label="Data: Gconv=%0.2f\ntexp=%i\nG=%i"
         % (conversion_gain, header_exptime, header_gain),
     )
-    plt.plot(
+    ax.plot(
         bins_os[bins_os < upper_limit_os],
         y_os_conv[bins_os < upper_limit_os],
         ":",
@@ -327,22 +328,16 @@ def emccd_model(
         label="OS",
         alpha=1,
     )
-    # plt.plot(
-    #     bins_os[bins_os > upper_limit_os],
-    #     os_v[bins_os > upper_limit_os],
-    #     ":",
-    #     c="black",
-    #     alpha=0.4,
-    # )
 
-    plt.plot(bins_os, os_v, color, alpha=0.2)
+
+    ax.plot(bins_os, os_v, color, alpha=0.2)
 
     f1 = np.convolve(function(x, *centers), np.ones(n_conv) / n_conv, mode="same")
     centers_ = np.array(centers) + [0, 0, 0, flux, 0, 0]
     # centers_[-3] = flux
     f2 = np.convolve(function(x, *centers_), np.ones(n_conv) / n_conv, mode="same")
-    (l1,) = plt.plot(x, f1, "-", lw=1, label="EMCCD OS model", alpha=0.7)
-    (l2,) = plt.plot(x, f2, "-", c=l1.get_color(), lw=1)
+    (l1,) = ax.plot(x, f1, "-", lw=1, label="EMCCD OS model", alpha=0.7)
+    (l2,) = ax.plot(x, f2, "-", c=l1.get_color(), lw=1)
       # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))
     ax.set_ylabel("Log (Frequency of occurence)", fontsize=15)
@@ -352,15 +347,15 @@ def emccd_model(
     c = "white"
     c =  '#FF000000'
     hc = "0.975"
-    button = Button(
-        plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit+smearing", color=c, hovercolor=hc,
-    )
-    button0 = Button(
-        plt.axes([0.67 - 0.02 * 1, 0.025, 0.1, 0.04]),
-        "Reset smear",
-        color=c,
-        hovercolor=hc,
-    )
+    # button = Button(
+    #     plt.axes([0.77, 0.025, 0.1, 0.04]), "Fit+smearing", color=c, hovercolor=hc,
+    # )
+    # button0 = Button(
+    #     plt.axes([0.67 - 0.02 * 1, 0.025, 0.1, 0.04]),
+    #     "Reset smear",
+    #     color=c,
+    #     hovercolor=hc,
+    # )
     simplified_least_square = Button(
         plt.axes([0.57 - 0.02 * 2, 0.025, 0.1, 0.04]),
         "Fit (B,RN,G,F)",
@@ -368,9 +363,9 @@ def emccd_model(
         hovercolor=hc,
     )
 
-    fit_os_button = Button(
-        plt.axes([0.47 - 0.02 * 3, 0.025, 0.1, 0.04]), "Fit OS", color=c, hovercolor=hc,
-    )
+    # fit_os_button = Button(
+    #     plt.axes([0.47 - 0.02 * 3, 0.025, 0.1, 0.04]), "Fit OS", color=c, hovercolor=hc,
+    # )
     # Button(plt.axes([0.37 - 0.02 * 4, 0.025, 0.1, 0.04]),"Save").on_clicked(fig.savefig(name.replace('.fits','.png')))
 
     def update(val):
@@ -383,13 +378,29 @@ def emccd_model(
         x = dict_values["x"]
         v1 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[0] for v in vals1]
         v2 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[1] for v in vals1]
-        
-        l1.set_ydata(
-            np.convolve(function(x, *v1), np.ones(n_conv) / n_conv, mode="same")
-        )
+        print(vals1)
+
         l2.set_ydata(
-            np.convolve(function(x, *v2), np.ones(n_conv) / n_conv, mode="same")
+            np.convolve(
+                function(xdata, *v2),
+                np.ones(n_conv) / n_conv,
+                mode="same",
+            )
         )
+        l1.set_ydata(
+            np.convolve(
+                function(xdata, *v1),
+                np.ones(n_conv) / n_conv,
+                mode="same",
+            )
+        )
+
+        # l1.set_ydata(
+        #     np.convolve(function(x, *v1), np.ones(n_conv) / n_conv, mode="same")
+        # )
+        # l2.set_ydata(
+        #     np.convolve(function(x, *v2), np.ones(n_conv) / n_conv, mode="same")
+        # )
         # l1.set_ydata(function(x, *v1))
         # l2.set_ydata(function(x, *v2))
         fig.canvas.draw_idle()
@@ -429,7 +440,7 @@ def emccd_model(
     # rax = plt.axes([0.5, 0.05-0.035*0, 0.1, 0.15])
     for edge in "left", "right", "top", "bottom":
         rax.spines[edge].set_visible(False)
-    check = CheckButtons(rax, ["Bias","RN","Gain","Flux","Smearing","mCIC" ],actives=[True]*6) # ,"sCIC"
+    check = CheckButtons(rax, ["Bias","RN","Gain","Flux","Smearing","mCIC" ],actives=[False]*6) # ,"sCIC"
     def func(label):
         fig.canvas.draw_idle()
     check.on_clicked(func)
@@ -459,7 +470,8 @@ def emccd_model(
             print("bounds = ",bounds1,bounds2)
             popt, pcov = curve_fit(
                 function, x, y, p0, bounds=[bounds1, bounds2],
-            epsfcn=epsfcn)
+            # epsfcn=epsfcn
+            )
 
         # else:
         #     popt, pcov = curve_fit(function, x, y, p0)
@@ -470,47 +482,47 @@ def emccd_model(
 
 
 
-    def fit(event):
-        vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
-        vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
-        vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
-        function = lambda x, RN, EmGain, flux, smearing: EMCCDhist(
-            x,
-            bias=vals1[0],
-            RN=RN,
-            EmGain=EmGain,
-            flux=flux,
-            smearing=smearing,
-            sCIC=vals1[5],
-        )
-        p0 = [vals2[1], vals2[2], vals2[3], vals2[4]]
-        # bounds = [[], []]
-        # bounds = np.array([(0, 300), (100, 2200), (0.001, 6), (0, 3)]).T
-        popt, pcov = curve_fit(
-            function,
-            xdata[xdata < upper_limit],
-            ydata[xdata < upper_limit],
-            p0=p0,
-            epsfcn=1,
-        )
-        print(p0)
-        print(popt)
-        vals2[1], vals2[2], vals2[3], vals2[4] = popt  # , vals[4]
-        # We do not want to add the flux
-        vals1[1], vals1[2] = popt[:-2]  # , vals[4]
-        vals1[4] = popt[-1]  # , vals[4]
-        print(popt)
+    # def fit(event):
+    #     vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
+    #     vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
+    #     vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
+    #     function = lambda x, RN, EmGain, flux, smearing: EMCCD(
+    #         x,
+    #         bias=vals1[0],
+    #         RN=RN,
+    #         EmGain=EmGain,
+    #         flux=flux,
+    #         smearing=smearing,
+    #         sCIC=vals1[5],
+    #     )
+    #     p0 = [vals2[1], vals2[2], vals2[3], vals2[4]]
+    #     # bounds = [[], []]
+    #     # bounds = np.array([(0, 300), (100, 2200), (0.001, 6), (0, 3)]).T
+    #     popt, pcov = curve_fit(
+    #         function,
+    #         xdata[xdata < upper_limit],
+    #         ydata[xdata < upper_limit],
+    #         p0=p0,
+    #         epsfcn=1,
+    #     )
+    #     print(p0)
+    #     print(popt)
+    #     vals2[1], vals2[2], vals2[3], vals2[4] = popt  # , vals[4]
+    #     # We do not want to add the flux
+    #     vals1[1], vals1[2] = popt[:-2]  # , vals[4]
+    #     vals1[4] = popt[-1]  # , vals[4]
+    #     print(popt)
 
-        l2.set_ydata(EMCCDhist(x, *vals2[:args_number]))
-        l1.set_ydata(EMCCDhist(x, *vals1[:args_number]))
-        plt.draw()
-        for slid, val1i, val2i in zip(sliders, vals1, vals2):
-            try:
-                slid.set_val(val2i)
-            except np.AxisError:
-                slid.set_val([val1i, val2i])
-            dict_values[slid.label.get_text()] = slid.val
-        return
+    #     l2.set_ydata(EMCCD(x, *vals2[:args_number]))
+    #     l1.set_ydata(EMCCD(x, *vals1[:args_number]))
+    #     plt.draw()
+    #     for slid, val1i, val2i in zip(sliders, vals1, vals2):
+    #         try:
+    #             slid.set_val(val2i)
+    #         except np.AxisError:
+    #             slid.set_val([val1i, val2i])
+    #         dict_values[slid.label.get_text()] = slid.val
+    #     return
 
     # def fit0(event):
     #     vals1 = centers
@@ -546,7 +558,7 @@ def emccd_model(
     #     vals1 = [v if type(v) != np.ndarray else v[0] for v in vals_tot]
     #     vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
     #     function = lambda x, RN, EmGain, flux: np.convolve(
-    #         EMCCDhist(
+    #         EMCCD(
     #             x,
     #             bias=vals1[0],
     #             RN=RN,
@@ -578,14 +590,14 @@ def emccd_model(
 
     #     l2.set_ydata(
     #         np.convolve(
-    #             EMCCDhist(x, *vals2[:args_number]),
+    #             EMCCD(x, *vals2[:args_number]),
     #             np.ones(n_conv) / n_conv,
     #             mode="same",
     #         )
     #     )
     #     l1.set_ydata(
     #         np.convolve(
-    #             EMCCDhist(x, *vals1[:args_number]),
+    #             EMCCD(x, *vals1[:args_number]),
     #             np.ones(n_conv) / n_conv,
     #             mode="same",
     #         )
@@ -606,19 +618,19 @@ def emccd_model(
         vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
         vals1 = [v if type(v) != tuple else v[0] for v in vals_tot]
         vals2 = [v if type(v) != tuple else v[1] for v in vals_tot]
-        function = lambda x, bias,RN, EmGain, flux, smearing, sCIC: np.convolve(
-            EMCCDhist(
-                x,
-                bias=bias,
-                RN=RN,
-                EmGain=EmGain,
-                flux=flux,
-                smearing=smearing,
-                sCIC=sCIC,
-            ),
-            np.ones(n_conv) / n_conv,
-            mode="same",
-        )
+        # function = lambda x, bias,RN, EmGain, flux, smearing, sCIC: np.convolve(
+        #     EMCCD(
+        #         x,
+        #         bias=bias,
+        #         RN=RN,
+        #         EmGain=EmGain,
+        #         flux=flux,
+        #         smearing=smearing,
+        #         sCIC=sCIC,
+        #     ),
+        #     np.ones(n_conv) / n_conv,
+        #     mode="same",
+        # )
 
         p0 = vals2#[vals2[1], vals2[2], vals2[3]]  # , vals[4]
         print("p0=",p0)
@@ -630,28 +642,43 @@ def emccd_model(
             xdata[(xdata > xmin) & (xdata < xmax) & (xdata < upper_limit)],
             y_conv[(xdata > xmin) & (xdata < xmax) & (xdata < upper_limit)],
             p0=p0,
+            # bounds=[[p -10 for p in p0],[p +10 for p in p0]]
             # epsfcn=1#,optimizer=curve_fit_with_bounds
         )
+        
+        print("popt=",popt)
         print("p0 - popt=",np.array(p0) - np.array(popt))
         # vals2[1], vals2[2], vals2[3] = popt  # , vals[4]
-        vals2 = popt  # , vals[4]
-        # vals2[1], vals2[2] = popt[:-1]  # , vals[4]
-        print(popt)
+        print("vals1=",vals1)
+        print("vals2=",vals2)
 
-        l2.set_ydata(
-            np.convolve(
-                EMCCDhist(x, *vals2[:args_number]),
-                np.ones(n_conv) / n_conv,
-                mode="same",
-            )
-        )
-        l1.set_ydata(
-            np.convolve(
-                EMCCDhist(x, *vals1[:args_number]),
-                np.ones(n_conv) / n_conv,
-                mode="same",
-            )
-        )
+        vals2 = popt  # , vals[4]
+        # new_vals1 = popt
+        # new_vals1[4] = vals1[4]
+        vals1[:3]= popt[:3]
+        vals1[-2:]= popt[-2:]
+        # vals2[1], vals2[2] = popt[:-1]  # , vals[4]
+        # print("x-xdata=",x-xdata)
+        # print("y-xdata=",x-xdata)
+        # l2.set_data(xdata,ydata)
+        # ax.plot(xdata,ydata,":r")
+        # ax.plot(xdata,y_conv,"--r")
+        # ax.plot(xdata,np.convolve(
+        #         function(x, *vals2[:args_number]),
+        #         np.ones(n_conv) / n_conv,
+        #         mode="same"),"or")
+        # l2.set_ydata(
+        #     np.convolve(
+        #         function(x, *vals2[:args_number]),
+        #         np.ones(n_conv) / n_conv,
+        #         mode="same")
+        # )
+        # l1.set_ydata(
+        #     np.convolve(
+        #         function(x, *vals1[:args_number]),
+        #         np.ones(n_conv) / n_conv,
+        #         mode="same")
+        # )
 
         # l2.set_ydata(function(x, *vals2[:args_number]))
         # l1.set_ydata(function(x, *vals1[:args_number]))
@@ -659,7 +686,8 @@ def emccd_model(
         for slid, val1i, val2i in zip(sliders, vals1, vals2):
             try:
                 slid.set_val(val2i)
-            except np.AxisError:
+            except np.AxisError as e:
+                # print(e)
                 slid.set_val([val1i, val2i])
             dict_values[slid.label.get_text()] = slid.val
         return
@@ -669,7 +697,7 @@ def emccd_model(
     #     vals2 = [v if type(v) != np.ndarray else v[1] for v in vals_tot]
 
     #     vals1[3] = 0
-    #     function = lambda x, bias, RN, cic: EMCCDhist(
+    #     function = lambda x, bias, RN, cic: EMCCD(
     #         x,
     #         bias=bias,
     #         RN=RN,
@@ -690,8 +718,8 @@ def emccd_model(
     #     print("vals1 = ", vals1)
     #     vals1[0], vals1[1], vals1[-1] = popt
     #     vals2[0], vals2[1], vals2[-1] = popt
-    #     l1.set_ydata(EMCCDhist(x, *vals1[:args_number]))
-    #     l2.set_ydata(EMCCDhist(x, *vals2[:args_number]))
+    #     l1.set_ydata(EMCCD(x, *vals1[:args_number]))
+    #     l2.set_ydata(EMCCD(x, *vals2[:args_number]))
     #     print("p0 = ", p0)
     #     print("vals1 = ", vals1)
     #     plt.draw()

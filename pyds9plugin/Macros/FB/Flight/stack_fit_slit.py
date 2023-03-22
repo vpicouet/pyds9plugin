@@ -77,7 +77,22 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
                 ax2 = None
                 ax3 = None
             if slit_width is None:
-                slit_min, slit_max, slit_med = 5,12, 5.5
+                ds=0.3
+                if "tilted" in filename:
+                    slit_width = 6.5
+                if "F1" in filename:
+                    slit_width = 6.5
+                if "F2" in filename:
+                    slit_width = 6
+                if "F3" in filename:
+                    slit_width = 6
+                if "F4" in filename:
+                    slit_width = 8.5
+                if "QSO" in filename:
+                    slit_width = 6
+                slit_min, slit_max, slit_med = slit_width-ds,slit_width+ds,slit_width
+                print(filename,":\n", slit_min, slit_max, slit_med)
+                
             else:
                 slit_min, slit_max, slit_med = slit_width-ds,slit_width+ds,slit_width
 
