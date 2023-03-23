@@ -121,7 +121,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
         except (FileNotFoundError,KeyError) as e:
             print(e)
             t=""
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) #& (cat["line"]==214) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
@@ -164,7 +164,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
             cat['fwhm_y'] *= ps_spatial
         label=os.path.basename(os.path.dirname(file)) if i==1 else None
   
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) #& (cat["line"]==214) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
@@ -193,7 +193,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
         print(i)
         label=os.path.basename(os.path.dirname(file)) if i==1 else None
   
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) #& (cat["line"]==214) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
@@ -242,11 +242,9 @@ cold_4 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flig
 cold_5 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/2023/9_cold_230317_-87/[FQt$]*.csv"
 cold_5b = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/2023/9_cold_230317_-95/*.csv"
 
+analyze_focus(path=FTS4_105, path1=FTS4_70,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
 
-masks= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
-analyze_focus(path=cold_5b, path1=cold_5,path2=None,name="T" ,pixel=True, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-8.9,-9.7,-9.35])-0.1,tilt=np.array([-0.1,-0.1,-0.1])*1.3)
-# analyze_focus(path=cold_5b, path1=cold_5,path2=None,name="T" ,pixel=True, x="x",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2],masks=None,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-8.9,-9.7,-9.35])-0.1,tilt=np.array([-0.1,-0.1,-0.1])*1.3)
-# analyze_focus(path=cold_5b, path1=cold_4,path2=cold_5,name="T" ,pixel=True, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2],masks='/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt',ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-8.9,-9.7,-9.35])-0.1,tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+# analyze_focus(path=FTS4_70, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
 
 #%%
 # 
@@ -265,7 +263,6 @@ analyze_focus(path=cold_5b, path1=cold_5,path2=None,name="T" ,pixel=True, x="y",
 # path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_3_-100.csv";  title="2022 iteration 3, T-100 , -40"
 
 
-# # FTS 4 warm cold 
 
 # path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_4_-1*.csv"; title="2022 iteration 4"
 # path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/**/*2022_1*.csv";  title="2022 iteration 1"
@@ -277,7 +274,11 @@ FTS_4_2022_105 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-
 
 analyze_focus(path=FTS_4_2022_105, path1=FTS_4_2022_70,path2=None,name="T" ,pixel=False, x="y",fit=True,title=None,slit_size=True,order=[-1,-2,0,3,1,2])
 
+# FTS 4 warm cold 
+FTS4_70 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/new/**/*70.csv"; 
+FTS4_105 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/new/**/*105.csv"; 
 
+     
 
 UA0 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/2023/0_warm_230223/*.csv"; title="iteration 0"
 UA1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/FocusEvolution/2023/1_warm_230225/1_warm_230225/*.csv"; title="iteration 1"

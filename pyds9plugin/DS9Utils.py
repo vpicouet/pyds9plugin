@@ -4546,6 +4546,12 @@ def execute_command(
             )[0]
         ds9 = fitsimage.data
         header = fitsimage.header
+    if ".tiff"  in filename:
+        from PIL import Image
+        fitsimage=d.get_pyfits()[0]
+        ds9 = Image.open(filename)
+        header = d.get_pyfits()[0].header
+        
     else:
         fitsimage = 0
         ds9 = 0
@@ -12499,6 +12505,8 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                     elif (filename[-5:].lower() == ".tiff") | (
                         filename[-4:].lower() == ".tif"
                     ):
+                        d.set("frame new")
+
                         d.set("tiff {}".format(filename))  #
                     elif filename[-4:].lower() == ".gif":
                         d.set("gif {}".format(filename))  #
@@ -12539,6 +12547,7 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                 elif (filename[-5:].lower() == ".tiff") | (
                     filename[-4:].lower() == ".tif"
                 ):
+                    d.set("frame new")
                     d.set("tiff {}".format(filename))  #
                 elif filename[-4:].lower() == ".gif":
                     d.set("gif {}".format(filename))  #
