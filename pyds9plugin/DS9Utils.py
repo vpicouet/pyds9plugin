@@ -2570,7 +2570,7 @@ def throughfocus_wcs(
                 pass
             ax.axis("off")
     fig.tight_layout()
-    fig.savefig(os.path.dirname(files[0])+"/tf.png")
+    fig.savefig(os.path.dirname(files[0])+"/tf_%s.png"%(header["FRAMESTA"]))
     plt.close()
 
     xtot = np.linspace(x.min(), x.max(), 200)
@@ -2642,13 +2642,13 @@ def throughfocus_wcs(
     np.savetxt("/tmp/EE80.dat", np.array([x, EE80]).T)
     np.savetxt("/tmp/maxpix.dat", np.array([x, maxpix]).T)
     # try:
-    #     OldTable = Table.read(os.path.dirname(filename) + "/Throughfocus.csv")
+    #     OldTable = Table.read(os.path.dirname(filename) + "/Throughfocus_%s.csv"%(header["FRAMESTA"]))
     # except IOError as e:
     #     logger.warning(e)
-    #     t.write(os.path.dirname(filename) + "/Throughfocus.csv")
+    #     t.write(os.path.dirname(filename) +  "/Throughfocus_%s.csv"%(header["FRAMESTA"]))
     # else:
     #     t = vstack((OldTable, t))
-    t.write(os.path.dirname(filename) + "/Throughfocus.csv", overwrite=True)
+    t.write(os.path.dirname(filename) +  "/Throughfocus_%s.csv"%(header["FRAMESTA"]), overwrite=True)
     d = []
     d.append("plot line open")  # d.append("plot axis x grid no ")
     d.append("plot axis y grid no ")
@@ -2721,7 +2721,7 @@ def throughfocus_wcs(
     d.append("plot layout GRID ; plot layout STRIP scale 100")
     d.append("plot font legend size 9 ")
     d.append("plot font labels size 13 ")
-    d.append("plot export "+os.path.dirname(files[0])+"/TF.jpeg")
+    d.append("plot export "+os.path.dirname(files[0])+"/TF_%s.jpeg"%(header["FRAMESTA"]))
     ds9 = DS9n()
     ds9.set(" ; ".join(d))
     return images  # fwhm, EE50, EE80
@@ -4547,6 +4547,12 @@ def execute_command(
             )[0]
         ds9 = fitsimage.data
         header = fitsimage.header
+    elif ".tiff"  in filename:
+        from PIL import Image
+        fitsimage=d.get_pyfits()[0]
+        ds9 = Image.open(filename)
+        header = d.get_pyfits()[0].header
+        
     else:
         fitsimage = 0
         ds9 = 0
@@ -12500,6 +12506,8 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                     elif (filename[-5:].lower() == ".tiff") | (
                         filename[-4:].lower() == ".tif"
                     ):
+                        d.set("frame new")
+
                         d.set("tiff {}".format(filename))  #
                     elif filename[-4:].lower() == ".gif":
                         d.set("gif {}".format(filename))  #
@@ -12540,6 +12548,7 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                 elif (filename[-5:].lower() == ".tiff") | (
                     filename[-4:].lower() == ".tif"
                 ):
+                    d.set("frame new")
                     d.set("tiff {}".format(filename))  #
                 elif filename[-4:].lower() == ".gif":
                     d.set("gif {}".format(filename))  #

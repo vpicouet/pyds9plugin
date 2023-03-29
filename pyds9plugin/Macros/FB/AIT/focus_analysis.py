@@ -252,7 +252,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
         except (FileNotFoundError,KeyError) as e:
             print(e)
             t=""
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) #& (cat["line"]==214) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
@@ -295,7 +295,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
             cat['fwhm_y'] *= ps_spatial
         label=os.path.basename(os.path.dirname(file)) if i==1 else None
   
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) #& (cat["line"]==214) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
@@ -324,7 +324,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
         print(i)
         label=os.path.basename(os.path.dirname(file)) if i==1 else None
   
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) #& (cat["line"]==214) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
@@ -371,6 +371,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
   
 # analyze_focus(path=UA0, path1=UA1,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=slit_size,order=[-1,-2,0,3,1,2],masks="/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_5_feb2023/metrology_*180*02-17*.txt",det_pos=[],opt_pos=[],ylim=(4-5.4,6-5.4))
 
+analyze_focus(path=FTS4_105, path1=FTS4_70,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
 
 UA0 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/0_warm_230223_1/*.csv"; title="iteration 0"
 UA1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/1_warm_230225/1_warm_230225_1/*.csv"; title="iteration 1"
@@ -403,6 +404,7 @@ cold_2 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/6_
 cold_3= "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/7_cold_230314_0.3/*.csv"
 cold_1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/5_cold_230307_0.74/*.csv"
 
+     
 
 
 #%%  
