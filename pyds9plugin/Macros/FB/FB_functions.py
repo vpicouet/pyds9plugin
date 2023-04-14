@@ -19,7 +19,7 @@ color="k"
 
 
 def emccd_model(
-    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False
+    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, fit="EMCCDhist"
 ):
     """Plot EMCCD simulation
     """
@@ -111,11 +111,12 @@ def emccd_model(
         val = np.array(val, dtype=float) *t/ im_nan_fraction 
         os_v = np.log10(np.array(val_os *t/ os_nan_fraction, dtype=float)) #* os.size / len(os[np.isfinite(os)])) 
         # TODO take care of this factor
-        bins_os, os_v = bins[np.isfinite(os_v)], os_v[np.isfinite(os_v)]
         try:
             header_exptime, header_gain = header["EXPTIME"], header["EMGAIN"]
+            temp_device = header["TEMPD"]
         except:
             header_exptime, header_gain = -99, -99
+            temp_device = -99
             pass
             # try:
             # header_exptime, header_gain = (
@@ -125,17 +126,22 @@ def emccd_model(
         # val_os = val_os / t  / os_nan_fraction
         # val *= im.size / len(im[np.isfinite(im)])
 
-    xdata, ydata = (
+    xdata, ydata, ydata_os = (
         bins[np.isfinite(np.log10(val))],
-        np.log10(val)[np.isfinite(np.log10(val))],
+        np.log10(val)[np.isfinite(np.log10(val))],os_v[np.isfinite(np.log10(val))]
     )
-    np.savetxt("/tmp/xy.txt", np.array([xdata, ydata]).T)
+    bins_os, os_v = bins[np.isfinite(os_v)], os_v[np.isfinite(os_v)]
+    np.savetxt("/tmp/xy.txt", np.array([xdata, ydata,ydata_os]).T)
+    # np.savetxt("/tmp/"+os.path.basename(name).replace(".fits",".txt"), np.array([xdata, ydata,ydata_os]).T)
+    # np.savetxt("/tmp/xy.txt", np.array([xdata, ydata,ydata_os]).T)
 
     import sys
 
     sys.path.append("../../../../pyds9plugin")
-    from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist as EMCCD
-    from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD
+    if fit=="EMCCDhist":
+        from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist as EMCCD
+    else:
+        from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD
 
     n = np.log10(np.sum([10 ** yi for yi in ydata]))
     lims = np.array([0, 2])
@@ -285,11 +291,19 @@ def emccd_model(
         RON/ conversion_gain,
         # RN / conversion_gain,
         gain,
-        0,  # ADDED
+        0.005,  # ADDED
         smearing,  # ADDED
-        0.01,  # ADDED
+        0.005,  # ADDED0.01
     ]
-
+    centers = [
+        bias,  # ADDED
+        147.3,
+        # RN / conversion_gain,
+        1040,
+        0.005,  # ADDED
+        smearing,  # ADDED
+        0.0118,  # ADDED0.01
+    ]
     names = inspect.getargspec(function).args[1:]
     # print(names)
     names = [
@@ -440,7 +454,7 @@ def emccd_model(
     # rax = plt.axes([0.5, 0.05-0.035*0, 0.1, 0.15])
     for edge in "left", "right", "top", "bottom":
         rax.spines[edge].set_visible(False)
-    check = CheckButtons(rax, ["Bias","RN","Gain","Flux","Smearing","mCIC" ],actives=[False]*6) # ,"sCIC"
+    check = CheckButtons(rax, ["Bias","RN","Gain","Flux","Smearing","mCIC" ],actives=[True,True,False,False,True,True]) # ,"sCIC"
     def func(label):
         fig.canvas.draw_idle()
     check.on_clicked(func)
@@ -754,9 +768,9 @@ def emccd_model(
         mask = np.nan
 
     try:                              
-        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,ncr,mask])])
+        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,ncr,mask,temp_device])])
     except Exception as e:
         print(e)
-        df = pd.DataFrame([np.array([sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val])])
+        df = pd.DataFrame([np.array([sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,temp_device])])
     df.to_clipboard(index=False,header=False)
     return 1, fig

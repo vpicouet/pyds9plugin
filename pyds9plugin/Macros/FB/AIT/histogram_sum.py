@@ -14,7 +14,8 @@ def HistogramSums(path=[]):
     # matplotlib.use("TkAgg")
     import matplotlib.pyplot as plt
     from astropy.table import Table
-    from pyds9plugin.Macros.FIREBall.FB_functions import emccd_model
+    # from pyds9plugin.Macros.FIREBall.FB_functions import emccd_model
+    from pyds9plugin.Macros.FB.FB_functions import emccd_model
 
     # d = DS9n()
     # filename = get_filename(d)
@@ -138,10 +139,10 @@ def HistogramSums(path=[]):
 
 
 ## %%
-# if "" in sys.argv:
-#     sys.argv.remove("")
-# path = sys.argv[1:]
-# HistogramSums(path=path)
+if "" in sys.argv:
+    sys.argv.remove("")
+path = sys.argv[1:]
+HistogramSums(path=path)
 # HistogramSums(path=glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220512/EMgain_gillian_-100/220512_15H02m48/Directory_EMgain_gillian_-100/EMGAIN_9230/EXPTIME_0.0/*.fits"))
 # for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/7000/220329_18H54m27/EMGAIN_7000.0/*'):
 # for folder in glob.glob('/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/DetectorData/220204_darks_T183_1MHz/6800/220330_09H27m13/EMGAIN_6800/*'):
@@ -149,19 +150,21 @@ def HistogramSums(path=[]):
 # for fold in glob.glob(
 #     "/Volumes/ExtremePro/LAM/FIREBALL/2022/DetectorData/220623/cit_darks_T92/11168/*"
 # ):
-for fold in glob.glob(
-    "/Volumes/ExtremePro/LAM/FIREBALL/2022/DetectorData/220619/CIT_NUVU_m100_darks/220619_19H04m40/*"
-):
+
+
+# for fold in glob.glob(
+#     "/Volumes/ExtremePro/LAM/FIREBALL/2022/DetectorData/220619/CIT_NUVU_m100_darks/220619_19H04m40/*"
+# ):
     
     
-    for folder in glob.glob(fold + "/*"):
-        if os.path.isdir(folder):
-            print(folder)
-            path = glob.glob(folder + "/image*.fits")[:5]
-            print(path)
-            HistogramSums(path=path[1:10])
-            # sys.exit()
-    sys.exit()
+#     for folder in glob.glob(fold + "/*"):
+#         if os.path.isdir(folder):
+#             print(folder)
+#             path = glob.glob(folder + "/image*.fits")[:5]
+#             print(path)
+#             HistogramSums(path=path[1:10])
+#             # sys.exit()
+#     sys.exit()
 # %%
 
 #%%

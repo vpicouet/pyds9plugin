@@ -11,5 +11,5 @@ from pyds9plugin.Macros.FB.FB_functions import emccd_model
 #     filename = get_filename(d)
 # else:
 #     pass
-
-emccd_model(xpapoint=None, path=filename, smearing=0.5, argv=[])
+# emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCD", argv=[])
+emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[])

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 try:
-    x, y = np.loadtxt("/tmp/xy.txt").T
+    x, y, z = np.loadtxt("/tmp/xy.txt").T
     # x, y =  np.array(x), np.array(y)
     # print(np.log10(np.sum(10**y)))
 except (OSError, ValueError) as e:

@@ -915,13 +915,17 @@ def organize_files(xpapoint=None, argv=[]):
         print(e)
         logger.warning(e)
     cat = delete_multidim_columns(cat)
-    if query != "":
+
+
+
+    # if query != "":
         # print(sys.argv)
         # print(args.selection)
         # print(query)
-        query = query.replace("$Mask", "&")
-        # print(query)
-        df = cat.to_pandas()
+    query = query.replace("$Mask", "&")
+    # print(query)
+    df = cat.to_pandas()
+    if query != "":
         verboseprint(query)
         try:
             new_table = df.query(query)
@@ -936,9 +940,14 @@ def organize_files(xpapoint=None, argv=[]):
                     quit_=False,
                 )
                 new_table = df.query(query)
-        t2 = Table.from_pandas(new_table)
     else:
-        t2 = cat
+        new_table=df
+    for f in fields:
+        if f not in cat.colnames:
+            new_table[f]=np.round(new_table.eval(f),2)
+    t2 = Table.from_pandas(new_table)
+    # else:
+    #     t2 = cat
     if len(t2) == 0:
         d = DS9n(args.xpapoint)
         message(d, "No header verifying %s condition, please verify it." % (query))
@@ -2160,7 +2169,8 @@ def create_wcs(PathExec, filename, Newfilename, params, type_="Image"):
         + " --apikey apfqmasixxbqxngm --wcs "
         + Newfilename
         + " --private n --annotate y --kmz /tmp/test.kmz " #--urlupload false
-        # + " --use_sextractor true "
+        # + " --parity  1 "
+        + " --use_sextractor true "
         + upload
         + filename
         + " "
@@ -2437,17 +2447,19 @@ def throughfocus_wcs(
     WCS=False,
     DS9backUp=DS9_BackUp_path,
     offsets=10,
+    n = 150
+
 ):
     """Same algorithm than throughfocus except it works on WCS coordinate
     and not on pixels. Then the throughfocus can be run on stars even
     with a sky drift
     """
     from astropy.io import fits
-    from astropy.table import Table, vstack
+    from astropy.table import Table, vstack, hstack
     import numpy as np
-
+    import re
     from scipy.optimize import curve_fit
-
+    import re
     fwhm = []
     EE50 = []
     EE80 = []
@@ -2457,6 +2469,7 @@ def throughfocus_wcs(
     xo = []
     yo = []
     images = []
+    images2 = []
     ENCa = []
     ext = fits_ext(fits.open(files[0]))
     x = offsets
@@ -2476,7 +2489,7 @@ def throughfocus_wcs(
         ),
         dtype=("S15", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4", "f4",),
     )
-
+    number = re.findall(r'\d+',os.path.basename(files[0]))[0]
     for i, filename in enumerate(files):
         with fits.open(filename) as f:
             fitsfile = f[ext]
@@ -2507,18 +2520,21 @@ def throughfocus_wcs(
             SigmaMax=SigmaMax,
         )
         background = 1 * estimate_background(image, center)
-        n = 25
         subimage = (image - background)[
             int(center_pix[1]) - n : int(center_pix[1]) + n,
             int(center_pix[0]) - n : int(center_pix[0]) + n,
         ]
         images.append(subimage)
+        images2.append((image - background)[
+            int(center_pix[1]) - 80+50 : int(center_pix[1]) + 80+50,
+            int(center_pix[0]) - 80-50 : int(center_pix[0]) + 80-50,
+        ])
 
         max20 = subimage.flatten()
         max20.sort()
         fwhm.append(d["Sigma"])
-        EE50.append(d["EE50"])
-        EE80.append(d["EE80"])
+        EE50.append(2*d["EE50"])
+        EE80.append(2*d["EE80"])
         xo.append(d["Center"][0])
         yo.append(d["Center"][1])
         maxpix.append(np.nanmean(max20[-20:]))
@@ -2530,7 +2546,8 @@ def throughfocus_wcs(
         t.add_row(
             (
                 os.path.basename(filename),
-                os.path.basename(filename)[5:11],
+                # os.path.basename(filename)[5:11],
+                re.findall(r'\d+',os.path.basename(filename) )[0],
                 # t2s(h=h, m=m, s=s, d=day),
                 x[i],
                 d["Center"][0],
@@ -2549,6 +2566,11 @@ def throughfocus_wcs(
                 # max(varpix),
             )
         )
+    t = hstack([t,create_catalog(files, ext=[0], info="", reg=None)])
+    t["Sigma_min"] = np.nanmin(t["Sigma"])
+    t["EE50_min"] = np.nanmin(t["EE50"])
+    t["EE80_min"] = np.nanmin(t["EE80"])
+
     maxpix = np.array(maxpix) / np.max(maxpix)
     def f(x, a, b, c):
         return a * (x - b) ** 2 + c
@@ -2559,30 +2581,38 @@ def throughfocus_wcs(
     fig, axes = plt.subplots(3,n,sharex=True,sharey=True,figsize=(4*n,3*4))
     for i, ax in enumerate(axes.flatten()):
         if i<len(files):
-            ax.imshow(images[i])
-            ax.text(0.1, 0.1, "σ=%0.1f\nEE50=%0.1f\nEE80=%0.1f"%(fwhm[i],EE80[i],EE50[i]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
-            ax.set_title("%0.2f"%(x[i]))
+            ax.imshow(images2[i])
+            ax.text(0.1, 0.1, "%i\nσ=%0.1f\nEE50=%0.1f\nEE80=%0.1f"%(t["number"][i],fwhm[i],EE80[i],EE50[i]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
+            # ax.set_title("%0.2f"%(x[i]))
             # ax.legend()
-        else:
+        elif i==len(files):
             try:
-                ax.text(0.1, 0.1, "x=%0.1f\ny=%0.1f\nA=%0.2f\nB=%0.2f\nC=%0.2f\nN=%i\nname=%s"%(center[0],center[1],header["LINAENC"],header["LINBENC"],header["LINCENC"],header["FRAMESTA"],files[0].split("/")[-2]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
+                ax.text(0.1, 0.1, "x=%0.1f\ny=%0.1f\nA=%0.2f\nB=%0.2f\nC=%0.2f\nN=%s\nname=%s"%(center[0],center[1],header["LINAENC"],header["LINBENC"],header["LINCENC"],number,files[0].split("/")[-2]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
             except KeyError:
                 pass
             ax.axis("off")
+        else:
+            ax.axis("off")
     fig.tight_layout()
-    fig.savefig(os.path.dirname(files[0])+"/tf_%s.png"%(header["FRAMESTA"]))
+    # fig.subplots_adjust(wspace=0, hspace=0)
+    fig.savefig(os.path.dirname(filename)+"/tf_%s.png"%(number))
     plt.close()
-
+    print("Best image: sigma=%0.1f, EE50=%0.1f [>%0.1f?], EE80=%0.1f [>%0.1f?]"%(np.min(fwhm),EE50[np.argmin(fwhm)],np.min(EE50),EE80[np.argmin(fwhm)],np.min(EE80)))
     xtot = np.linspace(x.min(), x.max(), 200)
+    fwhm = np.array(fwhm)
+    EE50 = np.array(EE50)
+    EE80 = np.array(EE80)
+    maxpix = np.array(maxpix)
 
     try:
-        opt1, cov1 = curve_fit(f, x, fwhm)
+        opt1, cov1 = curve_fit(f, x[fwhm<100], fwhm[fwhm<100])
         bestx1 = xtot[np.argmin(f(xtot, *opt1))]
         np.savetxt("/tmp/fwhm_fit.dat", np.array([xtot, f(xtot, *opt1)]).T)
     except RuntimeError as e:
         logger.warning(e)
         opt1 = [np.nan, np.nan, np.nan]  # [0,0,0]
         bestx1 = np.nan
+        np.savetxt("/tmp/fwhm_fit.dat", np.array([x, fwhm]).T)
         pass
     try:
         opt2, cov2 = curve_fit(f, x, EE50)
@@ -2591,6 +2621,7 @@ def throughfocus_wcs(
     except RuntimeError:
         opt2 = [np.nan, np.nan, np.nan]  # [0,0,0]
         bestx2 = np.nan
+        np.savetxt("/tmp/fwhm_fit.dat", np.array([x, EE50]).T)
         pass
     try:
         opt3, cov3 = curve_fit(f, x, EE80)
@@ -2599,23 +2630,25 @@ def throughfocus_wcs(
     except RuntimeError:
         opt3 = [np.nan, np.nan, np.nan]  # [0,0,0]
         bestx3 = np.nan
+        np.savetxt("/tmp/fwhm_fit.dat", np.array([x, EE80]).T)
         pass
     try:
         opt4, cov4 = curve_fit(f, x, maxpix)
         bestx4 = xtot[np.argmax(f(xtot, *opt4))]
         np.savetxt("/tmp/maxpix_fit.dat", np.array([xtot, f(xtot, *opt4)]).T)
-    except RuntimeError:
+    except (RuntimeError,ValueError):
         bestx4 = np.nan
         opt4 = [np.nan, np.nan, np.nan]  # [0,0,0]
+        np.savetxt("/tmp/fwhm_fit.dat", np.array([x, maxpix]).T)
 
         pass
-    try:
-        opt6, cov6 = curve_fit(f, x, varpix)
-        bestx6 = xtot[np.argmax(f(xtot, *opt6))]
-    except RuntimeError:
-        opt6 = [0, 0, 0]
-        bestx6 = np.nan
-        pass
+    # try:
+    #     opt6, cov6 = curve_fit(f, x, varpix)
+    #     bestx6 = xtot[np.argmax(f(xtot, *opt6))]
+    # except RuntimeError:
+    #     opt6 = [0, 0, 0]
+    #     bestx6 = np.nan
+    #     pass
     name = "%s - %i - %i - %s " % (
         os.path.basename(filename),
         int(center_pix[0]),
@@ -2648,7 +2681,7 @@ def throughfocus_wcs(
     #     t.write(os.path.dirname(filename) +  "/Throughfocus_%s.csv"%(header["FRAMESTA"]))
     # else:
     #     t = vstack((OldTable, t))
-    t.write(os.path.dirname(filename) +  "/Throughfocus_%s.csv"%(header["FRAMESTA"]), overwrite=True)
+    t.write(os.path.dirname(filename) +  "/Throughfocus_%s.csv"%(number), overwrite=True)
     d = []
     d.append("plot line open")  # d.append("plot axis x grid no ")
     d.append("plot axis y grid no ")
@@ -2687,12 +2720,12 @@ def throughfocus_wcs(
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
     d.append(
-        "plot title 'Fit: Best EE80 = %0.2f - Position = %0.2f' "
+        "plot title 'Fit: Best EE80%% Ø = %0.2f - Position = %0.2f' "
         % (np.nanmin(EE50), x[np.argmin(EE50)])
         # % (np.nanmin(f(xtot, *opt2)), xtot[np.argmin(f(xtot, *opt2))])
     )
     d.append("plot load /tmp/EE50.dat xy")
-    d.append("plot title y 'EE80' ")
+    d.append("plot title y 'EE80% Ø' ")
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
     d.append("plot line shape color black")  # d.append("plot legend yes ")
@@ -2703,13 +2736,9 @@ def throughfocus_wcs(
     d.append("plot name 'FWHM = %i, σ  = %0.1f' " % (1, 1))
     d.append("plot add graph ")
     d.append("plot axis y grid no ")
-    d.append(
-        "plot title 'Fit: Best EE50 = %0.2f - Position = %0.2f' "
-        % (np.nanmin(EE80), x[np.argmin(EE80)])
-        # % (np.nanmin(f(xtot, *opt3)), xtot[np.argmin(f(xtot, *opt3))])
-    )
+    d.append("plot title 'Fit: Best EE50%% Ø = %0.2f - Position = %0.2f' "% (np.nanmin(EE80), x[np.argmin(EE80)]))
     d.append("plot load /tmp/EE80.dat xy")
-    d.append("plot title y 'EE50' ")
+    d.append("plot title y 'EE50% Ø' ")
     d.append("plot line shape circle ")
     d.append("plot line width 0 ")
     d.append("plot line shape color black")  # d.append("plot legend yes ")
@@ -2721,7 +2750,7 @@ def throughfocus_wcs(
     d.append("plot layout GRID ; plot layout STRIP scale 100")
     d.append("plot font legend size 9 ")
     d.append("plot font labels size 13 ")
-    d.append("plot export "+os.path.dirname(files[0])+"/TF_%s.jpeg"%(header["FRAMESTA"]))
+    d.append("plot export "+os.path.dirname(files[0])+"/TF_%s.jpeg"%(number))
     ds9 = DS9n()
     ds9.set(" ; ".join(d))
     return images  # fwhm, EE50, EE80
@@ -2794,8 +2823,8 @@ def analyze_spot(
             "Flux": 0,
             "SizeSource": popt[1],
             "Sigma": abs(popt[2]),
-            "EE50": mina,
-            "EE80": minb,
+            "EE50": minb,
+            "EE80": mina,
             "Platescale": platescale,
             "Center": NewCenter,
         }
@@ -2851,14 +2880,33 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
     d = DS9n(args.xpapoint)
     filename = get_filename(d)
     header = fits.open(filename)[0].header
-    if getregion(d, selected=True) is None:
-        raise_create_region(d)
-        sys.exit()
-    a = getregion(d)[0]
+    
+    
     if args.path == "":
         path = get_filename(d, All=True, sort=False)
+        image = fits.open(filename)[0]
     else:
-        path = globglob(args.path, xpapoint=args.xpapoint)
+        path = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
+        image = fits.open(path[int(len(path)/2)])[0]
+
+
+    if getregion(d, selected=True) is None:
+        if args.path=="":
+            raise_create_region(d)
+            sys.exit()
+        else:
+            data = fits.open(path[int(len(path)/2)])[0].data
+            class Empty:
+                pass
+            a = Empty()
+            valmax = np.nanmax(data)
+            print(np.where(data==valmax))
+            yc, xc = np.where(data==valmax)
+            a.xc, a.yc = xc, yc
+            
+    else:
+        a = getregion(d)[0]
+
 
     WCS = bool(int(args.WCS))
     sort = args.sort
@@ -2902,8 +2950,13 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
                    the analysis and provide consistent number of offsets."""
                 % (len(offsets), len(path)),
             ), sys.exit()
+    
+    # import matplotlib.pyplot as plt
+    # print(xc, yc,valmax)
 
-    image = fits.open(filename)[0]
+    # plt.imshow(image.data[np.int(a.yc)-30:np.int(a.yc)+30, np.int(a.xc)-30:np.int(a.xc)+30])
+    # plt.colorbar()
+    # sys.exit()
     rp = analyze_spot(image.data, center=[np.int(a.xc), np.int(a.yc)], fibersize=0)
     x, y = rp["Center"]
     d.set("regions system image")
@@ -2963,7 +3016,7 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
     #     a.sort(args.sort)
     # names = [name for name in a.colnames if len(a[name].shape) > 2] * 2
 
-    pyvista_throughfocus(a)
+    # pyvista_throughfocus(a)
 
 
 def add_field_after_matching(
@@ -3654,6 +3707,7 @@ def ds9_plot_radial_profile(
     d.append("plot load /tmp/2.dat xy ")
     d.append("plot line color black ")
     d.append("plot title y 'Encircled energy' ")
+    d.append("plot title x 'Radius' ")
     d.append("plot name 'Data' ")
     d.append("plot title x 'Distance from center' ")
     d.append("plot load /tmp/4.dat xy ")
@@ -3673,7 +3727,6 @@ def ds9_plot_radial_profile(
     d.append("plot layout STRIP ; plot layout STRIP scale 100")
     d.append("plot font legend size 9 ")
     d.append("plot font labels size 13 ")
-    d.append("plot title y 'Radius' ")
     d.append("plot current graph 1 ")
     ds9.set(" ; ".join(d))
     return d_
@@ -5044,9 +5097,27 @@ def stack_images_path(
     import re
     import numpy as np
 
-    fitsfile = fits.open(paths[0])
+    if ".csv" in paths[0]:
+        print("entry seem to ba catalog")
+        from astropy.table import Table, vstack
+        fitsfile = vstack([Table.read(f) for f in paths])
+        name = os.path.dirname(paths[0]) + "/stack_cat.csv"
+        fitsfile.write(name,overwrite=True)
+        return fitsfile, name
 
-    i = fits_ext(fitsfile)
+    else:
+        fitsfile = fits.open(paths[0])
+
+    try:
+        i = fits_ext(fitsfile)
+    except IndexError:
+        print("entry seem to ba catalog")
+        from astropy.table import Table, vstack
+        fitsfile = vstack([Table.read(f) for f in paths])
+        name = os.path.dirname(paths[0]) + "/stack_cat.fits"
+        fitsfile.write(name,overwrite=True)
+        return fitsfile, name
+        
     x_inf, x_sup, y_inf, y_sup = 0, -1, 0, -1  # my_conf.physical_region
     stds = np.array(
         [
@@ -7366,7 +7437,7 @@ def parallelize(
             return
 
 
-def create_catalog(files, ext=[0], info=None, reg=None):
+def create_catalog(files, ext=[0], info="", reg=None):
     """Create header catalog from a list of fits file
     """
     from astropy.table import Column, vstack  # hstack,
@@ -7503,10 +7574,9 @@ def create_catalog(files, ext=[0], info=None, reg=None):
     ).any():
         f = ".ecsv"
     else:
-        f = ".csv"  # os.path.dirname(path)
+        f = ".csv"  
     info_name = os.path.basename(info).replace(".py", "")
     name = os.path.commonpath(files) + "/HeaderCatalog" + info_name + f
-    # print(table_header["intensity"], name)
     # table_header.write(name.replace(".ecsv", ".fits"))
     csvwrite(table_header, name)
     print(name)
@@ -12431,6 +12501,7 @@ def fitsconverter(fname, savefile=tmp_image):
 def open_file(xpapoint=None, filename=None, argv=[]):
     """Open file(s) in DS9 in an easier way [DS9 required]
     """
+    import numpy as np
     parser = create_parser(get_name_doc(), path=False)
     parser.add_argument(
         "-p",
@@ -12514,7 +12585,13 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                     elif ".bmp" in os.path.basename(filename):
                         import imageio
                         image= imageio.imread(filename)
-                        d.set_np2arr(image.mean(axis=2))
+                        # print(image,type(image))
+                        d.set("frame new")
+                        try:
+                            d.set_np2arr(image.mean(axis=2))
+                        except ValueError:
+                            d.set_np2arr(np.array(image))
+                            
                     else:
                         d.set("fits new {}".format(filename))
                         if os.path.isfile(filename.replace(".fits",".reg")):
@@ -14106,7 +14183,10 @@ def next_image(xpapoint=None):
     # d.set("tile no")
     # try:
     d.set("frame new")
-    d.set("file {}".format(files[-1]))
+    if ~yesno(d,"""Do you want to open the next file? If no the last file will be open"""):
+        d.set("file {}".format(files[index+1]))
+    else:
+        d.set("file {}".format(files[-1]))
     # except IndexError:
     #     verboseprint("No more files")
     #     sys.exit()

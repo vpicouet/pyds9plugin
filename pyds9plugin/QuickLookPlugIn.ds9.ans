@@ -1282,9 +1282,8 @@ param LostInSpace
 Image menu {Type} Image|XY-catalog {If Image, upload the image, else upload the used defined DS9 regions as jsoned fits catalog!}
 scale_units menu {scale_units} arcsecperpix|degwidth|arcminwidth|focalmm {The units for the scale_lower and scale_upper arguments becomes the scale-units argument to solve-field on the server side}
 #scale_type menu {scale_type} ul|ev {Set ul if you are going to provide scale_lower and scale_upper arguments, or ev if you are going to provide scale_est and scale_err error percentage  arguments.}
-scale_lower entry {scale_lower} "0.87" {The lower-bound of the scale of the image.}#0.3
-scale_upper entry {scale_upper} "0.93" {The upper-bound of the scale of the image.}#0.35
-
+scale_lower entry {scale_lower} "0.7" {The lower-bound of the scale of the image.}#0.87
+scale_upper entry {scale_upper} "1.1" {The upper-bound of the scale of the image.}#0.93
 scale_est entry {scale_estimate} "" {The estimated scale of the image.}
 scale_err entry {scale_error} "" {0 to 100. The error (percentage) on the estimated scale of the image.}
 center_ra entry {center_ra} "" {float, 0 to 360, in degrees. The position of the center of the image}

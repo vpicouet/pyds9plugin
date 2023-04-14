@@ -84,7 +84,7 @@ files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illuminatio
 files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/*.csv")
 
 
-files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/t*.csv")
+files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/F4*.csv")
 # files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/*cold*/*.csv")
 # files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/**/*.csv")
 
@@ -371,7 +371,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
   
 # analyze_focus(path=UA0, path1=UA1,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=slit_size,order=[-1,-2,0,3,1,2],masks="/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_5_feb2023/metrology_*180*02-17*.txt",det_pos=[],opt_pos=[],ylim=(4-5.4,6-5.4))
 
-analyze_focus(path=FTS4_105, path1=FTS4_70,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
+# analyze_focus(path=FTS4_105, path1=FTS4_70,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
 
 UA0 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/0_warm_230223_1/*.csv"; title="iteration 0"
 UA1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/1_warm_230225/1_warm_230225_1/*.csv"; title="iteration 1"
@@ -399,12 +399,17 @@ cool_down3 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/202
 
 
 
+cold_6 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/11_cold_230407_0.55/*.csv"
+cold_5 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/10*/*.csv"
 cold_4 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/8_cold_230315_1.09/*.csv"
 cold_2 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/6_cold_230310_1.05/*.csv"; title="iteration 1(blue) vs 2(red) - cold - Caltech"
 cold_3= "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/7_cold_230314_0.3/*.csv"
 cold_1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/5_cold_230307_0.74/*.csv"
 
+masks_2023a= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
+masks_2023= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
      
+analyze_focus(path=cold_6, path1=cold_5,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[],tilt=np.array([-0.1,-0.1,-0.1])*1.3)
 
 
 #%%  
@@ -413,8 +418,6 @@ cold_5b = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/9
 
 cold_6="/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/10_cold_230320_0.55/*.csv"
 
-masks_2023a= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
-masks_2023= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
 # analyze_focus(path=cold_5b, path1=cold_5,path2=None,name="T" ,pixel=True, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-8.9,-9.7,-9.35])-0.1,tilt=np.array([-0.1,-0.1,-0.1])*1.3)
 analyze_focus(path=cold_5b, path1=UA4,path2=cold_6,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-8.9,-9.7,-9.35])-0.1,tilt=np.array([-0.1,-0.1,-0.1])*1.3)
 
