@@ -10953,6 +10953,7 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
         thresh=float(param_dict["DETECT_THRESH"]),
         err=bkg.globalrms,
         mask=None,
+        gain=float(param_dict["GAIN"]),
         minarea=int(param_dict["DETECT_MINAREA"]),
         filter_type="matched",
         deblend_nthresh=int(param_dict["DEBLEND_NTHRESH"]),
@@ -11011,10 +11012,11 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
     catalog["MAG_AUTO"] = flux_auto
     catalog["MAGERR_AUTO"] = fluxerr_auto
     catalog["FLAG_AUTO"] = flag
-    catalog["KRON_RADIUS"] = kronrad
+    catalog["KRON_RADIUS"] = 2.5 * kronrad
     catalog["ALPHA_J2000"] = np.nan
     catalog["DELTA_J2000"] = np.nan
     catalog["DELTA_J2000"] = np.nan
+    catalog["FLUX_MAX"] = np.nan
     catalog["THETA_WORLD"] = np.nan
     catalog["B_WORLD"] = np.nan
     catalog["A_WORLD"] = np.nan
@@ -11143,7 +11145,7 @@ def run_sex(path, DETECTION_IMAGE, param_dict):
     param_dict["CHECKIMAGE_NAME"] = cat_path + "_check_%s.fits" % (
         param_dict["CHECKIMAGE_TYPE"]
     )
-    if which("sex") is None:  # None
+    if which("sex") is not None:  # None
         command = "Running sep"
         run_sep(path, DETECTION_IMAGE, param_dict)
         return 0

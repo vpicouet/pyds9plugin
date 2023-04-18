@@ -30,10 +30,14 @@ ims_stack = np.nanmean(ims,axis=0)
 ims_stack[~np.isfinite(ims_stack)] = np.nanmin(ims_stack)
 fitsimage[0].data = ims_stack
 h = fitsimage[0].header
+#     filename = "/Users/Vincent/Nextcloud/LAM/FIREBALL/2023/Autocoll/Off_focus_exploration/sum_A%0.2f_B%0.2f_C%0.2f.fits"%(h["LINAENC"],h["LINBENC"],h["LINCENC"])
 try:
-    filename = "/Users/Vincent/Nextcloud/LAM/FIREBALL/2023/Autocoll/Off_focus_exploration/sum_A%0.2f_B%0.2f_C%0.2f.fits"%(h["LINAENC"],h["LINBENC"],h["LINCENC"])
+    filename = os.path.dirname(files[0]) + "/sum_%s.fits"%(h["ROTENC"])
 except KeyError:
-    filename = os.path.dirname(files[0]) + "/sum.fits"
+    filename = os.path.dirname(files[0]) + "/sum_%s.fits"%(h["ROTENC"])
 
 print(filename)
 fitsimage.writeto(filename,overwrite=True)
+
+
+
