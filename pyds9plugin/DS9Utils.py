@@ -8063,12 +8063,28 @@ def get_filename(ds9, All=False, sort=True):
         new_filename = []
         verboseprint("Taking images opened in DS9")
         current = ds9.get("frame")
-        number = number_ds9_frames(ds9.get("xpa info").split("\t")[-1])
-        for i in range(number):
+
+
+        ds9.set("frame last")
+        last = ds9.get("frame")
+        ds9.set("frame first")
+        a = ""
+        number = 1
+
+        # number = number_ds9_frames(ds9.get("xpa info").split("\t")[-1])
+        # ["frame next;"]
+        # for i in range(number):
+        file = ds9.get("file")
+        if os.path.isfile(file):
+            new_filename.append(file)
+        while a != last:
+
             ds9.set("frame next")
             file = ds9.get("file")
             if os.path.isfile(file):
                 new_filename.append(file)
+            a = ds9.get("frame")
+            number += 1
         ds9.set("frame " + current)
         if sort:
             new_filename.sort()
@@ -11026,8 +11042,9 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
         ["x", "y", "a", "b", "theta", "flag"],
         ["X_IMAGE", "Y_IMAGE", "A_IMAGE", "B_IMAGE", "THETA_IMAGE", "FLAGS"],
     )
+    catalog["FWHM_IMAGE"] = 2 * np.sqrt(np.log(2) * (catalog["A_IMAGE"]**2 + (catalog["B_IMAGE"]**2)))
     catalog["THETA_IMAGE"] *= 180 / np.pi
-    print(param_dict["CATALOG_NAME"])
+    print(catalog,param_dict["CATALOG_NAME"])
     catalog.write(param_dict["CATALOG_NAME"], overwrite=True)
     return catalog
 
