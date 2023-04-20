@@ -23,6 +23,7 @@ def emccd_model(
 ):
     """Plot EMCCD simulation
     """
+    import os
     print("path = ", path)
     if ".fit" not in path:
         tab = Table.read(path)
@@ -89,23 +90,23 @@ def emccd_model(
                 fits.open(file)[0].data[Yinf:Ysup, Xinf:Xsup]
                 for file in globglob(paths)
             )
-            os = np.hstack(
+            osv = np.hstack(
                 fits.open(file)[0].data[Yinf:Ysup, Xinf_os:Xsup_os]
                 for file in globglob(paths)
             )
         else:
             im = data[Yinf:Ysup, Xinf:Xsup]
-            os = data[Yinf:Ysup, Xinf_os:Xsup_os]
+            osv = data[Yinf:Ysup, Xinf_os:Xsup_os]
         im_nan_fraction = np.isfinite(im).mean()
-        os_nan_fraction = np.isfinite(os).mean()
-        print(os.shape, im.shape)
+        os_nan_fraction = np.isfinite(osv).mean()
+        print(osv.shape, im.shape)
         median_im = np.nanmedian(im)
-        min_, max_ = (np.nanpercentile(os, 0.4), np.nanpercentile(im, 99.8))
+        min_, max_ = (np.nanpercentile(osv, 0.4), np.nanpercentile(im, 99.8))
         # print(im.shape,os.shape)
         # print(min_, max_,np.nanpercentile(im[np.isfinite(im)], 99.8),np.nanpercentile(im[np.isfinite(im)], 0.4),np.nanpercentile(im[np.isfinite(im)], 40))
         val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1))
-        val_os, bins_os = np.histogram(os.flatten(), bins=np.arange(min_, max_, 1))
-        print(val_os,min_, max_,os)
+        val_os, bins_os = np.histogram(osv.flatten(), bins=np.arange(min_, max_, 1))
+        print(val_os,min_, max_,osv)
         bins = (bins[1:] + bins[:-1]) / 2
         t=1#2.5
         val = np.array(val, dtype=float) *t/ im_nan_fraction 
@@ -286,24 +287,19 @@ def emccd_model(
         (0, 0.2),
     ]
     # (1.5e3,1.5e5),
-    centers = [
-        bias,  # ADDED
-        RON/ conversion_gain,
-        # RN / conversion_gain,
-        gain,
-        0.005,  # ADDED
-        smearing,  # ADDED
-        0.005,  # ADDED0.01
-    ]
-    centers = [
-        bias,  # ADDED
-        147.3,
-        # RN / conversion_gain,
-        1040,
-        0.005,  # ADDED
-        smearing,  # ADDED
-        0.0118,  # ADDED0.01
-    ]
+    if os.path.isfile("/tmp/emccd_fit_values.npy"):
+        centers = np.genfromtxt("/tmp/emccd_fit_values.npy")
+        
+    else:
+        centers = [
+            bias,  # ADDED
+            RON/ conversion_gain,
+            # RN / conversion_gain,
+            gain,
+            0.005,  # ADDED
+            smearing,  # ADDED
+            0.005,  # ADDED0.01
+        ]
     names = inspect.getargspec(function).args[1:]
     # print(names)
     names = [
@@ -370,6 +366,12 @@ def emccd_model(
     #     color=c,
     #     hovercolor=hc,
     # )
+    button0 = Button(
+        plt.axes([0.67 - 0.02 * 1, 0.025, 0.1, 0.04]),
+        "Save values",
+        color=c,
+        hovercolor=hc,
+    )
     simplified_least_square = Button(
         plt.axes([0.57 - 0.02 * 2, 0.025, 0.1, 0.04]),
         "Fit (B,RN,G,F)",
@@ -537,7 +539,13 @@ def emccd_model(
     #             slid.set_val([val1i, val2i])
     #         dict_values[slid.label.get_text()] = slid.val
     #     return
-
+    def save_values(event):
+        vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
+        vals2 = [v if type(v) != tuple else v[0] for v in vals_tot]
+        print("vals2", vals2)
+        np.savetxt("/tmp/emccd_fit_values.npy", vals2, fmt='%s')
+        print(np.fromfile("/tmp/emccd_fit_values.npy", fmt='%s'))
+        return
     # def fit0(event):
     #     vals1 = centers
     #     vals2 = np.array(centers) + 0.1
@@ -745,6 +753,7 @@ def emccd_model(
     #         dict_values[slid.label.get_text()] = slid.val
     #     return
 
+    button0.on_clicked(save_values)
     # button0.on_clicked(fit0)
     # button.on_clicked(fit)
     # fit_os_button.on_clicked(fit_os)

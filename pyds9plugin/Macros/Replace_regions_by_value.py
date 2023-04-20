@@ -9,11 +9,11 @@ value = get(d, 'Value to replace in the regions (eg. inf, nan, 0.1, -2)', exit_=
 ds9 = ds9#.astype(float).copy()
 # print(ds9[0,0])
 # verboseprint(regions)
-other_mask = get(d, 'Other mask to apply', exit_=True)
+other_mask = get(d, 'Other mask to apply (for example ds9>0)', exit_=True)
 if other_mask=="":
     print("no other mask")
     other_mask=True
-print( other_mask)
+print(other_mask)
 
 try:
     xc, yc, h, w = int(regions.xc), int(regions.yc), int(regions.h), int(regions.w)

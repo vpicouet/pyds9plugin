@@ -1086,6 +1086,7 @@ def PlotFit1D(
     sigma=None,
     # ls=":",
     interactive=False,
+    extrapolate=True,
     **kwargs,
 ):
     """ PlotFit1D(np.arange(100),np.arange(100)**2
@@ -1192,9 +1193,10 @@ def PlotFit1D(
             )
             if P0 is None:
                 P0 = [
-                    np.nanmax(y) - np.nanmin(y),
+                    np.ptp(y),
                     x[np.argmax(y)],
-                    np.std(y),
+                    x.ptp()/2,
+                    # np.std(y),
                     np.nanmin(y),
                 ]
         elif deg == "power":
@@ -1314,9 +1316,13 @@ def PlotFit1D(
         res = np.sum(np.square(y - law(x, *popt)))
         zp = law(xp, *popt)
         zz = law(x, *popt)
+        try:
+            dec_Rec = Decimal(res)
+        except TypeError:
+            dec_Rec=0
         name = "Fit %s, R=%0.2E" % (
             np.round(np.array(popt, dtype=int), 0),
-            Decimal(res),
+            dec_Rec,
         )
     if plot_:
         if ax is None:
@@ -1345,9 +1351,14 @@ def PlotFit1D(
             ax1.legend()
             plt.tight_layout()
         else:
-            xp = np.linspace(
-                np.nanmin(xp) - 2 * xp.ptp(), np.nanmax(xp) + 2 * xp.ptp(), 5 * len(xp),
-            )
+            if extrapolate:
+                xp = np.linspace(
+                    np.nanmin(xp) - 2 * xp.ptp(), np.nanmax(xp) + 2 * xp.ptp(), 5 * len(xp),
+                )
+            else:
+                xp = np.linspace(
+                    np.nanmin(xp), np.nanmax(xp), 5 * len(xp),
+                )
             try:
                 line = ax.plot(xp, np.poly1d(z)(xp), **kwargs)
             except UnboundLocalError:
@@ -2831,6 +2842,278 @@ def analyze_spot(
         verboseprint(d)
     return d
 
+def stack_throughfocus(files, tf_length=11, n=30):
+    from astropy.io import fits
+    import numpy as np
+    files.sort()
+    chunks = [files[x:x+tf_length] for x in range(0, len(files), tf_length)]#[:-1]
+    new_image = np.zeros((n*2*len(chunks),n*2*tf_length+1))
+    for j, tfs in enumerate(chunks):
+        # print(i)
+        data = fits.open(tfs[int(tf_length/2)])[0].data
+        valmax = np.nanmax(data)
+        print(np.where(data==valmax))
+        yc, xc = np.where(data==valmax)
+        yc, xc  = int(yc), int(xc)
+        # yc, xc  = int(yc)+50, int(xc)-100
+        for i,f in enumerate(tfs):
+            print(j)
+            data = fits.open(f)[0].data
+            sub = data[yc-n:yc+n,xc-n:xc+n]
+            print(sub.shape)
+            print(new_image[j*2*n:(j+1)*2*n,i*2*n:(i+1)*2*n].shape)
+            new_image[j*2*n:(j+1)*2*n,i*2*n:(i+1)*2*n] = sub
+            # plt.imshow(new_image)      
+            # plt.show()
+    # fitswrite(new_image,"/Volumes/VINCENT/GOBC/today/stacked_image_2.fits")
+    # plt.imshow(new_image)      
+    return new_image, (xc, yc)
+    # d=DS9n()
+    # d.set_np2arr(new_image)
+
+
+def throughfocus_new(xpapoint=None, plot_=True,tf_length=11, argv=[]):
+    """
+    """
+    from astropy.io import fits
+    import matplotlib.pyplot as plt
+    from astropy.table import Table
+    import numpy as np
+    parser = create_parser(get_name_doc(), path=False)
+    parser.add_argument(
+        "-p",
+        "--path",
+        default="",
+        help="Paths of the images you want to analyse. Use regexp ",
+        type=str,
+        metavar="",
+    )
+    parser.add_argument(
+        "-s",
+        "--sort",
+        default="AlphaNumerical",
+        help="Way to sort files to create throughfocus profile",
+        type=str,
+        choices=["AlphaNumerical", "CreationDate", "DS9-Order"],
+        metavar="",
+    )
+    args = parser.parse_args_modif(argv, required=False)
+
+    verboseprint("""\n\n\n\n      START THROUGHFOCUS \n\n\n\n""")
+    d = DS9n(args.xpapoint)
+    filename = get_filename(d)
+    header = fits.open(filename)[0].header
+    if args.path == "":
+        # name = filename.replace(".fits","_TF.fits")
+        name = "/tmp/tf.fits"
+        cat_name = filename.replace(".fits","_cat.fits")
+    else:
+        name = os.path.dirname(args.path) + "/imstack_TF.fits"
+        cat_name = os.path.dirname(args.path) + "/imstack_TF_cat.fits"
+
+    param_dict = {"DETECT_THRESH":10,
+    "GAIN":0,
+    "DETECT_MINAREA":100,
+    "DEBLEND_NTHRESH":1,
+    "DEBLEND_MINCONT":100,
+    "PHOT_APERTURES":"5,20,80",
+    "CLEAN":0,
+    "CLEAN_PARAM":0,
+    "CATALOG_NAME":cat_name,
+    }
+    
+    if (args.path == "") & (d.get("tile")=="yes"):
+        files = get_filename(d, All=True, sort=False)
+        image = fits.open(filename)[0]
+        files.sort()
+        region = getregion(d, quick=True, message=False, selected=True)
+        print("region = ", region)
+        Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
+        xc, yc = (Xinf+ Xsup)/2, (Yinf+ Ysup)/2
+        new_image = np.hstack([fits.open(f)[0].data[Yinf:Ysup, Xinf:Xsup] for f in files]) 
+        print(new_image)
+        fitswrite(new_image,name)
+
+    elif os.path.isfile(args.path) | ((args.path == "") & (d.get("tile")=="no")) | (len(globglob(args.path))>tf_length) :            
+        print("os.path.isfile(args.path)",args.path,os.path.isfile(args.path))
+        n_tf = tf_length
+        if os.path.isfile(args.path):
+            filename = args.path
+        elif args.path == "":
+            pass
+        else:
+            files = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
+            image = fits.open(files[int(len(files)/2)])[0]
+            new_image, (xc, yc) = stack_throughfocus(files, tf_length=tf_length, n=30)
+            fitswrite(new_image,name)
+            filename = name
+
+        print(filename)
+        run_sep(filename,filename, param_dict)
+        fig, ((ax1, ax2, ax2b), (ax3, ax4b, ax4)) = plt.subplots(2, 3, figsize=(12, 8), sharex=True)
+        color1 = 'k'
+        color2 = 'grey'
+
+        cat=Table.read(cat_name)
+        x=cat["X_IMAGE"]
+        cat["FLUX_APER_0"] = cat["MAG_APER_0"]#[:,0]
+        if 1==1:
+            reg_file="/tmp/test.reg"
+            create_ds9_regions(
+                [cat["X_IMAGE"]], [cat["Y_IMAGE"]],
+                more=[
+                    cat["A_IMAGE"] * cat["KRON_RADIUS"] / 2,
+                    cat["B_IMAGE"] * cat["KRON_RADIUS"] / 2,
+                    cat["THETA_IMAGE"], ],
+                form=["ellipse"] * len(cat),
+                save=True,
+                ID=[np.around(cat["FWHM_IMAGE"], 1).astype(str)],
+                color=["white"] * len(cat),
+                savename=reg_file,
+                font=10)
+            d.set("regions " + reg_file)
+        else:
+            command = """catalog import FITS %s ; catalog x %s ;
+                    catalog y %s ; catalog symbol shape
+                    ellipse  ; catalog symbol Size
+                    "$A_IMAGE * $KRON_RADIUS/2" ; catalog symbol
+                    Size2 "$B_IMAGE * $KRON_RADIUS/2"; catalog
+                    symbol angle "$THETA_IMAGE" ; catalog symbol Text "$FWHM_IMAGE" ; mode catalog;  """
+            d.set(f_string(command % (cat_name, x, y)))
+        import pandas as pd
+        from sklearn.cluster import KMeans
+        cat = delete_multidim_columns(cat)
+        catalog_df = cat.to_pandas()
+        n_clusters = int(len(cat)/n_tf)
+        if len(cat)>n_tf:
+            km = KMeans(n_clusters=n_clusters)
+            X=catalog_df[["Y_IMAGE"]]
+            km.fit(X)
+            catalog_df["cluster"] = km.predict(X)
+            sub_catalogs = []
+            idx = np.argsort(km.cluster_centers_.sum(axis=1))
+            for i in idx:
+                sub_catalogs.append(catalog_df[catalog_df["cluster"] == i])
+        else:
+            sub_catalogs=[catalog_df]
+        ax2.set_title('Aperture flux')
+        ax3.set_title('Angle')
+        ax1.set_ylabel('pix', color=color1)
+        ax1.set_title('σ')
+        ax4.set_title('Minor axis')
+        ax2b.set_title('Ellipticity')
+        ax4b.set_title('Major axis')
+        c="k"
+        ax2b.set_ylim(ymin=0)
+        for i, cat in enumerate(sub_catalogs):
+        # for i, cat in enumerate([sub_catalogs[3],sub_catalogs[5],sub_catalogs[6]]):
+            cat=cat.sort_values(by=['X_IMAGE'])#.sort("X_IMAGE")
+            x=np.arange(len(cat["X_IMAGE"]))
+            
+            # PlotFit1D(x, cat["ELLIPTICITY"],deg=lambda x,a,b,x0:a*np.log(abs(x-x0))+b,ax=ax2b,ls=":",extrapolate=False,P0=[0.1,0.1,np.mean(x)])
+            fit = PlotFit1D(x, cat["ELLIPTICITY"],deg=lambda x, a,b,c,d,x0:-((d-a*abs(x-x0))**2)/b+c,ls=":",ax=ax2b,extrapolate=False,P0=[5,np.mean(x),0,np.mean(x),np.mean(x)])["popt"]
+            ax2b.scatter(x, cat["ELLIPTICITY"],label="c=%0.1f"%(fit[-1]))#,label="%i: FWHM=%0.1f"%(i,np.min(cat["FWHM_IMAGE"])))#, c=c)
+            
+            fit=PlotFit1D(x, cat["FWHM_IMAGE"]/2.35,deg=2,ax=ax1,ls=":",extrapolate=False)
+            ax1.scatter(x, cat["FWHM_IMAGE"]/2.35,label="%i: FWHM=%0.1f, C=%0.1f"%(i,np.min(cat["FWHM_IMAGE"]),np.argmin(cat["FWHM_IMAGE"])))#, c=c)
+            fit=PlotFit1D(x, cat["FLUX_APER_0"],deg="gaus",ax=ax2,ls=":",extrapolate=False)["popt"]
+            ax2.scatter(x, cat["FLUX_APER_0"],label="c=%0.1f"%(fit[1]))
+            fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)+c,ax=ax3,P0=[190/3,100,-60,np.mean(x)],ls=":",extrapolate=False)["popt"]
+            ax3.scatter(x, cat["THETA_IMAGE"],label="%i: $\Delta$=%0.1f, c=%0.1f"%(i,fit[0],fit[-1]))#, c=c)
+            fit=PlotFit1D(x, cat["A_IMAGE"],deg=lambda x, a,b,x0:np.abs(a*(x-x0))+b,ls=":",ax=ax4b,extrapolate=False,P0=[0.1,4,np.mean(x)])["popt"]
+            # PlotFit1D(x, cat["A_IMAGE"],deg=2,ls=":",ax=ax4b,extrapolate=False)
+            # PlotFit1D(x, cat["B_IMAGE"],deg=5,ls=":",ax=ax4,extrapolate=False)
+            ax4b.scatter(x, cat["A_IMAGE"],marker="o",label="c=%0.1f"%(fit[-1]))
+            fit=PlotFit1D(x, cat["B_IMAGE"],deg=lambda x, a,b,c,d,x0:((d-a*abs(x-x0))**2)/b+c,ls=":",ax=ax4,extrapolate=False,P0=[5,np.mean(x),5,np.mean(x),np.mean(x)])["popt"]
+            ax4.scatter(x, cat["B_IMAGE"],marker="o",label="c=%0.1f"%(fit[-1]))
+
+        ax1.legend(fontsize=7)
+        ax3.legend(fontsize=7)
+        ax2.legend(fontsize=7)
+        ax2b.legend(fontsize=7)
+        ax4.legend(fontsize=7)
+        ax4b.legend(fontsize=7)
+
+        fig.tight_layout()
+        fig.savefig(filename.replace(".fits",".png"), dpi=100, bbox_inches="tight")
+        plt.show()
+        return
+    else:    
+        files = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
+        image = fits.open(files[int(len(files)/2)])[0]
+        new_image, (xc, yc) = stack_throughfocus(files, tf_length=tf_length, n=30)
+        fitswrite(new_image,name)
+        print("ok ",name)
+
+    # files=get_filename(d, All=True, sort=False)
+    x, y = "X_IMAGE", "Y_IMAGE"
+
+
+    run_sep(name, name, param_dict)
+    cat = Table.read(cat_name)
+    cat = cat[cat["FWHM_IMAGE"]>4]
+    cat.sort("X_IMAGE")
+    # d.set("frame new; file "+name)
+
+
+    from matplotlib.patches import Ellipse
+    from matplotlib.patches import Circle
+    from pylab import figure, cm
+    from matplotlib.colors import LogNorm
+    fig = plt.figure(figsize=(12,6))
+    cat.sort("X_IMAGE")
+    cat["id"]=np.arange(len(cat))
+    x = cat["id"]
+
+    ax1 = plt.subplot2grid(shape=(3, 3), loc=(0, 0), colspan=3)
+    ax2 = plt.subplot2grid(shape=(3, 3), loc=(1, 0), colspan=1)
+    ax3 = plt.subplot2grid(shape=(3, 3), loc=(1, 1), colspan=1,sharex=ax2)
+    ax4 = plt.subplot2grid(shape=(3, 3), loc=(1, 2), colspan=1,sharex=ax2)
+    ax2b = plt.subplot2grid(shape=(3, 3), loc=(2, 0), colspan=1,sharex=ax2)
+    ax3b = plt.subplot2grid(shape=(3, 3), loc=(2, 1), colspan=1,sharex=ax2)
+    ax4b = plt.subplot2grid(shape=(3, 3), loc=(2, 2), colspan=1,sharex=ax2)
+    ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,50), vmax=np.percentile(new_image,99.99)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    ax1.axis("off")
+    for i in range(len(cat)):
+        ellipse = Ellipse((cat["X_IMAGE"][i], cat["Y_IMAGE"][i]), 2.5*cat["A_IMAGE"][i]* cat["KRON_RADIUS"][i] / 2, 2.5*cat["B_IMAGE"][i]* cat["KRON_RADIUS"][i] / 2, cat["THETA_IMAGE"][i], edgecolor='k', facecolor='none',ls="--")
+        ax1.add_artist(ellipse)
+        circle = Circle((cat["X_IMAGE"][i], cat["Y_IMAGE"][i]),5, edgecolor='r', facecolor='none',lw=0.2)
+        ax1.add_artist(circle)
+        circle = Circle((cat["X_IMAGE"][i], cat["Y_IMAGE"][i]),20, edgecolor='r', facecolor='none',lw=0.2)
+        ax1.add_artist(circle)
+    color1 = 'k'
+    color2 = 'k'
+    PlotFit1D(x, cat["FWHM_IMAGE"]/2.35,deg=2, ax=ax2,c=color1,ls=":",extrapolate=False)
+    ax2.plot(x, cat["FWHM_IMAGE"]/2.35,"o", color=color1,label="σ$_{min}$=%0.1f"%(np.min(cat["FWHM_IMAGE"]/2.35)))
+    ax2.tick_params(axis='y', labelcolor=color1)
+    fit = PlotFit1D(x, cat["MAG_APER_0"],deg="gaus", ax=ax3,c=color1,ls=":",extrapolate=False)["popt"]
+    ax3.errorbar(x, cat["MAG_APER_0"],fmt="o", yerr=cat["MAGERR_APER_0"],color=color2,label=r"$m_{aper}^{5pix}$, c=%0.1f"%(fit[1]))
+    ax3.errorbar(x, cat["MAG_APER_1"],ls=":",yerr=cat["MAGERR_APER_1"], color=color2,label=r"$m_{aper}^{20pix}$")
+    ax3.set_yscale("log")
+
+    fit = PlotFit1D(x, cat["ELLIPTICITY"],deg=lambda x, a,b,c,d,x0:-((d-a*abs(x-x0))**2)/b+c,ls=":",ax=ax4,P0=[5,np.mean(x),0,np.mean(x),np.mean(x)], color=color1,extrapolate=False)["popt"]
+    ax4.plot(x, cat["ELLIPTICITY"],"o", color=color2,label="c=%0.1f"%(fit[-1]))#,label="%i: FWHM=%0.1f"%(i,np.min(cat["FWHM_IMAGE"])))#, c=c)
+    fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)+c,ax=ax2b,P0=[190/3,100,-60,np.mean(x)],ls=":",extrapolate=False, color=color1)["popt"]
+    ax2b.scatter(x, cat["THETA_IMAGE"],label="%i: $\Delta$=%0.1f, c=%0.1f"%(i,fit[0],fit[-1]), color=color1)
+    fit=PlotFit1D(x, cat["A_IMAGE"],deg=lambda x, a,b,x0:np.abs(a*(x-x0))+b,ls=":",ax=ax3b,extrapolate=False,P0=[0.1,4,np.mean(x)], color=color1)["popt"]
+    ax3b.scatter(x, cat["A_IMAGE"],marker="o",label="c=%0.1f"%(fit[-1]), color=color1)
+    fit=PlotFit1D(x, cat["B_IMAGE"],deg=lambda x, a,b,c,d,x0:((d-a*abs(x-x0))**2)/b+c,ls=":",ax=ax4b,extrapolate=False,P0=[5,np.mean(x),5,np.mean(x),np.mean(x)], color=color1)["popt"]
+    ax4b.scatter(x, cat["B_IMAGE"],marker="o",label="c=%0.1f"%(fit[-1]), color=color1)
+    ax3.legend(fontsize=7,title="Flux")
+    ax2.legend(fontsize=7,title="PSF size")
+    ax2b.legend(fontsize=7,title="Angle")
+    ax3b.legend(fontsize=7,title="Major axis")
+    ax4b.legend(fontsize=7,title="Minor axis")
+    ax1.set_title("%i - %i"%(xc, yc))
+    fig.subplots_adjust(hspace=0.03)   
+    fig.savefig(filename.replace(".fits",".png"), dpi=100, bbox_inches="tight", transparent=True)
+    # fig.savefig('/tmp/output.png', transparent=True)
+    plt.show()
+
+
+
+
+
 
 def throughfocus(xpapoint=None, plot_=True, argv=[]):
     """Perform a throughfocus analysis and return the best focused image
@@ -2886,7 +3169,7 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
         path = get_filename(d, All=True, sort=False)
         image = fits.open(filename)[0]
     else:
-        path = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
+        path = globglob(args.path)#[:]
         image = fits.open(path[int(len(path)/2)])[0]
 
 
@@ -10962,8 +11245,8 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
     h = hdu[extension].header
     img = hdu[extension].data
     img = img.byteswap().newbyteorder()
-    bkg = sep.Background(img)
-    data_sub = img - bkg
+    bkg = sep.Background(np.array(img,dtype=float))
+    data_sub = np.array(img,dtype=float) -  np.array(bkg,dtype=float)
     objects = sep.extract(
         data_sub,
         thresh=float(param_dict["DETECT_THRESH"]),
@@ -11042,6 +11325,8 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
         ["x", "y", "a", "b", "theta", "flag"],
         ["X_IMAGE", "Y_IMAGE", "A_IMAGE", "B_IMAGE", "THETA_IMAGE", "FLAGS"],
     )
+    catalog["ELLIPTICITY"] =  1 - catalog["B_IMAGE"]/catalog["A_IMAGE"]
+    catalog["ELONGATION"] =  catalog["A_IMAGE"]/catalog["B_IMAGE"]
     catalog["FWHM_IMAGE"] = 2 * np.sqrt(np.log(2) * (catalog["A_IMAGE"]**2 + (catalog["B_IMAGE"]**2)))
     catalog["THETA_IMAGE"] *= 180 / np.pi
     print(catalog,param_dict["CATALOG_NAME"])
@@ -11162,7 +11447,7 @@ def run_sex(path, DETECTION_IMAGE, param_dict):
     param_dict["CHECKIMAGE_NAME"] = cat_path + "_check_%s.fits" % (
         param_dict["CHECKIMAGE_TYPE"]
     )
-    if which("sex") is not None:  # None
+    if which("sex") is None:  # None
         command = "Running sep"
         run_sep(path, DETECTION_IMAGE, param_dict)
         return 0
@@ -14469,6 +14754,7 @@ def main():
         "center_region": center_region,
         "radial_profile": radial_profile,
         "throughfocus": throughfocus,
+        "throughfocus_new":throughfocus_new,
         "compute_fluctuation": compute_fluctuation,
         "light_curve": light_curve,
         "explore_throughfocus": explore_throughfocus,

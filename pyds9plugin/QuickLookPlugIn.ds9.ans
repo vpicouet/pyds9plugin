@@ -10,6 +10,11 @@ button
 DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $diam    | $text
 
 
+New TF
+*
+button
+DS9Utils throughfocus_new -x $xpa_method  --path  "'$entry(Regexp path of the images that you want to use:)'"   | $text
+
 SExtractor #36
 *
 button
@@ -1554,7 +1559,7 @@ endparam
 
 
 param Python-Command
-exp combobox {Expression} {ds9[(ds9>50)&(ds9<-50)]=np.nan|ds9[fits.open(filename.replace('.fits','.masks.fits'))[0].data>0.1]=np.nan|ds9=interpolate_replace_nans(sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std'),Gaussian2DKernel(x_stddev=3,y_stddev=1))|ds9=sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std')|a,b=np.array(d.get('scale limits').split(),dtype=float);ds9[np.bitwise_or(ds9>a,ds9<b)]=np.nan|ds9=ds9[:10,:10]|ds9+=np.random.normal(0,0.1,ds9.shape)|ds9+=30*(ds9-gaussian_filter(ds9,1))|ds9=np.abs(fftshift(fft2(region)))**2|ds9=correlate2d(region.astype('uint64'),region,boundary='symm',mode='same')|ds9=interpolate_replace_nans(ds9,Gaussian2DKernel(x_stddev=5,y_stddev=5))|n=1060;ds9=np.hstack([ds9.min()*np.ones((ds9.shape[0],n)),ds9[:,::-1],ds9.min()*np.ones((ds9.shape[0],3216-n-ds9.shape[1]))])|np.random.gamma(np.random.poisson(np.ones(ds9.shape)*np.linspace(0,1,ds9.shape[0])), 1400)+ np.random.normal(3000,50, size=ds9.shape)|ds9=mask_CR_tails(ds9, header,threshold=15000,n=3,size=0)|ds9=grey_dilation(grey_erosion(ds9, size=(3, 3)), size=(3, 3))|ds9=np.array([fits.open(f)[0].data for f in glob.glob('/tmp/?.fits')])|ds9[fits.open('/tmp/HP_mask_50s_-95C.fits')[0].data==1]=np.nan|ds9-=fits.open('test')[0].data|ds9=convolve(ds9,np.ones((2,3)))} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
+exp combobox {Expression} {ds9[(ds9>50)&(ds9<-50)]=np.nan|ds9[fits.open(filename.replace('.fits','.masks.fits'))[0].data>0.1]=np.nan|ds9=interpolate_replace_nans(sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std'),Gaussian2DKernel(x_stddev=3,y_stddev=1))|ds9=sigma_clip(ds9,axis=1,masked=False,sigma_upper=1.4,sigma_lower=3,stdfunc='mad_std')|a,b=np.array(d.get('scale limits').split(),dtype=float);ds9[np.bitwise_or(ds9>a,ds9<b)]=np.nan|ds9=ds9[:10,:10]|ds9+=np.random.normal(0,0.1,ds9.shape)|ds9+=30*(ds9-gaussian_filter(ds9,1))|ds9=np.abs(fftshift(fft2(region)))**2|ds9=correlate2d(region.astype('uint64'),region,boundary='symm',mode='same')|ds9=interpolate_replace_nans(ds9,Gaussian2DKernel(x_stddev=5,y_stddev=5))|n=1060;ds9=np.hstack([ds9.min()*np.ones((ds9.shape[0],n)),ds9[:,::-1],ds9.min()*np.ones((ds9.shape[0],3216-n-ds9.shape[1]))])|np.random.gamma(np.random.poisson(np.ones(ds9.shape)*np.linspace(0,1,ds9.shape[0])), 1400)+ np.random.normal(3000,50, size=ds9.shape)|ds9=mask_CR_tails(ds9, header,threshold=15000,n=3,size=0)|ds9=grey_dilation(grey_erosion(ds9, size=(3, 3)), size=(3, 3))|ds9=np.array([fits.open(f)[0].data for f in glob.glob('/tmp/?.fits')])|ds9[fits.open('/tmp/HP_mask_50s_-95C.fits')[0].data==1]=np.nan|ds9-=fits.open('test')[0].data|ds9=convolve(ds9,np.ones((2,3)))|plt.hist(region.flatten(),log=True,bins=300);plt.show()} {Python expression for exec method or python macro path}#. See doc for exemples (convolution, adding noise, masking, trimming).
 overwrite checkbox {Write ouput} 0 {Will save ds9 image if modified (_modified.fits), uncheck if image saved in macro.}#USE WITH CAUTION!
 endparam
 
