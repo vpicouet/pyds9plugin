@@ -1,6 +1,6 @@
 ims = []
 lim=100
-n=50
+n=200
 # files=glob.glob("/Volumes/VINCENT/GOBC/img_save/bkgd_photutils_substracted/stack4*.fits")
 files=glob.glob("/Volumes/VINCENT/GOBC/img_save/bkgd_photutils_substracted/stack4*.fits")
 
@@ -34,7 +34,7 @@ h = fitsimage[0].header
 try:
     filename = os.path.dirname(files[0]) + "/sum_%s.fits"%(h["ROTENC"])
 except KeyError:
-    filename = os.path.dirname(files[0]) + "/sum_%s.fits"%(h["ROTENC"])
+    filename = os.path.dirname(files[0]) + "/sum_%s_%s.fits"%(h["TEMPDATE"].replace("/",""),h["TEMPTIME"])
 
 print(filename)
 fitsimage.writeto(filename,overwrite=True)
