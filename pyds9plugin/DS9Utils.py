@@ -11362,7 +11362,7 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
     catalog["ELLIPTICITY"] =  1 - catalog["B_IMAGE"]/catalog["A_IMAGE"]
     catalog["ELONGATION"] =  catalog["A_IMAGE"]/catalog["B_IMAGE"]
     # catalog["FWHM_IMAGE"] = 2 * np.sqrt(np.log(2) * (catalog["A_IMAGE"]**2 + catalog["B_IMAGE"]**2))
-    catalog["FWHM_IMAGE"] = 2.35 * np.sqrt(catalog["A_IMAGE"]**2 + catalog["B_IMAGE"]**2) /np.sqrt(2) 
+    catalog["FWHM_IMAGE"] = 2.35 * np.sqrt(catalog["A_IMAGE"]**2 + catalog["B_IMAGE"]**2) /2
     # FWHM = 2.35/sqrt(2) * sqrt(A^2+B^2)
     catalog["THETA_IMAGE"] *= 180 / np.pi
     print(catalog,param_dict["CATALOG_NAME"])
