@@ -3022,7 +3022,6 @@ def throughfocus_new(xpapoint=None, plot_=True,tf_length=11, argv=[]):
         # for i, cat in enumerate([sub_catalogs[3],sub_catalogs[5],sub_catalogs[6]]):
             cat=cat.sort_values(by=['X_IMAGE'])#.sort("X_IMAGE")
             x=np.arange(len(cat["X_IMAGE"]))
-            
             # PlotFit1D(x, cat["ELLIPTICITY"],deg=lambda x,a,b,x0:a*np.log(abs(x-x0))+b,ax=ax2b,ls=":",extrapolate=False,P0=[0.1,0.1,np.mean(x)])
             fit = PlotFit1D(x, cat["ELLIPTICITY"],deg=lambda x, a,b,c,d,x0:-((d-a*abs(x-x0))**2)/b+c,ls=":",ax=ax2b,extrapolate=False,P0=[5,np.mean(x),0,np.mean(x),np.mean(x)])["popt"]
             ax2b.scatter(x, cat["ELLIPTICITY"],label="c=%0.1f"%(fit[-1]))#,label="%i: FWHM=%0.1f"%(i,np.min(cat["FWHM_IMAGE"])))#, c=c)
@@ -11362,12 +11361,14 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
     )
     catalog["ELLIPTICITY"] =  1 - catalog["B_IMAGE"]/catalog["A_IMAGE"]
     catalog["ELONGATION"] =  catalog["A_IMAGE"]/catalog["B_IMAGE"]
-    catalog["FWHM_IMAGE"] = 2 * np.sqrt(np.log(2) * (catalog["A_IMAGE"]**2 + (catalog["B_IMAGE"]**2)))
+    # catalog["FWHM_IMAGE"] = 2 * np.sqrt(np.log(2) * (catalog["A_IMAGE"]**2 + catalog["B_IMAGE"]**2))
+    catalog["FWHM_IMAGE"] = 2.35 * np.sqrt(catalog["A_IMAGE"]**2 + catalog["B_IMAGE"]**2) /np.sqrt(2) 
+    # FWHM = 2.35/sqrt(2) * sqrt(A^2+B^2)
     catalog["THETA_IMAGE"] *= 180 / np.pi
     print(catalog,param_dict["CATALOG_NAME"])
     catalog.write(param_dict["CATALOG_NAME"], overwrite=True)
     return catalog
-
+# 2sigma^2 donc FWHM = 2.35/sqrt(2) * sqrt(A^2+B^2) 
 
 def BackgroundMeasurement():
     """
