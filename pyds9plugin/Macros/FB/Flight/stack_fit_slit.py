@@ -90,6 +90,9 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
                     slit_width = 8.5
                 if "QSO" in filename:
                     slit_width = 6
+                else:
+                    slit_width = 6
+        
                 slit_min, slit_max, slit_med = slit_width-ds,slit_width+ds,slit_width
                 print(filename,":\n", slit_min, slit_max, slit_med)
                 
@@ -387,7 +390,7 @@ d = DS9n()
 # d.set("frame first")
 
 # for i in range(number_ds9_frames()):
-if 1==0:
+if 1==1:
     d.set("regions select all")
     regs = getregion(d, selected=True)
     image = d.get_pyfits()[0].data

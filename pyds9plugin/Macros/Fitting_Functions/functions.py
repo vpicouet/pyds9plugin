@@ -495,6 +495,7 @@ def EMCCDhist(
         except TypeError:
             n_pix = 10 ** 6.3
             # print(2)
+        # print(n_pix)
         n = 1
         im = np.zeros(int(n_pix))  #
         im = np.zeros((1000, int(n_pix / 1000)))

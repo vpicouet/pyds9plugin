@@ -15,11 +15,11 @@ for i, (name, c) in enumerate(zip(names, colors)):
     # a['col2'] = (a['col2']-a['col2'].min()) / (a['col2']-a['col2'].min()).ptp()
     # a.write(filename,overwrite=True,format='ascii',names=[None,None] )
     if len(Table.read(filename,format="ascii").colnames)==2:
-        d.set("plot load %s xy" % (filename)
-    elif en(Table.read(filename,format="ascii").colnames)==3:
-        d.set("plot load %s xyey" % (filename)
-    elif en(Table.read(filename,format="ascii").colnames)==4:
-        d.set("plot load %s xyexey" % (filename)
+        d.set("plot load %s xy" % (filename))
+    elif len(Table.read(filename,format="ascii").colnames)==3:
+        d.set("plot load %s xyey" % (filename))
+    elif len(Table.read(filename,format="ascii").colnames)==4:
+        d.set("plot load %s xyexey" % (filename))
     d.set("plot line color %s" % (c))
 
 d.set("plot legend yes")

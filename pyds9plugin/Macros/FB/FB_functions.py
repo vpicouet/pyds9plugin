@@ -19,7 +19,7 @@ color="k"
 
 
 def emccd_model(
-    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, fit="EMCCDhist"
+    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, fit="EMCCDhist",gui=True
 ):
     """Plot EMCCD simulation
     """
@@ -97,6 +97,34 @@ def emccd_model(
         else:
             im = data[Yinf:Ysup, Xinf:Xsup]
             osv = data[Yinf:Ysup, Xinf_os:Xsup_os]
+
+        try:
+            date = float(header["DATE"][:4])
+        except KeyError:
+            try:
+                date = float(header["OBSDATE"][:4])
+            except KeyError:
+                date = 2023
+        except TypeError:
+            date = 2023
+            print("No date keeping 2022 conversion gain")
+
+        # if bias > 1500:
+        if date < 2020:
+            conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
+            # smearing = 0.8  # 1.5  # ADDED
+            RN = 60  # 45 #ADDED
+        else:
+            conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
+            conversion_gain = 0.5  # ADU/e-  0.53 in 2018
+            # smearing = 1.3  # 0.7  # ADDED
+            RN = 10
+
+        conv=1
+        # conv = conversion_gain
+        # im = im/conversion_gain
+        # osv = osv/conversion_gain
+        # conversion_gain=1
         im_nan_fraction = np.isfinite(im).mean()
         os_nan_fraction = np.isfinite(osv).mean()
         print(osv.shape, im.shape)
@@ -104,11 +132,11 @@ def emccd_model(
         min_, max_ = (np.nanpercentile(osv, 0.4), np.nanpercentile(im, 99.8))
         # print(im.shape,os.shape)
         # print(min_, max_,np.nanpercentile(im[np.isfinite(im)], 99.8),np.nanpercentile(im[np.isfinite(im)], 0.4),np.nanpercentile(im[np.isfinite(im)], 40))
-        val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1))
-        val_os, bins_os = np.histogram(osv.flatten(), bins=np.arange(min_, max_, 1))
+        val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1*conversion_gain))
+        val_os, bins_os = np.histogram(osv.flatten(), bins=np.arange(min_, max_, 1*conversion_gain))
         print(val_os,min_, max_,osv)
         bins = (bins[1:] + bins[:-1]) / 2
-        t=1#2.5
+        t=1#0#1#2.5
         val = np.array(val, dtype=float) *t/ im_nan_fraction 
         os_v = np.log10(np.array(val_os *t/ os_nan_fraction, dtype=float)) #* os.size / len(os[np.isfinite(os)])) 
         # TODO take care of this factor
@@ -152,32 +180,9 @@ def emccd_model(
         np.nanmax(bins[np.isfinite(np.log10(val))]),
         len(ydata),
     )  # ADDED
-    # print(val_os)
-    # print(np.nanargmax(val_os))
-    # print(len(val_os),len(bins_os))
     bias = bins_os[np.nanargmax(os_v)]  # + 0.5  #  #ADDED xdata[np.nanargmax(ydata)]
-    # PlotFit1D(bins[mask_RN],value[mask_RN],deg='gaus', plot_=False,P0=[1,bins[np.nanargmax(value)],50,0])['popt'][1]
 
-    try:
-        date = float(header["DATE"][:4])
-    except KeyError:
-        try:
-            date = float(header["OBSDATE"][:4])
-        except KeyError:
-            date = 2023
-    except TypeError:
-        date = 2023
-        print("No date keeping 2022 conversion gain")
 
-    # if bias > 1500:
-    if date < 2020:
-        conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
-        # smearing = 0.8  # 1.5  # ADDED
-        RN = 60  # 45 #ADDED
-    else:
-        conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
-        # smearing = 1.3  # 0.7  # ADDED
-        RN = 10
     # conversion_gain=1
     # print("conversion_gain = ", conversion_gain)
     lim_rn1, lim_rn2 = (
@@ -200,7 +205,7 @@ def emccd_model(
 
     # centers = [xdata[np.nanargmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
     # print("RN",RN,RN * conversion_gain,RON,RON/conversion_gain)
-    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCD(
+    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: np.log10(1/conv) + EMCCD(
         x,
         bias=Bias,
         RN=RN * conversion_gain,
@@ -300,6 +305,8 @@ def emccd_model(
             smearing,  # ADDED
             0.005,  # ADDED0.01
         ]
+    if gui is False:
+        return {"BIAS":bias,"RON":RON/ conversion_gain,"GAIN":gain,"FLUX":flux}
     names = inspect.getargspec(function).args[1:]
     # print(names)
     names = [
@@ -313,10 +320,10 @@ def emccd_model(
     plt.plot(
         xdata, ydata, "grey", alpha=0.2,
     )
-    plt.plot([lim_rn1, lim_rn1], [0, 5], ":", c="grey", alpha=0.7)
-    plt.plot([lim_rn2, lim_rn2], [0, 5], ":", c="grey", alpha=0.7)
-    plt.plot([lim_gain_1, lim_gain_1], [0, 3], ":", c="grey", alpha=0.7)
-    plt.plot([upper_limit, upper_limit], [0, 3], ":", c="grey", alpha=0.7)
+    # plt.plot([lim_rn1, lim_rn1], [0, 5], ":", c="grey", alpha=0.7)
+    # plt.plot([lim_rn2, lim_rn2], [0, 5], ":", c="grey", alpha=0.7)
+    # plt.plot([lim_gain_1, lim_gain_1], [0, 3], ":", c="grey", alpha=0.7)
+    # plt.plot([upper_limit, upper_limit], [0, 3], ":", c="grey", alpha=0.7)
     n_conv = 21
     y_conv = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
     y_os_conv = np.convolve(os_v, np.ones(n_conv) / n_conv, mode="same")
@@ -410,7 +417,6 @@ def emccd_model(
                 mode="same",
             )
         )
-
         # l1.set_ydata(
         #     np.convolve(function(x, *v1), np.ones(n_conv) / n_conv, mode="same")
         # )
@@ -777,7 +783,7 @@ def emccd_model(
         mask = np.nan
 
     try:                              
-        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,ncr,mask,temp_device])])
+        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,ncr,sliders[3].val[1]*3600/header_exptime,temp_device])])#mask
     except Exception as e:
         print(e)
         df = pd.DataFrame([np.array([sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,temp_device])])

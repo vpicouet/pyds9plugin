@@ -2482,6 +2482,7 @@ def throughfocus_wcs(
     images = []
     images2 = []
     ENCa = []
+    headers=[]
     ext = fits_ext(fits.open(files[0]))
     x = offsets
     t = Table(
@@ -2536,6 +2537,7 @@ def throughfocus_wcs(
             int(center_pix[0]) - n : int(center_pix[0]) + n,
         ]
         images.append(subimage)
+        headers.append(header)
         images2.append((image - background)[
             int(center_pix[1]) - 80+50 : int(center_pix[1]) + 80+50,
             int(center_pix[0]) - 80-50 : int(center_pix[0]) + 80-50,
@@ -2593,7 +2595,11 @@ def throughfocus_wcs(
     for i, ax in enumerate(axes.flatten()):
         if i<len(files):
             ax.imshow(images2[i])
-            ax.text(0.1, 0.1, "%i\nσ=%0.1f\nEE50=%0.1f\nEE80=%0.1f"%(t["number"][i],fwhm[i],EE80[i],EE50[i]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
+            try:
+                ax.text(0.1, 0.1, "%i\nσ=%0.1f\nEE50=%0.1f\nEE80=%0.1f\nA,B,C = %0.2f,%0.2f,%0.2f"%(t["number"][i],fwhm[i],EE80[i],EE50[i],headers[i]["LINAENC"],headers[i]["LINBENC"],headers[i]["LINCENC"]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
+            except KeyError:
+                ax.text(0.1, 0.1, "%i\nσ=%0.1f\nEE50=%0.1f\nEE80=%0.1f"%(t["number"][i],fwhm[i],EE80[i],EE50[i]), bbox={'facecolor': 'white', 'pad': 10,'alpha':0.5}, transform=ax.transAxes)
+                pass
             # ax.set_title("%0.2f"%(x[i]))
             # ax.legend()
         elif i==len(files):
@@ -2872,7 +2878,7 @@ def stack_throughfocus(files, tf_length=11, n=30):
     # d.set_np2arr(new_image)
 
 
-def throughfocus_new(xpapoint=None, plot_=True,tf_length=11, argv=[]):
+def throughfocus_new(xpapoint=None, plot_=True, argv=[]):
     """
     """
     import re
@@ -2899,12 +2905,23 @@ def throughfocus_new(xpapoint=None, plot_=True,tf_length=11, argv=[]):
         choices=["AlphaNumerical", "CreationDate", "DS9-Order"],
         metavar="",
     )
-    args = parser.parse_args_modif(argv, required=False)
 
+    parser.add_argument(
+        "-n",
+        "--number",
+        default="AlphaNumerical",
+        help="Number of images per throughfocus",
+        type=str,
+        # choices=["AlphaNumerical", "CreationDate", "DS9-Order"],
+        metavar="",
+    )
+
+    args = parser.parse_args_modif(argv, required=False)
+    tf_length=int(args.number)
     verboseprint("""\n\n\n\n      START THROUGHFOCUS \n\n\n\n""")
     d = DS9n(args.xpapoint)
     filename = get_filename(d)
-    header = fits.open(filename)[0].header
+    # header = fits.open(filename)[0].header
     if args.path == "":
         # name = filename.replace(".fits","_TF.fits")
         name = "/tmp/tf.fits"
@@ -2915,7 +2932,7 @@ def throughfocus_new(xpapoint=None, plot_=True,tf_length=11, argv=[]):
 
     param_dict = {"DETECT_THRESH":3,
     "GAIN":0,
-    "DETECT_MINAREA":100,
+    "DETECT_MINAREA":80,
     "DEBLEND_NTHRESH":1,
     "DEBLEND_MINCONT":10000,
     "PHOT_APERTURES":"5,20,80",
@@ -2999,7 +3016,11 @@ def throughfocus_new(xpapoint=None, plot_=True,tf_length=11, argv=[]):
                 sub_catalogs=[catalog_df]
 
         except IndexError:
-            cat=Table.read(filename).to_pandas()
+            cat=Table.read(filename)
+            if "MAG_APER_0" not in cat.colnames:
+                cat["MAG_APER_0"] = cat["MAG_APER"][:,0]
+            cat = delete_multidim_columns(cat)
+            cat = cat.to_pandas()
             sub_catalogs = [ cat[i*n_tf:(i+1)*n_tf] for i in range(int(len(cat)/n_tf))]
         import pandas as pd
         from sklearn.cluster import KMeans
@@ -3045,7 +3066,7 @@ def throughfocus_new(xpapoint=None, plot_=True,tf_length=11, argv=[]):
         ax2b.legend(fontsize=7)
         ax4.legend(fontsize=7)
         ax4b.legend(fontsize=7)
-        fig.set_suptitle("%i - %i"%(int(n1),int(n2)))
+        fig.suptitle("%i - %i"%(int(n1),int(n2)))
         fig.tight_layout()
         fig.savefig(os.path.dirname(filename) + "/Throughfocus_%i_%i.png"%(int(n1),int(n2)), dpi=100, bbox_inches="tight")
         plt.show()
@@ -3109,8 +3130,10 @@ def throughfocus_new(xpapoint=None, plot_=True,tf_length=11, argv=[]):
     ax3.errorbar(x, cat["MAG_APER_0"]/np.max(cat["MAG_APER_1"]),fmt="o",color=color2,label=r"$m_{aper}^{5pix}$, c=%0.1f"%(fit[1]))#, yerr=cat["MAGERR_APER_0"]
     ax3.errorbar(x, cat["MAG_APER_1"]/np.max(cat["MAG_APER_1"]),ls=":", color=color2,label=r"$m_{aper}^{20pix}$")#,yerr=cat["MAGERR_APER_1"]
     ax3.set_yscale("log")
-
-    fit = PlotFit1D(x, cat["ELLIPTICITY"],deg=lambda x, a,b,c,d,x0:-((d-a*abs(x-x0))**2)/b+c,ls=":",ax=ax4,P0=[5,x[np.argmin(cat["ELLIPTICITY"])],0,x[np.argmin(cat["ELLIPTICITY"])],x[np.argmin(cat["ELLIPTICITY"])]], color=color1,extrapolate=False)["popt"]
+    try:
+        fit = PlotFit1D(x, cat["ELLIPTICITY"],deg=lambda x, a,b,c,d,x0:-((d-a*abs(x-x0))**2)/b+c,ls=":",ax=ax4,P0=[5,x[np.argmin(cat["ELLIPTICITY"])],0,x[np.argmin(cat["ELLIPTICITY"])],x[np.argmin(cat["ELLIPTICITY"])]], color=color1,extrapolate=False)["popt"]
+    except ValueError:
+        pass
     ax4.plot(x, cat["ELLIPTICITY"],"o", color=color2,label="c=%0.1f"%(fit[-1]))#,label="%i: FWHM=%0.1f"%(i,np.min(cat["FWHM_IMAGE"])))#, c=c)
     fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)+c,ax=ax2b,P0=[190/3,100,-60,x[np.argmin(cat["ELLIPTICITY"])]],ls=":",extrapolate=False, color=color1)["popt"]
     ax2b.scatter(x, cat["THETA_IMAGE"],label="%i: $\Delta$=%0.1f, c=%0.1f"%(i,fit[0],fit[-1]), color=color1)
@@ -3195,15 +3218,16 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
     verboseprint("""\n\n\n\n      START THROUGHFOCUS \n\n\n\n""")
     d = DS9n(args.xpapoint)
     filename = get_filename(d)
-    header = fits.open(filename)[0].header
     
     
     if args.path == "":
         path = get_filename(d, All=True, sort=False)
         image = fits.open(filename)[0]
+        header = fits.open(filename)[0].header
     else:
         path = globglob(args.path)#[:]
         image = fits.open(path[int(len(path)/2)])[0]
+        header = fits.open(path[int(len(path)/2)])[0].header
 
 
     if getregion(d, selected=True) is None:
@@ -4006,7 +4030,7 @@ def ds9_plot_radial_profile(
     d.append("plot legend yes ")
     d.append("plot legend position top ")
     d.append("plot title legend ''")
-    d.append("plot name 'Data: Flux = %i, σ  = %0.1fpix = %0.1FWHM' " % (d_["Flux"], abs(popt[1]),2.35*abs(popt[1])))
+    d.append("plot name 'Data: Flux = %i, σ  = %0.1fpix = %0.1fFWHM' " % (d_["Flux"], abs(popt[1]),2.35*abs(popt[1])))
     # d.append("plot line shape circle ")
     d.append("plot line dash yes ")
     # d.append("plot line shape color black")
@@ -5282,8 +5306,17 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
     expression with this: /tmp/image[5-15].fits
     """
     import numpy as np
-
+    import re
     file = file.rstrip()[::-1].rstrip()[::-1]
+    # hack
+    print( file)
+    print( re.match(r'^\d{8}-\d{8}$', file))
+    if re.match(r'^\d{8}-\d{8}$', file):
+         file = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/GOBC_data/img/stack[%s].fits"%(file)    
+    # elif re.match(r'^\d{1,3}-\d{1,3}$', file):
+    #      file = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/GOBC_data/img/stack25579345.fits"
+
+
     try:
         paths = glob.glob(r"%s" % (file), recursive=True)
     except Exception as e:
@@ -7097,7 +7130,7 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
     ]
     from datetime import datetime
 
-    verboseprint(t1s)
+    # verboseprint(t1s)
     t1 = vstack(t1s)
     if np.array([type(t1[0][c]) == np.ndarray for c in t1.colnames]).any():
         f = ".ecsv"
@@ -11166,7 +11199,15 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
                 param_dict["CATALOG_NAME"], format="fits", hdu="LDAC_OBJECTS"
             )
         verboseprint(cat_sex)
-        w = WCS(filename)
+        try:
+            w = WCS(filename)
+            # Hack
+        except OSError:
+            class Empty:
+                pass
+            w = Empty()
+            w.is_celestial =False
+
         d.set("regions showtext no")
         if len(cat_sex) == 0:
             message(d, "No source detected, verify you parameters...")
@@ -11272,12 +11313,17 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
     from astropy.table import Table
 
     filename = DETECTION_IMAGE
-    hdu = fits.open(filename)
-    hdu.verify("fix")
-    extension = fits_ext(hdu)
-    h = hdu[extension].header
-    img = hdu[extension].data
-    img = img.byteswap().newbyteorder()
+    if ".fits" in os.path.basename(DETECTION_IMAGE):
+        hdu = fits.open(filename)
+        hdu.verify("fix")
+        extension = fits_ext(hdu)
+        h = hdu[extension].header
+        img = hdu[extension].data
+        img = img.byteswap().newbyteorder()
+    else:
+        from PIL import Image
+        img = Image.open(filename)
+        img_array = np.array(img)
     bkg = sep.Background(np.array(img,dtype=float))
     data_sub = np.array(img,dtype=float) -  np.array(bkg,dtype=float)
     objects = sep.extract(
@@ -11362,7 +11408,7 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
     catalog["ELLIPTICITY"] =  1 - catalog["B_IMAGE"]/catalog["A_IMAGE"]
     catalog["ELONGATION"] =  catalog["A_IMAGE"]/catalog["B_IMAGE"]
     # catalog["FWHM_IMAGE"] = 2 * np.sqrt(np.log(2) * (catalog["A_IMAGE"]**2 + catalog["B_IMAGE"]**2))
-    catalog["FWHM_IMAGE"] = 2.35 * np.sqrt(catalog["A_IMAGE"]**2 + catalog["B_IMAGE"]**2) /2
+    catalog["FWHM_IMAGE"] = 2.35 * np.sqrt(catalog["A_IMAGE"]**2 + catalog["B_IMAGE"]**2) /np.sqrt(2)
     # FWHM = 2.35/sqrt(2) * sqrt(A^2+B^2)
     catalog["THETA_IMAGE"] *= 180 / np.pi
     print(catalog,param_dict["CATALOG_NAME"])
@@ -11483,7 +11529,7 @@ def run_sex(path, DETECTION_IMAGE, param_dict):
     param_dict["CHECKIMAGE_NAME"] = cat_path + "_check_%s.fits" % (
         param_dict["CHECKIMAGE_TYPE"]
     )
-    if which("sex") is None:  # None
+    if (which("sex") is None) | (".fits" not in os.path.basename(DETECTION_IMAGE)):  # None
         command = "Running sep"
         run_sep(path, DETECTION_IMAGE, param_dict)
         return 0
@@ -12910,7 +12956,7 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                     if (filename[-4:].lower() == ".jpg") or (
                         filename[-4:].lower() == "jpeg"
                     ):
-                        d.set("jpeg {}".format(filename))
+                        d.set("frame new; jpeg {}".format(filename))
                         print("here")
                     elif filename[-4:].lower() == ".png":
                         d.set("png {}".format(filename))  #
@@ -12934,22 +12980,22 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                             
                     else:
                         d.set("fits new {}".format(filename))
-                        # if os.path.isfile(filename.replace(".fits",".reg")):
-                        #     d.set("regions " + filename.replace(".fits",".reg"))
-                        if os.path.isfile(filename.replace(".fits",".csv")):
-                            from astropy.table import Table
-                            cat = Table.read(filename.replace(".fits",".csv"))
-                            create_ds9_regions(
-                                    [cat["X_IMAGE"]],
-                                    [cat["Y_IMAGE"]],
-                                    radius=[cat["lx"],cat["ly"]] ,
-                                    save=True,
-                                    savename="/tmp/test.reg",
-                                    form=["box"],
-                                    color=["yellow"],
-                                    ID=None,
-                                )
-                            d.set("regions " + "/tmp/test.reg")
+                        if os.path.isfile(filename.replace(".fits",".reg")):
+                            d.set("regions " + filename.replace(".fits",".reg"))
+                        # if os.path.isfile(filename.replace(".fits",".csv")):
+                        #     from astropy.table import Table
+                        #     cat = Table.read(filename.replace(".fits",".csv"))
+                        #     create_ds9_regions(
+                        #             [cat["X_IMAGE"]],
+                        #             [cat["Y_IMAGE"]],
+                        #             radius=[cat["lx"],cat["ly"]] ,
+                        #             save=True,
+                        #             savename="/tmp/test.reg",
+                        #             form=["box"],
+                        #             color=["yellow"],
+                        #             ID=None,
+                        #         )
+                        #     d.set("regions " + "/tmp/test.reg")
                             
                 except ValueError as e:
                     print(e)

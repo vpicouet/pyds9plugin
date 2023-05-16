@@ -10,10 +10,11 @@ button
 DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $diam    | $text
 
 
+
 New TF
 *
 button
-DS9Utils throughfocus_new -x $xpa_method  --path  "'$entry(Regexp path of the images that you want to use:)'"   | $text
+DS9Utils throughfocus_new -x $xpa_method  $param(new_tf) --path "$path" -n $n    | $text
 
 SExtractor #36
 *
@@ -676,7 +677,10 @@ endhmenu
 
 
 
-
+param new_tf
+path entry {path} "" {Regexp path of the images that you want to use}
+n entry {n} 11 {Number of images per throughfocus}
+endparam
 
 param Function
 plot menu {Plot type} Linear|Polar|LinLog|LogLog {Choose beyond the 2D plots, still use x (not r) in polar plots.}#|PolarLog|Plot3D
