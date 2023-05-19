@@ -19,8 +19,7 @@ color="k"
 
 
 def emccd_model(
-    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, fit="EMCCDhist",gui=True
-):
+    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, conversion_gain=1, fit="EMCCDhist",gui=True, ):
     """Plot EMCCD simulation
     """
     import os
@@ -111,12 +110,12 @@ def emccd_model(
 
         # if bias > 1500:
         if date < 2020:
-            conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
+            # conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
             # smearing = 0.8  # 1.5  # ADDED
             RN = 60  # 45 #ADDED
         else:
-            conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
-            conversion_gain = 0.5  # ADU/e-  0.53 in 2018
+            # conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
+            # conversion_gain = 0.5  # ADU/e-  0.53 in 2018
             # smearing = 1.3  # 0.7  # ADDED
             RN = 10
 

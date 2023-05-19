@@ -12,4 +12,4 @@ from pyds9plugin.Macros.FB.FB_functions import emccd_model
 # else:
 #     pass
 # emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCD", argv=[])
-emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[])
+emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", conversion_gain=float(argument.split(":")[-1]),argv=[])

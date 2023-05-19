@@ -4901,7 +4901,7 @@ def throw_apertures(xpapoint=None, argv=[]):
 
 
 def execute_command(
-    filename, path2remove, exp, xpapoint=None, eval_=False, write=False, d=FakeDS9(),
+    filename, argument, exp, xpapoint=None, eval_=False, write=False, d=FakeDS9(),
 ):
     """Combine two images and an evaluable expression
     """
@@ -4977,6 +4977,7 @@ def execute_command(
         "ds9": ds9,
         "plt": plt,
         "header": header,
+        "argument": argument,
         "fits": fits,
         "region": region,
         # "image": image,
@@ -5095,7 +5096,7 @@ def execute_command(
         # else:
         #     name = filename
         fitsimage.header["DS9"] = filename
-        fitsimage.header["IMAGE"] = path2remove
+        # fitsimage.header["IMAGE"] = path2remove
         try:
             fitsimage.header["COMMAND"] = exp
         except ValueError as e:
@@ -14256,10 +14257,10 @@ def python_command(xpapoint=None, argv=[]):
         required=True,
     )
     parser.add_argument(
-        "-i",
-        "--other_image",
-        default=tmp_image,
-        help="Path of a second image to use with",
+        "-a",
+        "--argument",
+        default="",
+        help="Other argument if necessary for function",
         metavar="",
         type=str,
     )
@@ -14273,12 +14274,20 @@ def python_command(xpapoint=None, argv=[]):
         help="Number of processors to use for multiprocessing analysis. Default use your total number of processors - 2.",
         metavar="",
     )
-    
+
+    # parser.add_argument(
+    #     "-a",
+    #     "--argument",
+    #     default="",
+    #     help="Other argument if necessary for function",
+    #     metavar="",
+    # )
+
     args = parser.parse_args_modif(argv, required=True)
 
     d = DS9n(args.xpapoint)
 
-    path2remove, exp, eval_ = args.other_image, args.exp.replace("$exp"," & "), 0
+    argument, exp, eval_ = args.argument, args.exp.replace("$exp"," & "), 0
     verboseprint("Expression to be evaluated: %s" % (exp))
     path = globglob(args.path, args.xpapoint)
     verboseprint("path: %s" % (path))
@@ -14326,7 +14335,7 @@ def python_command(xpapoint=None, argv=[]):
     #     d.set("frame new ; tile yes ; file " + name)
     if len(path) < 2:
         result, name = execute_command(
-            path[0], path2remove, exp, xpapoint, bool(int(eval_)), write, d,
+            path[0], argument, exp, xpapoint, bool(int(eval_)), write, d,
         )
         if result is not None:
             # if same & (fitsimage.header == header):
@@ -14334,7 +14343,7 @@ def python_command(xpapoint=None, argv=[]):
     else:
         result, name = parallelize(
             function=execute_command,
-            parameters=[path2remove, exp, xpapoint, bool(int(eval_)), write, d,],
+            parameters=[argument, exp, xpapoint, bool(int(eval_)), write, d,],
             action_to_paralize=path,
             number_of_thread=args.number_processors,
         )

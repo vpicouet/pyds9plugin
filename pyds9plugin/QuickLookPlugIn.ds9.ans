@@ -85,6 +85,14 @@ SWARP #38
 button
 DS9Utils ds9_swarp -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME -w $WEIGHT_TYPE -rw $RESCALE_WEIGHTS -W "$WEIGHT_IMAGE" -c $COMBINEI -ct $COMBINE_TYPE -CA $CLIP_AMPFRAC -CS $CLIP_SIGMA -CT $CELESTIAL_TYPE -PT $PROJECTION_TYPE -PE $PROJECTION_ERR -C_T $CENTER_TYPE -C $CENTERI -PST $PIXELSCALE_TYPE -PS $PIXEL_SCALE -IS $IMAGE_SIZE -R $RE-SAMPLING  -r $RESAMPLING_TYPE  -o $OVERSAMPLING  -I $INTERPOLATE -SB $SUBTRACT_BACK  -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BFT $BACK_FILTTHRESH     | $text
 
+
+
+EMCCD fit
+*
+button
+DS9Utils python_command -x $xpa_method $param(conversion_gain);  -e $dir/Macros/FB/Flight/EMCCD_fit.py  -o 0  -a $gain | $text
+
+
 endbuttonbar
 #######################################################################
 #######################################################################
@@ -99,6 +107,9 @@ bind E
 /Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/simulate_EMCCD.py  -x $xpa_method  $param(Detector-Parameters); $size $overscan $OS $ConversionGain $EmGain $n_registers $Bias $RN $pCIC $sCIC $Dark $Smearing $RateSmearing $Exposure $Flux $Source $Rx $Ry  $Name $spectra $cube $threshold $hist    | $text
 
 
+param conversion_gain
+gain combobox {Conversion gain} Now:0.43|Aafaque:0.77|2022:0.22|2018:0.53 {Conversion gain in ADU/e-}
+endparam
 
 
 param Reduction
