@@ -11,7 +11,11 @@ try:
     # x, y =  np.array(x), np.array(y)
     # print(np.log10(np.sum(10**y)))
 except (OSError, ValueError) as e:
-    x, y = np.array([0, 1]), np.array([0, 1])
+    try:
+        x, y = np.loadtxt("/tmp/xy.txt").T
+
+    except (OSError, ValueError) as e:
+        x, y = np.array([0, 1]), np.array([0, 1])
 
 
 
@@ -209,8 +213,8 @@ def moffat_profile(
 # ):
 #     FWHM /= 2.35
 #     return offset + amp * np.exp(-np.square(x / FWHM) / 2)
-
-
+print(y)
+print(y.ptp())
 def fiber_radial_profile(
     r,
     amp=y.ptp() * np.array([0, 1.3, 1]),

@@ -239,6 +239,7 @@ table["SaturatedPixels"] = (
 )
 table["median_pre_scan"] = np.nanmedian(pre_scan)
 table["mean_pre_scan"] = np.nanmean(pre_scan)
+table["std_pre_scan"] = np.nanstd(pre_scan)
 # table['post_scan'] =  np.nanmedian(post_scan)
 table["stdXY"] = np.nanstd(physical_region)
 table["stdXY_Top"] = np.nanstd(physical_region[-30:-10, :])

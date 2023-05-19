@@ -221,18 +221,18 @@ def DS9n(xpapoint=None, stop=False):
 def create_folders(DS9_BackUp_path=DS9_BackUp_path):
     """Create the folders in which are stored DS9 related data
     """
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path)):
-        os.makedirs(os.path.dirname(DS9_BackUp_path))
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + "/Plots"):
-        os.makedirs(os.path.dirname(DS9_BackUp_path) + "/Plots")
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + "/CSVs"):
-        os.makedirs(os.path.dirname(DS9_BackUp_path) + "/CSVs")
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + "/HeaderDataBase"):
-        os.makedirs(os.path.dirname(DS9_BackUp_path) + "/HeaderDataBase")
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + "/subsets"):
-        os.makedirs(os.path.dirname(DS9_BackUp_path) + "/subsets")
-    if not os.path.exists(os.path.dirname(DS9_BackUp_path) + "/tmp"):
-        os.makedirs(os.path.dirname(DS9_BackUp_path) + "/tmp")
+    if not os.path.exists(DS9_BackUp_path):
+        os.makedirs(DS9_BackUp_path)
+    if not os.path.exists(DS9_BackUp_path + "/Plots"):
+        os.makedirs(DS9_BackUp_path + "/Plots")
+    if not os.path.exists(DS9_BackUp_path + "/CSVs"):
+        os.makedirs(DS9_BackUp_path + "/CSVs")
+    if not os.path.exists(DS9_BackUp_path + "/HeaderDataBase"):
+        os.makedirs(DS9_BackUp_path + "/HeaderDataBase")
+    if not os.path.exists(DS9_BackUp_path + "/subsets"):
+        os.makedirs(DS9_BackUp_path + "/subsets")
+    if not os.path.exists(DS9_BackUp_path + "/tmp"):
+        os.makedirs(DS9_BackUp_path + "/tmp")
     if not os.path.exists(DS9_BackUp_path + "/.verbose.txt"):
         os.system("echo 0 > %s" % (DS9_BackUp_path + "/.verbose.txt"))
     if not os.path.exists(DS9_BackUp_path + "/.message.txt"):
@@ -241,7 +241,7 @@ def create_folders(DS9_BackUp_path=DS9_BackUp_path):
 
 
 if (len(sys.argv) == 1) | ("LoadDS9QuickLookPlugin" in sys.argv):
-    create_folders()
+    create_folders(DS9_BackUp_path)
 
 # Do not chnage order
 # if sys.stdin is not None:
@@ -3051,7 +3051,7 @@ def throughfocus_new(xpapoint=None, plot_=True, argv=[]):
             ax1.scatter(x, cat["FWHM_IMAGE"]/2.35,label="%i: FWHM=%0.1f, C=%0.1f"%(i,np.min(cat["FWHM_IMAGE"]),np.argmin(cat["FWHM_IMAGE"])))#, c=c)
             fit=PlotFit1D(x, cat["FLUX_APER_0"],deg="gaus",ax=ax2,ls=":",extrapolate=False)["popt"]
             ax2.scatter(x, cat["FLUX_APER_0"],label="c=%0.1f"%(fit[1]))
-            fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)+c,ax=ax3,P0=[190/3,100,-60,np.mean(x)],ls=":",extrapolate=False)["popt"]
+            fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)/np.pi+c,ax=ax3,P0=[190,100,-60,np.mean(x)],ls=":",extrapolate=False)["popt"]
             ax3.scatter(x, cat["THETA_IMAGE"],label="%i: $\Delta$=%0.1f, c=%0.1f"%(i,fit[0],fit[-1]))#, c=c)
             fit=PlotFit1D(x, cat["A_IMAGE"],deg=lambda x, a,b,x0:np.abs(a*(x-x0))+b,ls=":",ax=ax4b,extrapolate=False,P0=[0.1,4,np.mean(x)])["popt"]
             # PlotFit1D(x, cat["A_IMAGE"],deg=2,ls=":",ax=ax4b,extrapolate=False)
@@ -3135,7 +3135,7 @@ def throughfocus_new(xpapoint=None, plot_=True, argv=[]):
     except ValueError:
         pass
     ax4.plot(x, cat["ELLIPTICITY"],"o", color=color2,label="c=%0.1f"%(fit[-1]))#,label="%i: FWHM=%0.1f"%(i,np.min(cat["FWHM_IMAGE"])))#, c=c)
-    fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)+c,ax=ax2b,P0=[190/3,100,-60,x[np.argmin(cat["ELLIPTICITY"])]],ls=":",extrapolate=False, color=color1)["popt"]
+    fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)/np.pi+c,ax=ax2b,P0=[190,100,-60,x[np.argmin(cat["ELLIPTICITY"])]],ls=":",extrapolate=False, color=color1)["popt"]
     ax2b.scatter(x, cat["THETA_IMAGE"],label="%i: $\Delta$=%0.1f, c=%0.1f"%(i,fit[0],fit[-1]), color=color1)
     fit=PlotFit1D(x, cat["A_IMAGE"],deg=lambda x, a,b,x0:np.abs(a*(x-x0))+b,ls=":",ax=ax3b,extrapolate=False,P0=[0.1,4,x[np.argmin(cat["A_IMAGE"])]], color=color1)["popt"]
     ax3b.scatter(x, cat["A_IMAGE"],marker="o",label="c=%0.1f"%(fit[-1]), color=color1)
@@ -3356,7 +3356,7 @@ def throughfocus(xpapoint=None, plot_=True, argv=[]):
     #     a.sort(args.sort)
     # names = [name for name in a.colnames if len(a[name].shape) > 2] * 2
 
-    # pyvista_throughfocus(a)
+    pyvista_throughfocus(a)
 
 
 def add_field_after_matching(

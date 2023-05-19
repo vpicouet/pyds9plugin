@@ -1364,14 +1364,10 @@ def SimulateFIREBallemCCDImage(
     readout_stack = np.random.normal(Bias, RN/np.sqrt(int(stack)), (size[1], size[0]))
     if counting:
         readout_cube = np.random.normal(Bias, RN, (int(stack),size[1], size[0])).astype("int32")
-
         # print((np.random.rand(source_im.shape[0], source_im.shape[1]) < cosmic_ray_loss).mean())
         #TOKEEP  for cosmic ray masking readout[np.random.rand(source_im.shape[0], source_im.shape[1]) < cosmic_ray_loss]=np.nan
-
         #print(np.max(((image + readout) * ConversionGain).round()))
     #     if np.max(((image + readout) * ConversionGain).round()) > 2 ** 15:
-
-
     imaADU_wo_RN = (image * ConversionGain).round().astype(type_)
     imaADU_RN = (readout * ConversionGain).round().astype(type_)
     imaADU = ((image + 1*readout) * ConversionGain).round().astype(type_)
@@ -1380,8 +1376,5 @@ def SimulateFIREBallemCCDImage(
         imaADU_cube = ((cube_stack + 1*readout_cube) * ConversionGain).round().astype("int32")
     else:
         imaADU_cube = imaADU_stack
-
-
-
     return imaADU, imaADU_stack, imaADU_cube, source_im, source_im_wo_atm#imaADU_wo_RN, imaADU_RN
 

@@ -1,10 +1,10 @@
 buttonbar
-Optimize Display
+Display#Optimize 
 *
 button
 DS9Utils setup -x $xpa_method  $param(Setup); -s "$scale"  -l $cut  -c  $color | $text
 
-Radial Profile
+Rad-Profile
 *
 button
 DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $diam    | $text
@@ -29,13 +29,13 @@ DS9Utils ds9_swarp -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME 
 
 
 
-Plot Region In 3D
+3D Plot
 *
 button
 DS9Utils plot_3d -x $xpa_method  | $text
 
 
-Interactive Fitting
+Fit plot
 *
 button
 DS9Utils fit_ds9_plot -x $xpa_method   $param(Background-Fit-1D); -b $background -g $gaussians -m $moffats -v $voight -o $other -f $curve_fit | $text
@@ -48,12 +48,49 @@ DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp" 
 
 
 
-remove dark
+# remove dark
+# *
+# button
+# # /Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FB/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+# /Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/AIT/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+
+
+Header DB
 *
 button
-# /Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FB/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
-/Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/AIT/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+DS9Utils create_header_catalog -x $xpa_method   $param(Header-Catalog); -p "$path" -i "$info"  | $text
+
+
+Filter/orga
+*
+button
+DS9Utils organize_files -x $xpa_method  $param(subset_); -p "$cat" -a $Fields -s "$Mask" -n $number -c $copy | $text
+
+
+
+Stack
+*
+button
+DS9Utils stack_images -x $xpa_method  $param(Stacking); -p $Path -t $stack | $text
+
+
+Subtract Background
+*
+button
+DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); -s $sigma -b $bckd -r $rms -f $filter -box $box -per $percentile -m $mask -snr $snr -n $npixels -d $dilate   | $text
+
+
+SWARP #38
+*
+button
+DS9Utils ds9_swarp -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME -w $WEIGHT_TYPE -rw $RESCALE_WEIGHTS -W "$WEIGHT_IMAGE" -c $COMBINEI -ct $COMBINE_TYPE -CA $CLIP_AMPFRAC -CS $CLIP_SIGMA -CT $CELESTIAL_TYPE -PT $PROJECTION_TYPE -PE $PROJECTION_ERR -C_T $CENTER_TYPE -C $CENTERI -PST $PIXELSCALE_TYPE -PS $PIXEL_SCALE -IS $IMAGE_SIZE -R $RE-SAMPLING  -r $RESAMPLING_TYPE  -o $OVERSAMPLING  -I $INTERPOLATE -SB $SUBTRACT_BACK  -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BFT $BACK_FILTTHRESH     | $text
+
 endbuttonbar
+#######################################################################
+#######################################################################
+
+
+
 
 
 Simulate FIREBall emCCD detector

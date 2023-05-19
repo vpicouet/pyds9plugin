@@ -120,7 +120,7 @@ def emccd_model(
             # smearing = 1.3  # 0.7  # ADDED
             RN = 10
 
-        conv=1
+        conv=1#.1
         # conv = conversion_gain
         # im = im/conversion_gain
         # osv = osv/conversion_gain
