@@ -3135,8 +3135,8 @@ def throughfocus_new(xpapoint=None, plot_=True, argv=[]):
     except ValueError:
         pass
     ax4.plot(x, cat["ELLIPTICITY"],"o", color=color2,label="c=%0.1f"%(fit[-1]))#,label="%i: FWHM=%0.1f"%(i,np.min(cat["FWHM_IMAGE"])))#, c=c)
-    fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)/np.pi+c,ax=ax2b,P0=[190,100,-60,x[np.argmin(cat["ELLIPTICITY"])]],ls=":",extrapolate=False, color=color1)["popt"]
-    ax2b.scatter(x, cat["THETA_IMAGE"],label="%i: $\Delta$=%0.1f, c=%0.1f"%(i,fit[0],fit[-1]), color=color1)
+    fit = PlotFit1D(x, cat["THETA_IMAGE"],deg=lambda x, a,b,c,x0:a*np.arctan((x-x0)/b)/np.pi+c,ax=ax2b,P0=[190,100,-60,x[np.argmin(cat["ELLIPTICITY"])]],ls=":",extrapolate=False, color=color1)
+    ax2b.scatter(x, cat["THETA_IMAGE"],label="%i: %0.1f-%0.1f=%0.1f, c=%0.1f"%(i,fit["y_fit"][0],fit["y_fit"][-1],fit["popt"][0],fit["popt"][-1]), color=color1)
     fit=PlotFit1D(x, cat["A_IMAGE"],deg=lambda x, a,b,x0:np.abs(a*(x-x0))+b,ls=":",ax=ax3b,extrapolate=False,P0=[0.1,4,x[np.argmin(cat["A_IMAGE"])]], color=color1)["popt"]
     ax3b.scatter(x, cat["A_IMAGE"],marker="o",label="c=%0.1f"%(fit[-1]), color=color1)
     try:
@@ -3155,7 +3155,7 @@ def throughfocus_new(xpapoint=None, plot_=True, argv=[]):
     ax2 .set_ylim((2,10))
     ax3 .set_ylim((0.05,1.1))
     ax4 .set_ylim((0.1,0.7))
-    ax2b.set_ylim((-100,60))
+    # ax2b.set_ylim((-100,60))
     ax3b.set_ylim((2,12))
     ax4b.set_ylim((1,7))
 

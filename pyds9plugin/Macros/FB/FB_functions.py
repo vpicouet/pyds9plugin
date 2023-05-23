@@ -117,7 +117,7 @@ def emccd_model(
             # conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
             # conversion_gain = 0.5  # ADU/e-  0.53 in 2018
             # smearing = 1.3  # 0.7  # ADDED
-            RN = 10
+            RN = 20
 
         conv=1#.1
         # conv = conversion_gain
@@ -141,11 +141,15 @@ def emccd_model(
         # TODO take care of this factor
         try:
             header_exptime, header_gain = header["EXPTIME"], header["EMGAIN"]
-            temp_device = header["TEMPD"]
         except:
             header_exptime, header_gain = -99, -99
+            pass
+        try:
+            temp_device = header["TEMPD"]
+        except:
             temp_device = -99
             pass
+
             # try:
             # header_exptime, header_gain = (
             #     path.split("_")[-1].split(".csv")[0],
@@ -199,12 +203,12 @@ def emccd_model(
         )["popt"][2]
         # / conversion_gain
     )
-    RON = np.nanmax([RON] + [0])
+    RON = np.nanmax([abs(RON)] + [10])
     # print("bias = ", bias, xdata[np.nanargmax(ydata)])
 
     # centers = [xdata[np.nanargmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
     # print("RN",RN,RN * conversion_gain,RON,RON/conversion_gain)
-    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: np.log10(1/conv) + EMCCD(
+    function = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCD(
         x,
         bias=Bias,
         RN=RN * conversion_gain,
@@ -212,7 +216,7 @@ def emccd_model(
         flux=flux,
         smearing=smearing,
         sCIC=sCIC,
-    )
+    ) #+np.log10(1/conv) 
     args_number = len(inspect.getargspec(function).args) - 1
 
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -401,6 +405,7 @@ def emccd_model(
         v1 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[0] for v in vals1]
         v2 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[1] for v in vals1]
         print(vals1)
+
 
         l2.set_ydata(
             np.convolve(

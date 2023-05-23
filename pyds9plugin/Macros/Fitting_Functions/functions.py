@@ -213,8 +213,7 @@ def moffat_profile(
 # ):
 #     FWHM /= 2.35
 #     return offset + amp * np.exp(-np.square(x / FWHM) / 2)
-print(y)
-print(y.ptp())
+
 def fiber_radial_profile(
     r,
     amp=y.ptp() * np.array([0, 1.3, 1]),
@@ -540,6 +539,7 @@ def EMCCDhist(
         imaADU += read_noise
         range = [np.nanmin(x), np.nanmax(x)]
         n, bins = np.histogram(imaADU.flatten(), bins=[x[0] - 1] + list(x))
+        # print("bins=",bins[1]-bins[0])
         # print(np.nansum(n))
         return n
 
@@ -556,7 +556,8 @@ def EMCCDhist(
         sCIC=sCIC,
     )
     y[y == 0] = 1.0
-    y = y / (x[1] - x[0])
+    # y = y / (x[1] - x[0])
+    # y = y / (bins[1] - bins[0])
     # print(np.nansum(y))
     return np.log10(y)
 
