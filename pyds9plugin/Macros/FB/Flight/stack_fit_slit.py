@@ -390,7 +390,7 @@ d = DS9n()
 # d.set("frame first")
 
 # for i in range(number_ds9_frames()):
-if 1==1:
+if 1==0:
     d.set("regions select all")
     regs = getregion(d, selected=True)
     image = d.get_pyfits()[0].data

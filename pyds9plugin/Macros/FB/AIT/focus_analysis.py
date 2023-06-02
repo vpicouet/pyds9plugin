@@ -147,7 +147,7 @@ import matplotlib.pyplot as plt
 import os
 
 
-def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=np.arange(10),masks=None,ylim=None,opt_pos=-9.3,det_pos=[-8.95,-9.7,-9.3],tilt=[-0.1,-0.1,-0.1]): #
+def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=np.arange(10),masks=None,ylim=None,opt_pos=-9.3,det_pos=[-8.95,-9.7,-9.3],tilt=[-0.1,-0.1,-0.1],temp="TEMPD",fitdeg=2): #
     # if len(files)==6:
     #     if "2022_1" in path:
     #         order = [0,-1,1,2]
@@ -205,7 +205,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
     
 
     if slit_size:
-        fig, axes = plt.subplots(4+line,len(files),figsize=(15,12),sharey="row",sharex=False)
+        fig, axes = plt.subplots(4+line,len(files),figsize=(len(files)*3,12),sharey="row",sharex=False)
     else:
         fig, axes = plt.subplots(2+line,len(files),figsize=(15,7),sharey="row",sharex=False)
     fig.suptitle(title)
@@ -218,7 +218,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
             # plt.plot(a['col1'],a['col2'])
             if ylim is None:
                 ymean = np.nanmedian(a['col2'])
-                print(ymean)
+                # print(ymean)
                 ylim = (ymean-1,ymean+1)
                 #(-10,-8)
 
@@ -233,52 +233,62 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
                     ax.legend(fontsize=8)
         axes[-1][0].set_ylim(ylim)
 
-
+    cat_temp = Table(names=["T","spatial","spectral"])
     # files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/TestsFTS2018-Flight/E2E-AIT-Flight/all_diffuse_illumination/grid/*_cat.fits")
     # names_ = ["2018","1","2 -100","3","3 -100","4 -70","4 -105"]
     # temp = [fits.open(f.replace(".csv",".fits"))[0].header["TEMPB"] for f in files]
     names_ = [os.path.basename(file).split(".csv")[0].split("_")[0] for file in files]#.split("_2022_5")[0]
+    names_ = [os.path.basename(file).split(".csv")[0].split("_")[2] for file in files]#.split("_2022_5")[0]
     print(files,axes.T,lims, names_)
     # names_ = [os.path.basename(file).split("old_tilted")[1].split(".csv")[0] for file in files]#.split("_2022_5")[0]
     for i, (file, ax,lim,name) in enumerate(zip(files,axes.T,lims, names_)):
-        print(name)
+        # print(name)
         cat = Table.read(file)
         if not pixel:
             cat['fwhm_x'] *= ps_spectral
             cat['fwhm_y'] *= ps_spatial
         try:
-            t = fits.open(file.replace(".csv",".fits"))[0].header["TEMPB"]
-            print(t)
+            t = fits.open(file.replace(".csv",".fits"))[0].header[temp]
+            # print(t)
         except (FileNotFoundError,KeyError) as e:
-            print(e)
+            # print(e)
             t=""
         mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
-        samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
-        g = plots.get_single_plotter()#width_inch=4, ratio=1)
-        g.plot_2d([samples], x, 'fwhm_y', filled=True,ax=ax[0],add_legend_proxy=False)
-        g.plot_2d([samples], x, 'fwhm_x', filled=True,ax=ax[1])
-        if slit_size:
-            try:
-                g.plot_2d([samples], x, 'lx', filled=True,ax=ax[2])
-            except Exception as e:
-                print(e)
-                pass
-                
-            g.plot_2d([samples], x, 'ly', filled=True,ax=ax[3])
-            ax[2].plot(cat[mask][x],cat[mask]["lx"],'.b')
-            ax[3].plot(cat[mask][x],cat[mask]["ly"],'.b')
-            ax[2].set_ylim((3,13.9))
-            ax[3].set_ylim((9,49))
+        # samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
+        # g = plots.get_single_plotter()#width_inch=4, ratio=1)
+        # g.plot_2d([samples], x, 'fwhm_y', filled=True,ax=ax[0],add_legend_proxy=False)
+        # g.plot_2d([samples], x, 'fwhm_x', filled=True,ax=ax[1])
+        # if slit_size:
+        #     try:
+        #         g.plot_2d([samples], x, 'lx', filled=True,ax=ax[2])
+        #     except Exception as e:
+        #         # print(e)
+        #         pass
+        #     g.plot_2d([samples], x, 'ly', filled=True,ax=ax[3])
+            
+        #     ax[2].plot(cat[mask][x],cat[mask]["lx"],'.b')
+        #     ax[3].plot(cat[mask][x],cat[mask]["ly"],'.b')
+        #     ax[2].set_ylim((3,13.9))
+        #     ax[3].set_ylim((9,49))
         ax[0].set_title( name)
         label=os.path.basename(os.path.dirname(file)) if i==1 else None
         if fit:
-            fit=PlotFit1D(cat[mask][x],cat[mask]["fwhm_y"],deg=2,ax=ax[0])
-            fit2 = PlotFit1D(cat[mask][x],cat[mask]["fwhm_x"],deg=2,ax=ax[1])
+            fit=PlotFit1D(cat[mask][x],cat[mask]["fwhm_y"],deg=fitdeg,ax=ax[0])
+            fit2 = PlotFit1D(cat[mask][x],cat[mask]["fwhm_x"],deg=fitdeg,ax=ax[1])
             title1 =  "T=%sC = %i pix"%(t[:5],xx[np.argmin(fit["function"](xx))])
             title2 =  "T=%sC = %i pix"%(t[:5],xx[np.argmin(fit2["function"](xx))])
+            title1 =  fit["popt"]
+            title2 =   fit2["popt"]
+            print(fit2["popt"][0])
+            # print(fit2["popt"][1])
             ax[0].plot(cat[mask][x],cat[mask]["fwhm_y"],'.b',label=label)
             ax[1].plot(cat[mask][x],cat[mask]["fwhm_x"],'.b',label=label)
+            try:
+                print(len(cat.colnames),len((float(t[:5]),xx[np.argmin(fit["function"](xx))],xx[np.argmin(fit2["function"](xx))])))
+                cat_temp.add_row(vals=(float(t[:5]),xx[np.argmin(fit["function"](xx))],xx[np.argmin(fit2["function"](xx))]))
+            except ValueError:
+                pass
         else:
             title1 =  "T=%sC"%(t[:5])
             title2 =  "T=%sC"%(t[:5])
@@ -308,8 +318,8 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
             try:
                 g.plot_2d([samples], x, 'lx', filled=True,ax=ax[2],colors=["r"],alphas=[alpha])
             except Exception as e:
-                print(e)
-
+                # print(e)
+                pass
             g.plot_2d([samples], x, 'ly', filled=True,ax=ax[3],colors=["r"],alphas=[alpha])
             ax[2].plot(cat[mask][x],cat[mask]["lx"],'.r')
             ax[3].plot(cat[mask][x],cat[mask]["ly"],'.r')
@@ -367,8 +377,58 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
     ax[1].set_ylim(ylim_spectral)
     fig.tight_layout()
     fig.subplots_adjust(hspace=0,wspace=0)    
-    return
+    return cat_temp
   
+    
+  
+test = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230525/diffusefocus/Catalogs/image0000*.csv"  
+# analyze_focus(path=test, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=True,fitdeg=1,title=None,slit_size=True,order=[-7,-6,-5,-4,-3,-2,-1][::-1]+ list(np.arange(8)),masks=None,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[-9.5,-9.35],tilt=np.array([-0.1,-0.1,-0.1])*1.1)
+analyze_focus(path=test, path1=None,path2=None,name="T" ,pixel=True, x="y",fit=True,fitdeg=1,title=None,slit_size=True,order= list(np.arange(16)),masks=None,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[-9.5,-9.35],tilt=np.array([-0.1,-0.1,-0.1])*1.1)
+
+
+#%%
+
+test = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230525/diffusefocus/Catalogs/image0000*.csv"  
+fs = glob.glob(test)
+fs.sort()
+rots = np.array([os.path.basename(f).split("_")[2].split(".")[0] for f in fs],dtype=float)
+rots = [r-180 if r>0 else 180 +r for r in rots]
+plt.figure(figsize=(6,10))
+# ro
+# for f,r in zip(fs[-7:],rots[-7:]):
+# for f,r in zip(fs[:10],rots):
+for f,r in zip(fs,rots):
+    cat = Table.read(f)
+    if r<0:
+        plt.plot(cat["X_IMAGE"],cat["Y_IMAGE"]+r*100,".",label="PA + %s"%(r))
+    else:
+        plt.plot(cat["X_IMAGE"],cat["Y_IMAGE"]+r*100+120,"P",label="PA + %s"%(r))
+        pass
+        # plt.plot(-cat["X_IMAGE"]+3900,cat["Y_IMAGE"]+r*100+120,"P",label="PA + %s"%(r))
+        
+plt.xlabel("X_det")
+plt.ylabel("Y_det + 100 * PA")
+plt.legend()
+# cold_9 = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230515/14_cold_230515_0.34/*.csv"
+# cold_8 ="/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/13_cold_230511_0.55/*.csv" 
+# analyze_focus(path=cold_6, path1=cold_9,path2=UA5,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[-9.5,-9.35],tilt=np.array([-0.1,-0.1,-0.1])*1.1)
+# analyze_focus(path=cold_8, path1=UA2,path2=UA5,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[-9.3,-9.3,-9.5],tilt=np.array([-0.1,-0.1,-0.1])*1.1)
+
+
+   
+# cat4 = analyze_focus(path=evol3, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=True,title=None,slit_size=False,temp="TEMPD")#,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([]),tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+# cat1 = analyze_focus(path=cool_down1, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=True,title=None,slit_size=False,temp="TEMPB")#,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([]),tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+# cat2 = analyze_focus(path=cool_down2, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=True,title=None,slit_size=False,temp="TEMPB")#,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([]),tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+# cat3 = analyze_focus(path=cool_down3, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=True,title=None,slit_size=False,temp="TEMPB")#,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([]),tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+
+# plt.title("Shift of best focus position in pixels")
+# plt.xlabel("Detector temperature")
+# plt.ylabel("Detector pixels (Y)")
+# plt.plot(cat["T"],cat["spatial"],"ko",label="spatial")#
+# plt.plot(cat["T"],cat["spectral"],"kP",label="spectral")#
+# plt.legend()
+
+#%%
 # analyze_focus(path=UA0, path1=UA1,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=slit_size,order=[-1,-2,0,3,1,2],masks="/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_5_feb2023/metrology_*180*02-17*.txt",det_pos=[],opt_pos=[],ylim=(4-5.4,6-5.4))
 
 # analyze_focus(path=FTS4_105, path1=FTS4_70,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=False,order=[-1,-2,0,3,1,2])
@@ -392,13 +452,14 @@ UA5 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/4_war
 
 
 # path1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2022/tilted/*.csv";# title="iteration 1(blue) vs 2(red) - cold - Caltech"
-cool_down1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/230307/diffuse_temp_data/temp_evol/*.csv"; #title="iteration 1 - cold - Caltech"
-cool_down2 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/230310/cooldown/evol/*.csv"; title="cool down 2 caltech - Caltech"
-cool_down3 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/230313/cool_down/*.csv"; title="cool down 2 caltech - Caltech"
+cool_down1 = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230307/diffuse_temp_data/temp_evol/*.csv"; #title="iteration 1 - cold - Caltech"
+cool_down2 = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230310/cooldown_230310/*.csv"; title="cool down 2 caltech - Caltech"
+cool_down3 = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230313/cooldown_230313/*.csv"; title="cool down 2 caltech - Caltech"
 
 
 
 
+cold_7 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/12_cold_230509_0.55/*.csv"
 cold_6 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/11_cold_230407_0.55/*.csv"
 cold_5 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/10*/*.csv"
 cold_4 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/8_cold_230315_1.09/*.csv"
@@ -409,7 +470,11 @@ cold_1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/5_
 masks_2023a= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
 masks_2023= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
      
-analyze_focus(path=cold_6, path1=cold_5,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[],tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+# analyze_focus(path=cold_6, path1=cold_5,path2=cold_7,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[],tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+
+
+
+
 
 
 #%%  
@@ -483,7 +548,14 @@ analyze_focus(path=UA4, path1=cold_1,path2=None,name="T" ,pixel=False, x="y",fit
 analyze_focus(path=cold_1, path1=cold_2,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=slit_size,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([]),tilt=np.array([-0.1,-0.1,-0.1])*1.3)
 
 analyze_focus(path=cold_2, path1=cold_3,path2=None,name="T" ,pixel=True, x="y",fit=False,title=None,slit_size=slit_size,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([]),tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+
 analyze_focus(path=cold_3, path1=cold_4,path2=None,name="T" ,pixel=True, x="y",fit=False,title=None,slit_size=slit_size,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([]),tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+
+
+#%%
+evol3 = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230509/diffusefocus/temp_dependancy/Subset/*.csv"
+cat = analyze_focus(path=evol3, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=True,title=None,slit_size=False)#,order=[-1,-2,0,3,1,2],masks=masks,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([]),tilt=np.array([-0.1,-0.1,-0.1])*1.3)
+
 
 #%%
 
