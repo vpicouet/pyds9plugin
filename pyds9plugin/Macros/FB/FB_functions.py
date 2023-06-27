@@ -283,7 +283,7 @@ def emccd_model(
     elif (median_im - bias) > 2e2:
         flux_max = 3  # ADDED
     else:# (median_im - bias) > 1e2:
-        flux_max = 1  # ADDED
+        flux_max = 0.1#1  # ADDED
     # else:
     #     flux_max = 0.8  # ADDED
     lims = [
@@ -337,7 +337,7 @@ def emccd_model(
         y_conv[xdata < upper_limit],
         "-",
         c=color,
-        label="Data: Gconv=%0.2f\ntexp=%i\nG=%i"
+        label="Data: Gconv=%0.2fADU/e-\ntexp=%is\nG=%iDAQ"
         % (conversion_gain, header_exptime, header_gain),
     )
     ax.plot(

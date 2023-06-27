@@ -108,7 +108,7 @@ bind E
 
 
 param conversion_gain
-gain combobox {Conversion gain} NoOSsequence:0.4|Now:0.43|Aafaque:0.77|2022:0.22|2018:0.53 {Conversion gain in ADU/e-}
+gain combobox {Conversion gain} NoOSsequence:0.4ADU/e-|Now:0.43ADU/e-|Aafaque:0.72ADU/e-|2022:0.22ADU/e-|2018:0.53 {Conversion gain in ADU/e-}
 endparam
 
 
