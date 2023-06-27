@@ -75,7 +75,7 @@ def build_wcs_header(
     for line in header.cards:
 
         fits.setval(filename, line[0], value=line[1], comment=line[2])
-    return header
+    return header, w
 
 
 # param Create-WCS
@@ -96,13 +96,14 @@ else:
     factor=2
 # 1.271 1.106
 # filename = "/Volumes/GoogleDrive-105248178238021002216/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2022/Detector_Data/220621/CIT_NUVU_platescale/image000049.fits"
-header_det_sky = build_wcs_header(
+header_det_sky, w = build_wcs_header(
     xpapoint=None,
     filename=filename,
     CRPIX=[0, 0],
     # CDELT=[1.106 / 3600, 1.271 / 3600], #2018
     # CDELT=[1.3745 / 3600, 1.09612142 / 3600],  # 2022
-    CDELT=[1.3745 / 3600/factor, 1.09612142 / 3600/factor],  # 2022
+    # CDELT=[1.3745 / 3600/factor, 1.09612142 / 3600/factor],  # 2022
+    CDELT=[1.26 / 3600/factor, 1.08 / 3600/factor],  # 2023
     # CDELT=[1, 1],
     # CTYPE=["RA---AIR", "DEC--AIR"],
     CTYPE=["RA---TAN", "DEC--TAN"],
@@ -111,7 +112,7 @@ header_det_sky = build_wcs_header(
     argv=[],
 )
 
-header_det_mask = build_wcs_header(
+header_det_mask, w = build_wcs_header(
     xpapoint=None,
     filename=filename,
     CRPIX=[0, 0],
@@ -122,7 +123,7 @@ header_det_mask = build_wcs_header(
 )
 
 
-header_dispersion = build_wcs_header(
+header_dispersion, w = build_wcs_header(
     xpapoint=None,
     filename=filename,
     CRPIX=[0, 0],
@@ -172,3 +173,18 @@ fits.HDUList([fits.PrimaryHDU(ds9, header=header)]).writeto(
 d.set("regions shape Ruler")
 d.set("file " + filename)
 #%%
+
+
+
+
+
+
+
+
+
+
+
+#%% Way to measure 
+
+# FB2_2023/instrument_alignment_focusing/XY_calibration/FireBallPipe/mapping_mask_det_2022.y
+# fit_magnfication(X,-Y,3600*EL*2,3600*CE*2,Y, field="",x0=(0,0,0,1,1))

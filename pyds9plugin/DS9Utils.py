@@ -2030,9 +2030,6 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
 def astrometry_net(xpapoint=None, argv=[]):
     """Uses astrometry.net to compute position on the sky and return header
     """
-    from astropy.io import fits
-    from astropy.wcs import wcs
-
     parser = create_parser(get_name_doc(), path=True)
     parser.add_argument("--type", choices=("Image", "XY-catalog"), metavar="")
     parser.add_argument(
@@ -2095,6 +2092,13 @@ def astrometry_net(xpapoint=None, argv=[]):
     #     metavar="",
     # )
     parser.add_argument(
+        "-N",
+        "--number_processors",
+        default=os.cpu_count() - 2,
+        help="Number of processors to use for multiprocessing analysis. Default use your total number of processors - 2.",
+        metavar="",
+    )
+    parser.add_argument(
         "--positional_error",
         default="",
         dest="positional_error",
@@ -2103,9 +2107,41 @@ def astrometry_net(xpapoint=None, argv=[]):
         metavar="",
     )
     args = parser.parse_args_modif(argv, required=True)
-
     d = DS9n(args.xpapoint)
-    filename = get_filename(d)  # d.get("file")
+    # filename = get_filename(d)  # d.get("file")
+    path = globglob(args.path)
+    if len(path) < 2:
+        astrometry(path[0], args,d)
+        # result, name = execute_command(
+        #     path[0], argument, exp, xpapoint, bool(int(eval_)), write, d,
+        # )
+        # if result is not None:
+        #     # if same & (fitsimage.header == header):
+        #     d.set("frame new ; tile yes ; file " + name)
+        d.set("lock frame wcs")
+        message(
+            d,
+            """Astrometry.net performed successfully!
+                    The WCS header has been saved in you image.""")
+    else:
+        for f in path:
+            astrometry(f,args,d)
+        # result, name = parallelize(
+        #     function=astrometry,
+        #     parameters=[args,d],
+        #     action_to_paralize=path,
+        #     number_of_thread=args.number_processors,
+        # )
+
+    return
+
+
+def astrometry(filename, args, d):
+    from astropy.io import fits
+    from astropy.wcs import wcs
+    import webbrowser
+
+
     type_ = args.type
     verboseprint("Type = %s" % (type_))
     if type_ == "XY-catalog":
@@ -2116,12 +2152,11 @@ def astrometry_net(xpapoint=None, argv=[]):
     verboseprint("Processing might take a few minutes ~5-10")
     PathExec = os.path.dirname(os.path.realpath(__file__)) + "/astrometry3.py"
     Newfilename = filename[:-5] + "_wcs.fits"
-    import webbrowser
 
-    webbrowser.open("https://nova.astrometry.net/dashboard/submissions", new=2)
+    # webbrowser.open("https://nova.astrometry.net/dashboard/submissions", new=2)
     create_wcs(PathExec, filename, Newfilename, params=args, type_=type_)
     wcs_header = wcs.WCS(fits.getheader(Newfilename)).to_header()
-    filename = get_filename(d)
+    # filename = get_filename(d)
     for key in list(dict.fromkeys(wcs_header.keys())):
         verboseprint(key)
         try:
@@ -2134,14 +2169,13 @@ def astrometry_net(xpapoint=None, argv=[]):
         value=datetime.datetime.now().strftime("%y%m%d-%HH%M"),
         comment="",
     )
-    d.set("lock frame wcs")
-    message(
-        d,
-        """Astrometry.net performed successfully!
-                  The WCS header has been saved in you image.""",
-    )
-    return
-
+    # d.set("lock frame wcs")
+    # message(
+    #     d,
+    #     """Astrometry.net performed successfully!
+    #               The WCS header has been saved in you image.""",
+    # )
+    return 1, 1
 
 def create_wcs(PathExec, filename, Newfilename, params, type_="Image"):
     """Sends the image on the astrometry.net server
@@ -2864,20 +2898,61 @@ def analyze_spot(
         verboseprint(d)
     return d
 
-def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC-LINBENC-LINCENC"):
+
+        # if int(args.WCS)==1:
+        #     from astropy import units as u
+        #     from astropy import wcs
+        #     w = wcs.WCS(image.header)
+        #     xc, yc = (Xinf+ Xsup)/2, (Yinf+ Ysup)/2
+        #     center_wcs = w.all_pix2world(xc, yc, 0)
+        #     # d.set('crosshair {} {} physical'.format(x,y))
+        #     alpha, delta = float(center_wcs[0]), float(center_wcs[1])
+        #     verboseprint("alpha, delta = %s %s" % (alpha, delta))
+        #     center = [alpha, delta]
+        #     new_image = np.hstack([f.data[int(yc-r):int(yc+r), int(xc-r):int(xc+r)] for f in fitsimages]) 
+        #     new_image=[]
+        #     for f in fitsimages:
+        #         w = wcs.WCS(f.header)
+        #         center_wcs = center
+        #         center_pix = w.all_world2pix(center_wcs[0] * u.deg, center_wcs[1] * u.deg, 0)
+        #         center_pix = [int(center_pix[0]), int(center_pix[1])]
+        #         yc, xc = center_pix
+        #         # new_image.append(f.data[int(yc-r):int(yc+r), int(xc-r):int(xc+r)])
+        #         new_image.append(f.data[int(xc-r):int(xc+r), int(yc-r):int(yc+r)])
+        #     new_image = np.hstack(new_image) 
+
+
+
+def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC",WCS=0,edge=200):#-LINBENC-LINCENC
     from astropy.io import fits
     import numpy as np
     files.sort()
     chunks = [files[x:x+tf_length] for x in range(0, len(files), tf_length)]#[:-1]
     new_image = np.zeros((n*2*len(chunks),n*2*tf_length+1))
     ttfs=[]
+    if WCS==1:
+        from astropy import units as u
+        from astropy import wcs
     for j, tfs in enumerate(chunks):
-        # print(i)
-        data = fits.open(tfs[int(tf_length/3)])[0].data
-        valmax = np.nanmax(data)
-        print(np.where(data==valmax))
-        yc, xc = np.where(data==valmax)
-        yc, xc  = int(yc), int(xc)
+        print(tfs,int(tf_length/3))
+        fitsfile = fits.open(tfs[int(tf_length/3)])[0]
+        data = fitsfile.data
+        header = fitsfile.header
+        # valmax = np.nanmax(data)
+        # print(np.where(data==valmax))
+        # n_lim = 80
+        yc, xc = np.where(data[edge:-edge,edge:-edge]==np.nanmax(data[edge:-edge,edge:-edge]))
+        yc, xc = yc+edge, xc+edge
+        try:
+            yc, xc  = int(yc), int(xc)
+        except TypeError:
+            yc, xc  = int(yc[-1]), int(xc[-1])
+        if WCS==1:
+            w = wcs.WCS(header)
+            center_wcs = w.all_pix2world(xc, yc, 0)
+            # d.set('crosshair {} {} physical'.format(x,y))
+            alpha, delta = float(center_wcs[0]), float(center_wcs[1])
+
         # yc, xc  = int(yc)+50, int(xc)-100
         for i,f in enumerate(tfs):
             print(j)
@@ -2891,10 +2966,24 @@ def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC-LINBENC-LINCENC"
                     ttfs.append(h[head])
             except KeyError:    
                 ttfs.append(i)
+
+
+            if WCS==1:
+                w = wcs.WCS(h)
+                # center_wcs = center
+                center_pix = w.all_world2pix(alpha * u.deg, delta * u.deg, 0)
+                center_pix = [int(center_pix[0]), int(center_pix[1])]
+                xc, yc = center_pix
+                print("center = ",xc, yc)
+
             sub = data[yc-n:yc+n,xc-n:xc+n]
-            print(sub.shape)
-            print(new_image[j*2*n:(j+1)*2*n,i*2*n:(i+1)*2*n].shape)
-            new_image[j*2*n:(j+1)*2*n,i*2*n:(i+1)*2*n] = sub
+            # print(sub.shape)
+            # print(new_image[j*2*n:(j+1)*2*n,i*2*n:(i+1)*2*n].shape)
+            try:
+                new_image[j*2*n:(j+1)*2*n,i*2*n:(i+1)*2*n] = sub
+            except ValueError as e:
+                print(yc, xc)
+                print(e)
             fits.setval(f, "X_IMAGE_PSF", value=xc)
             fits.setval(f, "Y_IMAGE_PSF", value=yc)
             # plt.imshow(new_image)      
@@ -2906,11 +2995,13 @@ def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC-LINBENC-LINCENC"
     # d.set_np2arr(new_image)
 
 
-def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
+
+
+
+def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
     """
     """
     import re
-
     from astropy.io import fits
     import matplotlib.pyplot as plt
     from astropy.table import Table, hstack
@@ -2937,7 +3028,7 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
     parser.add_argument(
         "-n",
         "--number",
-        default="AlphaNumerical",
+        default="11",
         help="Number of images per throughfocus",
         type=str,
         # choices=["AlphaNumerical", "CreationDate", "DS9-Order"],
@@ -2953,19 +3044,77 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
         metavar="",
     )
 
+    parser.add_argument(
+        "-e",
+        "--Est",
+        help="Estimators to get the best focus",
+        type=str,
+        default="All",
+        metavar="",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--radius",
+        help="radius",
+        type=str,
+        default="40",
+        metavar="",
+    )
+
+    parser.add_argument(
+        "-N",
+        "--name",
+        help="name to add to the files",
+        type=str,
+        default="",
+        metavar="",
+    )
+
+    parser.add_argument(
+        "-w",
+        "--WCS",
+        help="TF based on WCS",
+        type=str,
+        default="0",
+        metavar="",
+    )
+
+
     args = parser.parse_args_modif(argv, required=False)
+
+
+    # if WCS:
+    #     from astropy import wcs
+    #     w = wcs.WCS(image.header)
+    #     center_wcs = w.all_pix2world(x, y, 0)
+    #     # d.set('crosshair {} {} physical'.format(x,y))
+    #     alpha, delta = float(center_wcs[0]), float(center_wcs[1])
+    #     verboseprint("alpha, delta = %s %s" % (alpha, delta))
+    #     center = [alpha, delta]
+
+    # if int(args.WCS)==1:
+    #     from astropy import units as u
+    #     from astropy import wcs
+    #     w = wcs.WCS(header)
+    #     center_wcs = center
+    #     center_pix = w.all_world2pix(center_wcs[0] * u.deg, center_wcs[1] * u.deg, 0)
+    #     center_pix = [int(center_pix[0]), int(center_pix[1])]
+
+
     tf_length=int(args.number)
+    
     verboseprint("""\n\n\n\n      START THROUGHFOCUS \n\n\n\n""")
     d = DS9n(args.xpapoint)
     filename = get_filename(d)
     # header = fits.open(filename)[0].header
     if args.path == "":
         # name = filename.replace(".fits","_TF.fits")
-        name = "/tmp/tf.fits"
-        cat_name = filename.replace(".fits","_cat.fits")
+        name = os.path.dirname(filename) + "/imstack_TF%s.fits"%(args.name)    #"/tmp/imstack_TF.fits"
+        cat_name = filename.replace(".fits","_cat%s.fits"%(args.name)) 
     else:
-        name = os.path.dirname(args.path) + "/imstack_TF.fits"
-        cat_name = os.path.dirname(args.path) + "/imstack_TF_cat.fits"
+        name = os.path.dirname(args.path) + "/imstack_TF%s.fits"%(args.name)
+        cat_name = os.path.dirname(args.path) + "/imstack_TF_cat%s.fits"%(args.name)
 
     param_dict = {"DETECT_THRESH":1.7,
     "GAIN":0,
@@ -2976,7 +3125,8 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
     "CLEAN":0,
     "CLEAN_PARAM":0,
     "CATALOG_NAME":cat_name,
-    "filter_type":np.ones((40,40))#np.ones((10,10))
+    "filter_type":np.ones((10,10))
+    # "filter_type":np.ones((40,40))#np.ones((10,10))
     }
 
     if (args.path == "") & (d.get("tile")=="yes"):
@@ -2986,18 +3136,64 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
         region = getregion(d, quick=True, message=False, selected=True)
         print("region = ", region)
         Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
-        xc, yc = (Xinf+ Xsup)/2, (Yinf+ Ysup)/2
+        #TODO here we should extract the barycenter of the center image
+        # xc,yc = 
         n1, n2 = re.findall(r"\d+", os.path.basename(files[0]))[-1],  re.findall(r"\d+", os.path.basename(files[-1]))[-1]
         fitsimages = [fits.open(f)[0] for f in files]
-        new_image = np.hstack([f.data[Yinf:Ysup, Xinf:Xsup] for f in fitsimages]) 
+        print(args.radius)
+        if args.radius!="circle":
+            r = int(args.radius)
+        if int(args.WCS)==1:
+            from astropy import units as u
+            from astropy import wcs
+            w = wcs.WCS(image.header)
+            xc, yc = (Xinf+ Xsup)/2, (Yinf+ Ysup)/2
+            center_wcs = w.all_pix2world(xc, yc, 0)
+            # d.set('crosshair {} {} physical'.format(x,y))
+            alpha, delta = float(center_wcs[0]), float(center_wcs[1])
+            verboseprint("alpha, delta = %s %s" % (alpha, delta))
+            center = [alpha, delta]
+            new_image = np.hstack([f.data[int(yc-r):int(yc+r), int(xc-r):int(xc+r)] for f in fitsimages]) 
+            new_image=[]
+            for f in fitsimages:
+                w = wcs.WCS(f.header)
+                center_wcs = center
+                center_pix = w.all_world2pix(center_wcs[0] * u.deg, center_wcs[1] * u.deg, 0)
+                center_pix = [int(center_pix[0]), int(center_pix[1])]
+                yc, xc = center_pix
+                # new_image.append(f.data[int(yc-r):int(yc+r), int(xc-r):int(xc+r)])
+                new_image.append(f.data[int(xc-r):int(xc+r), int(yc-r):int(yc+r)])
+            new_image = np.hstack(new_image) 
+            print(new_image)
+            print(new_image.shape)
+        else:
+            xc, yc = (Xinf+ Xsup)/2, (Yinf+ Ysup)/2
+            new_image = np.hstack([f.data[int(yc-r):int(yc+r), int(xc-r):int(xc+r)] for f in fitsimages]) 
+            # new_image = np.hstack([f.data[int(yc-r):int(yc+r), int(xc-r):int(xc+r)] for f in fitsimages]) 
+
+        # from astropy import units as u
+        # from astropy import wcs
+        # w = wcs.WCS(header)
+        # center_wcs = center
+        # center_pix = w.all_world2pix(center_wcs[0] * u.deg, center_wcs[1] * u.deg, 0)
+        # center_pix = [int(center_pix[0]), int(center_pix[1])]
+
+
+
+        # else:
+        #     new_image = np.hstack([f.data[Yinf:Ysup, Xinf:Xsup] for f in fitsimages]) 
+        #HACK for plot
+        region = getregion(d, quick=False, message=False, selected=True)
+        xc,yc = region[0].xc , region[0].yc 
 
         try:
             ttfs = np.hstack([f.header[args.ttf] for f in fitsimages]) 
         except KeyError:
             ttfs = np.arange(len(fitsimages))
         # print(new_image)
+        # fitswrite(new_image,name)
+        name = name.replace(".fits","_%i_%i.fits"%(int(n1),int(n2)))
         fitswrite(new_image,name)
-        # fitswrite(new_image,name.replace(".fits","_%i_%i.fits"%(int(n1),int(n2))))
 
     elif os.path.isfile(args.path) | ((args.path == "") & (d.get("tile")=="no")) | (len(globglob(args.path))>tf_length) :            
         print("os.path.isfile(args.path)",args.path,os.path.isfile(args.path))
@@ -3011,18 +3207,20 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
         else:
             files = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
             image = fits.open(files[int(len(files)/2)])[0]
-            new_image, (xc, yc), ttfs = stack_throughfocus(files, tf_length=tf_length, n=radius)
+            new_image, (xc, yc), ttfs = stack_throughfocus(files, tf_length=tf_length, n=int(args.radius),edge=edge,WCS = int(args.WCS))
             n1, n2 = re.findall(r"\d+", os.path.basename(files[0]))[-1],  re.findall(r"\d+", os.path.basename(files[-1]))[-1]
             # sys.exit()
             # name = os.path.dirname(filename) + "/Throughfocus_%i_%i_cat.fits"%(int(n1),int(n2))
-            fitswrite(new_image,name)
-            # fitswrite(new_image,name.replace(".fits","_%i_%i.fits"%(int(n1),int(n2))))
+            # fitswrite(new_image,name)
+            name = name.replace(".fits","_%i_%i.fits"%(int(n1),int(n2)))
+            fitswrite(new_image,name)#.replace(".fits","_%i_%i.fits"%(int(n1),int(n2))))
             filename = name
 
         print(filename)
         try:
             run_sep(filename,filename, param_dict)
             cat=Table.read(cat_name)
+            cat = cat[(cat["Y_IMAGE"]>int(args.radius)-shift)&(cat["Y_IMAGE"]<int(args.radius)+shift)]
             if 1==1:
                 reg_file="/tmp/test.reg"
                 create_ds9_regions(
@@ -3070,6 +3268,8 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
 
         except IndexError:
             cat=Table.read(filename)
+            cat = cat[(cat["Y_IMAGE"]>int(args.radius)-shift)&(cat["Y_IMAGE"]<int(args.radius)+shift)]
+
             if "MAG_APER_0" not in cat.colnames:
                 cat["MAG_APER_0"] = cat["MAG_APER"][:,0]
             cat = delete_multidim_columns(cat)
@@ -3082,7 +3282,7 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
         print(ttfs)
         print(sub_ttfs)
 
-        plot_tf(sub_catalogs, new_image, sub_ttfs[0], n1, n2,tf_length,filename)
+        plot_tf(sub_catalogs, new_image, sub_ttfs[0], n1, n2,tf_length,filename,args=args)
         # plot_tf(Table.from_pandas(sub_catalogs[0]), new_image, sub_ttfs[0], n1, n2,tf_length,filename)
         # import pandas as pd
         # color1 = 'k'
@@ -3127,25 +3327,31 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
 
 
         return
-    else:    
+    else:
+        if os.path.isdir(args.path)   :
+            args.path = args.path+"/*.fits"
+        #     files = globglob(args.path+"/*.fits", xpapoint=args.xpapoint,sort=True)[:]
+        # else:
         files = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
         import shutil
         for file in files:
             shutil.copyfile(file, "/tmp/" + os.path.basename(file))
         image = fits.open(files[int(len(files)/2)])[0]
         n1, n2 = re.findall(r"\d+", os.path.basename(files[0]))[-1],  re.findall(r"\d+", os.path.basename(files[-1]))[-1]
-        new_image, (xc, yc), ttfs = stack_throughfocus(files, tf_length=tf_length, n=30)
+        new_image, (xc, yc), ttfs = stack_throughfocus(files, tf_length=tf_length, n=int(args.radius),WCS = int(args.WCS),edge=edge)
+        name = name.replace(".fits","_%i_%i.fits"%(int(n1),int(n2)))
+
         fitswrite(new_image,name)
         # sys.exit()
         print("ok ",name)
         filename = cat_name
-    param_dict["CATALOG_NAME"] = os.path.dirname(filename) + "/Throughfocus_%i_%i_cat.fits"%(int(n1),int(n2))
+    param_dict["CATALOG_NAME"] = os.path.dirname(filename) + "/Throughfocus_%i_%i_cat%s.fits"%(int(n1),int(n2),args.name)
     # files=get_filename(d, All=True, sort=False)
     x, y = "X_IMAGE", "Y_IMAGE"
 
     run_sep(name, name, param_dict)
     cat = Table.read(param_dict["CATALOG_NAME"])
-    cat = cat[cat["FWHM_IMAGE"]>4]
+    cat = cat[(cat["FWHM_IMAGE"]>4)&(cat["Y_IMAGE"]>int(args.radius)-shift)&(cat["Y_IMAGE"]<int(args.radius)+shift)]
     cat.sort("X_IMAGE")
     ttfs=np.array(ttfs)[:len(cat)]
 
@@ -3154,7 +3360,7 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
     # d.set("frame new; file "+name)
 
 
-    cat = plot_tf(cat, new_image, ttfs, n1, n2,tf_length=tf_length,filename=filename)
+    cat = plot_tf(cat, new_image, ttfs, n1, n2,tf_length=tf_length,filename=filename,args=args)
 
     cat = hstack([cat,create_catalog(files, ext=[0], info="", reg=None,save=False)])
     cat.write(param_dict["CATALOG_NAME"],overwrite=True)
@@ -3163,7 +3369,8 @@ def throughfocus_new(xpapoint=None, plot_=True, radius=40, argv=[]):
 
 
 
-def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename):
+def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename,args):
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
     import matplotlib.pyplot as plt
     import numpy as np
     from matplotlib.patches import Ellipse
@@ -3189,13 +3396,22 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename):
     ax2b = plt.subplot2grid(shape=(n_rows,  3), loc=(len(cats)+1, 0), colspan=1,sharex=ax2)
     ax3b = plt.subplot2grid(shape=(n_rows,  3), loc=(len(cats)+1, 1), colspan=1,sharex=ax2)
     ax4b = plt.subplot2grid(shape=(n_rows,  3), loc=(len(cats)+1, 2), colspan=1,sharex=ax2)
-    ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,97)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    im = ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    cax0 = make_axes_locatable(ax1).append_axes('right', size='1%', pad=0.05)
+    cbar1 = fig.colorbar(im, cax=cax0, orientation='vertical')
+    # cbar1.formatter.set_powerlimits((0, 0))
+    xc, yc = cats[0]["x_real_center"][0], cats[0]["y_real_center"][0]
+
+    title  =  "Nimages%s = %i ➛ %i, center = %0.1f - %0.1f, "%(args.name, int(n1),int(n2),xc, yc)
     for cat, color1 in zip(cats,["k","firebrick","darksalmon"]):
         print(color1)
         color2=color1
         cat.sort("X_IMAGE")
         if cat["THETA_IMAGE"][0]>cat["THETA_IMAGE"][-1]:
             cat["THETA_IMAGE"] = 90 - cat["THETA_IMAGE"]
+        # cat["THETA_IMAGE"][(cat["THETA_IMAGE"]<np.mean(cat["THETA_IMAGE"][:4])) | (cat["THETA_IMAGE"]>np.mean(cat["THETA_IMAGE"][-4:]))]  -= 90
+        # if ~(np.mean(cat["THETA_IMAGE"][:2]) <= cat["THETA_IMAGE"] <= np.mean(cat["THETA_IMAGE"][-2:])):
+            
         cat["id"]=np.arange(len(cat))
         x = cat["id"]
         for i in range(len(cat)):
@@ -3206,13 +3422,16 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename):
         # color2 = 'k'
         fit1 = PlotFit1D(x, cat["FWHM_IMAGE"]/2.35,deg=2, ax=ax2,c=color1,ls=":",extrapolate=False)
         ax2.plot(x, cat["FWHM_IMAGE"]/2.35,"o", color=color1,label="σ$_{min}$=%0.1f, c=%0.1f"%(np.min(cat["FWHM_IMAGE"]/2.35),-fit1["popt"][1] / (2 * fit1["popt"][2])  ))
-        a1, a2 = PlotFit1D(x,ttfs,deg=1,plot_=False)["popt"],  PlotFit1D(ttfs,x,deg=1,plot_=False)["popt"]
-        ax2.secondary_xaxis('top', functions=(a1, a2))
-        ax3.secondary_xaxis('top', functions=(a1, a2))
-        ax4.secondary_xaxis('top', functions=(a1, a2))
+        try:
+            a1, a2 = PlotFit1D(x,ttfs,deg=1,plot_=False)["popt"],  PlotFit1D(ttfs,x,deg=1,plot_=False)["popt"]
+            ax2.secondary_xaxis('top', functions=(a1, a2))
+            ax3.secondary_xaxis('top', functions=(a1, a2))
+            ax4.secondary_xaxis('top', functions=(a1, a2))
+        except IndexError:
+            pass
         # ax2b = ax2.twiny()
         # ax2b.plot(x,ttfs )
-        ax2.tick_params(axis='y', labelcolor=color1)
+        # ax2.tick_params(axis='y')#, labelcolor=color1)
         fit2 = PlotFit1D(x, cat["MAG_APER_0"]/np.max(cat["MAG_APER_1"]),deg="gaus", ax=ax3,c=color1,ls=":",extrapolate=False)["popt"]
         ax3.errorbar(x, cat["MAG_APER_0"]/np.max(cat["MAG_APER_1"]),fmt="o",color=color2,label=r"$m_{aper}^{5pix}$, c=%0.1f"%(fit2[1]))#, yerr=cat["MAGERR_APER_0"]
         ax3.errorbar(x, cat["MAG_APER_1"]/np.max(cat["MAG_APER_1"]),ls=":", color=color2,label=r"$m_{aper}^{20pix}$")#,yerr=cat["MAGERR_APER_1"]
@@ -3235,8 +3454,21 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename):
             fit5=np.ones(5)*len(cat)/2
             pass
         ax4b.scatter(x, cat["B_IMAGE"],marker="o",label="c=%0.1f"%(fit5[-1]), color=color1)
-        centers =  np.array([   -fit1["popt"][1] / (2 * fit1["popt"][0]), fit2[1],fit[-1], fit3["popt"][-1],fit4[-1],fit5[-1]    ]  )
-        center = np.median(   centers[centers!=0]   )
+       
+        cat["FWHM_min"] = -fit1["popt"][1] / (2 * fit1["popt"][2])
+        cat["Flux_min"] =  fit2[1]
+        cat["Ellipticity_min"] =  fit[-1]
+        cat["Angle_min"] =  fit3["popt"][-1]
+        cat["Maj_axis_min"] =  fit4[-1]
+        cat["Min_axis_min"] =  fit5[-1]
+
+        if args.Est=="All":
+            centers =  np.array([   -fit1["popt"][1] / (2 * fit1["popt"][2]), fit2[1],fit[-1], fit3["popt"][-1],fit4[-1],fit5[-1]    ]  )
+            center = np.median(   centers[centers!=0]   )
+        else:
+            centers = [cat["%s_min"%(est)][0] for est in args.Est.split(",")]
+            center = np.mean(centers)
+            print(args.Est,centers,center)
         for i in range(len(cat)):
             if (i==int(center)) |  (i==int(center)+1):
                 lw=1
@@ -3248,7 +3480,6 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename):
             circle = Circle((cat["X_IMAGE"][i], cat["Y_IMAGE"][i]),20, edgecolor='r', facecolor='none',lw=lw)
             ax1.add_artist(circle)
         
-        xc, yc = cat["x_real_center"][0], cat["y_real_center"][0]
 
         ax2.axvline(x=-fit1["popt"][1] / (2 * fit1["popt"][2]), color=color1, linestyle=":")
         ax3.axvline(x= fit2[1], color=color1, linestyle=":")
@@ -3259,14 +3490,15 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename):
         ax4b.set_xlim((-0.5,tf_length-0.5))
         for ax in [ax2,ax3,ax4,ax2b,ax3b,ax4b]:
             ax.axvline(x=center, color=color1, linestyle="--")
-
+        title += " - Best Im = %0.1f"%( center)
+    cat["Center"] =  center
     ax3.legend(fontsize=ft,title="Flux",title_fontsize=ft+1)
     ax2.legend(fontsize=ft,title="PSF size",title_fontsize=ft+1)
     ax2b.legend(fontsize=ft,title="Angle",title_fontsize=ft+1)
     ax3b.legend(fontsize=ft,title="Major axis",title_fontsize=ft+1)
     ax4b.legend(fontsize=ft,title="Minor axis",title_fontsize=ft+1)
     ax4.legend(fontsize=ft,title="Ellipticity",title_fontsize=ft+1)
-    ax1.set_title("Nimages = %i ➛ %i, center = %i - %i, Best Im = %0.1f"%(int(n1),int(n2), xc, yc, center))
+    ax1.set_title(title)
     ax2 .set_ylim((2,10))
     ax3 .set_ylim((0.05,1.1))
     ax4 .set_ylim((0.1,0.7))
@@ -3275,16 +3507,10 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename):
     ax4b.set_ylim((1,7))
 
     fig.subplots_adjust(hspace=0.03)   
-    fig.savefig(os.path.dirname(filename) + "/Throughfocus_%i_%i.png"%(int(n1),int(n2)), dpi=100, bbox_inches="tight")#, transparent=True)
+    fig.savefig(os.path.dirname(filename) + "/Throughfocus_%i_%i%s.png"%(int(n1),int(n2),args.name), dpi=100, bbox_inches="tight")#, transparent=True)
     # fig.savefig('/tmp/output.png', transparent=True)
     plt.show()
-    cat["FWHM_min"] = -fit1["popt"][1] / (2 * fit1["popt"][2])
-    cat["Flux_max"] =  fit2[1]
-    cat["Ellipticity_min"] =  fit[-1]
-    cat["Angle_center"] =  fit3["popt"][-1]
-    cat["Maj_axis_min"] =  fit4[-1]
-    cat["Min_axis_min"] =  fit5[-1]
-    cat["Center"] =  center
+    print(cat["Center"])
     return cat
 
 
@@ -5126,26 +5352,28 @@ def execute_command(
     new_dict = {}
     new_dict.update(globals())
     new_dict.update(ldict)
-    #TODO add possibility to run ipynb https://stackoverflow.com/questions/67811531/how-can-i-execute-a-ipynb-notebook-file-in-a-python-script
-
-    # import nbformat
-    # from nbconvert.preprocessors import ExecutePreprocessor
-
-    # filename = 'NotebookName.ipynb'
-    # with open(filename) as ff:
-    #     nb_in = nbformat.read(ff, nbformat.NO_CONVERT)
-        
-    # ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
-
-    # nb_out = ep.preprocess(nb_in)
+   
     try:
+        verboseprint("Executing expression : %s" % (exp))
         if os.path.isfile(exp):
-            verboseprint("Executing file %s" % (exp))
-            # exec(open(exp).read(),globals()+ldict)#, globals(), ldict)
-            exec(open(exp).read(), new_dict)  # dict_function.update(d)
-
+            if ".py" in os.path.basename(exp):
+                exec(open(exp).read(), new_dict)  # dict_function.update(d)
+            elif ".ipynb" in os.path.basename(exp):
+                # import nbformat
+                # from nbconvert.preprocessors import ExecutePreprocessor
+                # with open(exp) as ff:
+                #     nb_in = nbformat.read(ff, nbformat.NO_CONVERT)
+                # ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
+                # nb_out = ep.preprocess(nb_in)
+                #TODO add possibility to run ipynb https://stackoverflow.com/questions/67811531/how-can-i-execute-a-ipynb-notebook-file-in-a-python-script
+                from json import load
+                with open(exp) as fp:
+                    nb = load(fp)
+                for cell in nb['cells']:
+                    if cell['cell_type'] == 'code':
+                        source = ''.join(line for line in cell['source'] if not line.startswith('%'))
+                        exec(source, new_dict)
         else:
-            verboseprint("Executing expression : %s" % (exp))
             exec(exp, new_dict)  # globals(), ldict)  # , locals(),locals())
     except (TabError) as e:  # NameError,IndexError
         import traceback
@@ -5270,7 +5498,13 @@ def fitswrite(fitsimage, filename, verbose=True, header=None):
     import numpy as np
 
     if type(fitsimage) == np.ndarray:
-        fitsimage = fits.HDUList([fits.PrimaryHDU(fitsimage, header=header)])[0]
+        try:
+            fitsimage = fits.HDUList([fits.PrimaryHDU(fitsimage, header=header)])[0]
+        except KeyError as e:
+            print(fitsimage)
+            print("discarding header due to error: ", e)
+            fitsimage = fits.HDUList([fits.PrimaryHDU(fitsimage)])[0]
+
     if len(filename) == 0:
         verboseprint(
             "Impossible to save image in filename %s, saving it to %s"
@@ -5575,6 +5809,9 @@ def stack_images_path(
     from astropy.io import fits
     import re
     import numpy as np
+    paths.sort(key=lambda x: int(re.findall(r"\d+", os.path.basename(x))[-1]))
+    # paths.sort()
+                # int(re.findall(r"\d+", os.path.basename(filename))[-1])
 
     if ".csv" in paths[0]:
         print("entry seem to ba catalog")
@@ -5611,7 +5848,7 @@ def stack_images_path(
     else:
         stds /= np.nansum(stds[index])
     n = len(paths)
-    paths.sort()
+    # paths.sort()
     ly, lx = fitsfile[i].data.shape
     stack = np.zeros((ly, lx), dtype=dtype)
     if std:
@@ -5632,8 +5869,12 @@ def stack_images_path(
         array3d = [fits.open(file)[i].data for file in paths[index]]
         if (
             np.isfinite(np.array(array3d)).all()
+            # np.isfinite(np.array(array3d,dtype=object)).all()
             & (Type != "mean")
             & (Type != "nanmean")
+            & (Type != "vstack")
+            & (Type != "hstack")
+            & (Type != "dstack")
         ):
             dtype = float# type(array3d[0][0,0])
         if Type == "counting":
@@ -5647,6 +5888,15 @@ def stack_images_path(
             stack = np.array(
                 getattr(np, "sum")(np.array(array3d), axis=0,), dtype=dtype,
             )
+        elif Type == "vstack":
+            # from astropy.table import vstack
+            stack = np.concatenate(array3d,axis=0)
+        elif Type == "dstack":
+            # from astropy.table import dstack
+            stack =  np.concatenate(array3d,axis=-1)
+        # elif Type == "hstack":
+        #     # from astropy.table import hstack
+        #     stack =  np.concatenate(array3d,axis=2)
         else:
             stack = np.array(
                 getattr(np, Type)(np.array(array3d), axis=0,), dtype=dtype,
@@ -5662,7 +5912,14 @@ def stack_images_path(
     # print(numbers)
     images = " - ".join(list(np.array(numbers, dtype=str)))
     new_fitsfile = fitsfile[i]
-    new_fitsfile.data = stack
+    # print(fits.open(paths[0])[i].data)
+    # print(array3d)
+    # print(stack,type(stack))
+    try:
+        new_fitsfile.data = stack
+    except KeyError:
+        new_fitsfile.data = np.array(stack,dtype=int)
+
     new_fitsfile.header["STK_NB"] = images
     if dtype == int:
         print("dtype=", dtype)
@@ -13038,6 +13295,11 @@ def open_file(xpapoint=None, filename=None, argv=[]):
     parser.add_argument(
         "-c", "--clip", default="0", help="Open screenshot image from mac", metavar="",
     )
+    parser.add_argument(
+        "-C", "--clear", default="0", help="clear DS9 frames", metavar="",
+    )
+
+
     args = parser.parse_args_modif(argv)
 
     d = DS9n(args.xpapoint)
@@ -13066,6 +13328,8 @@ def open_file(xpapoint=None, filename=None, argv=[]):
     if d.get("file") == "":
         d.set("frame delete")
     path = 1
+    if args.clear == "1":
+        d.set("frame delete all")
     while (filenames == []) & (path != ""):
         path = get(
             d,

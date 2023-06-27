@@ -54,7 +54,11 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
             w, h = int(region.w), int(region.h)
         except AttributeError:
             break
-        if (x > 1200) & (y < 1950) & (y > 250) & (x < 2050):
+        if image.size < 3251072:
+            limx1, limx2 = 20, 1040
+        else:
+            limx1, limx2 = 1100, 2130
+        if (x > limx1) & (y < 1990) & (y > 75) & (x < limx2):
             # if x > 0:  # & (y < 1950) & (y > 250) & (x < 2050):
             x_inf, x_sup, y_inf, y_sup = lims_from_region(region=region, coords=None)
             n = 15
@@ -140,7 +144,7 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
                         y_spatial.ptp(),
                         len(y_spatial),
                         len(y_spatial),
-                        18,
+                        50,
                         np.nanmax(y_spatial),
                     ],
                 ]
@@ -387,20 +391,16 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
 
 
 d = DS9n()
-# d.set("frame first")
 
-# for i in range(number_ds9_frames()):
 if 1==0:
     d.set("regions select all")
     regs = getregion(d, selected=True)
     image = d.get_pyfits()[0].data
     filename = get_filename(d)
     cat, filename = Measure_PSF_slits(image, regs, filename=filename)
-    # d.set("frame next")
 
 else:
     image = fits.open(filename)[0].data
-    # regs = getregion(d,file=filename.replace".fits",".reg"),message=False)
     regs = getregion(d,file=filename.replace(".fits",".reg"),message=False)
     cat, filename = Measure_PSF_slits(image, regs, filename=filename)
 

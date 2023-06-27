@@ -238,7 +238,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
     # names_ = ["2018","1","2 -100","3","3 -100","4 -70","4 -105"]
     # temp = [fits.open(f.replace(".csv",".fits"))[0].header["TEMPB"] for f in files]
     names_ = [os.path.basename(file).split(".csv")[0].split("_")[0] for file in files]#.split("_2022_5")[0]
-    names_ = [os.path.basename(file).split(".csv")[0].split("_")[2] for file in files]#.split("_2022_5")[0]
+    # names_ = [os.path.basename(file).split(".csv")[0].split("_")[2] for file in files]#.split("_2022_5")[0]
     print(files,axes.T,lims, names_)
     # names_ = [os.path.basename(file).split("old_tilted")[1].split(".csv")[0] for file in files]#.split("_2022_5")[0]
     for i, (file, ax,lim,name) in enumerate(zip(files,axes.T,lims, names_)):
@@ -253,24 +253,27 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
         except (FileNotFoundError,KeyError) as e:
             # print(e)
             t=""
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        if cat["x"].max()>1500:
+            mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        else:
+            mask = cat["x"]>20
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
-        # samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
-        # g = plots.get_single_plotter()#width_inch=4, ratio=1)
-        # g.plot_2d([samples], x, 'fwhm_y', filled=True,ax=ax[0],add_legend_proxy=False)
-        # g.plot_2d([samples], x, 'fwhm_x', filled=True,ax=ax[1])
-        # if slit_size:
-        #     try:
-        #         g.plot_2d([samples], x, 'lx', filled=True,ax=ax[2])
-        #     except Exception as e:
-        #         # print(e)
-        #         pass
-        #     g.plot_2d([samples], x, 'ly', filled=True,ax=ax[3])
+        samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
+        g = plots.get_single_plotter()#width_inch=4, ratio=1)
+        g.plot_2d([samples], x, 'fwhm_y', filled=True,ax=ax[0],add_legend_proxy=False)
+        g.plot_2d([samples], x, 'fwhm_x', filled=True,ax=ax[1])
+        if slit_size:
+            try:
+                g.plot_2d([samples], x, 'lx', filled=True,ax=ax[2])
+            except Exception as e:
+                # print(e)
+                pass
+            g.plot_2d([samples], x, 'ly', filled=True,ax=ax[3])
             
-        #     ax[2].plot(cat[mask][x],cat[mask]["lx"],'.b')
-        #     ax[3].plot(cat[mask][x],cat[mask]["ly"],'.b')
-        #     ax[2].set_ylim((3,13.9))
-        #     ax[3].set_ylim((9,49))
+            ax[2].plot(cat[mask][x],cat[mask]["lx"],'.b')
+            ax[3].plot(cat[mask][x],cat[mask]["ly"],'.b')
+            ax[2].set_ylim((3,13.9))
+            ax[3].set_ylim((9,49))
         ax[0].set_title( name)
         label=os.path.basename(os.path.dirname(file)) if i==1 else None
         if fit:
@@ -305,7 +308,10 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
             cat['fwhm_y'] *= ps_spatial
         label=os.path.basename(os.path.dirname(file)) if i==1 else None
   
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        if cat["x"].max()>1500:
+            mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        else:
+            mask = cat["x"]>20
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
@@ -318,7 +324,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
             try:
                 g.plot_2d([samples], x, 'lx', filled=True,ax=ax[2],colors=["r"],alphas=[alpha])
             except Exception as e:
-                # print(e)
+                zprint(e)
                 pass
             g.plot_2d([samples], x, 'ly', filled=True,ax=ax[3],colors=["r"],alphas=[alpha])
             ax[2].plot(cat[mask][x],cat[mask]["lx"],'.r')
@@ -333,8 +339,10 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
             cat['fwhm_y'] *= ps_spatial
         print(i)
         label=os.path.basename(os.path.dirname(file)) if i==1 else None
-  
-        mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        if cat["x"].max()>1500:
+            mask = (cat["x"]<2100) &  (cat["x"]>1170) & (cat["y"]>200)  & (cat["y"]<2000)  & (cat["y"]<2000) &( (cat["line"]==214)|(cat["line"]==-99)) # & (cat["FLUX_MAX"]>lim) #& (cat["X2_IMAGE"]>5)
+        else:
+            mask = cat["x"]>20
         names = ['x','y','fwhm_x','fwhm_y', 'fwhm_x_unsmear','lx','ly']#,'lx_unsmear','smearing']
         samples = MCSamples(samples=[cat[mask][n] for n in names],names = names, labels =["",""],settings={'mult_bias_correction_order':0,'smooth_scale_2D':0.3, 'smooth_scale_1D':0.3})#,ax=ax)
         g = plots.get_single_plotter()#width_inch=4, ratio=1)
@@ -366,7 +374,7 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
             ax[1].legend()#loc="upper left")#,title=title2)
 
     if slit_size:
-        ax[2].set_ylim((4,13))
+        ax[2].set_ylim((4,8))
         ax[3].set_ylim((10,39))
     for i,l in enumerate(['fwhm_y'+unit_spatial,'fwhm_λ'+unit_spectral,'lλ','ly']):
         try:
@@ -379,12 +387,29 @@ def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=F
     fig.subplots_adjust(hspace=0,wspace=0)    
     return cat_temp
   
-    
+masks_2023a= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
+masks_2023= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
+ 
   
 test = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230525/diffusefocus/Catalogs/image0000*.csv"  
 # analyze_focus(path=test, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=True,fitdeg=1,title=None,slit_size=True,order=[-7,-6,-5,-4,-3,-2,-1][::-1]+ list(np.arange(8)),masks=None,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[-9.5,-9.35],tilt=np.array([-0.1,-0.1,-0.1])*1.1)
-analyze_focus(path=test, path1=None,path2=None,name="T" ,pixel=True, x="y",fit=True,fitdeg=1,title=None,slit_size=True,order= list(np.arange(16)),masks=None,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[-9.5,-9.35],tilt=np.array([-0.1,-0.1,-0.1])*1.1)
 
+colf_foc_14 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/14_cold_230515_0.34/*.csv"
+colf_foc_15 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/15_cold_230609/*.csv"
+colf_foc_15_213 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/15_cold_230609/*.csv"
+
+
+cold_focus_16 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/16_cold_230612/202/*.csv"
+cold_focus_16 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/16_cold_230612/*.csv"
+cold_focus_16b = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/16_cold_230612/230615/*.csv"
+
+analyze_focus(path=cold_focus_16b, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-9.7,-9.7]),tilt=np.array([-0.1,-0.1,-0.1])*0)
+
+
+#%%
+
+
+stack_images_path(paths=glob.glob("/Volumes/VINCENT/GOBC/220612/Detector_213/imstack_TF_*.fits"), Type="vstack", clipping=3, dtype=int, fname="", std=False, name=None)
 
 #%%
 
@@ -467,8 +492,6 @@ cold_2 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/6_
 cold_3= "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/7_cold_230314_0.3/*.csv"
 cold_1 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/5_cold_230307_0.74/*.csv"
 
-masks_2023a= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
-masks_2023= '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/*all*.txt'
      
 # analyze_focus(path=cold_6, path1=cold_5,path2=cold_7,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=[],tilt=np.array([-0.1,-0.1,-0.1])*1.3)
 

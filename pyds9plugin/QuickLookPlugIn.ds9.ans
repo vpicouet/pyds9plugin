@@ -14,7 +14,7 @@ DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $d
 New TF
 *
 button
-DS9Utils throughfocus_new -x $xpa_method  $param(new_tf) --path "$path" -n $n    | $text
+DS9Utils throughfocus_new -x $xpa_method  $param(new_tf) --path "$path" -n $m --Est "$Est"  --name $name --WCS $WCS | $text
 
 SExtractor #36
 *
@@ -28,11 +28,11 @@ button
 DS9Utils ds9_swarp -x $xpa_method   $param(SWARP); -p "$PATH" -i $IMAGEOUT_NAME -w $WEIGHT_TYPE -rw $RESCALE_WEIGHTS -W "$WEIGHT_IMAGE" -c $COMBINEI -ct $COMBINE_TYPE -CA $CLIP_AMPFRAC -CS $CLIP_SIGMA -CT $CELESTIAL_TYPE -PT $PROJECTION_TYPE -PE $PROJECTION_ERR -C_T $CENTER_TYPE -C $CENTERI -PST $PIXELSCALE_TYPE -PS $PIXEL_SCALE -IS $IMAGE_SIZE -R $RE-SAMPLING  -r $RESAMPLING_TYPE  -o $OVERSAMPLING  -I $INTERPOLATE -SB $SUBTRACT_BACK  -BS $BACK_SIZE -BFS $BACK_FILTERSIZE -BFT $BACK_FILTTHRESH     | $text
 
 
-
 3D Plot
 *
 button
 DS9Utils plot_3d -x $xpa_method  | $text
+
 
 
 Fit plot
@@ -48,11 +48,11 @@ DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp" 
 
 
 
-# remove dark
-# *
-# button
-# # /Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FB/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
-# /Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/AIT/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+remove dark
+*
+button
+# /Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FB/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+/Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/AIT/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
 
 
 Header DB
@@ -108,7 +108,7 @@ bind E
 
 
 param conversion_gain
-gain combobox {Conversion gain} Now:0.43|Aafaque:0.77|2022:0.22|2018:0.53 {Conversion gain in ADU/e-}
+gain combobox {Conversion gain} NoOSsequence:0.4|Now:0.43|Aafaque:0.77|2022:0.22|2018:0.53 {Conversion gain in ADU/e-}
 endparam
 
 
@@ -358,7 +358,7 @@ hmenu 1. Generic Functions
 	Open Image Key
 	*
 	bind O
-	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0 | $text
+	DS9Utils open_file -x $xpa_method  $param(open); -p "$path" -t $type  -c 0  -C $clear | $text
 
 	Plot Region In 3D
 	*
@@ -370,7 +370,8 @@ hmenu 1. Generic Functions
 	Python Command/Macro#13
 	*
 	menu
-	DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
+	# DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
+	DS9Utils python_command -x $xpa_method  $param(Python-Command); -e "$exp"  -o $overwrite | $text
 
 	Python Command/Macro
 	*
@@ -722,12 +723,13 @@ endhmenu
 
 
 
-
-
-
+		
 param new_tf
 path entry {path} "" {Regexp path of the images that you want to use}
-n entry {n} 11 {Number of images per throughfocus}
+m entry {n} 11 {Number of images per throughfocus}
+Est combobox {Center_estimators} All|FWHM,Min_axis,Maj_axis,Flux|FWHM,Min_axis,Maj_axis,Flux,Angle,Ellipticity {Apertures radius in pixel}
+WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
+name combobox {Center_estimators} _213|_206|_202| {Name to add to the files}
 endparam
 
 param Function
@@ -916,6 +918,7 @@ param open
 path open {Path of the image(s) to open}    {} #NORMAL
 #clip checkbox {Clipboard image}  0  {Open Screenshot image from clipboard Shift+Ctrl+Cmd+4 on OSX} #NORMAL
 type menu {Type} Slice|Multi-Frames-As-Cube|Multi-Frames|RGB|CUBE|IMPORT-3D|PRISM {}
+clear checkbox {Clear frames}  0  {Clear all the current frames} #NORMAL
 endparam
 
 
