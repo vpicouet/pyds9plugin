@@ -19,7 +19,7 @@ color="k"
 
 
 def emccd_model(
-    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, conversion_gain=1, fit="EMCCDhist",gui=True, ):
+    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, conversion_gain=1, fit="EMCCDhist",gui=True,RN=3 ):#RN in ADU
     """Plot EMCCD simulation
     """
     import os
@@ -108,16 +108,22 @@ def emccd_model(
             date = 2023
             print("No date keeping 2022 conversion gain")
 
-        # if bias > 1500:
-        if date < 2020:
-            # conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
-            # smearing = 0.8  # 1.5  # ADDED
-            RN = 60  # 45 #ADDED
+        if conversion_gain<0.5:
+            n_conv = 7#21
         else:
-            # conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
-            # conversion_gain = 0.5  # ADU/e-  0.53 in 2018
-            # smearing = 1.3  # 0.7  # ADDED
-            RN = 20
+            n_conv = 21
+        
+
+        # if bias > 1500:
+        # if date < 2020:
+        #     # conversion_gain = 0.53  # 1/4.5 #ADU/e-  0.53 in 2018
+        #     # smearing = 0.8  # 1.5  # ADDED
+        #     RN = 60  # 45 #ADDED
+        # else:
+        #     # conversion_gain = 1 / 4.5  # ADU/e-  0.53 in 2018
+        #     # conversion_gain = 0.5  # ADU/e-  0.53 in 2018
+        #     # smearing = 1.3  # 0.7  # ADDED
+        #     RN = 20
 
         conv=1#.1
         # conv = conversion_gain
@@ -128,7 +134,7 @@ def emccd_model(
         os_nan_fraction = np.isfinite(osv).mean()
         print(osv.shape, im.shape)
         median_im = np.nanmedian(im)
-        min_, max_ = (np.nanpercentile(osv, 0.4), np.nanpercentile(im, 99.8))
+        min_, max_ = (np.nanpercentile(osv, 0.4)-5, np.nanpercentile(im, 99.8))
         # print(im.shape,os.shape)
         # print(min_, max_,np.nanpercentile(im[np.isfinite(im)], 99.8),np.nanpercentile(im[np.isfinite(im)], 0.4),np.nanpercentile(im[np.isfinite(im)], 40))
         val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1*conversion_gain))
@@ -203,7 +209,7 @@ def emccd_model(
         )["popt"][2]
         # / conversion_gain
     )
-    RON = np.nanmax([abs(RON)] + [10])
+    RON = np.nanmax([abs(RON)] + [1])
     # print("bias = ", bias, xdata[np.nanargmax(ydata)])
 
     # centers = [xdata[np.nanargmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
@@ -278,19 +284,22 @@ def emccd_model(
         "xdata": xdata,
         "ydata": ydata,
     }
-    if (median_im - bias) > 1e3:
-        flux_max = 25
-    elif (median_im - bias) > 2e2:
-        flux_max = 3  # ADDED
-    else:# (median_im - bias) > 1e2:
-        flux_max = 0.1#1  # ADDED
+    # if (median_im - bias) > 1e3:
+    #     flux_max = 25
+    # elif (median_im - bias) > 2e2:
+    #     flux_max = 3  # ADDED
+    # else:# (median_im - bias) > 1e2:
+    #     flux_max = 1#0.1#1  # ADDED
+
+
+
     # else:
     #     flux_max = 0.8  # ADDED
     lims = [
         (bins.min(), bins.min() + bins.ptp() / 2),
         (0, 300),
-        (10, 4000),  # 3200
-        (0, flux_max),
+        (10, 8000),  # 3200
+        (0, flux*10),
         (0, 3),
         (0, 0.2),
     ]
@@ -300,7 +309,7 @@ def emccd_model(
         
     else:
         centers = [
-            bias,  # ADDED
+            bias-0.5,  # ADDED
             RON/ conversion_gain,
             # RN / conversion_gain,
             gain,
@@ -308,8 +317,9 @@ def emccd_model(
             smearing,  # ADDED
             0.005,  # ADDED0.01
         ]
-    if gui is False:
-        return {"BIAS":bias,"RON":RON/ conversion_gain,"GAIN":gain,"FLUX":flux}
+    #chaaange
+    # if gui is False:
+    #     return {"BIAS":bias,"RON":RON/ conversion_gain,"GAIN":gain,"FLUX":flux}
     names = inspect.getargspec(function).args[1:]
     # print(names)
     names = [
@@ -327,7 +337,6 @@ def emccd_model(
     # plt.plot([lim_rn2, lim_rn2], [0, 5], ":", c="grey", alpha=0.7)
     # plt.plot([lim_gain_1, lim_gain_1], [0, 3], ":", c="grey", alpha=0.7)
     # plt.plot([upper_limit, upper_limit], [0, 3], ":", c="grey", alpha=0.7)
-    n_conv = 21
     y_conv = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
     y_os_conv = np.convolve(os_v, np.ones(n_conv) / n_conv, mode="same")
     y = function(x, *centers)
@@ -409,14 +418,14 @@ def emccd_model(
 
         l2.set_ydata(
             np.convolve(
-                function(xdata, *v2),
+                function(xdata+1, *v2), #+1 else bias is shifted by 1 ADU
                 np.ones(n_conv) / n_conv,
                 mode="same",
             )
         )
         l1.set_ydata(
             np.convolve(
-                function(xdata, *v1),
+                function(xdata+1, *v1),
                 np.ones(n_conv) / n_conv,
                 mode="same",
             )
@@ -552,9 +561,15 @@ def emccd_model(
     def save_values(event):
         vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
         vals2 = [v if type(v) != tuple else v[0] for v in vals_tot]
-        print("vals2", vals2)
-        np.savetxt("/tmp/emccd_fit_values.npy", vals2, fmt='%s')
-        print(np.fromfile("/tmp/emccd_fit_values.npy", fmt='%s'))
+        for val, n in zip(vals2, ["BIAS_ADU","RN_e-","GAINEM","sCIC","FLUX","SMEARING","mCIC"]):
+            fits.setval(name, n, value=str(val)[:6], comment="Histogram fitting")
+
+        # print("vals2", vals2)
+        # np.savetxt("/tmp/emccd_fit_values.npy", vals2, fmt='%s')
+        # print(np.fromfile("/tmp/emccd_fit_values.npy", fmt='%s'))
+
+
+
         return
     # def fit0(event):
     #     vals1 = centers
@@ -774,7 +789,12 @@ def emccd_model(
     ax.set_title("/".join(name.split("/")[-4:]), fontsize=9)
     if (".fit" not in path) & (".csv" in path):
         plt.savefig(path.replace(".csv", ".png"))
-    plt.show()
+    if gui is False:
+        plt.savefig()
+        return {"BIAS":bias,"RON":RON/ conversion_gain,"GAIN":gain,"FLUX":flux}
+
+    else:
+        plt.show()
 
     import pandas as pd
     import os

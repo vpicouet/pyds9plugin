@@ -2936,7 +2936,7 @@ def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC",WCS=0,edge=200)
     for j, tfs in enumerate(chunks):
         print(tfs,int(tf_length/3))
         fitsfile = fits.open(tfs[int(tf_length/3)])[0]
-        data = fitsfile.data
+        data = fitsfile.data#[200-edge:800+edge,1500-edge:1900+edge]
         header = fitsfile.header
         # valmax = np.nanmax(data)
         # print(np.where(data==valmax))
@@ -5244,7 +5244,7 @@ def throw_apertures(xpapoint=None, argv=[]):
 
 
 def execute_command(
-    filename, argument, exp, xpapoint=None, eval_=False, write=False, d=FakeDS9(),
+    filename, argument, exp, xpapoint=None, eval_=False, write=True, d=FakeDS9(),
 ):
     """Combine two images and an evaluable expression
     """
@@ -5313,10 +5313,13 @@ def execute_command(
     # else:
     #     fitsimage2 = fits.open(path2remove)[ext]
     #     image = fitsimage2.data
-    ds9 = np.array(ds9, dtype=float)
+    ext = filename.split(".")[-1]
 
+    ds9 = np.array(ds9, dtype=float)
+    new_path = filename.replace("."+ext,  "_modified.fits")
     ldict = {
         "fitsimage": fitsimage,
+        "new_path":new_path,
         "ds9": ds9,
         "plt": plt,
         "header": header,
@@ -5359,12 +5362,6 @@ def execute_command(
             if ".py" in os.path.basename(exp):
                 exec(open(exp).read(), new_dict)  # dict_function.update(d)
             elif ".ipynb" in os.path.basename(exp):
-                # import nbformat
-                # from nbconvert.preprocessors import ExecutePreprocessor
-                # with open(exp) as ff:
-                #     nb_in = nbformat.read(ff, nbformat.NO_CONVERT)
-                # ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
-                # nb_out = ep.preprocess(nb_in)
                 #TODO add possibility to run ipynb https://stackoverflow.com/questions/67811531/how-can-i-execute-a-ipynb-notebook-file-in-a-python-script
                 from json import load
                 with open(exp) as fp:
@@ -5425,6 +5422,7 @@ def execute_command(
                 verbose="1",
             )
     ds9 = new_dict["ds9"]
+    new_path = new_dict["new_path"]
     # try:
     #     od_data = fitsimage.data
     #     old_header =
@@ -5441,13 +5439,12 @@ def execute_command(
     else:
         fitsimage.data = ds9
         fitsimage.header = header
-        if (ds9.astype(int) == ds9).all():
-            fitsimage.data = np.int16(fitsimage.data)
-            fitsimage.header["BITPIX"] = 16
+        # if (ds9.astype(int) == ds9).all():
+            # fitsimage.data = np.int16(fitsimage.data)
+            # fitsimage.header["BITPIX"] = 16
         # if overwrite is False:
-        ext = filename.split(".")[-1]
         if write:
-            name = filename.replace("."+ext,  "_modified.fits")
+            name = new_path
         else:
             name = "/tmp/" + os.path.basename(filename).replace("."+ext,  "_modified.fits")
         # else:
@@ -11917,6 +11914,8 @@ def run_sex(path, DETECTION_IMAGE, param_dict):
     param_dict["CHECKIMAGE_NAME"] = cat_path + "_check_%s.fits" % (
         param_dict["CHECKIMAGE_TYPE"]
     )
+    # run_sep(path, DETECTION_IMAGE, param_dict)
+
     if (which("sex") is None) | (".fits" not in os.path.basename(DETECTION_IMAGE)):  # None
         command = "Running sep"
         run_sep(path, DETECTION_IMAGE, param_dict)
@@ -14659,7 +14658,7 @@ def python_command(xpapoint=None, argv=[]):
         type=str,
     )
     parser.add_argument(
-        "-o", "--overwrite", default="0", help="Overwrite image", metavar=""
+        "-o", "--overwrite", default="1", help="Overwrite image", metavar=""
     )
     parser.add_argument(
         "-N",

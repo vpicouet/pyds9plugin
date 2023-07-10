@@ -34,6 +34,11 @@ def MaskCosmicRaysCS(image, cosmics, all=False, size=None):
 
 if __name__ == "__main__":
 
+    if os.path.exists(os.path.dirname(filename) + "/CosmicRayFree") is False:
+        os.mkdir(os.path.dirname(filename) + "/CosmicRayFree")
+    new_path = os.path.dirname(filename) + "/CosmicRayFree/" +     os.path.basename(filename).replace(".fits",  "_CR.fits")
+    n=3
+
 #%%
     # ds9=d.get_pyfits()[0].data
     
@@ -42,10 +47,12 @@ if __name__ == "__main__":
     threshold = 40000
     
     #masking_factor
-    if yesno(d, "Do you want to apply a strong but conservative madking?"):
-        n = 4
-    else:
-        n = 3
+    # if yesno(d, "Do you want to apply a strong but conservative madking?"):
+    #     n = 4
+    # else:
+    #     n = 3
+
+
     size=0
     # fitsimage = fits.open(filename)[0]
     

@@ -259,7 +259,10 @@ table["flat"] = (np.nanmedian(physical_region) - table["median_pre_scan"]) / np.
 )
 
 from pyds9plugin.Macros.FB.FB_functions import emccd_model
-fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False)
+#2018
+fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40)
+#2023
+# fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53, RN=3)
 
 table["hist_bias"] = fit_param["BIAS"]
 table["hist_ron"] = fit_param["RON"]

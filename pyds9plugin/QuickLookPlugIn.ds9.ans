@@ -44,7 +44,8 @@ DS9Utils fit_ds9_plot -x $xpa_method   $param(Background-Fit-1D); -b $background
 Python
 *
 button
-DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
+DS9Utils python_command -x $xpa_method  $param(Python-Command);  -e "$exp"  -o $overwrite | $text
+# DS9Utils python_command -x $xpa_method  $param(Python-Command); -i "" -e "$exp"  -o $overwrite | $text
 
 
 
@@ -107,8 +108,11 @@ bind E
 /Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/simulate_EMCCD.py  -x $xpa_method  $param(Detector-Parameters); $size $overscan $OS $ConversionGain $EmGain $n_registers $Bias $RN $pCIC $sCIC $Dark $Smearing $RateSmearing $Exposure $Flux $Source $Rx $Ry  $Name $spectra $cube $threshold $hist    | $text
 
 
+
+
+
 param conversion_gain
-gain combobox {Conversion gain} NoOSsequence:0.4ADU/e-|Now:0.43ADU/e-|Aafaque:0.72ADU/e-|2022:0.22ADU/e-|2018:0.53 {Conversion gain in ADU/e-}
+gain combobox {Conversion gain} S2:0.053ADU/e-|S2_hdr:0.97ADU/e-|NoOSsequence:0.4ADU/e-|CaltechIntegration:0.43ADU/e-|Aafaque:0.72ADU/e-|2022:0.22ADU/e-|2018:0.53 {Conversion gain in ADU/e-}
 endparam
 
 
@@ -376,7 +380,7 @@ hmenu 1. Generic Functions
 	Python Command/Macro
 	*
 	bind P
-	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/$exp   -o 0 -p  "$path"| $text
+	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/$exp   -o 1 -p  "$path"| $text
 
 
 

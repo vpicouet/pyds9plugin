@@ -12,6 +12,7 @@ d=DS9n()
 def correct_smearing(new_img_data, mask_data):
     mask_data_ind = np.array(np.where(mask_data == 1))
     #for all masked values
+    xval=None
     for j in range(0,mask_data_ind.shape[1]):
     # for j in tqdm(range(0,mask_data_ind.shape[1]), desc="Analysis: %i"%(i), ncols=99, unit=" count", unit_scale=True):
     
@@ -22,8 +23,8 @@ def correct_smearing(new_img_data, mask_data):
             if mask_data[yind,xind] == 1 and mask_data[yind,xind-1] == 0:
                 xval = xind
                 #Left pixel smear V2 only
-            #xval = xind
-        #counter = 0
+            xval = xind
+        counter = 0
     
         #while mask_data[yind,xval-1] == 1:
     
@@ -36,22 +37,23 @@ def correct_smearing(new_img_data, mask_data):
             #Right pixel smear V3 only
                 # print(xval)
         counter = 0
-        while (xval < mask_data.shape[1]-1) & (mask_data[yind,xval] == 1):#  bug only with mad! and new_img_data[yind,(xval+1)] < bias - (5*sigma):
-            xval = xval + 1
-            counter = counter + 1
-            # if xval == mask_data.shape[1]-1:
-            #     break
-            rpix = counter
+        if xval is not None:
+            while (xval < mask_data.shape[1]-1) & (mask_data[yind,xval] == 1):#  bug only with mad! and new_img_data[yind,(xval+1)] < bias - (5*sigma):
+                xval = xval + 1
+                counter = counter + 1
+                # if xval == mask_data.shape[1]-1:
+                #     break
+                rpix = counter
     
-        #Making new mask with LHS pixel smear check
-        corr_mask_data[yind,xind+1:xind+rpix+1] = -1
-        fixed_smear = np.array(new_img_data[yind,xind:xind+rpix+1])
-        fixed_smear_sum = np.nansum(fixed_smear) - (rpix)*int(bias)
-           #print 'image %i lpix %i orig %i summed %i' %(i, int(lpix), int(new_img_data[yind,xind]), int(fixed_smear_sum))
-       # TODO should put it in the right or left of smearing depending on CTE direction
-        new_img_data[yind,xind] = int(fixed_smear_sum)
-        pixel_length.append(rpix)
-    
+            #Making new mask with LHS pixel smear check
+            corr_mask_data[yind,xind+1:xind+rpix+1] = -1
+            fixed_smear = np.array(new_img_data[yind,xind:xind+rpix+1])
+            fixed_smear_sum = np.nansum(fixed_smear) - (rpix)*int(bias)
+               #print 'image %i lpix %i orig %i summed %i' %(i, int(lpix), int(new_img_data[yind,xind]), int(fixed_smear_sum))
+           # TODO should put it in the right or left of smearing depending on CTE direction
+            new_img_data[yind,xind] = int(fixed_smear_sum)
+            pixel_length.append(rpix)
+        
     #TBC if indentation ok
     newmask_idx = corr_mask_data < 0
     # TODO takes 75% of the time!
@@ -96,7 +98,8 @@ def correct_smearing(new_img_data, mask_data):
 #         pre_scan = img_data[:, :]
 # else:
 path = filename #"/Users/Vincent/Nextcloud/LAM/Work/EMCCD_reduction/smearing/field_test.fits"#get(d,"Give the path of the images you want to desmear (around 5)")
-# path = "/Users/Vincent/Nextcloud/LAM/Work/FIREBall/FB_Images/2018_images/image000388_dark_modified.fits"
+# path = "/Users/Vincent/DS9QuickLookPlugIn/subsets/230627_UA_biases/Directory_dark_05282023_g1000_-130/EMGAIN_7780/image000002.fits"
+# "/Users/Vincent/Nextcloud/LAM/Work/FIREBall/FB_Images/2018_images/image000388_dark_modified.fits"
 # %%
 if 1==1:
     # pre_scan=region
@@ -118,10 +121,10 @@ if 1==1:
     header = fits.getheader(image_cube)
     method = 'mad'
     threshold =  '5.0'
-    if yesno(d,"Do you confirm that smearing is in the left direction?"):
-        direction = "left" 
-    else:
-        direction = "right" 
+    # if yesno(d,"Do you confirm that smearing is in the left direction?"):
+    #     direction = "left" 
+    # else:
+    direction = "right" 
         
     for p in globglob(path):
         if direction == "left":
@@ -139,16 +142,16 @@ bins_os = (b_os[1:]+b_os[:-1])/2
 
 
 bias_os = bins_os[np.nanargmax(value_os)]
-RN=10
+RN=30
 mask_RN_os = (bins_os>bias_os-1*RN) & (bins_os<bias_os+0.8*RN)  &(value_os>0)
 
 # hist_output = calc_emgain_CR(image_cube,area)
-popt = PlotFit1D(bins_os[mask_RN_os],value_os[mask_RN_os],deg='gaus', plot_=False,P0=[value_os[mask_RN_os].ptp(),bias_os,50,0])['popt']
+popt = PlotFit1D(bins_os[mask_RN_os],value_os[mask_RN_os],deg='gaus', plot_=False)['popt']#,P0=[value_os[mask_RN_os].ptp(),bias_os,50,0]
 # table['Amp'] =   popt[0]
 # table['bias_fit'] =   popt[1]
 bias =  popt[1]
 sigma =  popt[2]#100#300#popt[2]
-verboseprint(bias,sigma)
+print(bias,sigma)
 # sys.exit()
 
 
@@ -226,16 +229,26 @@ for i in range(img_data.shape[0]):
     
     
 
-filename = "/tmp/test_0g_0s.csv"
-min_, max_ = (np.nanpercentile(ds9, 0.4), np.nanpercentile(ds9, 99.8))
-val, bins = np.histogram(img_data.flatten(), bins=np.arange(min_, max_, 1))
-val_new, _ = np.histogram(ds9.flatten(), bins=np.arange(min_, max_, 1))
-bins = (bins[1:] + bins[:-1]) / 2
-val = np.array(val, dtype=float)/ np.isfinite(img_data).mean()
-val_new = np.array(val_new, dtype=float)/ np.isfinite(ds9).mean()
-Table([bins,val,val_new]).write(filename)
 
-emccd_model(xpapoint=None, path=filename, smearing=0, argv=[])
+
+if 1=="test":    
+    filename = "/tmp/test_0g_0s.csv"
+    min_, max_ = (np.nanpercentile(ds9, 0.4), np.nanpercentile(ds9, 99.8))
+    val, bins = np.histogram(img_data.flatten(), bins=np.arange(min_, max_, 1))
+    val_new, _ = np.histogram(ds9.flatten(), bins=np.arange(min_, max_, 1))
+    bins = (bins[1:] + bins[:-1]) / 2
+    val = np.array(val, dtype=float)/ np.isfinite(img_data).mean()
+    val_new = np.array(val_new, dtype=float)/ np.isfinite(ds9).mean()
+    Table([bins,val,val_new]).write(filename)
+    
+    emccd_model(xpapoint=None, path=filename, smearing=0, argv=[])
+
+
+
+
+
+
+
 
     # print("\t  DESMEARED image : %s" %(new_image_fname))
     # if os.path.exists(new_image_fname):

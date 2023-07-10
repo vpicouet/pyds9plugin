@@ -45,3 +45,16 @@ CLASS_STAR
 #SNR_WIN
 XMAX_IMAGE
 YMAX_IMAGE
+XPEAK_IMAGE
+YPEAK_IMAGE
+FLUX_GROWTH              #Cumulated growth-curve                                    [count]
+FLUX_GROWTHSTEP          #Step for growth-curves                                    [pixel]
+FLUX_RADIUS              #Fraction-of-light radii                                   [pixel]
+#FLUX_MAX_DISK            #Peak disk flux above background                           [count]
+#FLUX_EFF_DISK            #Effective disk flux above background                      [count]
+#FLUX_MEAN_DISK           #Mean effective disk flux above background                 [count]
+#MU_MAX_DISK              #Peak disk surface brightness above background             [mag * arcsec**(-2)]
+#MU_EFF_DISK              #Effective disk surface brightness above background        [mag * arcsec**(-2)]
+#MU_MEAN_DISK             #Mean effective disk surface brightness above background   [mag * arcsec**(-2)]#FLUXRATIO_DISK           Disk flux-to-total ratio from fitting
+#FLUXRATIO_DISK        #RMS error on disk flux-to-total ratio
+ISOAREA_IMAGE
