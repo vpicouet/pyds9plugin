@@ -134,11 +134,11 @@ def emccd_model(
         os_nan_fraction = np.isfinite(osv).mean()
         print(osv.shape, im.shape)
         median_im = np.nanmedian(im)
-        min_, max_ = (np.nanpercentile(osv, 0.4)-5, np.nanpercentile(im, 99.8))
+        min_, max_ = (int(np.nanpercentile(osv, 0.4)-5), int(np.nanpercentile(im, 99.8)))
         # print(im.shape,os.shape)
         # print(min_, max_,np.nanpercentile(im[np.isfinite(im)], 99.8),np.nanpercentile(im[np.isfinite(im)], 0.4),np.nanpercentile(im[np.isfinite(im)], 40))
-        val, bins = np.histogram(im.flatten(), bins=np.arange(min_, max_, 1*conversion_gain))
-        val_os, bins_os = np.histogram(osv.flatten(), bins=np.arange(min_, max_, 1*conversion_gain))
+        val, bins = np.histogram(im.flatten(), bins=0.5+np.arange(min_, max_, 1*conversion_gain))
+        val_os, bins_os = np.histogram(osv.flatten(), bins=0.5+np.arange(min_, max_, 1*conversion_gain))
         print(val_os,min_, max_,osv)
         bins = (bins[1:] + bins[:-1]) / 2
         t=1#0#1#2.5
@@ -309,7 +309,7 @@ def emccd_model(
         
     else:
         centers = [
-            bias-0.5,  # ADDED
+            bias-1,  # ADDED
             RON/ conversion_gain,
             # RN / conversion_gain,
             gain,
@@ -415,17 +415,21 @@ def emccd_model(
         v2 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[1] for v in vals1]
         print(vals1)
 
-
+        print("xdata[0]: ", xdata[0])
+        # if xdata[0]%1<0.5:
+        #     xdata_ = xdata #+ 1
+        # else:
+        #     xdata_ = xdata #- 1
         l2.set_ydata(
             np.convolve(
-                function(xdata+1, *v2), #+1 else bias is shifted by 1 ADU
+                function(xdata, *v2), #+1 else bias is shifted by 1 ADU
                 np.ones(n_conv) / n_conv,
                 mode="same",
             )
         )
         l1.set_ydata(
             np.convolve(
-                function(xdata+1, *v1),
+                function(xdata, *v1),
                 np.ones(n_conv) / n_conv,
                 mode="same",
             )
@@ -563,6 +567,7 @@ def emccd_model(
         vals2 = [v if type(v) != tuple else v[0] for v in vals_tot]
         for val, n in zip(vals2, ["BIAS_ADU","RN_e-","GAINEM","sCIC","FLUX","SMEARING","mCIC"]):
             fits.setval(name, n, value=str(val)[:6], comment="Histogram fitting")
+            print(name, "  OK")
 
         # print("vals2", vals2)
         # np.savetxt("/tmp/emccd_fit_values.npy", vals2, fmt='%s')
