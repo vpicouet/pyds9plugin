@@ -454,7 +454,7 @@ def EMCCDhist(
     ConversionGain = 1  # /4.5
     # ConversionGain = 0.53  # C
     def variable_smearing_kernels(
-        image, Smearing=0.7, SmearExpDecrement=50000, type_="exp"
+        image, Smearing=0.7, SmearExpDecrement=50000/2, type_="exp"
     ):
         """Creates variable smearing kernels for inversion
         """

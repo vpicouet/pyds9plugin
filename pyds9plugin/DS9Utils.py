@@ -7535,10 +7535,11 @@ def create_header_catalog(xpapoint=None, files=None, info=False, argv=[]):
     question = "Analysis saved in %s! Open the table with TOPCAT?" % (path_db)
     print(question, args.xpapoint)
 
-    if (args.xpapoint != "None") & (args.xpapoint != None):
-        if yesno(d, question):
-            # open_folder(os.path.commonpath(files))
-            load_table_topcat(path_db)
+    # if (args.xpapoint != "None") & (args.xpapoint != None):
+    #     if yesno(d, question):
+    #         # open_folder(os.path.commonpath(files))
+    #         load_table_topcat(path_db)
+
         # d.set("prism import csv " + path_db)
     return
 
@@ -7553,6 +7554,7 @@ def load_table_topcat(path):
         "java -Xmx2048M -jar /Applications/TOPCAT.app/Contents/Java/topcat-full.jar %s &"
         % (path)
     )
+    # sys.exit()
     # try:
     #     client.connect()
     # except Exception:

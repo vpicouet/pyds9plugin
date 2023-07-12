@@ -260,9 +260,12 @@ table["flat"] = (np.nanmedian(physical_region) - table["median_pre_scan"]) / np.
 
 from pyds9plugin.Macros.FB.FB_functions import emccd_model
 #2018
-fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40)
+# if header["EMGAIN"]==9200:
+#     fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40,mCIC=0.15,sCIC=0.02,gain=1400,RON=105*0.53)#,mCIC=0.005
+# else:
+#     fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40,mCIC=0.15,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
 #2023
-# fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53, RN=3)
+fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.02,RON=2.2)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
 
 table["hist_bias"] = fit_param["BIAS"]
 table["hist_ron"] = fit_param["RON"]

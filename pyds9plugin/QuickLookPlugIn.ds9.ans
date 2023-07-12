@@ -112,7 +112,7 @@ bind E
 
 
 param conversion_gain
-gain combobox {Conversion gain} S2:0.053ADU/e-|S2_hdr:0.97ADU/e-|NoOSsequence:0.4ADU/e-|CaltechIntegration:0.43ADU/e-|Aafaque:0.72ADU/e-|2022:0.22ADU/e-|2018:0.53 {Conversion gain in ADU/e-}
+gain combobox {Conversion gain} S2:0.053ADU/e-,RN=2.2|S2_hdr:0.97ADU/e-,RN=35|NoOSsequence:0.4ADU/e-|CaltechIntegration:0.43ADU/e-|Aafaque:0.72ADU/e-,RN=17|2022:0.22ADU/e-|2018:0.53,RN=53 {Conversion gain in ADU/e-}
 endparam
 
 
