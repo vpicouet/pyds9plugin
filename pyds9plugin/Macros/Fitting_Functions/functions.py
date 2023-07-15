@@ -550,7 +550,7 @@ def EMCCDhist(
         Bias=bias,
         RN=RN,
         Smearing=smearing,
-        SmearExpDecrement=1e4,  # 1e4,  # 1e5 #2022=1e5, 2018=1e4...
+        SmearExpDecrement=1e5,  # 1e4,  # 1e5 #2022=1e5, 2018=1e4...
         n_registers=604,
         flux=flux,
         sCIC=sCIC,

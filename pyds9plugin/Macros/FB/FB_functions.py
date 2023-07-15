@@ -68,7 +68,8 @@ def emccd_model(
         if region is not None:
             Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
         elif lx > 1500:
-            Xinf, Xsup, Yinf, Ysup = [1130, 1430, 1300, 1900]
+            # Xinf, Xsup, Yinf, Ysup = [1130, 1430, 1300, 1900]
+            Xinf, Xsup, Yinf, Ysup = [1130, 1600, 300, 1900]
         else:
             Xinf, Xsup, Yinf, Ysup = [0, -1, 0, -1]
 
@@ -196,12 +197,12 @@ def emccd_model(
 
     # conversion_gain=1
     # print("conversion_gain = ", conversion_gain)
-    lim_rn1, lim_rn2 = (
-        bias - 1 * RN / conversion_gain,
-        bias + 0.8 * RN / conversion_gain,
-    )
-    mask_RN_os = (bins > lim_rn1) & (bins < lim_rn2) & (val_os > 0)
     if RON is None:
+        lim_rn1, lim_rn2 = (
+            bias - 1 * RN / conversion_gain,
+            bias + 0.8 * RN / conversion_gain,
+        )
+        mask_RN_os = (bins > lim_rn1) & (bins < lim_rn2) & (val_os > 0)
         RON = np.abs(
             PlotFit1D(
                 bins[mask_RN_os],
@@ -213,6 +214,23 @@ def emccd_model(
             # / conversion_gain
         )
         RON = np.nanmax([abs(RON)] + [1])
+    else:
+        lim_rn1, lim_rn2 = bias - 1 * RON,bias + 0.8 * RON
+        # lim_rn1, lim_rn2 = (bias - 0.5 * RON,bias + 0.5 * RON,)
+        lim_rn1, lim_rn2 = bias - 3 * RON,bias + 3 * RON
+        mask_RN_os = (bins > lim_rn1) & (bins < lim_rn2) & (val_os > 0)
+
+        RON = np.abs(
+            PlotFit1D(
+                bins[mask_RN_os],
+                val_os[mask_RN_os],
+                deg="gaus",
+                plot_=False,
+                P0=[1, bias, RON/conversion_gain, 0],
+            )["popt"][2]
+            # / conversion_gain
+        )
+        # RON = np.nanmax([abs(RON)] + [1])
     # print("bias = ", bias, xdata[np.nanargmax(ydata)])
 
     # centers = [xdata[np.nanargmax(ydata)], 50, 1200, 0.01, 0, 0.01, 1.5e4]
@@ -336,8 +354,8 @@ def emccd_model(
     plt.plot(
         xdata, ydata, "grey", alpha=0.2,
     )
-    # plt.plot([lim_rn1, lim_rn1], [0, 5], ":", c="grey", alpha=0.7)
-    # plt.plot([lim_rn2, lim_rn2], [0, 5], ":", c="grey", alpha=0.7)
+    plt.plot([lim_rn1, lim_rn1], [0, 5], ":", c="grey", alpha=0.7)
+    plt.plot([lim_rn2, lim_rn2], [0, 5], ":", c="grey", alpha=0.7)
     # plt.plot([lim_gain_1, lim_gain_1], [0, 3], ":", c="grey", alpha=0.7)
     # plt.plot([upper_limit, upper_limit], [0, 3], ":", c="grey", alpha=0.7)
     y_conv = np.convolve(ydata, np.ones(n_conv) / n_conv, mode="same")
@@ -368,7 +386,8 @@ def emccd_model(
     centers_ = np.array(centers) + [0, 0, 0, flux, 0, 0]
     # centers_[-3] = flux
     f2 = np.convolve(function(x, *centers_), np.ones(n_conv) / n_conv, mode="same")
-    (l1,) = ax.plot(x, f1, "-", lw=1, label="EMCCD OS model\nFraction>5.5σ (RN=%0.1f)=%0.1f%%"%(RON,100*np.sum(10**y_conv[xdata>bias-0.5 + 5.5 *RON ])/np.sum(10**y_conv)), alpha=0.7)
+    fraction_thresholded = 100*np.sum(10**y_conv[xdata>bias-0.5 + 5.5 *RON ])/np.sum(10**y_conv)
+    (l1,) = ax.plot(x, f1, "-", lw=1, label="EMCCD OS model\nFraction>5.5σ (RN=%0.1f)=%0.1f%%"%(RON,fraction_thresholded), alpha=0.7)
     (l2,) = ax.plot(x, f2, "-", c=l1.get_color(), lw=1)
       # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))
@@ -800,7 +819,7 @@ def emccd_model(
         plt.savefig(path.replace(".csv", ".png"))
     if gui is False:
         plt.savefig(path.replace(".fits", ".png"))
-        return {"BIAS":bias,"RON":RON/ conversion_gain,"GAIN":gain,"FLUX":flux}
+        return {"BIAS":bias,"RON":RON/ conversion_gain,"GAIN":gain,"FLUX":flux,"FRAC5SIG":fraction_thresholded/100}
 
     else:
         plt.show()
@@ -816,9 +835,9 @@ def emccd_model(
         mask = np.nan
 
     try:                              
-        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,ncr,sliders[3].val[1]*3600/header_exptime,temp_device])])#mask
+        df = pd.DataFrame([np.array([n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,ncr,sliders[3].val[1]*3600/header_exptime,fraction_thresholded/100,temp_device])])#mask
     except Exception as e:
         print(e)
-        df = pd.DataFrame([np.array([sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,temp_device])])
+        df = pd.DataFrame([np.array([sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,temp_device,fraction_thresholded/100])])
     df.to_clipboard(index=False,header=False)
     return 1, fig

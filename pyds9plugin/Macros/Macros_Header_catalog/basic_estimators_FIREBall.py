@@ -13,6 +13,19 @@ from skimage.measure import block_reduce
 import matplotlib.pyplot as plt
 import matplotlib
 import datetime
+
+
+def create_cubsets(table, header):
+    try:
+        table['EMGAIN>0'] = header['EMGAIN']>0 
+        table['EMGAIN==0'] = header['EMGAIN']==0 
+        table['EXPTIME==0'] = header['EXPTIME']==0 
+        table['EXPTIME>0'] = header['EXPTIME']>0 
+    except KeyError:
+        pass
+    return table
+
+
 # from pyds9plugin.Macros.FIREBall.old.merge_temp import give_value_from_time
 
 
@@ -264,14 +277,36 @@ from pyds9plugin.Macros.FB.FB_functions import emccd_model
 #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40,mCIC=0.15,sCIC=0.02,gain=1400,RON=105*0.53)#,mCIC=0.005
 # else:
 #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40,mCIC=0.15,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-#2023
-fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.02,RON=2.2)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+table["percentile_04"] = float(np.nanpercentile(pre_scan, 0.4))
+table["percentile_998"] =  float(np.nanpercentile(physical_region, 99.8))
+# if 
+
+# else:
+    # if  (table["percentile_998"]-table["percentile_04"])>1000:
+#UA
+fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.2,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.72,RON=17)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+# if  header["ROS"]==2:
+#     #2023 s2_hdr
+#     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.97,RON=42)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+# # else:
+# elif  header["ROS"]==1:
+#     #2023 s2
+#     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.053,RON=2.6)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+# elif  header["ROS"]==5:
+#     #2022
+#     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.22,RON=10)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+
 
 table["hist_bias"] = fit_param["BIAS"]
 table["hist_ron"] = fit_param["RON"]
 table["hist_gain"] = fit_param["GAIN"]
 table["hist_flux"] = fit_param["FLUX"]
 table["e_per_hour"] = fit_param["FLUX"] * 3600 / float(table["EXPTIME"])
+table["FRAC5SIG"] = fit_param["FRAC5SIG"]  #/ float(table["EXPTIME"])
+
+
+table = create_cubsets(table, header)
+
 
 # print(region)
 # print(type(region))
