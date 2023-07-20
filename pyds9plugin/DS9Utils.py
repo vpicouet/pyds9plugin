@@ -2923,29 +2923,33 @@ def analyze_spot(
 
 
 
-def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC",WCS=0,edge=200):#-LINBENC-LINCENC
+def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC",WCS=0,edge=200,center=None):#-LINBENC-LINCENC
     from astropy.io import fits
     import numpy as np
     files.sort()
     chunks = [files[x:x+tf_length] for x in range(0, len(files), tf_length)]#[:-1]
-    new_image = np.zeros((n*2*len(chunks),n*2*tf_length+1))
+    new_image = np.zeros((n*2*len(chunks),n*2*tf_length+1),dtype="float32")
     ttfs=[]
     if WCS==1:
         from astropy import units as u
         from astropy import wcs
     for j, tfs in enumerate(chunks):
         print(tfs,int(tf_length/3))
-        fitsfile = fits.open(tfs[int(tf_length/3)])[0]
+        fitsfile = fits.open(tfs[int(tf_length/2)])[0]
         data = fitsfile.data#[200-edge:800+edge,1500-edge:1900+edge]
         header = fitsfile.header
         # valmax = np.nanmax(data)
         # print(np.where(data==valmax))
         # n_lim = 80
-        yc, xc = np.where(data[edge:-edge,edge:-edge]==np.nanmax(data[edge:-edge,edge:-edge]))
-        yc, xc = yc+edge, xc+edge
+        if center is None:
+            yc, xc = np.where(data[edge:-edge,edge:-edge]==np.nanmax(data[edge:-edge,edge:-edge]))
+            yc, xc = yc+edge, xc+edge
+        else:
+            yc, xc = np.array(center.split(","),dtype=float)
         try:
             yc, xc  = int(yc), int(xc)
-        except TypeError:
+        except TypeError as e:
+            print(e)
             yc, xc  = int(yc[-1]), int(xc[-1])
         if WCS==1:
             w = wcs.WCS(header)
@@ -2979,15 +2983,21 @@ def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC",WCS=0,edge=200)
             sub = data[yc-n:yc+n,xc-n:xc+n]
             # print(sub.shape)
             # print(new_image[j*2*n:(j+1)*2*n,i*2*n:(i+1)*2*n].shape)
+            # print(sub)
             try:
                 new_image[j*2*n:(j+1)*2*n,i*2*n:(i+1)*2*n] = sub
             except ValueError as e:
                 print(yc, xc)
                 print(e)
+            import matplotlib.pyplot as plt
             fits.setval(f, "X_IMAGE_PSF", value=xc)
             fits.setval(f, "Y_IMAGE_PSF", value=yc)
             # plt.imshow(new_image)      
             # plt.show()
+    new_image = new_image[:,:-1]
+    # plt.figure()
+    # plt.imshow(new_image)
+    # plt.show()
     # fitswrite(new_image,"/Volumes/VINCENT/GOBC/today/stacked_image_2.fits")
     # plt.imshow(new_image)      
     return new_image, (xc, yc), ttfs
@@ -3080,6 +3090,22 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
         metavar="",
     )
 
+    parser.add_argument(
+        "-c",
+        "--center",
+        help="Center",
+        type=str,
+        default=None,
+        metavar="",
+    )
+    parser.add_argument(
+        "-th",
+        "--threshold",
+        help="Detection threshold",
+        type=str,
+        default=1.7,
+        metavar="",
+    )
 
     args = parser.parse_args_modif(argv, required=False)
 
@@ -3116,7 +3142,7 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
         name = os.path.dirname(args.path) + "/imstack_TF%s.fits"%(args.name)
         cat_name = os.path.dirname(args.path) + "/imstack_TF_cat%s.fits"%(args.name)
 
-    param_dict = {"DETECT_THRESH":1.7,
+    param_dict = {"DETECT_THRESH":float(args.threshold),
     "GAIN":0,
     "DETECT_MINAREA":80,
     "DEBLEND_NTHRESH":1,
@@ -3207,7 +3233,7 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
         else:
             files = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
             image = fits.open(files[int(len(files)/2)])[0]
-            new_image, (xc, yc), ttfs = stack_throughfocus(files, tf_length=tf_length, n=int(args.radius),edge=edge,WCS = int(args.WCS))
+            new_image, (xc, yc), ttfs = stack_throughfocus(files, tf_length=tf_length, n=int(args.radius),edge=edge,WCS = int(args.WCS),center=args.center)
             n1, n2 = re.findall(r"\d+", os.path.basename(files[0]))[-1],  re.findall(r"\d+", os.path.basename(files[-1]))[-1]
             # sys.exit()
             # name = os.path.dirname(filename) + "/Throughfocus_%i_%i_cat.fits"%(int(n1),int(n2))
@@ -3266,22 +3292,39 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
                 sub_catalogs=[Table.from_pandas(catalog_df)]
                 sub_ttfs=[ttfs]
 
-        except IndexError:
+        except (IndexError) as e:
+            print(e)
             cat=Table.read(filename)
-            cat = cat[(cat["Y_IMAGE"]>int(args.radius)-shift)&(cat["Y_IMAGE"]<int(args.radius)+shift)]
+            if cat["Y_IMAGE"].max()<200:
+                cat = cat[(cat["Y_IMAGE"]>int(args.radius)-shift)&(cat["Y_IMAGE"]<int(args.radius)+shift)]
 
-            if "MAG_APER_0" not in cat.colnames:
-                cat["MAG_APER_0"] = cat["MAG_APER"][:,0]
-            cat = delete_multidim_columns(cat)
-            cat = cat.to_pandas()
-            sub_catalogs = [ Table.from_pandas(cat[i*n_tf:(i+1)*n_tf]) for i in range(int(len(cat)/n_tf))]
+            if "FLUX_APER_0" not in cat.colnames:
+                # cat["MAG_APER_0"] = cat["MAG_APER"][:,0]
+                cat["FLUX_APER_0"] = cat["FLUX_APER"][:,0]
+            # cat = delete_multidim_columns(cat)
+            # cat = cat.to_pandas()
+            # sub_catalogs = [ Table.from_pandas(cat[i*n_tf:(i+1)*n_tf]) for i in range(int(len(cat)/n_tf))]
+            try:
+                ttfs = cat[args.ttf] 
+            except KeyError:
+                ttfs = np.arange(len(cat))
             sub_ttfs = [ ttfs[i*n_tf:(i+1)*n_tf] for i in range(int(len(cat)/n_tf))]
+            print(cat["VIGNET"])
+            print(sub_ttfs)
+            print( np.vstack(cat["VIGNET"]))
+            sub_catalogs=[cat]
+            new_image = np.vstack(cat["VIGNET"]).T
+            new_image[new_image==-1e30]=np.nan
+            # # new_image[new_image<0]=np.nan
+            # new_image = new_image - np.nanmin(new_image) + 1
 
 
 
         print(ttfs)
         print(sub_ttfs)
-
+        print(new_image)
+        print(np.nanmin(new_image))
+        print(np.nanmax(new_image))
         plot_tf(sub_catalogs, new_image, sub_ttfs[0], n1, n2,tf_length,filename,args=args)
         # plot_tf(Table.from_pandas(sub_catalogs[0]), new_image, sub_ttfs[0], n1, n2,tf_length,filename)
         # import pandas as pd
@@ -3338,7 +3381,7 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
             shutil.copyfile(file, "/tmp/" + os.path.basename(file))
         image = fits.open(files[int(len(files)/2)])[0]
         n1, n2 = re.findall(r"\d+", os.path.basename(files[0]))[-1],  re.findall(r"\d+", os.path.basename(files[-1]))[-1]
-        new_image, (xc, yc), ttfs = stack_throughfocus(files, tf_length=tf_length, n=int(args.radius),WCS = int(args.WCS),edge=edge)
+        new_image, (xc, yc), ttfs = stack_throughfocus(files, tf_length=tf_length, n=int(args.radius),WCS = int(args.WCS),edge=edge,center=args.center)
         name = name.replace(".fits","_%i_%i.fits"%(int(n1),int(n2)))
 
         fitswrite(new_image,name)
@@ -3351,6 +3394,8 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
 
     run_sep(name, name, param_dict)
     cat = Table.read(param_dict["CATALOG_NAME"])
+    print(cat["FWHM_IMAGE","Y_IMAGE","X_IMAGE"])
+    print(int(args.radius),shift,int(args.radius)-shift)
     cat = cat[(cat["FWHM_IMAGE"]>4)&(cat["Y_IMAGE"]>int(args.radius)-shift)&(cat["Y_IMAGE"]<int(args.radius)+shift)]
     cat.sort("X_IMAGE")
     ttfs=np.array(ttfs)[:len(cat)]
@@ -3396,10 +3441,17 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename,args):
     ax2b = plt.subplot2grid(shape=(n_rows,  3), loc=(len(cats)+1, 0), colspan=1,sharex=ax2)
     ax3b = plt.subplot2grid(shape=(n_rows,  3), loc=(len(cats)+1, 1), colspan=1,sharex=ax2)
     ax4b = plt.subplot2grid(shape=(n_rows,  3), loc=(len(cats)+1, 2), colspan=1,sharex=ax2)
-    im = ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    # https://github.com/matplotlib/matplotlib/issues/18415/
+    # im = ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    im = ax1.imshow(new_image , interpolation="none",cmap="gray_r")#,vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7))#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    # try:
+    #     im = ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    # except ValueError:
+    #     im = ax1.imshow(new_image , interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+
     cax0 = make_axes_locatable(ax1).append_axes('right', size='1%', pad=0.05)
     cbar1 = fig.colorbar(im, cax=cax0, orientation='vertical')
-    # cbar1.formatter.set_powerlimits((0, 0))
+    ### cbar1.formatter.set_powerlimits((0, 0))
     xc, yc = cats[0]["x_real_center"][0], cats[0]["y_real_center"][0]
 
     title  =  "Nimages%s = %i ➛ %i, center = %0.1f - %0.1f, "%(args.name, int(n1),int(n2),xc, yc)
@@ -3432,9 +3484,14 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename,args):
         # ax2b = ax2.twiny()
         # ax2b.plot(x,ttfs )
         # ax2.tick_params(axis='y')#, labelcolor=color1)
-        fit2 = PlotFit1D(x, cat["MAG_APER_0"]/np.max(cat["MAG_APER_1"]),deg="gaus", ax=ax3,c=color1,ls=":",extrapolate=False)["popt"]
-        ax3.errorbar(x, cat["MAG_APER_0"]/np.max(cat["MAG_APER_1"]),fmt="o",color=color2,label=r"$m_{aper}^{5pix}$, c=%0.1f"%(fit2[1]))#, yerr=cat["MAGERR_APER_0"]
-        ax3.errorbar(x, cat["MAG_APER_1"]/np.max(cat["MAG_APER_1"]),ls=":", color=color2,label=r"$m_{aper}^{20pix}$")#,yerr=cat["MAGERR_APER_1"]
+        # fit2 = PlotFit1D(x, cat["MAG_APER_0"]/np.max(cat["MAG_APER_1"]),deg="gaus", ax=ax3,c=color1,ls=":",extrapolate=False)["popt"]
+        # ax3.errorbar(x, cat["MAG_APER_0"]/np.max(cat["MAG_APER_1"]),fmt="o",color=color2,label=r"$m_{aper}^{5pix}$, c=%0.1f"%(fit2[1]))#, yerr=cat["MAGERR_APER_0"]
+        # ax3.errorbar(x, cat["MAG_APER_1"]/np.max(cat["MAG_APER_1"]),ls=":", color=color2,label=r"$m_{aper}^{20pix}$")#,yerr=cat["MAGERR_APER_1"]
+
+        fit2 = PlotFit1D(x, cat["FLUX_APER_0"]/np.max(cat["FLUX_APER_1"]),deg="gaus", ax=ax3,c=color1,ls=":",extrapolate=False)["popt"]
+        ax3.errorbar(x, cat["FLUX_APER_0"]/np.max(cat["FLUX_APER_1"]),fmt="o",color=color2,label=r"$m_{aper}^{5pix}$, c=%0.1f"%(fit2[1]))#, yerr=cat["MAGERR_APER_0"]
+        ax3.errorbar(x, cat["FLUX_APER_1"]/np.max(cat["FLUX_APER_1"]),ls=":", color=color2,label=r"$m_{aper}^{20pix}$")#,yerr=cat["MAGERR_APER_1"]
+
         ax3.set_yscale("log")
         try:
             fit = PlotFit1D(x, cat["ELLIPTICITY"],deg=lambda x, a,b,c,d,x0:-((d-a*abs(x-x0))**2)/b+c,ls=":",ax=ax4,P0=[5,x[np.argmin(cat["ELLIPTICITY"])],0,x[np.argmin(cat["ELLIPTICITY"])],x[np.argmin(cat["ELLIPTICITY"])]], color=color1,extrapolate=False)["popt"]
@@ -11750,8 +11807,8 @@ def run_sep(path, DETECTION_IMAGE, param_dict):
             err=bkg.globalrms,
             gain=1.0,
         )
-        catalog["MAG_APER_%i" % (i)] = flux
-        catalog["MAGERR_APER_%i" % (i)] = fluxerr
+        catalog["FLUX_APER_%i" % (i)] = flux
+        catalog["FLUXERR_APER_%i" % (i)] = fluxerr
         catalog["FLAG_%i" % (i)] = flag
     kronrad, krflag = sep.kron_radius(
         photometry,
