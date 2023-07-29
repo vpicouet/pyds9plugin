@@ -7,137 +7,7 @@ Created on Wed Jun  1 10:45:25 2022
 """
 
 
-# files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2022/tilted/old_tilted_2022_2.csv")
-# for file in :
-
-
-# add to each slit the height of this slit. 
-# then plot for each mask resolution vs height
-# do the same for grid mask
-path = '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_5_feb2023/metrology_+3_180_-180_2023-02-17_20_54_58.694282.txt'
-path1 ='/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/metrology_caltech_all_2023-03-09_-179_179_2023-03-09_22:17:13.827241.txt'
-fits_masks1 = []
-fits_masks2 = []
-
-fig, axes = plt.subplots(1,7,sharey=True,figsize=(12,2))
-for p in [path,path1]:    
-    a = Table.read(p,format="ascii")
-    
-    a['col2'][a['col2']=="None"]="NaN"
-    a['col2'] = a['col2'].astype(float)
-    if "_5_feb2023" in p:
-        a['col2'][(a['col2']>0.7)]=np.nan
-    else:
-        a['col2'][(a['col2']>-8.7)]=np.nan
-    a["col2"]=a["col2"]-np.nanmedian(a["col2"])
-    a['col1'][a['col1']>165]=a['col1'][a['col1']>165]-360
-    a['col2'][(a['col1']>120)]=np.nan
-    # plt.plot(a['col1'],a['col2'],".")
-    # plt.grid()
-    
-
-    for i, (ax,lim) in enumerate(zip(axes,[-200,-120,-80,-40,0,40,80])):
-        # print(np.nanmedian(mask["col2"]))
-        mask = a[(a['col1']>lim+1) & (a['col1']<lim+40+1)]
-        mask["col1"]=mask["col1"]-np.nanmean(mask["col1"])+2
-        ax.plot(mask['col1'],mask['col2'] ,'k.')   
-        ax.set_xlim((-19,19))
-        if "_5_feb2023" in p:
-            fits_masks1.append(PlotFit1D(mask["col1"],mask["col2"],deg=2,ax=ax)["function"])
-        else:
-            fits_masks2.append(PlotFit1D(mask["col1"],mask["col2"],deg=2,ax=ax)["function"])
-        ax.set_ylim((-1,0.7))
-        ax.grid()
-
-##%%
-
-files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/**/*.csv")
-files.sort()
-for f in files[:]:
-    cat=Table.read(f)
-    name = os.path.basename(f)
-    cat["angle_mask"] = (cat["y"]-1000)/100
-    if "ilted" in f:
-        i=0
-    if "QSO" in f:
-        i=1
-    if "F1" in f:
-        i=2
-    if "F4" in f:
-        i=3
-    if "F2" in f:
-        i=4
-    if "F3" in f:
-        i=5
-    if "rid" in f:
-        i=6
-    if f in glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/*.csv"):
-        cat["elevation"] = fits_masks1[i]( cat["angle_mask"])
-    else:
-        cat["elevation"] = fits_masks2[i]( cat["angle_mask"])
-        
-    # axes[i].plot(cat["angle_mask"],  cat["elevation"],".")
-    cat.write(f,overwrite=True)
-fig.tight_layout()
-#%%
-files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/tilted*.csv")
-files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/*.csv")
-
-
-files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/F4*.csv")
-# files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/*cold*/*.csv")
-# files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/**/*.csv")
-
-files.sort()
-fig,(ax, ax1) = plt.subplots(2,1,figsize=(10,8),sharex=True,sharey=True)
-for f in files[:]:
-    cat=Table.read(f)
-    offset = os.path.basename(os.path.dirname(f)).split("_")[3]
-    name = os.path.basename(f)
-    if "ilted" in f:
-        m="."
-    if "QSO" in f:
-        m="+"
-    if "F1" in f:
-        m="x"
-    if "F4" in f:
-        m="^"
-    if "F2" in f:
-        m="v"
-    if "F3" in f:
-        m="s"
-    if "rid" in f:
-        m="o"
-
-    # if "grid" in f:
-    #     ax.plot(cat["elevation"]+float(offset),cat[""],"o",label=os.path.basename(os.path.dirname(f)))
-    #     ax1.plot(cat["elevation"]*1+1*float(offset),cat["fwhm_y"],"o",label=os.path.basename(os.path.dirname(f)))
-        
-    # else:
-    ax.plot(cat["elevation"]+float(offset),cat["fwhm_x"],m)#,label=os.path.basename(os.path.dirname(f)))
-    ax1.plot(cat["elevation"]*1+1*float(offset),cat["fwhm_y"],m,label=os.path.basename(os.path.dirname(f)))
-# plt.legend(fontsize=8)
-ax.plot([1],[0],"k.",label="tilted")
-ax.plot([1],[0],"k+",label="QSO")
-ax.plot([1],[0],"kx",label="F1")
-ax.plot([1],[0],"kv",label="F2")
-ax.plot([1],[0],"ks",label="F3")
-ax.plot([1],[0],"k^",label="F4")
-ax.plot([0.6,1.3],np.array([3,3])/0.9,"k:")
-ax1.plot([0.6,1.3],np.array([0.6,0.6])/0.21,"k:")
-ax1.set_xlabel("Slit elevation (mm)")
-ax.set_ylabel("Spectral resolution FWHM (pix)")
-ax1.set_ylabel("Spatial resolution FWHM (pix)")
-ax.set_ylim((1,20))
-ax.legend()
-ax1.legend()
-fig.tight_layout()
-plt.show()
-
-
-
-
-#%%
+#%% FOR DAVE / DREW BEGINNING FTS 2023
 #2023
 
 # Show plots inline, and load main getdist plot module and samples class
@@ -403,13 +273,159 @@ cold_focus_16 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/
 cold_focus_16 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/16_cold_230612/*.csv"
 cold_focus_16b = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/16_cold_230612/230615/*.csv"
 
-analyze_focus(path=cold_focus_16b, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-9.7,-9.7]),tilt=np.array([-0.1,-0.1,-0.1])*0)
+
+WARM_FOCUS_FTS_2023_0 = "..."
+COLD_FOCUS_FTS_2023_0 = "..."
+analyze_focus(path=cold_focus_16b, path1=WARM_FOCUS_FTS_2023_0,path2=COLD_FOCUS_FTS_2023_0,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-9.7,-9.7]),tilt=np.array([-0.1,-0.1,-0.1])*0)
 
 
 #%%
 
+analyze_focus(path=cold_focus_16b, path1=None,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-9.7,-9.7]),tilt=np.array([-0.1,-0.1,-0.1])*0)
 
 stack_images_path(paths=glob.glob("/Volumes/VINCENT/GOBC/220612/Detector_213/imstack_TF_*.fits"), Type="vstack", clipping=3, dtype=int, fname="", std=False, name=None)
+
+
+
+
+
+
+#%% PLOT ALL ITERATIONS AT ONCE
+
+
+
+import matplotlib.pyplot as plt
+
+path = '/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_5_feb2023/metrology_+3_180_-180_2023-02-17_20_54_58.694282.txt'
+path1 ='/Users/Vincent/Nextcloud/LAM/FIREBALL/2022/Masks/laser_measurements/measurement_6_March2023/metrology_caltech_all_2023-03-09_-179_179_2023-03-09_22:17:13.827241.txt'
+fits_masks1 = []
+fits_masks2 = []
+
+fig, axes = plt.subplots(1,7,sharey=True,figsize=(12,2))
+for p in [path,path1]:    
+    a = Table.read(p,format="ascii")
+    
+    a['col2'][a['col2']=="None"]="NaN"
+    a['col2'] = a['col2'].astype(float)
+    if "_5_feb2023" in p:
+        a['col2'][(a['col2']>0.7)]=np.nan
+    else:
+        a['col2'][(a['col2']>-8.7)]=np.nan
+    a["col2"]=a["col2"]-np.nanmedian(a["col2"])
+    a['col1'][a['col1']>165]=a['col1'][a['col1']>165]-360
+    a['col2'][(a['col1']>120)]=np.nan
+    # plt.plot(a['col1'],a['col2'],".")
+    # plt.grid()
+    
+
+    for i, (ax,lim) in enumerate(zip(axes,[-200,-120,-80,-40,0,40,80])):
+        # print(np.nanmedian(mask["col2"]))
+        mask = a[(a['col1']>lim+1) & (a['col1']<lim+40+1)]
+        mask["col1"]=mask["col1"]-np.nanmean(mask["col1"])+2
+        ax.plot(mask['col1'],mask['col2'] ,'k.')   
+        ax.set_xlim((-19,19))
+        if "_5_feb2023" in p:
+            fits_masks1.append(PlotFit1D(mask["col1"],mask["col2"],deg=2,ax=ax)["function"])
+        else:
+            fits_masks2.append(PlotFit1D(mask["col1"],mask["col2"],deg=2,ax=ax)["function"])
+        ax.set_ylim((-1,0.7))
+        ax.grid()
+
+
+files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/**/*.csv")
+files.sort()
+for f in files[:]:
+    cat=Table.read(f)
+    name = os.path.basename(f)
+    cat["angle_mask"] = (cat["y"]-1000)/100
+    if "ilted" in f:
+        i=0
+    if "QSO" in f:
+        i=1
+    if "F1" in f:
+        i=2
+    if "F4" in f:
+        i=3
+    if "F2" in f:
+        i=4
+    if "F3" in f:
+        i=5
+    if "rid" in f:
+        i=6
+    if f in glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/*.csv"):
+        cat["elevation"] = fits_masks1[i]( cat["angle_mask"])
+    else:
+        cat["elevation"] = fits_masks2[i]( cat["angle_mask"])
+        
+    # axes[i].plot(cat["angle_mask"],  cat["elevation"],".")
+    cat.write(f,overwrite=True)
+fig.tight_layout()
+
+
+
+
+
+
+
+
+files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/tilted*.csv")
+files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/*.csv")
+
+
+files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/[01234]_**/F4*.csv")
+# files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/*cold*/*.csv")
+# files = glob.glob("/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/**/*.csv")
+
+files.sort()
+fig,(ax, ax1) = plt.subplots(2,1,figsize=(10,8),sharex=True,sharey=True)
+for f in files[:]:
+    cat=Table.read(f)
+    offset = os.path.basename(os.path.dirname(f)).split("_")[3]
+    name = os.path.basename(f)
+    if "ilted" in f:
+        m="."
+    if "QSO" in f:
+        m="+"
+    if "F1" in f:
+        m="x"
+    if "F4" in f:
+        m="^"
+    if "F2" in f:
+        m="v"
+    if "F3" in f:
+        m="s"
+    if "rid" in f:
+        m="o"
+
+    # if "grid" in f:
+    #     ax.plot(cat["elevation"]+float(offset),cat[""],"o",label=os.path.basename(os.path.dirname(f)))
+    #     ax1.plot(cat["elevation"]*1+1*float(offset),cat["fwhm_y"],"o",label=os.path.basename(os.path.dirname(f)))
+        
+    # else:
+    ax.plot(cat["elevation"]+float(offset),cat["fwhm_x"],m)#,label=os.path.basename(os.path.dirname(f)))
+    ax1.plot(cat["elevation"]*1+1*float(offset),cat["fwhm_y"],m,label=os.path.basename(os.path.dirname(f)))
+# plt.legend(fontsize=8)
+ax.plot([1],[0],"k.",label="tilted")
+ax.plot([1],[0],"k+",label="QSO")
+ax.plot([1],[0],"kx",label="F1")
+ax.plot([1],[0],"kv",label="F2")
+ax.plot([1],[0],"ks",label="F3")
+ax.plot([1],[0],"k^",label="F4")
+ax.plot([0.6,1.3],np.array([3,3])/0.9,"k:")
+ax1.plot([0.6,1.3],np.array([0.6,0.6])/0.21,"k:")
+ax1.set_xlabel("Slit elevation (mm)")
+ax.set_ylabel("Spectral resolution FWHM (pix)")
+ax1.set_ylabel("Spatial resolution FWHM (pix)")
+ax.set_ylim((1,20))
+ax.legend()
+ax1.legend()
+fig.tight_layout()
+plt.show()
+
+
+
+
+
 
 #%%
 

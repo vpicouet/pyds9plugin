@@ -11,7 +11,7 @@ DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $d
 
 
 
-New TF
+Thr-Focus
 *
 button
 DS9Utils throughfocus_new -x $xpa_method  $param(new_tf) --path "$path" -n $m --Est "$Est"  --name $name --WCS $WCS | $text
@@ -49,14 +49,14 @@ DS9Utils python_command -x $xpa_method  $param(Python-Command);  -e "$exp"  -o $
 
 
 
-remove dark
+rmv dark
 *
 button
 # /Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FB/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
 /Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/AIT/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
 
 
-Header DB
+hdr DB
 *
 button
 DS9Utils create_header_catalog -x $xpa_method   $param(Header-Catalog); -p "$path" -i "$info"  | $text
@@ -75,7 +75,7 @@ button
 DS9Utils stack_images -x $xpa_method  $param(Stacking); -p $Path -t $stack | $text
 
 
-Subtract Background
+rmv Bckgd
 *
 button
 DS9Utils background_estimation -x $xpa_method  $param(Background-Subtraction); -s $sigma -b $bckd -r $rms -f $filter -box $box -per $percentile -m $mask -snr $snr -n $npixels -d $dilate   | $text
@@ -92,6 +92,12 @@ EMCCD fit
 *
 button
 DS9Utils python_command -x $xpa_method $param(conversion_gain);  -e $dir/Macros/FB/Flight/EMCCD_fit.py  -o 0  -a $gain | $text
+
+
+Diff Focus
+*
+button
+DS9Utils python_command -x $xpa_method  -e $dir/Macros/FB/Flight/stack_fit_slit.py  -o 0  | $text
 
 
 endbuttonbar
