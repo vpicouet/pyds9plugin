@@ -100,10 +100,16 @@ button
 DS9Utils python_command -x $xpa_method  -e $dir/Macros/FB/Flight/stack_fit_slit.py  -o 0  | $text
 
 
+Reduc
+*
+button
+DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/$exp   -o 1 -p  "$path" -c 1 | $text
+
+
+
 endbuttonbar
 #######################################################################
 #######################################################################
-
 
 
 
@@ -114,6 +120,10 @@ bind E
 /Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/simulate_EMCCD.py  -x $xpa_method  $param(Detector-Parameters); $size $overscan $OS $ConversionGain $EmGain $n_registers $Bias $RN $pCIC $sCIC $Dark $Smearing $RateSmearing $Exposure $Flux $Source $Rx $Ry  $Name $spectra $cube $threshold $hist    | $text
 
 
+Reduc
+*
+bind R
+DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/$exp   -o 1 -p  "$path" -c 1 | $text
 
 
 
@@ -144,6 +154,12 @@ verbose
 *
 bind A
 DS9Utils next_image -x $xpa_method
+
+
+Automatic reduction
+*
+menu
+DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/$exp   -o 1 -p  "$path" -c 1 | $text
 
 
 hmenu Quick Look Plugin
@@ -387,6 +403,8 @@ hmenu 1. Generic Functions
 	*
 	bind P
 	DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/$exp   -o 1 -p  "$path"| $text
+
+
 
 
 
@@ -798,10 +816,10 @@ DS9Utils next_step  -x  $xpa_method  | $text #-x $xpa_method
 # DS9Utils -x $xpa_method compute_fluctuation $param(ComputeFluctuation) -n $Number -a $Radius | $text
 
 
-Compute gain from fluctuation FB #29
-*
-bind F
-DS9Utils ComputeEmGain -x $xpa_method  $param(EmGainFB); $subtract "$path" $box $overscan $limits  "$path"   | $text
+#Compute gain from fluctuation FB #29
+#*
+#bind F
+#DS9Utils ComputeEmGain -x $xpa_method  $param(EmGainFB); $subtract "$path" $box $overscan $limits  "$path"   | $text
 
 
 

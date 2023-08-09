@@ -3106,9 +3106,27 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
         default=1.7,
         metavar="",
     )
+    # os.system('echo "%s" > /tmp/test/test.txt'%(sys.argv))
 
-    args = parser.parse_args_modif(argv, required=False)
+    # index = sys.argv.index('--path')
+    # files =  sys.argv[index+1:]
+    # sys.argv =  sys.argv[:index+1]
+    # # os.system('echo "%s" > /tmp/test/test1.txt'%(",".join([files])))
+    # sys.argv.append( ",".join(files) )
+    # os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
+    # args = parser.parse_args_modif(argv, required=False)
 
+    if "w" not in sys.argv:
+        args = parser.parse_args_modif(argv, required=False)
+    else:
+        index = sys.argv.index('--path')
+        files =  sys.argv[index+1:]
+        sys.argv =  sys.argv[:index+1]
+        # os.system('echo "%s" > /tmp/test/test1.txt'%(",".join([files])))
+        sys.argv.append( ",".join(files) )
+        os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
+        args = parser.parse_args_modif(argv, required=False)
+    # sys.exit()
 
     # if WCS:
     #     from astropy import wcs
@@ -3132,6 +3150,7 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
     
     verboseprint("""\n\n\n\n      START THROUGHFOCUS \n\n\n\n""")
     d = DS9n(args.xpapoint)
+
     filename = get_filename(d)
     # header = fits.open(filename)[0].header
     if args.path == "":
@@ -3371,11 +3390,20 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
 
         return
     else:
-        if os.path.isdir(args.path)   :
-            args.path = args.path+"/*.fits"
+        print("args.path=",args.path)
+        if os.path.isdir(args.path) :
+            args.path = args.path+"/*.fits"        
+        if ".fits,/" in args.path:
+            files = args.path.split(",")
+            # files.remove("")
+            args.path = os.path.dirname(files[0]) + "/image*.fits"
+            cat_name = args.path
+            name = os.path.dirname(files[0]) + "/throughfocus*.fits"
+        else:
+            files = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
         #     files = globglob(args.path+"/*.fits", xpapoint=args.xpapoint,sort=True)[:]
         # else:
-        files = globglob(args.path, xpapoint=args.xpapoint,sort=True)[:]
+        print("files=",files)
         import shutil
         for file in files:
             shutil.copyfile(file, "/tmp/" + os.path.basename(file))
@@ -8290,8 +8318,14 @@ def create_catalog(files, ext=[0], info="", reg=None, save=True):
         rename_duplicate=True,
     )
     table_header.add_column(
-        Column([os.path.basename(os.path.dirname(f)) for f in files_name]),
+        Column([os.path.basename(os.path.dirname(os.path.dirname(f))) for f in files_name]),
         name="Directory",
+        index=2,
+        rename_duplicate=True,
+    )
+    table_header.add_column(
+        Column([os.path.basename(os.path.dirname(f)) for f in files_name]),
+        name="SubDirectory",
         index=2,
         rename_duplicate=True,
     )
@@ -14719,6 +14753,12 @@ def python_command(xpapoint=None, argv=[]):
     parser.add_argument(
         "-o", "--overwrite", default="1", help="Overwrite image", metavar=""
     )
+
+    parser.add_argument(
+        "-c", "--continuous", default="0", help="Continuous reduction", metavar=""
+    )
+
+
     parser.add_argument(
         "-N",
         "--number_processors",
@@ -14741,6 +14781,8 @@ def python_command(xpapoint=None, argv=[]):
 
     argument, exp, eval_ = args.argument, args.exp.replace("$exp"," & "), 0
     verboseprint("Expression to be evaluated: %s" % (exp))
+    if os.path.isdir(args.path):
+        args.path = args.path + "/*.fits"
     path = globglob(args.path, args.xpapoint)
     verboseprint("path: %s" % (path))
     write = bool(int(args.overwrite))
@@ -14785,7 +14827,8 @@ def python_command(xpapoint=None, argv=[]):
     # )
     # if (len(path) < 2) & (result is not None):
     #     d.set("frame new ; tile yes ; file " + name)
-    if len(path) < 2:
+    N=len(path)
+    if N < 2:
         result, name = execute_command(
             path[0], argument, exp, xpapoint, bool(int(eval_)), write, d,
         )
@@ -14801,6 +14844,45 @@ def python_command(xpapoint=None, argv=[]):
         )
     if modified:
         os.remove(new_path)
+    
+    # if args.continuous:
+    if N > 1:
+        hours = get(d, "All images are processed do you want to continue to process incoming images? If yes enter how many hours you want to continue scaning the repository, else click cancel:", exit_=True)
+        start = time.time()
+        stop = time.time()
+        while datetime.timedelta(seconds=stop - start).seconds/3600<float(hours):
+            new_files = globglob(args.path, args.xpapoint)
+            if len(new_files) > N:
+                print(0, new_files)
+                files_to_process = []
+                
+                [files_to_process.append(filename)     for filename in new_files if filename not in path]
+                    # if filename not in path:
+                    #     files_to_process.append(filename)      
+                        # if filename in new_files:
+                        #     new_files.remove(filename)      
+
+                # [new_files.remove(filename) for filename in new_files if filename in path]
+                # print(1, new_files)
+                parallelize(
+                    function=execute_command,
+                    parameters=[argument, exp, xpapoint, bool(int(eval_)), write, d,],
+                    action_to_paralize=files_to_process,
+                    number_of_thread=args.number_processors,
+                )
+                path =  path + files_to_process
+                # print("path + new_files", path)
+                N = len(path)
+                time.sleep(3)
+                stop = time.time()
+
+    # count all *.fits images (N)
+    # run all first images
+    # then ask if you want to continue
+    # then while 1>0:
+    #     if glob.glob(args.path)>N:
+    #         pour celles ou le .py n'est pas enregistré dans le header on le relance.
+    # On peut ensuite quitter 
     return
 
 
