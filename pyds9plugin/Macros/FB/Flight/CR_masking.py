@@ -2,8 +2,11 @@ from astropy.io import fits
 import re
 from astropy.table import Table
 import matplotlib.pyplot as plt
-import numpy as np
+import matplotlib
 
+import numpy as np
+from pyds9plugin.DS9Utils import verboseprint
+# matplotlib.use('Agg')#Agg #MacOSX
 
 
 def MaskCosmicRaysCS(image, cosmics, all=False, size=None):
@@ -29,23 +32,12 @@ def MaskCosmicRaysCS(image, cosmics, all=False, size=None):
             mask = (y > cosmics[i]["min_y"]) & (y < cosmics[i]["max_y"]) & (x < cosmics[i]["max_x"] + cosmics[i]["size_opp"]) & (x > -size + cosmics[i]["max_x"])
             # if len(image[mask])<50*3000:
             image[mask] = np.nan
-    # print(image[mask])
     return image
 
-if __name__ == "__main__":
 
-    if os.path.exists(os.path.dirname(filename) + "/CosmicRayFree") is False:
-        os.mkdir(os.path.dirname(filename) + "/CosmicRayFree")
-    new_path = os.path.dirname(filename) + "/CosmicRayFree/" +     os.path.basename(filename).replace(".fits",  "_CR.fits")
-    n=3
 
-#%%
-    # ds9=d.get_pyfits()[0].data
-    
-    area=[0,-1,0,-1]
+def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000):
     verboseprint("area=", area)
-    threshold = 40000
-    
     #masking_factor
     # if yesno(d, "Do you want to apply a strong but conservative madking?"):
     #     n = 4
@@ -113,11 +105,11 @@ if __name__ == "__main__":
     cosmics["max_y"][(cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)] += n * 20
     a = cosmics
     ds9 = MaskCosmicRaysCS(ds9, cosmics=cosmics)
-    print('Numbe of cosmics = ', len(CS.allsegs[0]))
+    verboseprint('Numbe of cosmics = ', len(CS.allsegs[0]))
     if ds9.shape[1]>2000:
-        print('Fraction of image lost = ', np.mean(np.isfinite(ds9[:,1000:-1000]).mean()))
+        verboseprint('Fraction of image lost = ', np.mean(np.isfinite(ds9[:,1000:-1000]).mean()))
     else:
-        print('Fraction of image lost = ', np.mean(np.isfinite(ds9).mean()))
+        verboseprint('Fraction of image lost = ', np.mean(np.isfinite(ds9).mean()))
     
     # savename = DS9backUp + "CSVs/Cosmics_" + os.path.basename(filename)[:-5] + ".csv"
     # csvwrite(a, savename)
@@ -145,3 +137,11 @@ if __name__ == "__main__":
     # except ZeroDivisionError:
     #     fitsimage.header["MASK"] = 100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0] * maskedimage.shape[1])
     #     fits.setval(filename, "MASK", value=100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0] * maskedimage.shape[1]))
+    return ds9
+
+
+if __name__ == "__main__":
+    if os.path.exists(os.path.dirname(filename) + "/CosmicRayFree") is False:
+        os.mkdir(os.path.dirname(filename) + "/CosmicRayFree")
+    new_path = os.path.dirname(filename) + "/CosmicRayFree/" +     os.path.basename(filename).replace(".fits",  "_CR.fits")
+    ds9 = CR_masking(filename,ds9, n=3, area=[0,-1,0,-1],threshold = 40000)    

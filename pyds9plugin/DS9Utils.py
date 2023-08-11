@@ -5537,7 +5537,10 @@ def execute_command(
         fitsimage.header["DS9"] = filename
         # fitsimage.header["IMAGE"] = path2remove
         try:
-            fitsimage.header["COMMAND"] = exp
+            if os.path.isfile(exp):
+                fitsimage.header["COMMAND"] = os.path.basename(exp)
+            else:
+                fitsimage.header["COMMAND"] = exp
         except ValueError as e:
             verboseprint(e)
             verboseprint(len(exp))
@@ -5755,8 +5758,8 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
     import re
     file = file.rstrip()[::-1].rstrip()[::-1]
     # hack
-    print( file)
-    print( re.match(r'^\d{8}-\d{8}$', file))
+    verboseprint(file)
+    verboseprint( re.match(r'^\d{8}-\d{8}$', file))
     if re.match(r'^\d{8}-\d{8}$', file):
          file = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/GOBC_data/today/stack[%s].fits"%(file)    
     # elif re.match(r'^\d{1,3}-\d{1,3}$', file):
@@ -5976,9 +5979,9 @@ def stack_images_path(
         elif Type == "dstack":
             # from astropy.table import dstack
             stack =  np.concatenate(array3d,axis=-1)
-        # elif Type == "hstack":
-        #     # from astropy.table import hstack
-        #     stack =  np.concatenate(array3d,axis=2)
+        elif Type == "hstack":
+            # from astropy.table import hstack
+            stack =  np.concatenate(array3d,axis=1)
         else:
             stack = np.array(
                 getattr(np, Type)(np.array(array3d), axis=0,), dtype=dtype,
@@ -14853,17 +14856,16 @@ def python_command(xpapoint=None, argv=[]):
         while datetime.timedelta(seconds=stop - start).seconds/3600<float(hours):
             new_files = globglob(args.path, args.xpapoint)
             if len(new_files) > N:
-                print(0, new_files)
+                verboseprint(0, new_files)
                 files_to_process = []
                 
-                [files_to_process.append(filename)     for filename in new_files if filename not in path]
+                [files_to_process.append(filename) for filename in new_files if filename not in path]
                     # if filename not in path:
                     #     files_to_process.append(filename)      
                         # if filename in new_files:
                         #     new_files.remove(filename)      
 
                 # [new_files.remove(filename) for filename in new_files if filename in path]
-                # print(1, new_files)
                 parallelize(
                     function=execute_command,
                     parameters=[argument, exp, xpapoint, bool(int(eval_)), write, d,],
@@ -14871,11 +14873,9 @@ def python_command(xpapoint=None, argv=[]):
                     number_of_thread=args.number_processors,
                 )
                 path =  path + files_to_process
-                # print("path + new_files", path)
                 N = len(path)
                 time.sleep(3)
                 stop = time.time()
-
     # count all *.fits images (N)
     # run all first images
     # then ask if you want to continue

@@ -285,7 +285,9 @@ table["percentile_998"] =  float(np.nanpercentile(physical_region, 99.8))
     # if  (table["percentile_998"]-table["percentile_04"])>1000:
 #UA
 try:
-    fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.2,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.72,RON=17)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+    fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.053,RON=2.6)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+    #2018??
+    # fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.2,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.72,RON=17)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
     # if  header["ROS"]==2:
     #     #2023 s2_hdr
     #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.97,RON=42)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
@@ -305,6 +307,8 @@ else:
     table["hist_flux"] = fit_param["FLUX"]
     if "EXPTIME" in table.colnames:
         table["e_per_hour"] = fit_param["FLUX"] * 3600 / float(table["EXPTIME"])
+    # if "R_EXP" in table.colnames:
+    #     table["e_per_hour"] = fit_param["FLUX"] * 3600 / float(table["R_EXP"]/1000)
     table["FRAC5SIG"] = fit_param["FRAC5SIG"]  #/ float(table["EXPTIME"])
 
 

@@ -1,5 +1,8 @@
 import os
 import numpy as np
+from pyds9plugin.DS9Utils import fitswrite
+
+
 
 def ComputeOSlevel1(
     image,
@@ -70,5 +73,5 @@ def ApplyOverscanCorrection(
         fitswrite(new_im, name)
     return new_im, name
 if __name__ == "__main__":
-
+    new_path = filename.replace(".fits","_OScorr.fits")
     ds9, _ = ApplyOverscanCorrection(image=ds9, ColumnCorrection=False,save=True)

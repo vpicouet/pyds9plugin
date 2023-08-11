@@ -274,9 +274,9 @@ cold_focus_16 = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/
 cold_focus_16b = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/16_cold_230612/230615/*.csv"
 
 
-WARM_FOCUS_FTS_2023_0 = "..."
-COLD_FOCUS_FTS_2023_0 = "..."
-analyze_focus(path=cold_focus_16b, path1=WARM_FOCUS_FTS_2023_0,path2=COLD_FOCUS_FTS_2023_0,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-9.7,-9.7]),tilt=np.array([-0.1,-0.1,-0.1])*0)
+# WARM_FOCUS_FTS_2023_0 = "..."
+COLD_FOCUS_FTS_2023_0 = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230804/17_cold_230804/*.csv"
+analyze_focus(path=COLD_FOCUS_FTS_2023_0, path1=cold_focus_16b,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2,4],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-9.7,-9.7]),tilt=np.array([-0.1,-0.1,-0.1])*0)
 
 
 #%%
