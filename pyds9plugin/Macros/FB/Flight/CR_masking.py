@@ -6,7 +6,7 @@ import matplotlib
 
 import numpy as np
 from pyds9plugin.DS9Utils import verboseprint
-# matplotlib.use('Agg')#Agg #MacOSX
+matplotlib.use('Agg')#Agg #MacOSX
 
 
 def MaskCosmicRaysCS(image, cosmics, all=False, size=None):
@@ -51,12 +51,15 @@ def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000):
     # AllLine =False
     #    locator = mdates.HourLocator(interval=1)
     #    locator.MAXTICKS = 50000
-    ax = plt.gca()
     #    ax.xaxis.set_minor_locator(locator)
     #    CS = ax.contour(image, levels=threshold, colors='white', alpha=0.5)
     cr_places = np.array(ds9 > threshold, dtype=int)
-    CS = ax.contour(cr_places, levels=1)
-    plt.close()
+
+    # ax = plt.gca()
+    # CS = ax.contour(cr_places, levels=1)
+    plt.ioff()
+    CS = plt.contour(cr_places, levels=1)
+    # plt.close()
     names = ("id", "sizex", "sizey", "len_contour", "max_x", "min_y", "max_y")
     cosmics = Table(np.zeros((len(CS.allsegs[0]), len(names))), names=names)
     cosmics["id"] = np.arange(len(CS.allsegs[0]))
