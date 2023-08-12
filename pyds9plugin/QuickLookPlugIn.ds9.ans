@@ -52,11 +52,11 @@ DS9Utils python_command -x $xpa_method  $param(Python-Command);  -e "$exp"  -o $
 
 
 
-rmv dark
-*
-button
-# /Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FB/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
-/Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/AIT/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+# rmv dark
+# *
+# button
+# # /Users/Vincent/opt/anaconda3/envs/py38/bin/python /Users/Vincent/Github/pyds9plugin/pyds9plugin/Macros/FB/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
+# /Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/AIT/subtract_dark.py  $param(Reduction); "$flux" "$dark" "$name" | $text
 
 
 hdr DB
@@ -107,6 +107,12 @@ Reduc
 *
 button
 DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros/$exp   -o 1 -p  "$path" -c 1 | $text
+
+
+Stellarium
+*
+button
+/Users/Vincent/opt/anaconda3/envs/py38/bin/python $dir/Macros/FB/Flight/Control_stellarium.py  $param(Stellarium); $guidance $update $path $type $sky  | $text
 
 
 
@@ -1619,6 +1625,7 @@ Unit2 combobox {Unit 2} |---DISTANCE---|angstrom|meter|parsec|astronomical_unit|
 Redshift entry {Redshift} - {Only if needed}
 endparam
 
+    
 
 
 
@@ -1628,7 +1635,15 @@ method menu {Method} Maximum|Center-of-mass|2x1D-Gaussian-fitting|2D-Gaussian-fi
 endparam
 
 
-
+param Stellarium
+var2 text {} {Make sure Stellarium & RemoteControl are turned on} {}
+# text {Please verify flight that Stellarium is open and that RemoteControl API is turned on}
+path combobox {RegExp Path} |/Users/Vincent/Github/FB-dashboard/Catalogs/CNES/ScienceDataFile_skytest_Caltech.txt|/Users/Vincent/Github/FB-dashboard/Catalogs/CNES/FlightPrincipalCatalog_v5_tronc.csv #|/tmp/test.csv
+type menu {Mode of lecture} {replay|real-time} 
+sky menu {Tracking mode} {radec-notime|radec-lowtime|radec|altaz} 
+guidance menu {Estimation} {Best|Guider|DTU|IMU} 
+update combobox {Update rate} {0.1|0.01|0.2|0.5|1|2|real-time} 
+endparam
 
 param Python-Command-P
 exp combobox {Expression} {FB/Flight/EMCCD_fit.py|FB/Flight/EMCCD_fit_analytical.py|FB/Flight/CR_masking.py|FB/Flight/continuum_photometry.py|FB/Flight/Flat_correction.py|FB/Flight/Flux_map_generation.py|FB/Flight/OS_correction.py|FB/Flight/photon_counting.py|FB/Flight/smear_profile.py|FB/Flight/stack_fit_slit.py|FB/Flight/TF_continuum.py|FB/Flight/image_fields.py|                    ---                    |FB/AIT/EMCCD_simulator.py|FB/AIT/plot_distortion_astrometry.py|FB/AIT/PTC2.py|FB/AIT/smearing_autocorr.py|FB/AIT/unsmear_e2v.py|                    ---                    |FB/test/concatenate_images.py|FB/test/smear_image.py|FB/test/unsmear_arctipy.py|                    ---                    |cosmology_calculator.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|join_DS9_plots.py|create_WCS.py|VENICE.py|stack_only_flux.py} {Python expression for exec method or python macro path}

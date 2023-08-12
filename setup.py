@@ -11,7 +11,7 @@ with open("README.md", "r") as fh:
 
 
 requires = [
-    "numpy >=1.8",  # 'PyQt5','Pillow',
+    "numpy ==1.23.4",  # 'PyQt5','Pillow',
     "scipy >=0.14",
     "matplotlib",#>=3.1.1",
     "astropy >=1.3",

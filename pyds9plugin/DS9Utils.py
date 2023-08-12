@@ -3470,8 +3470,8 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename,args):
     ax3b = plt.subplot2grid(shape=(n_rows,  3), loc=(len(cats)+1, 1), colspan=1,sharex=ax2)
     ax4b = plt.subplot2grid(shape=(n_rows,  3), loc=(len(cats)+1, 2), colspan=1,sharex=ax2)
     # https://github.com/matplotlib/matplotlib/issues/18415/
-    # im = ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
-    im = ax1.imshow(new_image , interpolation="none",cmap="gray_r")#,vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7))#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    im = ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
+    # im = ax1.imshow(new_image , interpolation="none",cmap="gray_r")#,vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7))#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
     # try:
     #     im = ax1.imshow(new_image , norm=LogNorm(vmin=np.percentile(new_image,45), vmax=np.percentile(new_image,99.7)),interpolation="none",cmap="gray_r")#cmocean.cm.deep)#, cmap='gray'#,cmap=cm.gray_r)#,log=True)
     # except ValueError:
