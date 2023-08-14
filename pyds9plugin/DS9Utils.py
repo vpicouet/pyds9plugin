@@ -3438,6 +3438,8 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
     cat = hstack([cat,create_catalog(files, ext=[0], info="", reg=None,save=False)])
     cat.write(param_dict["CATALOG_NAME"],overwrite=True)
     print(param_dict["CATALOG_NAME"])
+    plt.show()
+
     return
 
 
@@ -3594,7 +3596,7 @@ def plot_tf(cat, new_image, ttfs, n1, n2,tf_length,filename,args):
     fig.subplots_adjust(hspace=0.03)   
     fig.savefig(os.path.dirname(filename) + "/Throughfocus_%i_%i%s.png"%(int(n1),int(n2),args.name), dpi=100, bbox_inches="tight")#, transparent=True)
     # fig.savefig('/tmp/output.png', transparent=True)
-    plt.show()
+    # plt.show()
     print(cat["Center"])
     return cat
 
