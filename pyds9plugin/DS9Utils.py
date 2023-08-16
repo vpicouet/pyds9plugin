@@ -3337,6 +3337,7 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
             # # new_image[new_image<0]=np.nan
             # new_image = new_image - np.nanmin(new_image) + 1
 
+        ax1.legend(fontsize=7)
 
 
         print(ttfs)
@@ -13434,6 +13435,7 @@ def open_file(xpapoint=None, filename=None, argv=[]):
             exit_=True,
         )
         filenames = globglob(path, ds9_im=False)
+    filenames.sort()
     if path == "":
         sys.exit()
     for filename in filenames:
