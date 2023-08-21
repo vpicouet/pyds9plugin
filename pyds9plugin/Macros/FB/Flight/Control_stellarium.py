@@ -1,11 +1,15 @@
 import datetime
 import os
 import time
-from astropy import units as u
-from astropy.table import Table
 import numpy as np
-from astropy.time import Time
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+
+try:
+    from astropy import units as u
+    from astropy.table import Table
+    from astropy.time import Time
+    from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+except ImportError as e:
+    astropy = None
 import sys
 import threading
 
@@ -27,11 +31,81 @@ def convert_to_julian(date_string="11/08/23 14:30:00", dformat="%d/%m/%y %H:%M:%
 # RADEC: 
 # 
 # 
+
+
+def follow_FB_LOS_on_Stellarium_simplified(path="/tmp/test.csv",ftype="replay",guidance="Best",n_ra="DV Asc D",n_dec="DV Dec",gtype="radec",n_alt="DV EL",n_az="DV Az",lat="Latitude",lon="Longi",alt="Altitude",date="Datation GPS",dformat="%d/%m/%y %H:%M:%S",sleep=0.1,delay=1*u.min):
+    cat = np.genfromtxt(path, delimiter=',')
+    i=0
+    while 1>0:
+        cat = np.genfromtxt(path, delimiter=',')
+        # cat = cat[cat["Mins_after_launch"]>500]
+        # while len(cat.colnames)<5:
+        #     cat = Table.read(path,format="csv")
+            
+        # cat[n_az_b] =  180-cat[n_az]
+        if "radec" in gtype:
+            a,b = n_ra, n_dec
+        elif gtype=="altaz":
+            b,a = n_alt, n_az_b
+
+        
+        if ftype=="real-time":
+            i=-1
+        elif ftype=="replay":
+        #     cat["x"] = np.cos(cat[b] * np.pi / 180) * np.cos(cat[a] * np.pi / 180)
+        #     cat["y"] = np.cos(cat[b] * np.pi / 180) * np.sin(cat[a] * np.pi / 180)
+        #     cat["z"] = np.sin(cat[b] * np.pi / 180)
+            i+=1
+            
+        alpha, delta = cat[int(i),-4], cat[int(i),-3]
+        x = np.cos(delta * np.pi / 180) * np.cos(alpha * np.pi / 180)
+        y = np.cos(delta * np.pi / 180) * np.sin(alpha * np.pi / 180)
+        z = np.sin(delta * np.pi / 180)
+        
+        if gtype=="radec":
+            command = ['curl -d "j2000=[%0.10f,%0.10f,%0.10f]" http://localhost:8090/api/main/view  > /dev/null 2>&1'%(x,y,z)]
+            command.append(' -d "time=%0.10f" http://localhost:8090/api/main/time  > /dev/null 2>&1'%(convert_to_julian(cat[date][i], dformat)))
+            os.system(" --next ".join(command))
+        elif gtype=="radec-notime":
+            print(alpha, delta)
+            # print(x,y,z)
+            command = 'curl -d "j2000=[%0.10f,%0.10f,%0.10f]" http://localhost:8090/api/main/view  > /dev/null 2>&1'%(x,y,z)
+            os.system(command)
+        elif gtype=="radec-lowtime":
+            if i%50==0:
+                command = ['curl -d "j2000=[%0.10f,%0.10f,%0.10f]" http://localhost:8090/api/main/view  > /dev/null 2>&1'%(x,y,z)]
+                command.append(' -d "time=%0.10f" http://localhost:8090/api/main/time  > /dev/null 2>&1'%(convert_to_julian(cat[date][i], dformat)))
+                os.system(" --next ".join(command))
+            else:
+                command = 'curl -d "j2000=[%0.10f,%0.10f,%0.10f]" http://localhost:8090/api/main/view  > /dev/null 2>&1'%(x,y,z)
+                os.system(command)
+
+        elif gtype=="altaz":
+            command = ['curl -d "altAz=[%0.10f,%0.10f,%0.10f]" http://localhost:8090/api/main/view  > /dev/null 2>&1'%(x,y,z)]
+            command.append(' -d "time=%0.10f" http://localhost:8090/api/main/time  > /dev/null 2>&1'%(convert_to_julian(cat[date][i], dformat)))
+            # command.append(' -d "latitude=%0.3f" http://localhost:8090/api/location/setlocationfields  > /dev/null 2>&1'%(cat[lat][i]))
+            # command.append(' -d "longitude=%0.3f" http://localhost:8090/api/location/setlocationfields  > /dev/null 2>&1'%(cat[lon][i]))
+            # command.append(' -d "altitude=%0.3f" http://localhost:8090/api/location/setlocationfields  > /dev/null 2>&1'%(cat[alt][i]))
+            os.system(" --next ".join(command))
+        if 1==0:
+            # loc = EarthLocation(lat = cat[lat][i]*u.deg, lon = cat[lon][i]*u.deg, height = cat[alt][i]*u.m)
+            # obj = SkyCoord(ra = cat[n_ra][i]*u.deg, dec = cat[n_dec][i]*u.deg)
+            # delta_midnight=0
+            # altaz = obj.transform_to(AltAz(obstime=Time(datetime.datetime.strptime(cat[date][i], dformat))+delta_midnight, location = loc))
+            # print("Az_d, Alt_d = %0.3f, %0.3f"%(altaz.az.deg,altaz.alt.deg))
+            print("Az, Alt = %0.3f, %0.3f"%(cat[n_az][i],cat[n_alt][i]))
+            print("RA, DEC = %0.3f, %0.3f"%(cat[n_ra][i],cat[n_dec][i]))
+        # print(command)
+        time.sleep(sleep)
+        # sys.exit()
+
+
 def follow_FB_LOS_on_Stellarium(path="/tmp/test.csv",ftype="replay",guidance="Best",n_ra="DV Asc D",n_dec="DV Dec",gtype="radec",n_alt="DV EL",n_az="DV Az",lat="Latitude",lon="Longi",alt="Altitude",date="Datation GPS",dformat="%d/%m/%y %H:%M:%S",sleep=0.1,delay=1*u.min):
     print("path = ",path,"ftype=",ftype,"gtype=",gtype,"sleep=",sleep,"guidance=",guidance)
 
     i=0
     cat = Table.read(path,format="csv")
+    
     GPS = np.array([np.ma.median(cat[lat]),  np.ma.median(cat[lon]), np.ma.median(cat[alt])])
     GPS[~np.isfinite(GPS)] = 1
     loc = EarthLocation(lat = GPS[0]*u.deg, lon =GPS[0]*u.deg, height = GPS[0]*u.m)
@@ -162,7 +236,7 @@ if sys.argv[-2]=="real-time-test":
     
 
     
-follow_FB_LOS_on_Stellarium(path = sys.argv[-3],ftype=sys.argv[-2],gtype=sys.argv[-1],sleep=float(sys.argv[-4]),guidance=sys.argv[-5],n_ra=n_ra,n_dec=n_dec,n_alt=n_alt,n_az=n_az,date=date,dformat=dformat)
+follow_FB_LOS_on_Stellarium_simplified(path = sys.argv[-3],ftype=sys.argv[-2],gtype=sys.argv[-1],sleep=float(sys.argv[-4]),guidance=sys.argv[-5],n_ra=n_ra,n_dec=n_dec,n_alt=n_alt,n_az=n_az,date=date,dformat=dformat)
     
     
     

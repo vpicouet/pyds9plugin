@@ -15,7 +15,8 @@ from getdist import plots, MCSamples
 import getdist
 import matplotlib.pyplot as plt
 import os
-
+import numpy as np
+import glob 
 
 def analyze_focus(path=None, path1=None,path2=None,lims=[0]*15,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=np.arange(10),masks=None,ylim=None,opt_pos=-9.3,det_pos=[-8.95,-9.7,-9.3],tilt=[-0.1,-0.1,-0.1],temp="TEMPD",fitdeg=2): #
     # if len(files)==6:
@@ -276,7 +277,8 @@ cold_focus_16b = "/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination
 
 # WARM_FOCUS_FTS_2023_0 = "..."
 COLD_FOCUS_FTS_2023_0 = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/DOBC_data/230804/17_cold_230804/*.csv"
-analyze_focus(path=COLD_FOCUS_FTS_2023_0, path1=cold_focus_16b,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2,4],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-9.7,-9.7]),tilt=np.array([-0.1,-0.1,-0.1])*0)
+COLD_FOCUS_FTS_2023_m120 ="/Users/Vincent/Nextcloud/LAM/FIREBALL/all_diffuse_illumination/2023/18_cold_-120_230819/18_cold_-120_230819-100/*.csv"
+analyze_focus(path=COLD_FOCUS_FTS_2023_0, path1=COLD_FOCUS_FTS_2023_m120,path2=None,name="T" ,pixel=False, x="y",fit=False,title=None,slit_size=True,order=[-1,-2,0,3,1,2,4],masks=masks_2023,ylim=(-10,-8.2),opt_pos=-9.3,det_pos=np.array([-9.7,-9.7]),tilt=np.array([-0.1,-0.1,-0.1])*0)
 
 
 #%%

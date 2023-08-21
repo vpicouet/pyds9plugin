@@ -773,22 +773,23 @@ def setup(xpapoint=None, color="cool", argv=[]):
         print(e)
         fitsimage = d.get_arr2np()
     ly, lx = fitsimage.shape[0], fitsimage.shape[1]
+    size=400
     if region is not None:
         image_area = lims_from_region(None, coords=region)
         x_inf, x_sup, y_inf, y_sup = image_area
         if (x_sup < 0) | (y_sup < 0):
             image_area = [
                 int(lx / 2),
-                int(lx / 2) + 50,
+                int(lx / 2) + size,
                 int(ly / 2),
-                int(ly / 2) + 50,
+                int(ly / 2) + size,
             ]
     else:
         image_area = [
             int(lx / 2),
-            int(lx / 2) + 50,
+            int(lx / 2) + size,
             int(ly / 2),
-            int(ly / 2) + 50,
+            int(ly / 2) + size,
         ]
     x_inf, x_sup, y_inf, y_sup = image_area
     if len(fitsimage.shape) == 2:
@@ -804,6 +805,8 @@ def setup(xpapoint=None, color="cool", argv=[]):
         # print(100, np.nanpercentile(image_ok, 100))
         # print("max", np.max(image_ok))
         lim1, lim2 = np.nanpercentile(image_ok, cuts[0]), np.nanpercentile(image_ok, cuts[1]) 
+        if cuts[1]==100:
+            lim2 = np.nanmax(image_ok)
         if lim1==lim2:
             lim2 = abs(1.1*lim1)
         d.set(
@@ -2348,6 +2351,7 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
                 processed_regions.append(np.array(coords, dtype=int))
         else:
             if name == "box":
+                # print(coords)
                 xc, yc, w, h, angle = coords
                 box = namedtuple("Box", "data xc yc w h angle id color")
                 processed_regions.append(box(0, xc, yc, w, h, angle, id, color))
@@ -2425,12 +2429,16 @@ def getregion(
                 rows = file.read()
             rows = rows.split("\n")
             # print(rows[3:])
-            print(rows[3:-1])
+            # print(rows[3:-1])
             return process_region(rows[3:], win, quick=quick, message=message)
     else:
         if all is False:
             regions = win.get("regions selected")
-            if len([row for row in regions.split("\n")]) >= 3:
+            verboseprint(regions)
+            if type(regions) is bool:
+                return None
+
+            elif len([row for row in regions.split("\n")]) >= 3:
                 rows = regions
             elif selected is False:
                 verboseprint("no region selected")
@@ -6935,17 +6943,30 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
         ]
         d.set("regions system wcs ; regions sky fk5 ; regions skyformat degrees")
         system = "fk5"
-        size = float(size)
+        
         try:
+            size = float(size)
             size *= abs(wcs.wcs.cd[0][0])
+        except ValueError:
+            r1, r2 = np.array(size.split(","),dtype=float)
+            try:
+                size = "%0.7f,%0.7f"%(abs(r1*wcs.wcs.cdelt[0]), abs(r2*wcs.wcs.cdelt[1]))
+            except AttributeError:
+                    size *= 0.001
         except AttributeError:
             size *= 0.001
+
     verboseprint(cat)
+    if len(size.split(","))>1:
+        r1, r2 = np.array(size.split(","),dtype=float)
+        radius = [np.ones(len(cat)) * r1,np.ones(len(cat)) * r2 ]
+    else:
+        radius = np.ones(len(cat)) * float(size)
     if (ID == "") or (ID is None):
         create_ds9_regions(
             [cat[x]],
             [cat[y]],
-            radius=np.ones(len(cat)) * float(size),
+            radius=radius,
             form=[form],
             save=True,
             color=["yellow"],
@@ -6959,7 +6980,7 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
             create_ds9_regions(
                 [cat[x]],
                 [cat[y]],
-                radius=np.ones(len(cat)) * float(size),
+                radius=radius,
                 form=[form],
                 save=True,
                 color=["yellow"],
@@ -6974,7 +6995,7 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
             create_ds9_regions(
                 [cat[x]],
                 [cat[y]],
-                radius=np.ones(len(cat)) * float(size),
+                radius=radius,
                 form=[form],
                 save=True,
                 color=["yellow"],
@@ -13474,6 +13495,13 @@ def open_file(xpapoint=None, filename=None, argv=[]):
                         d.set("fits new {}".format(filename))
                         if os.path.isfile(filename.replace(".fits",".reg")):
                             d.set("regions " + filename.replace(".fits",".reg"))
+
+                        # if os.path.isfile(filename.replace(".fits","_OS.reg")):
+                        #     d.set("regions " + filename.replace(".fits","_OS.reg"))
+
+
+
+
                         # if os.path.isfile(filename.replace(".fits",".csv")):
                         #     from astropy.table import Table
                         #     cat = Table.read(filename.replace(".fits",".csv"))

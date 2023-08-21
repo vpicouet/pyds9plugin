@@ -6,6 +6,7 @@ def build_wcs_header(
     CDELT=None,
     CTYPE="RA---AIR,DEC--AIR",
     CRVAL=None,
+    angle=0,
     argv=[],
 ):
     """Creates a WCS header"""
@@ -35,6 +36,8 @@ def build_wcs_header(
     w.wcs.crval = CRVAL  # [0, -90]
     w.wcs.ctype = [str(CTYPE[0]), str(CTYPE[1])]
     print([str(CTYPE[0]), str(CTYPE[1])])
+    t=angle
+    # w.wcs.pc = [np.cos(t*np.pi/180),np.sin(t*np.pi/180),-np.sin(t*np.pi/180),np.cos(t*np.pi/180)]
     # ["RA---AIR", "DEC--AIR"], ["RA---TAN", "DEC--TAN"]#
     # w.wcs.set_pv([(2, 1, 45.0)])
     # Three pixel coordinates of interest.
@@ -75,6 +78,11 @@ def build_wcs_header(
     for line in header.cards:
 
         fits.setval(filename, line[0], value=line[1], comment=line[2])
+    fits.setval(filename, "PC1_1", value=np.cos(t*np.pi/180))#, comment=line[2])
+    fits.setval(filename, "PC1_2", value=np.cos(t*np.pi/180))#, comment=line[2])
+    fits.setval(filename, "PC2_1", value=-np.sin(t*np.pi/180))#, comment=line[2])
+    fits.setval(filename, "PC2_2", value=np.cos(t*np.pi/180))#, comment=line[2])
+
     return header, w
 
 
@@ -96,21 +104,40 @@ else:
     factor=2
 # 1.271 1.106
 # filename = "/Volumes/GoogleDrive-105248178238021002216/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2022/Detector_Data/220621/CIT_NUVU_platescale/image000049.fits"
+
 header_det_sky, w = build_wcs_header(
     xpapoint=None,
     filename=filename,
-    CRPIX=[0, 0],
+    # CRPIX=[0, 0],
+    CRPIX=[ds9.shape[0]/2, ds9.shape[1]/2],
     # CDELT=[1.106 / 3600, 1.271 / 3600], #2018
     # CDELT=[1.3745 / 3600, 1.09612142 / 3600],  # 2022
     # CDELT=[1.3745 / 3600/factor, 1.09612142 / 3600/factor],  # 2022
-    CDELT=[1.26 / 3600/factor, 1.08 / 3600/factor],  # 2023
+    #  CDELT=[1.26 *1.0063 / 3600/factor, 1.08*1.027 / 3600/factor],  # 2023
+        CDELT=[ 1.08*1.027 / 3600/factor,1.26 *1.0063 / 3600/factor],  # 2023
     # CDELT=[1, 1],
     # CTYPE=["RA---AIR", "DEC--AIR"],
     CTYPE=["RA---TAN", "DEC--TAN"],
     # CTYPE="RA---???,DEC--???",
-    CRVAL=[1, 1],
+    # CRVAL=[1, 1],
+    angle=0,
+    CRVAL=[32.19,	-5.688],
     argv=[],
 )
+
+
+
+# header_det_sky, w = build_wcs_header(
+#     xpapoint=None,
+#     filename=filename,
+#     # CRPIX=[0, 0],
+#     CRPIX=[ds9.shape[1]/2,ds9.shape[0]/2],
+#     CDELT=[1.26 *1.0063 / 3600/factor, 1.08*1.027 / 3600/factor],  # 2023
+#     CTYPE=["RA---TAN", "DEC--TAN"],
+#     angle=0,
+#     CRVAL=[32.19,	-5.688],
+#     argv=[],
+# )
 
 header_det_mask, w = build_wcs_header(
     xpapoint=None,
@@ -133,6 +160,7 @@ header_dispersion, w = build_wcs_header(
     argv=[],
 )
 
+-5.688,34.9699,0.21245,0.65245,1.39459,64.36
 
 # %%
 
@@ -162,7 +190,7 @@ fits.setval(filename,"CUNIT1B",value="mm",comment="",)
 fits.setval(filename,"CUNIT2B",value="mm",comment="",)
 
 
-
+ds9 = ds9.T[::-1,::-1]
 
 
 print(repr(header))
