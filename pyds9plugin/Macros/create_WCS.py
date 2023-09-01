@@ -160,7 +160,6 @@ header_dispersion, w = build_wcs_header(
     argv=[],
 )
 
--5.688,34.9699,0.21245,0.65245,1.39459,64.36
 
 # %%
 

@@ -16,9 +16,13 @@ n=200
 # files=globglob("/Volumes/VINCENT/GOBC/img_save/stack[43867757-43870607].fits")
 # files=globglob("/Volumes/VINCENT/GOBC/img_save/stack[43876907-43879907].fits")
 # files=globglob("/Volumes/VINCENT/GOBC/img_save/stack[44233583-44236957].fits")
-files=globglob(get(d,"Path of the images you want to stack:"))
+path = get(d,"Path of the images you want to stack:")
+if os.path.isdir(path):
+    files=globglob(path+"/*.fits")
+else:
+    files=globglob(path)
 
-files=globglob("/Users/Vincent/Pictures/Images_without213/image000*.fits")
+# files=globglob("/Users/Vincent/Pictures/Images_without213/image000*.fits")
 for file in files:
     fitsimage = fits.open(file)
     im = np.array(fitsimage[0].data[lim:-lim,lim:-lim],dtype=float)
@@ -27,10 +31,12 @@ for file in files:
     x_max, y_max = x_max[0], y_max[0]
     xs,ys = np.indices(im.shape)
     im[(xs<x_max-n)|(xs>x_max+n) | (ys<y_max-n)|(ys>y_max+n)]=np.nan
-    plt.figure()
-    plt.title(os.path.basename(file))
-    plt.imshow(im[(xs>x_max-n)&(xs<x_max+n) & (ys>y_max-n)&(ys<y_max+n)].reshape(2*n,2*n))
-    plt.show()
+    if 1==0:
+        plt.figure()
+        plt.title(os.path.basename(file))
+        plt.imshow(im[(xs>x_max-n)&(xs<x_max+n) & (ys>y_max-n)&(ys<y_max+n)].reshape(2*n,2*n))
+        plt.show()
+
     ims.append(im)
 
 ims_stack = np.nanmean(ims,axis=0)

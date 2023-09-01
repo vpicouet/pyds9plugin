@@ -1611,12 +1611,14 @@ def create_ds9_regions(
             r, r1 = radius  # , radius
         except ValueError:
             r = radius
+            r1=radius
     for i in range(len(xim)):
         if form[i] == "box":
             try:
-                rest = "{:.4f},{:.4f})".format(r, r1)  # r[i], r1[i]
+                print(r,r1)
+                rest = "%.4f,%.4f)"%(r, r1)  # r[i], r1[i]
             except (UnboundLocalError, TypeError):
-                rest = "{:.4f},{:.4f})".format(r[i], r1[i])  # r[i], r1[i]
+                rest = "%.4f,%.4f)"%(r[i], r1[i])  # r[i], r1[i]
 
             rest += " # color={}".format(color[i])
         elif form[i] == "circle":
@@ -2321,7 +2323,7 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
     for i, region in enumerate(regions):
         try:
             # print("test")
-            print(region)
+            verboseprint(region)
             name, info = region.split("(")
         except ValueError as e:
             if message:
@@ -2329,7 +2331,7 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
                 raise_create_region(d)
                 sys.exit()
             else:
-                print(e,region,1)
+                verboseprint(e,region,1)
         coords = [float(c) for c in info.split(")")[0].split(",")]
         if "text={" in info:
             id = info.split("text={")[-1][:-1]
@@ -3345,7 +3347,6 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
             # # new_image[new_image<0]=np.nan
             # new_image = new_image - np.nanmin(new_image) + 1
 
-        ax1.legend(fontsize=7)
 
 
         print(ttfs)
@@ -5364,7 +5365,11 @@ def execute_command(
     from scipy import signal
     from scipy.signal import correlate, correlate2d
     from astropy.convolution import interpolate_replace_nans, Gaussian2DKernel
-    from tqdm.tk import trange, tqdm
+    try:
+        from tqdm.tk import trange, tqdm
+    except ModuleNotFoundError:
+        from tqdm import trange, tqdm
+
     from matplotlib import pyplot as plt
 
     if ".fit" in filename:
@@ -6905,6 +6910,7 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
         x, y = cat.colnames[:2]
     else:
         x, y = args.fields.replace(",", "-").split("-")
+    print(cat)
     if args.name != "":
         ID = args.name
     if query != "":
@@ -6956,13 +6962,15 @@ def import_table_as_region(xpapoint=None, name=None, ID=None, system="image", ar
                     size *= 0.001
         except AttributeError:
             size *= 0.001
-
+        size=str(size)
     verboseprint(cat)
+    print(size)
     if len(size.split(","))>1:
         r1, r2 = np.array(size.split(","),dtype=float)
         radius = [np.ones(len(cat)) * r1,np.ones(len(cat)) * r2 ]
     else:
         radius = np.ones(len(cat)) * float(size)
+        print(cat, radius)
     if (ID == "") or (ID is None):
         create_ds9_regions(
             [cat[x]],
@@ -9248,7 +9256,10 @@ def create_image_from_catalog(xpapoint=None, nb=int(1e3), argv=[]):
     from astropy.table import Table
 
     # from tqdm import tqdm  # tqdm_gui,
-    from tqdm.tk import trange, tqdm
+    try:
+        from tqdm.tk import trange, tqdm
+    except ModuleNotFoundError:
+        from tqdm import trange, tqdm
 
     from astropy.modeling.functional_models import Gaussian2D
     from photutils.datasets import make_100gaussians_image
@@ -13456,7 +13467,6 @@ def open_file(xpapoint=None, filename=None, argv=[]):
             exit_=True,
         )
         filenames = globglob(path, ds9_im=False)
-    filenames.sort()
     if path == "":
         sys.exit()
     for filename in filenames:
@@ -14802,6 +14812,14 @@ def python_command(xpapoint=None, argv=[]):
         metavar="",
     )
 
+    parser.add_argument(
+        "-m",
+        "--DS9",
+        default=1,
+        help="Used via DS9 or by macbook (=0)",
+        metavar="",
+    )
+
     # parser.add_argument(
     #     "-a",
     #     "--argument",
@@ -14810,15 +14828,32 @@ def python_command(xpapoint=None, argv=[]):
     #     metavar="",
     # )
 
-    args = parser.parse_args_modif(argv, required=True)
+    # args = parser.parse_args_modif(argv, required=True)
+
+    if "--DS9" not in sys.argv:
+        args = parser.parse_args_modif(argv, required=False)
+    else:
+        index = sys.argv.index('--path')
+        files =  sys.argv[index+1:]
+        # os.system('echo "%s" > /tmp/test/files.txt'%(" ".join(files)))
+        sys.argv =  sys.argv[:index+1]
+        # os.system('echo "%s" > /tmp/test/test1.txt'%(",".join([files])))
+        sys.argv.append( ",".join(files[1:]) )
+        # os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
+        args = parser.parse_args_modif(argv, required=False)
+
 
     d = DS9n(args.xpapoint)
+
 
     argument, exp, eval_ = args.argument, args.exp.replace("$exp"," & "), 0
     verboseprint("Expression to be evaluated: %s" % (exp))
     if os.path.isdir(args.path):
         args.path = args.path + "/*.fits"
-    path = globglob(args.path, args.xpapoint)
+    if ".fits,/" in args.path:
+        path = args.path.split(",")
+    else:
+        path = globglob(args.path, args.xpapoint)
     verboseprint("path: %s" % (path))
     write = bool(int(args.overwrite))
     modified = False
@@ -15545,4 +15580,6 @@ def main():
 
 
 if __name__ == "__main__":
+    os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
+
     a = main()

@@ -14,7 +14,7 @@ DS9Utils radial_profile -x $xpa_method  $param(radial_profile)  -c $center -d $d
 Thr-Focus
 *
 button
-DS9Utils throughfocus_new -x $xpa_method  $param(new_tf) --path "$path" -n $m --Est "$Est"  --name $name --WCS $WCS | $text
+DS9Utils throughfocus_new -x $xpa_method  $param(new_tf) --path "$path" -n $m --Est "$Est"  --name "$name" --WCS $WCS | $text
 
 SExtractor #36
 *
@@ -137,7 +137,7 @@ DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros
 
 
 param conversion_gain
-gain combobox {Conversion gain} S2:0.053ADU/e-,RN=2.2|S2_hdr:0.97ADU/e-,RN=43|NoOSsequence:0.4ADU/e-|CaltechIntegration:0.43ADU/e-|Aafaque:0.72ADU/e-,RN=17|2022:0.22ADU/e-,RN=10|2018:0.53,RN=53 {Conversion gain in ADU/e-}
+gain combobox {Conversion gain} S2:0.053ADU/e-,RN=2.2|S2_hdr:0.98ADU/e-,RN=43|NoOSsequence:0.4ADU/e-|CaltechIntegration:0.43ADU/e-|Aafaque:0.72ADU/e-,RN=17|2022:0.22ADU/e-,RN=10|2018:0.53ADU/e-,RN=53 {Conversion gain in ADU/e-}
 endparam
 
 
@@ -202,7 +202,7 @@ hmenu Quick Look Plugin
 
 	Import Regions From Catalog
  	*
- 	bind @
+ 	bind A
  	DS9Utils import_table_as_region -x $xpa_method   $param(Catalog-to-region); -p "$path"  -xy "$fields" -n "$name" -f "$form" -r $size -w $wcs -s "$Selection" | $text
 
 
@@ -766,7 +766,7 @@ path entry {path} "" {Regexp path of the images that you want to use}
 m entry {n} 11 {Number of images per throughfocus}
 Est combobox {Center_estimators} All|FWHM,Min_axis,Maj_axis,Flux|FWHM,Min_axis,Maj_axis,Flux,Angle,Ellipticity {Apertures radius in pixel}
 WCS checkbox {WCS} 0 {Perform throughfocus using WCS coordinates (when drifting on sky)}
-name combobox {Center_estimators} _213|_206|_202| {Name to add to the files}
+name combobox {Center_estimators} |_213|_206|_202| {Name to add to the files}
 endparam
 
 param Function
@@ -1644,6 +1644,8 @@ sky menu {Tracking mode} {radec-notime|radec-lowtime|radec|altaz}
 guidance menu {Estimation} {Best|Guider|DTU|IMU} 
 update combobox {Update rate} {0.1|0.01|0.2|0.5|1|2|real-time} 
 endparam
+
+
 
 param Python-Command-P
 exp combobox {Expression} {FB/Flight/Flight_reduction.py|FB/Flight/EMCCD_fit_analytical.py|FB/Flight/CR_masking.py|FB/Flight/continuum_photometry.py|FB/Flight/Flat_correction.py|FB/Flight/Flux_map_generation.py|FB/Flight/OS_correction.py|FB/Flight/photon_counting.py|FB/Flight/smear_profile.py|FB/Flight/stack_fit_slit.py|FB/Flight/TF_continuum.py|FB/Flight/image_fields.py|                    ---                    |FB/AIT/EMCCD_simulator.py|FB/AIT/plot_distortion_astrometry.py|FB/AIT/PTC2.py|FB/AIT/smearing_autocorr.py|FB/AIT/unsmear_e2v.py|                    ---                    |FB/test/concatenate_images.py|FB/test/smear_image.py|FB/test/unsmear_arctipy.py|                    ---                    |cosmology_calculator.py|heatmap_slicer.py|Replace_regions_by_value.py|Crop_image_wcs.py|Autocorrelation.py|ColumnLineCorrelation.py|Plot_filters.py|Save_regions_as_table.py|Interpolate_NaNs.py|join_DS9_plots.py|create_WCS.py|VENICE.py|stack_only_flux.py} {Python expression for exec method or python macro path}
