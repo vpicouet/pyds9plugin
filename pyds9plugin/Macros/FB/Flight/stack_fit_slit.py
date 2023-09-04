@@ -458,21 +458,37 @@ for offset, ftype in zip([0,1088],["OS","noOS"]):
 
     xdetpix = []
     ydetpix = []
+    x,y =  slits["x_mm"], slits["y_mm"] if "x_mm" in slits.colnames() else slits["xmm"], slits["ymm"]
+
     for w in ws:
-        if "x_mm" in slits.colnames:
-            xydetpix = mapping.map(w, slits["x_mm"], slits["y_mm"])
-        else:
-            xydetpix = mapping.map(w, slits["xmm"], slits["ymm"])
+        # if "x_mm" in slits.colnames:
+        xydetpix = mapping.map(w, x,y)
+        create_ds9_regions(xdetpix, ydetpix, form=['box']*3, radius=[10,size_slit], save=True, 
+                                savename="/Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/2023_flight/fields/"+ os.path.basename(filename).replace(".fits","_%s_%i.reg"%(w)), color = colors, ID=[ID]*3)
         xdetpix.append(xydetpix[0]-offset)
         ydetpix.append(xydetpix[1])
+    size_slit = 20 if Field in ["F1","F4"] else 32:
+
+    create_ds9_regions(xdetpix, ydetpix, form=['box']*3, radius=[10,size_slit], save=True, 
+                            savename=filename.replace(".fits","_%s_Zn.reg"%(ftype)), color = colors, ID=[ID]*3)
+    create_ds9_regions(xdetpix, ydetpix, form=['box']*3, radius=[10,size_slit], save=True, 
+                            savename="/Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/2023_flight/fields/"+ os.path.basename(filename).replace(".fits","_%s_Zn.reg"%(ftype)), color = colors, ID=[ID]*3)
 
 
-    if Field in ["F1","F4"]:
-        create_ds9_regions(xdetpix, ydetpix, form=['box']*3, radius=[10,20], save=True, 
-                                savename=filename.replace(".fits","_%s.reg"%(ftype)), color = colors, ID=[ID]*3)
-    else:
-        create_ds9_regions(xdetpix, ydetpix, form=['box']*3, radius=[10,32], save=True, 
-                                savename=filename.replace(".fits","_%s.reg"%(ftype)), color = colors, ID=[ID]*3)
+
+#if frame.lower() == "restframe":
+    verboseprint("Working in rest frame wevelength")
+    w = 1215.67
+    wavelength = (1 + redshift) * w  # * 1e-4
+    yi, xi = mapping.map(wavelength, x, y, inverse=False)
+    create_ds9_regions(xdetpix, ydetpix, form=['box']*3, radius=[10,size_slit], save=True, 
+                            savename="/Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/2023_flight/fields/"+ os.path.basename(filename).replace(".fits","_%s_Lya.reg"%(ftype)), color = colors, ID=[ID]*3)
+
+    # if frame.lower() == "observedframe":
+    #     verboseprint("Working in observed frame wevelength")
+    #     y, x = mapping.map(w, xmask, ymask, inverse=False)
+
+
     xdetpix = []
     ydetpix = []
     w=0.20619
@@ -485,11 +501,11 @@ for offset, ftype in zip([0,1088],["OS","noOS"]):
     print(len(slits),len(ydetpix))
     print(slits,ydetpix)
 
-    # print([ [1000-offset for i in range(len(slits))] ], [[yi] for yi in ydetpix[0]], ['projection']*len(slits), [[[yi] for yi in ydetpix[0]],[2000-offset for i in range(len(slits))]] ,["yellow"]*len(slits))
-    # print( [[yi] for yi in ydetpix[0]])
     create_ds9_regions([ [1000-offset] for i in range(len(slits))] , [[yi] for yi in ydetpix[0]], form=['projection']*len(slits), radius=[[2000-offset for i in range(len(slits))],  [yi for yi in ydetpix[0]] ], save=True, 
-                                savename="/tmp/test.reg",color=["yellow"]*len(slits))
+                                savename=filename.replace(".fits","_%s_proj.reg"%(ftype)),color=["yellow"]*len(slits))
 
+    create_ds9_regions([ [1000-offset] for i in range(len(slits))] , [[yi] for yi in ydetpix[0]], form=['projection']*len(slits), radius=[[2000-offset for i in range(len(slits))],  [yi for yi in ydetpix[0]] ], save=True, 
+                                savename="/Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/2023_flight/fields/"+  os.path.basename(filename).replace(".fits","_%s_proj.reg"%(ftype)),color=["yellow"]*len(slits))
 
 
 

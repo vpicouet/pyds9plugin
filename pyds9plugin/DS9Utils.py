@@ -1625,7 +1625,7 @@ def create_ds9_regions(
         elif form[i]=="projection":
             print(form[i])
             print(r,r1,r[i])
-            rest = "%.4f,%.4f,%.4f)"%(r[i], r1[i],10)  # r[i], r1[i]
+            rest = "%.4f,%.4f,%.4f)"%(r[i], r1[i],20)  # r[i], r1[i]
 
             rest += " # color={}".format(color[i])
 
