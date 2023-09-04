@@ -1568,6 +1568,7 @@ def aperture_photometry(xpapoint=None, argv=[]):
     return phot
 
 
+
 def create_ds9_regions(
     xim,
     yim,
@@ -1613,14 +1614,21 @@ def create_ds9_regions(
             r = radius
             r1=radius
     for i in range(len(xim)):
+        print(xim)
         if form[i] == "box":
             try:
-                print(r,r1)
                 rest = "%.4f,%.4f)"%(r, r1)  # r[i], r1[i]
             except (UnboundLocalError, TypeError):
                 rest = "%.4f,%.4f)"%(r[i], r1[i])  # r[i], r1[i]
 
             rest += " # color={}".format(color[i])
+        elif form[i]=="projection":
+            print(form[i])
+            print(r,r1,r[i])
+            rest = "%.4f,%.4f,%.4f)"%(r[i], r1[i],10)  # r[i], r1[i]
+
+            rest += " # color={}".format(color[i])
+
         elif form[i] == "circle":
             rest = "{:.4f})".format(r[i])  # [i]
             rest += " # color={}".format(color[i])
@@ -1632,7 +1640,6 @@ def create_ds9_regions(
                         more[0][j], more[1][j], more[2][j]
                     )
                     rest += " # color={}".format(color[j])
-                    # print(color[j])
                 regions += "{}({:.6f},{:.6f},".format(form[i], x + 0, y + 0) + rest
                 if ID is not None:
                     regions += " text={{{}}}".format(ID[i][j])
@@ -1640,13 +1647,12 @@ def create_ds9_regions(
         except ValueError as e:
             logger.warning(e)
             pass
-
+    print(regions)
     if save:
         with open(savename, "w") as text_file:
             text_file.write(regions)
         verboseprint(("Region file saved at: " + savename))
         return
-
 
 def getdata(xpapoint=None, plot_=False, selected=False):
     """Get data from DS9 display in the definied region

@@ -8,7 +8,7 @@ def ComputeOSlevel1(
     image,
     OSR1=[20, -20, 20, 1053 - 20],
     OSR2=[20, -20, 2133 + 20, -20],
-    lineCorrection=True,
+    lineCorrection=True, non_0 = True, dtype=float
 ):
     """Apply overscan correction line by line using overscan region
     """  # ds9 -=  np.nanmedian(image[:,2200:2400],axis=1)[..., np.newaxis]*np.ones((ds9.shape))
@@ -18,13 +18,18 @@ def ComputeOSlevel1(
         OSregion = np.hstack((image[:, OSR1[2] : OSR1[3]], image[:, OSR2[2] : OSR2[3]]))
     else:
         OSregion = image[:, OSR1[2] : OSR1[3]]
+    OSregion = np.array(OSregion, dtype=float)
+    OSregion[OSregion==0] = np.nan
     if lineCorrection:
         OScorrection = np.nanmedian(OSregion, axis=1)
         # reject_outliers(OSregion, stddev=3))
         OScorrection = OScorrection[..., np.newaxis] * np.ones((image.shape))
     else:
         OScorrection = np.nanmedian(OSregion)  # reject_outliers(OSregion, stddev=3))
-    return OScorrection
+    if dtype == int:
+        return np.array(np.round(OScorrection),dtype=dtype)
+    else:
+        return np.array(np.round(OScorrection),dtype=dtype)
 
 
 def ApplyOverscanCorrection(
@@ -37,6 +42,7 @@ def ApplyOverscanCorrection(
     save=False,
     lineCorrection=True,
     ColumnCorrection="ColumnByColumn",
+    dtype=float
 ):
     """Apply overscan correction line by line using overscan region1234
     """
@@ -53,7 +59,7 @@ def ApplyOverscanCorrection(
     ###############################################
 
     OScorrection = ComputeOSlevel1(
-        image, OSR1=OSR1, OSR2=OSR2, lineCorrection=lineCorrection
+        image, OSR1=OSR1, OSR2=OSR2, lineCorrection=lineCorrection,dtype=dtype
     )
     # fits.setval(path, "OVS_CORR", value=lineCorrection)
     new_im = image - OScorrection
@@ -74,4 +80,4 @@ def ApplyOverscanCorrection(
     return new_im, name
 if __name__ == "__main__":
     new_path = filename.replace(".fits","_OScorr.fits")
-    ds9, _ = ApplyOverscanCorrection(image=ds9, ColumnCorrection=False,save=True)
+    ds9, _ = ApplyOverscanCorrection(image=ds9, ColumnCorrection=False,save=True,dtype=float)

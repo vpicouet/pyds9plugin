@@ -473,8 +473,22 @@ for offset, ftype in zip([0,1088],["OS","noOS"]):
     else:
         create_ds9_regions(xdetpix, ydetpix, form=['box']*3, radius=[10,32], save=True, 
                                 savename=filename.replace(".fits","_%s.reg"%(ftype)), color = colors, ID=[ID]*3)
-    
+    xdetpix = []
+    ydetpix = []
+    w=0.20619
+    if "x_mm" in slits.colnames:
+        xydetpix = mapping.map(w, slits["x_mm"], slits["y_mm"])
+    else:
+        xydetpix = mapping.map(w, slits["xmm"], slits["ymm"])
+    xdetpix.append(xydetpix[0]-offset)
+    ydetpix.append(xydetpix[1])
+    print(len(slits),len(ydetpix))
+    print(slits,ydetpix)
 
+    # print([ [1000-offset for i in range(len(slits))] ], [[yi] for yi in ydetpix[0]], ['projection']*len(slits), [[[yi] for yi in ydetpix[0]],[2000-offset for i in range(len(slits))]] ,["yellow"]*len(slits))
+    # print( [[yi] for yi in ydetpix[0]])
+    create_ds9_regions([ [1000-offset] for i in range(len(slits))] , [[yi] for yi in ydetpix[0]], form=['projection']*len(slits), radius=[[2000-offset for i in range(len(slits))],  [yi for yi in ydetpix[0]] ], save=True, 
+                                savename="/tmp/test.reg",color=["yellow"]*len(slits))
 
 
 

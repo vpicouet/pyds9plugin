@@ -5,7 +5,6 @@ from astropy.table import Table
 from matplotlib.widgets import Button
 import numpy as np
 from matplotlib.widgets import CheckButtons
-
 # from dataphile.graphics.widgets import Slider
 from matplotlib.widgets import Slider, RangeSlider
 
@@ -16,6 +15,8 @@ color="k"
 # if check_appearance():
 #     plt.style.use('dark_background')
 #     color="white"
+# import warnings
+# warnings.filterwarnings("ignore")
 
 
 def emccd_model(
@@ -59,7 +60,8 @@ def emccd_model(
             fitsim = fitsim[0]
 
         header = fitsim.header
-        data = fitsim.data
+        data = np.array(fitsim.data, dtype=float)
+        data[(data==0) | (data<-1000)] = np.nan
         if len(data.shape) == 3:
             data = data[0,:,:]
         ly, lx = data.shape
@@ -146,7 +148,8 @@ def emccd_model(
         bins = (bins[1:] + bins[:-1]) / 2
         t=1#0#1#2.5
         val = np.array(val, dtype=float) *t/ im_nan_fraction 
-        os_v = np.log10(np.array(val_os *t/ os_nan_fraction, dtype=float)) #* os.size / len(os[np.isfinite(os)])) 
+        os_v = np.log10(np.array(val_os *t/ os_nan_fraction, dtype=float)) 
+        #* os.size / len(os[np.isfinite(os)])) 
         # TODO take care of this factor
         try:
             header_exptime, header_gain = header["EXPTIME"], header["EMGAIN"]
@@ -367,7 +370,7 @@ def emccd_model(
         y_conv[xdata < upper_limit],
         "-",
         c=color,
-        label="Data: Gconv=%0.2fADU/e-\ntexp=%is\nG=%iDAQ"
+        label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\nG=%sDAQ"
         % (conversion_gain, header_exptime, header_gain),
     )
     ax.plot(
