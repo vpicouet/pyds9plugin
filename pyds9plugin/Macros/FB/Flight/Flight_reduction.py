@@ -23,8 +23,7 @@ if __name__ == "__main__":
         if create:
             if os.path.exists(os.path.dirname(filename) + name) is False:
                 os.mkdir(os.path.dirname(filename) +name)
-    new_path = "/tmp/" + os.path.basename(filename)
-
+    # new_path = "/tmp/" + os.path.basename(filename)
     if CR:
         CR_removed = CR_masking(filename,ds9, n=3, area=[0,-1,0,-1],threshold = 40000)    
         fitsimage.data = CR_removed
@@ -47,8 +46,21 @@ if __name__ == "__main__":
                 new_filename = os.path.dirname(filename) + name_CR + "/" +     os.path.basename(filename).replace(".fits",  "_CR.fits")
             else:
                 new_filename = filename
-        pc_image = DS9photo_counting(image=fitsimage.data, header=header, filename=new_filename, threshold=5.5)
+        pc_image, fit_param = DS9photo_counting(image=fitsimage.data, header=header, filename=new_filename, threshold=5.5)
         fitsimage.data = pc_image
         fitsimage.writeto(os.path.dirname(filename)+ name_PC + "/" +  os.path.basename(filename).replace(".fits",  "_PC.fits"),overwrite=True)
+
+        header["hist_bias"] = fit_param["BIAS"]
+        header["hist_ron"] = fit_param["RON"]
+        header["hist_gain"] = fit_param["GAIN"]
+        header["hist_flux"] = fit_param["FLUX"]
+        header["FRAC5SIG"] = fit_param["FRAC5SIG"]  #/ float(table["EXPTIME"])
+        if "EXPTIME" in list(dict.fromkeys(header.keys())):
+            try:
+                header["eperhour"] = fit_param["FLUX"] * 3600 / float(header["EXPTIME"])
+            except ValueError:
+                 header["eperhour"] = np.nan
+        # if "R_EXP" in table.colnames:
+        #     table["e_per_hour"] = fit_param["FLUX"] * 3600 / float(table["R_EXP"]/1000)
 
 

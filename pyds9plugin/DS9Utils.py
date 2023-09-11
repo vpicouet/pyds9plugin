@@ -3132,16 +3132,16 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
     # os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
     # args = parser.parse_args_modif(argv, required=False)
 
-    if "w" not in sys.argv:
-        args = parser.parse_args_modif(argv, required=False)
-    else:
-        index = sys.argv.index('--path')
-        files =  sys.argv[index+1:]
-        sys.argv =  sys.argv[:index+1]
-        # os.system('echo "%s" > /tmp/test/test1.txt'%(",".join([files])))
-        sys.argv.append( ",".join(files) )
-        os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
-        args = parser.parse_args_modif(argv, required=False)
+    # if "w" not in sys.argv:
+    args = parser.parse_args_modif(argv, required=False)
+    # else:
+    #     index = sys.argv.index('--path')
+    #     files =  sys.argv[index+1:]
+    #     sys.argv =  sys.argv[:index+1]
+    #     # os.system('echo "%s" > /tmp/test/test1.txt'%(",".join([files])))
+    #     sys.argv.append( ",".join(files) )
+    #     os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
+    #     args = parser.parse_args_modif(argv, required=False)
     # sys.exit()
 
     # if WCS:
@@ -5787,13 +5787,19 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
     # elif re.match(r'^\d{1,3}-\d{1,3}$', file):
     #      file = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/GOBC_data/img/stack25579345.fits"
 
-
-    try:
-        paths = glob.glob(r"%s" % (file), recursive=True)
-    except Exception as e:
-        verboseprint(e)
-        paths = []
-    # verboseprint(file, paths)
+    print("file=",file)
+    if ".fits,/" in file:
+        paths = file.split(",")
+    elif ".fits /" in file:
+        paths = file.split()
+    else:
+        # paths = glob.glob(r"%s" % (file), recursive=True)
+        try:
+            paths = glob.glob(r"%s" % (file), recursive=True)
+        except Exception as e:
+            verboseprint(e)
+            paths = []
+    verboseprint(file, paths)
     if file =="all":
        return get_filename(d, All=True, sort=False)
 
@@ -5824,6 +5830,7 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
 
     if sort:
         paths.sort()
+    print("paths=",paths)
     if (len(paths) == 0) & (file == ""):  # changed --""
         verboseprint("No file specified, using loaded one.")
         d = DS9n(xpapoint)
@@ -14836,17 +14843,17 @@ def python_command(xpapoint=None, argv=[]):
 
     # args = parser.parse_args_modif(argv, required=True)
 
-    if "--DS9" not in sys.argv:
-        args = parser.parse_args_modif(argv, required=False)
-    else:
-        index = sys.argv.index('--path')
-        files =  sys.argv[index+1:]
-        # os.system('echo "%s" > /tmp/test/files.txt'%(" ".join(files)))
-        sys.argv =  sys.argv[:index+1]
-        # os.system('echo "%s" > /tmp/test/test1.txt'%(",".join([files])))
-        sys.argv.append( ",".join(files[1:]) )
-        # os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
-        args = parser.parse_args_modif(argv, required=False)
+    args = parser.parse_args_modif(argv, required=False)
+    # if "--DS9" not in sys.argv:
+    # else:
+    #     index = sys.argv.index('--path')
+    #     files =  sys.argv[index+1:]
+    #     # os.system('echo "%s" > /tmp/test/files.txt'%(" ".join(files)))
+    #     sys.argv =  sys.argv[:index+1]
+    #     # os.system('echo "%s" > /tmp/test/test1.txt'%(",".join([files])))
+    #     sys.argv.append( ",".join(files[1:]) )
+    #     # os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
+    #     args = parser.parse_args_modif(argv, required=False)
 
 
     d = DS9n(args.xpapoint)

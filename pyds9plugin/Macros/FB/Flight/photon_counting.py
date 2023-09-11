@@ -34,30 +34,35 @@ def DS9photo_counting(image, header, filename, threshold=5.5,plot_flag=False):
 
 
     if "hist_bias" not in list(dict.fromkeys(header.keys())):
-        
-        if header["EMGAIN"]==9200:
-            # 2018
-            fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40,mCIC=0.15,sCIC=0.02,gain=1400,RON=105*0.53)#,mCIC=0.005
+        try:
+            if header["EMGAIN"]==9200:
+                # 2018
+                fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40,mCIC=0.15,sCIC=0.02,gain=1400,RON=105*0.53)#,mCIC=0.005
 
-        elif  header["ROS"]==2:
+            elif  header["ROS"]==2:
+                #2023 s2_hdr
+                fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.97,RON=42)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+            # else:
+            elif  header["ROS"]==1:
+                #2023 s2
+                fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.053,RON=2.6)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+            elif  header["ROS"]==5:
+                #2022
+                fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.22,RON=10)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+            else:
+                fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.2,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.72,RON=17)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+            new_image = apply_pc(image=image, bias=fit_param["BIAS"], sigma=fit_param["RON"], threshold=threshold)
+        except KeyError:
             #2023 s2_hdr
             fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.97,RON=42)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-        # else:
-        elif  header["ROS"]==1:
-            #2023 s2
-            fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.053,RON=2.6)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-        elif  header["ROS"]==5:
-            #2022
-            fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.22,RON=10)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-        else:
-            fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.2,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.72,RON=17)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-        new_image = apply_pc(image=image, bias=fit_param["BIAS"], sigma=fit_param["RON"], threshold=threshold)
+            new_image = apply_pc(image=image, bias=fit_param["BIAS"], sigma=fit_param["RON"], threshold=threshold)
+
     else:
         new_image = apply_pc(image=image, bias=float(header["hist_bias"]), sigma=float(header["hist_ron"]), threshold=threshold)
 
-    return new_image
+    return new_image, fit_param
 
 if __name__ == "__main__":
     new_path = filename.replace(".fits","_pc.fits")
-    ds9 = DS9photo_counting(image=ds9, header=header,filename=filename, threshold=5.5)
+    ds9, fit_param = DS9photo_counting(image=ds9, header=header,filename=filename, threshold=5.5)
 

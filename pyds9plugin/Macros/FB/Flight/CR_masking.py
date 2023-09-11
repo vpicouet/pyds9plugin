@@ -36,7 +36,7 @@ def MaskCosmicRaysCS(image, cosmics, all=False, size=None):
 
 
 
-def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000):
+def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000,matplotlib=False):
     verboseprint("area=", area)
     #masking_factor
     # if yesno(d, "Do you want to apply a strong but conservative madking?"):
@@ -57,37 +57,59 @@ def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000):
 
     # ax = plt.gca()
     # CS = ax.contour(cr_places, levels=1)
-    plt.ioff()
-    CS = plt.contour(cr_places, levels=1)
+    if matplotlib:
+        plt.ioff()
+        CS = plt.contour(cr_places, levels=1)
+        contours = CS.allsegs[0]
+        n1, n2 = 0, 1
+    else:
+        from skimage.measure import find_contours
+        contours = find_contours(cr_places, level=0.5)
+        n1, n2 = 1, 0
+        # for i in range(len(contours)):
+        #     a,b = contours[i][:,0], contours[i][:,1]
+        #     contours[i][:,1], contours[i][:,0] = a, b
     # plt.close()
     names = ("id", "sizex", "sizey", "len_contour", "max_x", "min_y", "max_y")
-    cosmics = Table(np.zeros((len(CS.allsegs[0]), len(names))), names=names)
-    cosmics["id"] = np.arange(len(CS.allsegs[0]))
-    cosmics["sizex"] = [cs[:, 0].max() - cs[:, 0].min() for cs in CS.allsegs[0]]
-    cosmics["sizey"] = [cs[:, 1].max() - cs[:, 1].min() for cs in CS.allsegs[0]]
-    cosmics["len_contour"] = [len(cs[:, 1]) for cs in CS.allsegs[0]]
-    cosmics["max_x"] = [int(cs[:, 0].max() + n * 1) for cs in CS.allsegs[0]]
-    cosmics["min_y"] = [int(cs[:, 1].min() - n * 1) for cs in CS.allsegs[0]]
-    cosmics["max_y"] = [int(cs[:, 1].max() + n * 2) for cs in CS.allsegs[0]]
-    cosmics["mean_y"] = [int((cs[:, 1].max() + cs[:, 1].max()) / 2) for cs in CS.allsegs[0]]
-    cosmics["size"] = [n * 50 for cs in CS.allsegs[0]]
-    cosmics["size_opp"] = [n * 1 for cs in CS.allsegs[0]]
+    cosmics = Table(np.zeros((len(contours), len(names))), names=names)
+    cosmics["id"] = np.arange(len(contours))
+    cosmics["sizex"] = [cs[:, n1].max() - cs[:, n1].min() for cs in contours]
+    cosmics["sizey"] = [cs[:, n2].max() - cs[:, n2].min() for cs in contours]
+    cosmics["len_contour"] = [len(cs[:, 1]) for cs in contours]
+    cosmics["max_x"] = [int(cs[:, n1].max() + n * 1) for cs in contours]
+    cosmics["min_y"] = [int(cs[:, n2].min() - n * 1) for cs in contours]
+    cosmics["max_y"] = [int(cs[:, n2].max() + n * 2) for cs in contours]
+    cosmics["mean_y"] = [int((cs[:, n2].max() + cs[:, 1].max()) / 2) for cs in contours]
+    cosmics["size"] = [n * 50 for cs in contours]
+    cosmics["size_opp"] = [n * 1 for cs in contours]
     # cosmics[my_conf.exptime[0]] = header[my_conf.exptime[0]]
     # cosmics[my_conf.gain[0]] = header[my_conf.gain[0]]
     # cosmics["number"] = re.findall(r"\d+", os.path.basename(filename))[-1]
-    contours = CS.allsegs[0]
-    imagettes = []
-    for cs in contours:
-        imagettes.append(ds9[int(cs[:, 1].min()) : int(cs[:, 1].max()) + 1, int(cs[:, 0].min()) : int(cs[:, 0].max()) + 1] )
+    # contours = contours[0]
+    # imagettes = []
+    # sizes = []
+    imagettes = [ds9[int(cs[:, n2].min()) : int(cs[:, n2].max()) + 1, int(cs[:, n1].min()) : int(cs[:, n1].max()) + 1] for cs in contours]
+    # if matplotlib:
+    # else:
+    #     imagettes = [ds9[int(cs[:, n1].min()) : int(cs[:, n1].max()) + 1,int(cs[:, n2].min()) : int(cs[:, n2].max()) + 1] for cs in contours]
+    # for cs in contours:
+    #     # imagettes.append(ds9[int(cs[:, 1].min()) : int(cs[:, 1].max()) + 1, int(cs[:, 0].min()) : int(cs[:, 0].max()) + 1] )
+    #     imagettes.append(ds9[int(cs[:, 0].min()) : int(cs[:, 0].max()) + 1,int(cs[:, 1].min()) : int(cs[:, 1].max()) + 1] )
+        # sizes.append([int(cs[:, 1].min()) , int(cs[:, 1].max()) + 1, int(cs[:, 0].min()) , int(cs[:, 0].max()) + 1])
     #    for cs in contours:
     #        verboseprint(int(cs[:,0].min()),int(cs[:,0].max())+1,int(cs[:,1].min()),int(cs[:,1].max()+1))
     # import numpy as np
     a=[];
-    
+    # print(imagettes)
+    # for i in range(len(contours)):
+    #     print(imagettes[i])
+    #     print(cosmics[i])
+    #     print(sizes[i])
+    #     print(np.nanmax(imagettes[i]))
     cosmics["cx"] = [np.where(ima == np.nanmax(ima))[1][0] for ima in imagettes]
     cosmics["cy"] = [np.where(ima == np.nanmax(ima))[0][0] for ima in imagettes]
-    cosmics["c0x"] = [int(cs[:, 0].min()) for cs in contours]
-    cosmics["c0y"] = [int(cs[:, 1].min()) for cs in contours]
+    cosmics["c0x"] = [int(cs[:, n1].min()) for cs in contours]
+    cosmics["c0y"] = [int(cs[:, n2].min()) for cs in contours]
     cosmics["xcentroid"] = cosmics["c0x"] + cosmics["cx"]
     cosmics["ycentroid"] = cosmics["c0y"] + cosmics["cy"]
     cosmics["value"] = [ds9[y, x] for x, y in zip(cosmics["xcentroid"], cosmics["ycentroid"])]
@@ -102,13 +124,13 @@ def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000):
     cosmics["size"][mask2] = n * 200
     cosmics["size"][mask3] = n * 3000
     if size > 1000:
-        cosmics["size"] = n * 3000  # [ n*3000   for cs in CS.allsegs[0] ]
+        cosmics["size"] = n * 3000  # [ n*3000   for cs in contours[0] ]
     cosmics["size_opp"][mask3 | mask4] = n * 3000
     cosmics["min_y"][(cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)] -= n * 20
     cosmics["max_y"][(cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)] += n * 20
     a = cosmics
     ds9 = MaskCosmicRaysCS(ds9, cosmics=cosmics)
-    verboseprint('Numbe of cosmics = ', len(CS.allsegs[0]))
+    verboseprint('Numbe of cosmics = ', len(contours))
     if ds9.shape[1]>2000:
         verboseprint('Fraction of image lost = ', np.mean(np.isfinite(ds9[:,1000:-1000]).mean()))
     else:
