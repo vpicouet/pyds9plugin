@@ -961,8 +961,8 @@ endparam
 
 
 param openR
-path combobox {Path of the image(s) to open}  F1|F2|QSO_mask|Bright_QSO_mask|QSO2|QSO2|BQSO1|BQSO2|BQSO3|axis_det.reg|F1_2018.reg|F3_2018.reg|F3_2018.reg|F4_2018.reg|QSO_2022_6_-100.reg|F1_2022_6_-100.reg|F2_2022_6_-100.reg|F3_2022_6_-100.reg|F4_2022_6_-100.reg {} 
-type menu {Type} Zn|Zn-206|Lya|proj {}
+path combobox {Path of the image(s) to open}  projection|F1|F2|QSO|QSObright|QSO2|QSO2|BQSO1|BQSO2|BQSO3|axis_det.reg|F1_2018.reg|F3_2018.reg|F3_2018.reg|F4_2018.reg|QSO_2022_6_-100.reg|F1_2022_6_-100.reg|F2_2022_6_-100.reg|F3_2022_6_-100.reg|F4_2022_6_-100.reg {} 
+type menu {Type} Zn|Zn-206|Zn-202|Zn-213|Lya|proj {}
 OS menu {Overscan} OS|noOS
 endparam
 

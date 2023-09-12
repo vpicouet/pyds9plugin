@@ -257,7 +257,7 @@ def madau(z,rho=[0.001,0.01],n=[2,3],n2=[2,3],pow=[2,7]):
 #     return g.ravel()
 
 
-def gaussian_flux(x, Flux=len(y)*y.ptp() * np.array([-2, 2, 1]), xo=[-0.5*len(x), 1.5*len(x),0.5*len(x)], sigma=[0, x.ptp(),x.ptp()/2]):#off=[np.nanmin(y)-y.ptp(),np.nanmax(y)+ y.ptp(),np.nanmean(y)]
+def gaussian_flux(x, Flux=len(y)*y.ptp() * np.array([-2, 2, 1/5]), xo=[-0.5*len(x), 1.5*len(x),0.5*len(x)], sigma=[0, x.ptp(),5]):#off=[np.nanmin(y)-y.ptp(),np.nanmax(y)+ y.ptp(),np.nanmean(y)]#, sigma=[0, x.ptp(),x.ptp()/2]
     """Defines a gaussian function with offset
     """
     import numpy as np
