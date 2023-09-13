@@ -167,6 +167,9 @@ def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000,matplotlib=F
 
 if __name__ == "__main__":
     if os.path.exists(os.path.dirname(filename) + "/CosmicRayFree") is False:
-        os.mkdir(os.path.dirname(filename) + "/CosmicRayFree")
+        try:
+            os.mkdir(os.path.dirname(filename) + "/CosmicRayFree")
+        except FileExistsError:
+            pass
     new_path = os.path.dirname(filename) + "/CosmicRayFree/" +     os.path.basename(filename).replace(".fits",  "_CR.fits")
     ds9 = CR_masking(filename,ds9, n=3, area=[0,-1,0,-1],threshold = 40000)    

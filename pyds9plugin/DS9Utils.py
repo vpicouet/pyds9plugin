@@ -39,6 +39,7 @@ same conditions as regards security.
 The fact that you are presently reading this means that you have had
 knowledge of the CeCILL-B license and that you accept its terms.
 """
+
 import resource
 import time
 import glob
@@ -1214,7 +1215,7 @@ def PlotFit1D(
             z0 = law(xp, *P0)
 
         if interactive:
-            print("Interactive Fit")
+            verboseprint("Interactive Fit")
             from IPython import get_ipython
 
             get_ipython().run_line_magic("matplotlib", "")
@@ -1226,7 +1227,7 @@ def PlotFit1D(
                     dict_={law.__name__: law},
                 )
             if len(P0) == 2:
-                print("Interactive Fit")
+                verboseprint("Interactive Fit")
                 interactiv_manual_fitting(
                     x,
                     y,
@@ -1261,9 +1262,7 @@ def PlotFit1D(
             popt, pcov = curve_fit(law, x, y, p0=P0, bounds=bounds, sigma=sigma)
         except RuntimeError as e:
             logger.warning(e)
-            # print(law)
-            # print(type(law))
-            # print(e)
+
             if interactive:
                 if input("Do you want to fit it manually? [y/n]") == "y":
                     from IPython import get_ipython
@@ -1614,7 +1613,7 @@ def create_ds9_regions(
             r = radius
             r1=radius
     for i in range(len(xim)):
-        print(xim)
+        verboseprint(xim)
         if form[i] == "box":
             try:
                 rest = "%.4f,%.4f)"%(r, r1)  # r[i], r1[i]
@@ -1623,8 +1622,8 @@ def create_ds9_regions(
 
             rest += " # color={}".format(color[i])
         elif form[i]=="projection":
-            print(form[i])
-            print(r,r1,r[i])
+            verboseprint(form[i])
+            verboseprint(r,r1,r[i])
             rest = "%.4f,%.4f,%.4f)"%(r[i], r1[i],20)  # r[i], r1[i]
 
             rest += " # color={}".format(color[i])
@@ -1647,7 +1646,7 @@ def create_ds9_regions(
         except ValueError as e:
             logger.warning(e)
             pass
-    print(regions)
+    verboseprint(regions)
     if save:
         with open(savename, "w") as text_file:
             text_file.write(regions)
@@ -2617,9 +2616,7 @@ def throughfocus_wcs(
         xo.append(d["Center"][0])
         yo.append(d["Center"][1])
         maxpix.append(np.nanmean(max20[-20:]))
-        # print(subimage)
-        # print(max20[-20:])
-        # print(maxpix)
+
         sumpix.append(d["Flux"])
         varpix.append(subimage.var())
         t.add_row(
@@ -2950,7 +2947,7 @@ def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC",WCS=0,edge=200,
         from astropy import units as u
         from astropy import wcs
     for j, tfs in enumerate(chunks):
-        print(tfs,int(tf_length/3))
+        verboseprint(tfs,int(tf_length/3))
         fitsfile = fits.open(tfs[int(tf_length/2)])[0]
         data = fitsfile.data#[200-edge:800+edge,1500-edge:1900+edge]
         header = fitsfile.header
@@ -2994,7 +2991,7 @@ def stack_throughfocus(files, tf_length=11, n=30, head="LINAENC",WCS=0,edge=200,
                 center_pix = w.all_world2pix(alpha * u.deg, delta * u.deg, 0)
                 center_pix = [int(center_pix[0]), int(center_pix[1])]
                 xc, yc = center_pix
-                print("center = ",xc, yc)
+                verboseprint("center = ",xc, yc)
 
             sub = data[yc-n:yc+n,xc-n:xc+n]
             # print(sub.shape)
@@ -3195,13 +3192,13 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
         image = fits.open(filename)[0]
         files.sort()
         region = getregion(d, quick=True, message=False, selected=True)
-        print("region = ", region)
+        verboseprint("region = ", region)
         Xinf, Xsup, Yinf, Ysup = lims_from_region(None, coords=region)
         #TODO here we should extract the barycenter of the center image
         # xc,yc = 
         n1, n2 = re.findall(r"\d+", os.path.basename(files[0]))[-1],  re.findall(r"\d+", os.path.basename(files[-1]))[-1]
         fitsimages = [fits.open(f)[0] for f in files]
-        print(args.radius)
+        verboseprint(args.radius)
         if args.radius!="circle":
             r = int(args.radius)
         if int(args.WCS)==1:
@@ -3225,8 +3222,8 @@ def throughfocus_new(xpapoint=None, plot_=True,  argv=[],shift=30,edge=200):
                 # new_image.append(f.data[int(yc-r):int(yc+r), int(xc-r):int(xc+r)])
                 new_image.append(f.data[int(xc-r):int(xc+r), int(yc-r):int(yc+r)])
             new_image = np.hstack(new_image) 
-            print(new_image)
-            print(new_image.shape)
+            verboseprint(new_image)
+            verboseprint(new_image.shape)
         else:
             xc, yc = (Xinf+ Xsup)/2, (Yinf+ Ysup)/2
             new_image = np.hstack([f.data[int(yc-r):int(yc+r), int(xc-r):int(xc+r)] for f in fitsimages]) 
@@ -15591,8 +15588,9 @@ def main():
     )
     return
 
+# os.system('echo "%s" > /tmp/test1.txt'%(" ".join(sys.argv)))
 
 if __name__ == "__main__":
-    os.system('echo "%s" > /tmp/test/test1.txt'%(" ".join(sys.argv)))
+    os.system('echo "%s" > /tmp/test1.txt'%(" ".join(sys.argv)))
 
     a = main()
