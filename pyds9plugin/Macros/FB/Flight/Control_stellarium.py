@@ -110,8 +110,12 @@ def follow_FB_LOS_on_Stellarium(path="/tmp/test.csv",ftype="replay",guidance="Be
     GPS[~np.isfinite(GPS)] = 1
     loc = EarthLocation(lat = GPS[0]*u.deg, lon =GPS[0]*u.deg, height = GPS[0]*u.m)
     obj = SkyCoord(ra = cat[n_ra]*u.deg, dec = cat[n_dec]*u.deg)
-    
-    altaz = obj.transform_to(AltAz(obstime=Time([datetime.datetime.strptime(cat[date][i], dformat) for i in range(len(cat))])+delay, location = loc))
+    try:
+        altaz = obj.transform_to(AltAz(obstime=Time([datetime.datetime.strptime(cat[date][i], dformat) for i in range(len(cat))])+delay, location = loc))
+    except TypeError:
+        i=100
+        altaz = obj.transform_to(AltAz(obstime=Time([datetime.datetime.strptime(cat[date][i], dformat) for i in range(len(cat))])+delay, location = loc))
+
     cat["alt_from_ra"] =  np.array((altaz.alt)*u.deg)
     cat["az_from_ra"] =  np.array((altaz.az)*u.deg)
 
@@ -152,7 +156,7 @@ def follow_FB_LOS_on_Stellarium(path="/tmp/test.csv",ftype="replay",guidance="Be
             command.append(' -d "time=%0.10f" http://localhost:8090/api/main/time  > /dev/null 2>&1'%(convert_to_julian(cat[date][i], dformat)))
             os.system(" --next ".join(command))
         elif gtype=="radec-notime":
-            print(alpha, delta)
+            print(cat[date][i],alpha, delta)
             # print(x,y,z)
             command = 'curl -d "j2000=[%0.10f,%0.10f,%0.10f]" http://localhost:8090/api/main/view  > /dev/null 2>&1'%(x,y,z)
             os.system(command)

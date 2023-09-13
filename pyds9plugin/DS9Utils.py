@@ -5784,7 +5784,7 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
     # elif re.match(r'^\d{1,3}-\d{1,3}$', file):
     #      file = "/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/GOBC_data/img/stack25579345.fits"
 
-    print("file=",file)
+    verboseprint("file=",file)
     if ".fits,/" in file:
         paths = file.split(",")
     elif ".fits /" in file:
@@ -5827,7 +5827,7 @@ def globglob(file, xpapoint=None, sort=True, ds9_im=False):
 
     if sort:
         paths.sort()
-    print("paths=",paths)
+    verboseprint("paths=",paths)
     if (len(paths) == 0) & (file == ""):  # changed --""
         verboseprint("No file specified, using loaded one.")
         d = DS9n(xpapoint)
