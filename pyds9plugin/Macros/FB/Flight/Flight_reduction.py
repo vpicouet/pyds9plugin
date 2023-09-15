@@ -6,6 +6,7 @@ import numpy as np
 from pyds9plugin.Macros.FB.Flight.CR_masking import *
 from pyds9plugin.Macros.FB.Flight.OS_correction import *
 from pyds9plugin.Macros.FB.Flight.photon_counting import *
+from pyds9plugin.Macros.FB.Flight.Visualization import *
 from pyds9plugin.Macros.Interpolate_NaNs import *
 
 
@@ -16,7 +17,7 @@ PC = True
 
 
 if __name__ == "__main__":
-    name_CR = "/CosmicRayFree_new"
+    name_CR = "/CosmicRayFree"
     name_OS = "/OS_subtracted"
     name_PC = "/PC_images"
     for name, create in zip([name_CR, name_OS, name_PC],[CR,OS,PC]):
@@ -28,6 +29,8 @@ if __name__ == "__main__":
         CR_removed = CR_masking(filename,ds9, n=3, area=[0,-1,0,-1],threshold = 40000)    
         fitsimage.data = CR_removed
         fitsimage.writeto(os.path.dirname(filename) + name_CR + "/" +     os.path.basename(filename).replace(".fits",  "_CR.fits"),overwrite=True)
+
+    VisualizationDetector3(fitsimage, filename, plot_flag=False, save=True, cbars=["fixed", "variable"], units=["counts"],emgain = 1500, conversion_gain = 1)
         # print("File saved : ", os.path.dirname(filename) + name_CR + "/" +     os.path.basename(filename).replace(".fits",  "_CR.fits"))
     # CR_removed = interpolate_nans(CR_removed)
     # fitsimage.data = CR_removed

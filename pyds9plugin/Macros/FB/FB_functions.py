@@ -821,7 +821,10 @@ def emccd_model(
     if (".fit" not in path) & (".csv" in path):
         plt.savefig(path.replace(".csv", ".png"))
     if gui is False:
-        plt.savefig(path.replace(".fits", ".png"))
+        # plt.savefig(path.replace(".fits", ".png"))
+        if os.path.exists(os.path.dirname(os.path.dirname(path)) + "/histogram_fitting") is False:
+            os.mkdir(os.path.dirname(os.path.dirname(path)) + "/histogram_fitting")
+        plt.savefig(os.path.dirname(os.path.dirname(path)) + "/histogram_fitting/" + os.path.basename(path).replace(".fits", ".png"))
         return {"BIAS":bias,"RON":RON/ conversion_gain,"GAIN":gain,"FLUX":flux,"FRAC5SIG":fraction_thresholded/100}
 
     else:

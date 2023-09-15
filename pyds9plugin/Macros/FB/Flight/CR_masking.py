@@ -130,6 +130,7 @@ def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000,matplotlib=F
     cosmics["max_y"][(cosmics["len_contour"] > 200) & (cosmics["len_contour"] < 2000)] += n * 20
     a = cosmics
     ds9 = MaskCosmicRaysCS(ds9, cosmics=cosmics)
+    maskedimage=ds9
     verboseprint('Numbe of cosmics = ', len(contours))
     if ds9.shape[1]>2000:
         verboseprint('Fraction of image lost = ', np.mean(np.isfinite(ds9[:,1000:-1000]).mean()))
@@ -151,17 +152,17 @@ def CR_masking(filename,ds9,n=3, area=[0,-1,0,-1],threshold = 40000,matplotlib=F
     # if "NAXIS3" in fitsimage.header:
     #     fits.delval(filename, "NAXIS3")
     #     verboseprint("2D array: Removing NAXIS3 from header...")
-    # fits.setval(filename, "N_CR", value=len(cosmics))
-    # fits.setval(filename, "N_CR1", value=len(cosmics[mask1]))
-    # fits.setval(filename, "N_CR2", value=len(cosmics[mask2]))
-    # fits.setval(filename, "N_CR3", value=len(cosmics[mask3]))
-    # fits.setval(filename, "N_CR4", value=len(cosmics[mask4]))
-    # try:
-    #     fitsimage.header["MASK"] = 100 * float(np.sum(~np.isfinite(maskedimage[:, 1053:2133]))) / (maskedimage[:, 1053:2133].shape[0] * maskedimage[:, 1053:2133].shape[1])
-    #     fits.setval(filename, "MASK", value=100 * float(np.sum(~np.isfinite(maskedimage[:, 1053:2133]))) / (maskedimage[:, 1053:2133].shape[0] * maskedimage[:, 1053:2133].shape[1]))
-    # except ZeroDivisionError:
-    #     fitsimage.header["MASK"] = 100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0] * maskedimage.shape[1])
-    #     fits.setval(filename, "MASK", value=100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0] * maskedimage.shape[1]))
+    fits.setval(filename, "N_CR", value=len(cosmics))
+    fits.setval(filename, "N_CR1", value=len(cosmics[mask1]))
+    fits.setval(filename, "N_CR2", value=len(cosmics[mask2]))
+    fits.setval(filename, "N_CR3", value=len(cosmics[mask3]))
+    fits.setval(filename, "N_CR4", value=len(cosmics[mask4]))
+    try:
+        # fitsimage.header["MASK"] = 100 * float(np.sum(~np.isfinite(maskedimage[:, 1053:2133]))) / (maskedimage[:, 1053:2133].shape[0] * maskedimage[:, 1053:2133].shape[1])
+        fits.setval(filename, "MASK", value=100 * float(np.sum(~np.isfinite(maskedimage[:, 1053:2133]))) / (maskedimage[:, 1053:2133].shape[0] * maskedimage[:, 1053:2133].shape[1]))
+    except ZeroDivisionError:
+        # fitsimage.header["MASK"] = 100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0] * maskedimage.shape[1])
+        fits.setval(filename, "MASK", value=100 * float(np.sum(~np.isfinite(maskedimage))) / (maskedimage.shape[0] * maskedimage.shape[1]))
     return ds9
 
 
