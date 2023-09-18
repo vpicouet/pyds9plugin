@@ -4,7 +4,8 @@ pyDS9plugin is the first open source pythonic [SAOImageDS9](https://sites.google
 
 Click on the image to see the 3 minutes youtube presentation video:
 
-[![Alt Text](https://people.lam.fr/picouet.vincent/images/presentation.gif)](https://www.youtube.com/watch?v=XcDm2JQDMLY)
+<!-- [![Alt Text](https://people.lam.fr/picouet.vincent/images/presentation.gif)](https://www.youtube.com/watch?v=XcDm2JQDMLY) -->
+[![Alt Text](https://github.com/vpicouet/pyds9plugin-doc/blob/master/docs/fig/presentation.gif)](https://www.youtube.com/watch?v=XcDm2JQDMLY)
 
 
 SAOImage DS9 is an astronomical imaging and data visualization application. Its 30 years of development has made it very stable and easy to use. This made it an essential tool in all fields of astronomy (observation, simulation, instrumentation). Much more profitable but pretty unsung feature, its extensibility makes it a limitless tool to interact with astronomical data. This extensibility did not generate a large collaborative and well organized effort to develop important extensions that could progressively converge towards a stable/rapid/configurable multi-extension DS9 package.

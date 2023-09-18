@@ -2334,6 +2334,7 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
             if message:
                 d = win
                 raise_create_region(d)
+                verboseprint(e,region,1)
                 sys.exit()
             else:
                 verboseprint(e,region,1)
@@ -5400,7 +5401,7 @@ def execute_command(
 
     region = 0
     try:
-        region = getregion(d, selected=True)
+        region = getregion(d, selected=True, message=False)
         x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
         if np.ndim(ds9) == 2:
             region = ds9[y_inf:y_sup, x_inf:x_sup]

@@ -1,9 +1,15 @@
 # Region file format: DS9 version 4.1
 global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
-image
+physical
 # projection(1089.2182,240.15357,1089.2182,153.48347,908.28949) width=2 text={BQSO2 in 58 (NUV~16.5)}
 # projection(1109.1247,1143.4105,1109.1247,1056.7404,908.28949) width=2 text={TBS in 25 or 22/23}
 # projection(1109.1247,1053.8313,1109.1247,967.1612,908.28949) width=2 text={BQSO1 PNK & IRAS QSO}
 # projection(1152.1227,1369.1501,1152.1227,1282.48,908.28949) width=2 text={BQSO3 (NUV~16.3)}
-# projection(1354.3723,444.39389,1354.3723,357.72379,908.28949) width=2 text={QSO2 in 2 (NUV~17.9)}
+# projection(1103.5496,444.39389,1103.5496,357.72379,944.39) width=2 text={QSO2 in 2 (NUV~17.9)}
 # projection(1115.4936,738.01565,1115.4936,651.34555,908.28949) width=2 text={Dawn White dwarf (NUV~12)}
+# projection(1072,1307.2781,2134,1307.2781,29.348864) width=2 text={BQSO3 (NUV~16.3)}
+# projection(1063.042,1081.3293,2125.042,1081.3293,29.348864) width=2 text={TBS in 25 or 22/23}
+# projection(1066.028,994.73576,2128.028,994.73576,29.348864) width=2 text={BQSO1 PNK & IRAS QSO}
+# projection(1066.028,669.26351,2128.028,669.26351,29.348864) width=2 text={Dawn White dwarf (NUV~12)}
+# projection(1060.0561,382.60904,2122.0561,382.60904,29.348864) width=2 text={QSO2 in 2 (NUV~17.9)}
+# projection(1060.0561,179.56213,2122.0561,179.56213,29.348864) width=2 text={BQSO2 in 58 (NUV~16.5)}
