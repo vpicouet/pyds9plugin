@@ -20,7 +20,7 @@ color="k"
 
 
 def emccd_model(
-    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, conversion_gain=1, fit="EMCCDhist",gui=True,RN=3,mCIC=0.005,sCIC=0.005,RON=None ):#RN in ADU
+    xpapoint=None, path=None, smearing=0.5, gain=None, argv=[], stack=False, save=False, conversion_gain=1, fit="EMCCDhist",gui=True,RN=3,mCIC=0.02,sCIC=0.005,RON=None ):#RN in ADU
     """Plot EMCCD simulation
     """
     import os
@@ -370,8 +370,12 @@ def emccd_model(
         y_conv[xdata < upper_limit],
         "-",
         c=color,
-        label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\nG=%sDAQ"
-        % (conversion_gain, header_exptime, header_gain),
+        # label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\nG=%sDAQ"
+        # % (conversion_gain, header_exptime, header_gain),
+        label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\nG=%sDAQ\nF=%0.1fe-/h"
+        % (conversion_gain, header_exptime, header_gain,flux*3600/header_exptime),
+
+
     )
     ax.plot(
         bins_os[bins_os < upper_limit_os],

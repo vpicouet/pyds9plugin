@@ -39,7 +39,7 @@ def DS9photo_counting(image, header, filename, threshold=5.5,plot_flag=False):
             # 2018
             fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40,mCIC=0.15,sCIC=0.02,gain=1400,RON=105*0.53)#,mCIC=0.005
 
-        elif  header["ROS"]==2:
+        elif  (header["ROS"]==2) | (header["ROS"]==4):
             #2023 s2_hdr
             fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.97,RON=42)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
         # else:

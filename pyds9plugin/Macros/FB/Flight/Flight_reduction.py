@@ -10,7 +10,7 @@ from pyds9plugin.Macros.FB.Flight.Visualization import *
 from pyds9plugin.Macros.Interpolate_NaNs import *
 
 
-CR = True
+CR = False
 OS = True
 PC = True
 
