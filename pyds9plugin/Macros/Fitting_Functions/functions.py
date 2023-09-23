@@ -5,7 +5,7 @@
 # as they will be used to define the lower and upper bounds of each widget.
 import matplotlib.pyplot as plt
 import numpy as np
-
+from astropy.table import Table
 try:
     x, y, z = np.loadtxt("/tmp/xy.txt").T
     # x, y =  np.array(x), np.array(y)
@@ -204,6 +204,32 @@ def moffat_profile(
     x0 = 0
     return amp * np.power((1 + np.square((x - x0) / σ)), -alpha) + offset
 
+
+
+def atm(
+    lambda_,
+    Flux_ADU_per_A=y.ptp() * np.array([0, 1.3, 1]),
+    Altitude_km=[25, 40, 30],
+    # offset=np.array([np.nanmin(y), np.nanmax(y), np.nanmin(y)]),
+    Dist_from_center_pixel=np.array([-500,500,0]), 
+):
+    atm = Table.read("/Users/Vincent/Github/FIREBallIMO/FireBallIMO/Atmosphere/AtmTrans_wave_180-239-0.1000nm_Alt_25-45.csv")
+    det_efficiency = Table.read("/Users/Vincent/Github/FIREBallIMO/FireBallIMO/PSFDetector/efficiencies/QE_detector_2022_D10.csv")[::-1]
+    det_efficiency = Table.read("/Users/Vincent/Github/FIREBallIMO/FireBallIMO/PSFDetector/efficiencies/DetectorQE-20170808.csv")#[::-1]
+    
+
+    absorption = atm["Trans_%ikm"%(Altitude_km)]
+    absorption = np.convolve(absorption,np.ones(10)/10,mode="same")
+
+    # x=np.linspace(190,210,100)
+    dispersion = 0.2137 #anstrom per pixels
+    if lambda_[0]<1700:
+        lambda_ = np.linspace(2060-dispersion*len(lambda_)/2 - Dist_from_center_pixel*dispersion,2060+dispersion*len(lambda_)/2 - Dist_from_center_pixel*dispersion,len(lambda_))
+    atm_interp = np.interp(lambda_,10*atm[atm.colnames[0]],absorption)
+    det_interp = np.interp(lambda_,10*det_efficiency[det_efficiency.colnames[0]],det_efficiency[det_efficiency.colnames[1]])
+
+
+    return Flux_ADU_per_A * dispersion * atm_interp * det_interp #+ offset
 
 # def gaussian_profile(
 #     x,
