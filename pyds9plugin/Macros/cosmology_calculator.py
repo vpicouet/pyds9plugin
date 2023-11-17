@@ -88,6 +88,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
 
     fig, (ax1, ax2, ax3) = plt.subplots(3, 3, figsize=(18, 9.5), sharex=True)
     a = 0.08
+    print(redshift,type(redshift))
     redshift_ = Slider(
         figure=fig,
         # location=[0.1, 0.14 - a, 0.8, 0.03],
@@ -96,7 +97,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         valmax=6,
         label="z",
         # bounds=(0, 5),
-        # value=redshift,
+        valinit=redshift[0],
         # init_value=redshift,
     )
     H0_ = Slider(
@@ -104,7 +105,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         # location=[0.1, 0.12 - a, 0.8, 0.03],
         label="$H_0$",
         # bounds=(0, 100),
-        # init_value=H0,
+        valinit=H0,
         ax=plt.axes([0.1, 0.12 - a, 0.8, 0.03], facecolor="None"),
         valmin=0,
         valmax=100,
@@ -114,7 +115,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         # location=[0.1, 0.10 - a, 0.8, 0.03],
         label=r"$\Omega_m$",
         # bounds=(0, 1),
-        # init_value=Omega_m,
+        valinit=Omega_m,
         ax=plt.axes([0.1, 0.10 - a, 0.8, 0.03], facecolor="None"),
         valmin=0,
         valmax=1,
@@ -124,7 +125,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         # location=[0.1, 0.08 - a, 0.8, 0.03],
         label="$Ode_0$",
         # bounds=(0, 1),
-        # init_value=Ode0,
+        valinit=Ode0,
         ax=plt.axes([0.1, 0.08 - a, 0.8, 0.03], facecolor="None"),
         valmin=0,
         valmax=1,

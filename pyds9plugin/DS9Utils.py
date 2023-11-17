@@ -5360,6 +5360,8 @@ def execute_command(
         binary_closing,
         label,
     )
+    from astropy.modeling.functional_models import Gaussian2D
+
     from astropy.stats import sigma_clip
 
     from astropy.io import fits
@@ -5395,9 +5397,12 @@ def execute_command(
         header = d.get_pyfits()[0].header
         
     else:
-        fitsimage = 0
-        ds9 = 0
-        header = 0
+        from shutil import copyfile
+        filename = "/tmp/test.fits"
+        copyfile(resource_filename("pyds9plugin", "Images") + "/stack.fits",filename)
+        fitsimage = fits.open(filename)[0]
+        ds9 = fitsimage.data * 0
+        header = fitsimage.header
 
     region = 0
     try:
@@ -5439,6 +5444,7 @@ def execute_command(
         "grey_erosion": grey_erosion,
         "gaussian_filter": gaussian_filter,
         "median_filter": median_filter,
+        "Gaussian2D": Gaussian2D,
         "sobel": sobel,
         "binary_propagation": binary_propagation,
         "binary_opening": binary_opening,
@@ -8325,6 +8331,10 @@ def create_catalog(files, ext=[0], info="", reg=None, save=True):
     # else:
     #     info = None
     # print(info,type(info))
+    # if os.path.exists(os.path.commonpath(files) + "/HeaderCatalog%s.csv"%(info_name)):
+         
+
+
     for i in tqdm(
         range(len(files)),
         file=sys.stdout,

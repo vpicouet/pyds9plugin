@@ -1,13 +1,17 @@
-# table['median'] = np.nanmedian(fitsfile[0].data) if  fitsfile[0].data is not None else np.nan
-# table['median'] = np.nanmedian(ds9)
-# table['mean'] = np.nanmean(ds9)
-from astropy.io import fits
+
+
+# if filename not in table["Path"]:
+# from astropy.io import fits
 ds9 = fitsfile[0].data
 header = fitsfile[0].header
-header['median'] = np.nanmedian(ds9)
-header['mean'] = np.nanmean(ds9)
-fits.setval(filename, 'median', value= np.nanmedian(ds9), comment="")
-fits.setval(filename, 'mean', value= np.nanmean(ds9), comment="")
+# table['median'] = np.nanmedian(fitsfile[0].data) if  fitsfile[0].data is not None else np.nan
+print(ds9[:,1000:2000].shape)
+table['median'] = np.nanmedian(ds9[:,1000:2000])
+table['mean'] = np.nanmean(ds9[:,1000:2000])
+# header['median'] = np.nanmedian(ds9)
+# header['mean'] = np.nanmean(ds9)
+# fits.setval(filename, 'median', value= np.nanmedian(ds9), comment="")
+# fits.setval(filename, 'mean', value= np.nanmean(ds9), comment="")
 # import re
 # SATURATION = 2 ** 16 -1
 # import numpy as np

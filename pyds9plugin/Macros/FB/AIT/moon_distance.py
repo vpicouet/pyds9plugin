@@ -1,3 +1,5 @@
+
+
 import astropy.units as u
 from astropy.coordinates import EarthLocation, AltAz, get_sun, get_moon, SkyCoord
 from astropy.time import Time
@@ -85,8 +87,16 @@ for i, field in enumerate([TBS, BQSO2, F2, BQSO1, BQSO3, QSO1, QSO2, QSO3, F1, F
     
     # separation_altaz = []
     moons = [get_moon(time, location=observer_location).transform_to(AltAz(obstime=time, location=observer_location)) for time in times]
+    targets = [target_coordinates.transform_to(AltAz(obstime=time, location=observer_location))   for time in times]
     # df.loc[3*i] = [field["name"]] + [int(get_moon(time, location=observer_location).separation(target_coordinates).to(u.deg).value) for time in times]
-    df.loc[3*i] = [field["name"]+ " Az"] + [abs(int( moon_altaz.az.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).az.deg  ))*np.cos(50*np.pi/180) if abs(int( moon_altaz.az.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).az.deg  ))<180 else (360-abs(int( moon_altaz.az.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).az.deg  )))*np.cos(50*np.pi/180) for time,moon_altaz in zip(times,moons)]
+
+
+    df.loc[i] = [field["name"]+ " Az"] + [abs(int( moon_altaz.az.deg - target.az.deg  ))*np.cos( ((moon_altaz.alt.deg+target.alt.deg)/2)  *np.pi/180) if abs(int( moon_altaz.az.deg - target.az.deg  ))<180 else (360-abs(int( moon_altaz.az.deg - target.az.deg  )))*np.cos( ((moon_altaz.alt.deg+target.alt.deg)/2)  *np.pi/180) for time,target,moon_altaz in zip(times,targets,moons)]
+
+    # df.loc[i] = [field["name"]+ " Az"] + [abs(int( moon_altaz.az.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).az.deg  ))*np.cos(moon_altaz.alt.deg*np.pi/180) if abs(int( moon_altaz.az.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).az.deg  ))<180 else (360-abs(int( moon_altaz.az.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).az.deg  )))*np.cos(moon_altaz.alt.deg*np.pi/180) for time,moon_altaz in zip(times,moons)]
+
+
+
     # df.loc[3*i+2] = [field["name"]+ " El"] + [abs(int( moon_altaz.alt.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).alt.deg)) for time,moon_altaz in zip(times,moons)]
     # df.loc[3*i+1] = [field["name"]+ " Az"] + [int( moon_altaz.az.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).az.deg  ) for time,moon_altaz in zip(times,moons)]
     # df.loc[3*i+1] = [field["name"]+ " El"] + [int( moon_altaz.alt.deg - target_coordinates.transform_to(AltAz(obstime=time, location=observer_location)).alt.deg) for time,moon_altaz in zip(times,moons)]
