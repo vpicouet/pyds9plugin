@@ -222,6 +222,7 @@ def emccd_model(
         # lim_rn1, lim_rn2 = (bias - 0.5 * RON,bias + 0.5 * RON,)
         lim_rn1, lim_rn2 = bias - 3 * RON,bias + 3 * RON
         mask_RN_os = (bins > lim_rn1) & (bins < lim_rn2) & (val_os > 0)
+        lim_rn1, lim_rn2 = bias - 0.5 + 5.5 * RON,  bias - 0.5 + 5.5 * RON
 
         RON = np.abs(
             PlotFit1D(
@@ -372,8 +373,8 @@ def emccd_model(
         c=color,
         # label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\nG=%sDAQ"
         # % (conversion_gain, header_exptime, header_gain),
-        label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\nG=%sDAQ\nF=%0.1fe-/h"
-        % (conversion_gain, header_exptime, header_gain,flux*3600/header_exptime),
+        label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\n"#G=%sDAQ\nF=%0.1fe-/h"
+        % (conversion_gain, header_exptime)#, header_gain,flux*3600/header_exptime),
 
 
     )
@@ -394,7 +395,7 @@ def emccd_model(
     # centers_[-3] = flux
     f2 = np.convolve(function(x, *centers_), np.ones(n_conv) / n_conv, mode="same")
     fraction_thresholded = 100*np.sum(10**y_conv[xdata>bias-0.5 + 5.5 *RON ])/np.sum(10**y_conv)
-    (l1,) = ax.plot(x, f1, "-", lw=1, label="EMCCD OS model\nFraction>5.5σ (RN=%0.1f)=%0.1f%%"%(RON,fraction_thresholded), alpha=0.7)
+    (l1,) = ax.plot(x, f1, "-", lw=1, alpha=0.7, label="EMCCD OS model")#\nFraction>5.5σ (RN=%0.1f)=%0.1f%%"%(RON,fraction_thresholded))
     (l2,) = ax.plot(x, f2, "-", c=l1.get_color(), lw=1)
       # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))

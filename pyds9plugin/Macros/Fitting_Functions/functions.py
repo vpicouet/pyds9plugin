@@ -485,7 +485,6 @@ def EMCCDhist(
         """Creates variable smearing kernels for inversion
         """
         import numpy as np
-
         n = 30
         smearing_length = Smearing * np.exp(-image / SmearExpDecrement)
         if type_ == "exp":
@@ -513,6 +512,11 @@ def EMCCDhist(
         sCIC=0,
     ):
         """Silumate EMCCD histogram
+        flux = flux + dark + CIC 
+        im = ConversionGain * gamma( poisson(np.nanmax([flux, 0]), abs(EmGain) )
+        gamma( poisson(1 * id_scic), np.power(EmGain, np.random.randint(1, n_registers, size=id_scic.shape)  / n_registers)
+        smearing(im) + normal(Bias, abs(RN * ConversionGain))
+
         """
         import numpy as np
 
@@ -529,9 +533,8 @@ def EMCCDhist(
         im = np.zeros(int(n_pix))  #
         im = np.zeros((1000, int(n_pix / 1000)))
         # print(flux)
-        imaADU = np.random.gamma(
-            np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain)
-        )
+        imaADU = np.random.gamma(np.random.poisson(np.nanmax([flux, 0]), size=im.shape), abs(EmGain))
+        # imaADU = np.random.gamma(np.nanmax([flux, 0])*np.ones(im.shape), abs(EmGain))
         # changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
         p_sCIC = sCIC  # / np.mean(
         #     1 / np.power(EmGain * ConversionGain, np.arange(604) / 604)
@@ -542,9 +545,8 @@ def EMCCDhist(
         # Compute and add the partial amplification for each sCIC pixel
         # when f=1e- gamma is equivalent to expoential law
         # should we add poisson here?
-        imaADU += np.random.gamma(
-            np.random.poisson(1 * id_scic), np.power(EmGain, register / n_registers)
-        )
+        imaADU += np.random.gamma(np.random.poisson(1 * id_scic), np.power(EmGain, register / n_registers))
+        # imaADU += np.random.gamma(1 * id_scic, np.power(EmGain, register / n_registers))
         # imaADU[id_scic] += np.random.gamma(1, np.power(EmGain, register / n_registers))
         imaADU *= ConversionGain
         # smearing data
@@ -571,7 +573,7 @@ def EMCCDhist(
 
     y = simulate_fireball_emccd_hist(
         x=x,
-        ConversionGain=ConversionGain,  # 0.53,
+        ConversionGain=ConversionGain, 
         EmGain=EmGain,
         Bias=bias,
         RN=RN,
