@@ -381,7 +381,7 @@ def DetectHotPixels(image, T1=None, T2=None, nb=None):
 
 
 #%%
-n = 5
+n = 8
 filename = get_filename(d)
 
 fitsimage = fits.open(filename)[0]
@@ -408,89 +408,90 @@ area = [Xinf, Xsup, Yinf, Ysup]
 print(area)
 region = image[Yinf:Ysup, Xinf:Xsup]
 print(region.shape)
-T1, T2 = GetThreshold(region, nb=200), 7e4
-print(T1, T2)
-x, y = np.where((region > T1) & (region < np.nanmax(region) - 50))
-print(len(x))
-ly, lx = region.shape
-n0 = 1
-mask = (x < lx - n) & (y < ly - n) & (x > n0) & (y > n0)
-x, y = x[mask], y[mask]
-a = Table([x, y, region[x, y]], names=["x", "y", "value"])
+T1, T2 = GetThreshold(region, nb=50), 7e4
+n_test = 1
 
-a.sort("value", reverse=True)
+for T1 in np.linspace(T1-6000,T1,12):
+    T2 = T1+500#np.nanmax(region) - 50
+    x, y = np.where((region[:,:] > T1) & (region[:,:] < T2)           )  # & (region[:,1:-1]>region[:,:-2])     & (region[:,1:-1]>region[:,2:])  
+    # x, y = np.where((region[:,n_test:-n_test] > T1) & (region[:,n_test:-n_test] < np.nanmax(region) - 50)           )  # & (region[:,1:-1]>region[:,:-2])     & (region[:,1:-1]>region[:,2:])  
+    # x, y = np.where((region[1:-1,:] > T1) & (region[1:-1,:] < np.nanmax(region) - 50)      & (region[1:-1,:]>region[2:,:])   & (region[1:-1,:]>region[:-2,:])        )  # & (region[:,:-1]>region[:,1:])
+    print(len(x))
+    ly, lx = region.shape
 
-i = 0
-xx = np.arange(n + n0) - n0
 
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
-for i in range(len(x)):
-    xi, yi = x[i], y[i]
-    line = (
-        region[xi : xi + 1, yi - n0 : yi + n].T
-        - region[xi : xi + 1, yi - n0 : yi + n].min()
-    )
-    ax1.plot(xx, line / line.ptp(), alpha=0.1)
-    ax2.semilogy(xx, line / line.ptp(), alpha=0.1)
-# plt.colorbar()
-first_pix = np.array(
-    [
-        (
-            region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].T
-            - region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].min()
-        )[n0]
-        for i in range(len(x))
-    ]
-)
-print(len(x))
-stack = np.hstack(
-    [
-        (
-            region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].T
-            - region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].min()
+
+    n0 = 2
+    i = 0
+    xx = np.arange(n + n0) - n0
+
+    mask = (x < lx - n) & (y < ly - n) & (x > n0) & (y > n0)
+    x, y = x[mask], y[mask]
+    a = Table([x, y, region[x, y]], names=["x", "y", "value"])
+    a.sort("value", reverse=True)
+    a.write("/tmp/test.csv", overwrite=True)
+
+    b = Table([x, y, region[x, y],[region[xi : xi + 1, yi - n0 : yi + n].T  - region[xi : xi + 1, yi - n0 : yi + n].min() for xi,yi in zip(x,y) ]], names=["x", "y", "value","profile"])
+    b.sort("value", reverse=True)
+    b.write("/tmp/test2.fits", overwrite=True)
+
+
+
+
+
+    lines=[]
+    first_pix = []
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
+    for i in range(len(x)):
+        xi, yi = x[i], y[i]
+        line = (
+            region[xi : xi + 1, yi - n0 : yi + n].T
+            - region[xi : xi + 1, yi - n0 : yi + n].min()
         )
-        / (
-            region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].T
-            - region[x[i] : x[i] + 1, y[i] - n0 : y[i] + n].min()
-        ).ptp()
-        for i in range(len(x))
-    ]
-)
-# ax1.errorbar(x=xx,y=stack.mean(axis=0).T[0],yerr=np.std(stack,axis=0).T[0],c='k')
-ax1.plot(xx, np.nanmedian(stack, axis=1), "r:", lw=3)
-popt = PlotFit1D(
-    xx[xx >= 0],
-    np.nanmean(stack, axis=1)[xx >= 0],
-    ax=ax1,
-    color="k",
-    deg="exp",
-    lw=0.5,
-)["popt"]
-ax1.plot(
-    xx[xx >= 0],
-    np.nanmean(stack, axis=1).T[xx >= 0],
-    "-o",
-    c="k",
-    label="Exp length =%0.2fpix\nFirst pixel keep %i%% energy\n Min,Max,mean (first pix)=%i, %i, %i"
-    % (
-        popt[1],
-        100 * np.nanmean(stack, axis=1)[n0] / (np.nanmean(stack, axis=1)[n0:].sum()),
-        np.nanmin(first_pix),
-        np.nanmax(first_pix),
-        np.nanmean(first_pix)), lw=3)
-# ,yerr=np.std(stack,axis=0).T[0]
-ax2.semilogy(xx, np.nanmean(stack, axis=1), "k")
-ax2.semilogy(xx, np.nanmedian(stack, axis=1), "r:")
-ax1.set_xlim((-n0, n - 1))
-ax1.set_ylim((-0.1, 1.1))
-ax2.set_ylim(ymin=1e-2)
-ax1.legend()
-ax1.grid()
-ax2.set_xlabel("pixels")
-ax1.set_ylabel("ADU decay")
-ax2.set_ylabel("ADU decay (log)")
-fig.tight_layout()
-plt.show()
+        if line[n0] >= np.nanmax(line) :
+            ax1.plot(xx, line / line.ptp(), alpha=0.1)
+            ax2.semilogy(xx, line / line.ptp(), alpha=0.1)
+            lines.append(line)
+            first_pix.append(line[n0])
+    print(len(x))
+    if len(x)>20:
+        stack = np.hstack([line/line.ptp() for line in lines])
+        ax1.plot(xx, np.nanmedian(stack, axis=1), "r:", lw=3)
+        popt = PlotFit1D(
+            xx[xx >= 0],
+            np.nanmean(stack, axis=1)[xx >= 0],
+            ax=ax1,
+            color="k",
+            deg="exp",
+            lw=0.5,
+        )["popt"]
+        ax1.errorbar(
+            xx[xx >= 0],
+            np.nanmean(stack, axis=1).T[xx >= 0],
+            fmt=":o",
+            yerr=np.nanstd(stack, axis=1).T[xx >= 0],
+            c="k",
+            label="Exp length =%0.2fpix\nFirst pixel keep %i%% energy\n Min,Max,mean (first pix)=%i, %i, %i"
+            % (
+                popt[1],
+                100 * np.nanmean(stack, axis=1)[n0] / (np.nanmean(stack, axis=1)[n0:].sum()),
+                np.nanmin(first_pix),
+                np.nanmax(first_pix),
+                np.nanmean(first_pix)), lw=3)
+        # ,yerr=np.std(stack,axis=0).T[0]
+        ax2.semilogy(xx, np.nanmean(stack, axis=1), "k")
+        ax2.semilogy(xx, np.nanmedian(stack, axis=1), "r:")
+        ax1.set_xlim((-n0, n - 1))
+        ax1.set_ylim((-0.1, 1.1))
+        ax2.set_ylim(ymin=1e-2)
+        ax1.legend()
+        ax1.grid()
+        ax2.set_xlabel("pixels")
+        ax1.set_ylabel("ADU decay")
+        ax2.set_ylabel("ADU decay (log)")
+        fig.tight_layout()
+        fig.savefig("/tmp/smearing_profile_%i_%i_%i_%0.2f.png"%(np.nanmin(first_pix),np.nanmax(first_pix),np.nanmean(first_pix),popt[1]))
+        plt.show()
 
 # %%
 
