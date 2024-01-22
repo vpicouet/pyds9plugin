@@ -428,6 +428,11 @@ def emccd_model(
         hovercolor=hc,
     )
 
+
+    write_model = Button(
+        plt.axes([0.47 - 0.02 * 3, 0.025, 0.1, 0.04]), "Gen image", color=c, hovercolor=hc,
+    )
+
     # fit_os_button = Button(
     #     plt.axes([0.47 - 0.02 * 3, 0.025, 0.1, 0.04]), "Fit OS", color=c, hovercolor=hc,
     # )
@@ -592,6 +597,20 @@ def emccd_model(
     #             slid.set_val([val1i, val2i])
     #         dict_values[slid.label.get_text()] = slid.val
     #     return
+    def generate_image(event):
+        from pyds9plugin.Macros.Fitting_Functions.functions import simulate_emccd_image
+        vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
+        vals2 = [v if type(v) != tuple else v[0] for v in vals_tot]
+        Bias, RN, EmGain, sCIC, Smearing, mCIC = vals2
+        flux = vals_tot[3][1]
+        im = simulate_emccd_image(ConversionGain=1,EmGain=EmGain,Bias=Bias,RN=RN,Smearing=Smearing,SmearExpDecrement=1e10,flux=flux,sCIC=sCIC,n_registers=604)
+        os = simulate_emccd_image(ConversionGain=1,EmGain=EmGain,Bias=Bias,RN=RN,Smearing=Smearing,SmearExpDecrement=1e10,flux=0,sCIC=sCIC,n_registers=604)
+        # header["DATE"] = 
+        fitswrite(np.hstack([os,im[:, ::-1]]), name.replace(".fits","_model.fits"),header=header)
+
+        return
+
+
     def save_values(event):
         vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
         vals2 = [v if type(v) != tuple else v[0] for v in vals_tot]
@@ -815,6 +834,7 @@ def emccd_model(
     #     return
 
     button0.on_clicked(save_values)
+    write_model.on_clicked(generate_image)
     # button0.on_clicked(fit0)
     # button.on_clicked(fit)
     # fit_os_button.on_clicked(fit_os)

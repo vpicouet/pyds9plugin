@@ -408,11 +408,16 @@ area = [Xinf, Xsup, Yinf, Ysup]
 print(area)
 region = image[Yinf:Ysup, Xinf:Xsup]
 print(region.shape)
-T1, T2 = GetThreshold(region, nb=50), 7e4
+T1, T2 = GetThreshold(region, nb=200), 7e4
 n_test = 1
 
-for T1 in np.linspace(T1-6000,T1,12):
-    T2 = T1+500#np.nanmax(region) - 50
+
+smearings = []
+intens = []
+pcovs=[]
+# for T1 in np.linspace((np.median(region)+T1)/7 ,T1,12):
+#     T2 = T1+500#np.nanmax(region) - 50
+for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetThreshold(region, nb=200),GetThreshold(region, nb=400),GetThreshold(region, nb=800)],[7e4,7e4,7e4,7e4,7e4,7e4,7e4,7e4]):
     x, y = np.where((region[:,:] > T1) & (region[:,:] < T2)           )  # & (region[:,1:-1]>region[:,:-2])     & (region[:,1:-1]>region[:,2:])  
     # x, y = np.where((region[:,n_test:-n_test] > T1) & (region[:,n_test:-n_test] < np.nanmax(region) - 50)           )  # & (region[:,1:-1]>region[:,:-2])     & (region[:,1:-1]>region[:,2:])  
     # x, y = np.where((region[1:-1,:] > T1) & (region[1:-1,:] < np.nanmax(region) - 50)      & (region[1:-1,:]>region[2:,:])   & (region[1:-1,:]>region[:-2,:])        )  # & (region[:,:-1]>region[:,1:])
@@ -420,41 +425,37 @@ for T1 in np.linspace(T1-6000,T1,12):
     ly, lx = region.shape
 
 
+    if (len(x)>20) & (len(x)<1e4):
 
-    n0 = 2
-    i = 0
-    xx = np.arange(n + n0) - n0
+        n0 = n
+        i = 0
+        xx = np.arange(n + n0) - n0
 
-    mask = (x < lx - n) & (y < ly - n) & (x > n0) & (y > n0)
-    x, y = x[mask], y[mask]
-    a = Table([x, y, region[x, y]], names=["x", "y", "value"])
-    a.sort("value", reverse=True)
-    a.write("/tmp/test.csv", overwrite=True)
+        mask = (x < lx - n) & (y < ly - n) & (x > n0) & (y > n0)
+        x, y = x[mask], y[mask]
+        a = Table([x, y, region[x, y]], names=["x", "y", "value"])
+        a.sort("value", reverse=True)
+        a.write("/tmp/test.csv", overwrite=True)
 
-    b = Table([x, y, region[x, y],[region[xi : xi + 1, yi - n0 : yi + n].T  - region[xi : xi + 1, yi - n0 : yi + n].min() for xi,yi in zip(x,y) ]], names=["x", "y", "value","profile"])
-    b.sort("value", reverse=True)
-    b.write("/tmp/test2.fits", overwrite=True)
-
-
-
+        b = Table([x, y, region[x, y],[region[xi : xi + 1, yi - n0 : yi + n].T  - region[xi : xi + 1, yi - n0 : yi + n].min() for xi,yi in zip(x,y) ]], names=["x", "y", "value","profile"])
+        b.sort("value", reverse=True)
+        b.write("/tmp/test2.fits", overwrite=True)
 
 
-    lines=[]
-    first_pix = []
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
-    for i in range(len(x)):
-        xi, yi = x[i], y[i]
-        line = (
-            region[xi : xi + 1, yi - n0 : yi + n].T
-            - region[xi : xi + 1, yi - n0 : yi + n].min()
-        )
-        if line[n0] >= np.nanmax(line) :
-            ax1.plot(xx, line / line.ptp(), alpha=0.1)
-            ax2.semilogy(xx, line / line.ptp(), alpha=0.1)
-            lines.append(line)
-            first_pix.append(line[n0])
-    print(len(x))
-    if len(x)>20:
+        lines=[]
+        first_pix = []
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
+        for i in range(len(x)):
+            xi, yi = x[i], y[i]
+            line = (
+                region[xi : xi + 1, yi - n0 : yi + n].T
+                - region[xi : xi + 1, yi - n0 : yi + n].min()
+            )
+            if line[n0] >= np.nanmax(line) :
+                ax1.plot(xx, line / line.ptp(), alpha=0.1)
+                ax2.semilogy(xx, line / line.ptp(), alpha=0.1)
+                lines.append(line)
+                first_pix.append(line[n0])
         stack = np.hstack([line/line.ptp() for line in lines])
         ax1.plot(xx, np.nanmedian(stack, axis=1), "r:", lw=3)
         popt = PlotFit1D(
@@ -465,6 +466,14 @@ for T1 in np.linspace(T1-6000,T1,12):
             deg="exp",
             lw=0.5,
         )["popt"]
+        pcov = PlotFit1D(
+            xx[xx >= 0],
+            np.nanmean(stack, axis=1)[xx >= 0],
+            ax=ax1,
+            color="k",
+            deg="exp",
+            lw=0.5,
+        )["pcov"]
         ax1.errorbar(
             xx[xx >= 0],
             np.nanmean(stack, axis=1).T[xx >= 0],
@@ -481,7 +490,7 @@ for T1 in np.linspace(T1-6000,T1,12):
         # ,yerr=np.std(stack,axis=0).T[0]
         ax2.semilogy(xx, np.nanmean(stack, axis=1), "k")
         ax2.semilogy(xx, np.nanmedian(stack, axis=1), "r:")
-        ax1.set_xlim((-n0, n - 1))
+        ax1.set_xlim((-2.5, n - 1))
         ax1.set_ylim((-0.1, 1.1))
         ax2.set_ylim(ymin=1e-2)
         ax1.legend()
@@ -489,10 +498,26 @@ for T1 in np.linspace(T1-6000,T1,12):
         ax2.set_xlabel("pixels")
         ax1.set_ylabel("ADU decay")
         ax2.set_ylabel("ADU decay (log)")
+        
         fig.tight_layout()
-        fig.savefig("/tmp/smearing_profile_%i_%i_%i_%0.2f.png"%(np.nanmin(first_pix),np.nanmax(first_pix),np.nanmean(first_pix),popt[1]))
-        plt.show()
+        fig.savefig(filename.replace(".fits","") + "smearing_profile_%i_%i_%i_%0.2f.png"%(np.nanmin(first_pix),np.nanmax(first_pix),np.nanmean(first_pix),popt[1]))
+        # plt.show()
+        smearings.append(popt[1])
+        intens.append(np.nanmean(first_pix))
+        pcovs.append(pcov[1,1])
 
+
+plt.figure()
+plt.errorbar(intens,smearings,yerr=pcovs,fmt="o")
+for exp_decr in [1e3,5e3, 1e4, 5e4,1e5,5e5]:
+    plt.plot(np.linspace(0,10000), np.max(smearings) * np.exp(-np.linspace(0,10000) / exp_decr),label="exp decrease = %i"%(int(exp_decr)))
+# plt.axvline([1400],c="k",ls=":",label="Gain")
+plt.fill_between([0,np.max(intens)],[0.2,0.2],[np.max(smearings),np.max(smearings)],alpha=0.1)
+plt.xlabel("Pixel value")
+plt.ylabel("Smearing length")
+plt.legend()
+plt.grid()
+plt.savefig(filename.replace(".fits","") + "smearing_profile.png")
 # %%
 
 # files = glob.glob("/Volumes/ExtremePro/LAM/FIREBALL/2022/DetectorData/220609/diffusefocus/*14?.fits")
