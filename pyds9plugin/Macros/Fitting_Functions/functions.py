@@ -349,6 +349,7 @@ def EMCCD(
         n_pix = np.sum(10 ** y)
     except TypeError:
         n_pix = 10 ** 6.3
+    print(n_pix)
     n_registers = 604  # number of amplification registers
     ConversionGain = 1 
     bin_size = np.median((x[1:] - x[:-1]))
@@ -457,11 +458,12 @@ def simulate_emccd_image(
     try:
         y = globals()["y"]
         n_pix = np.nansum(10 ** y[np.isfinite(y)])  # 1e6#
+        # print(y, n_pix)
         # print(1, n_pix)
     except TypeError:
         n_pix = 10 ** 6.3
         # print(2)
-    # print(n_pix)
+    print(n_pix)
     n = 1
     im = np.zeros(int(n_pix))  #
     im = np.zeros((1000, int(n_pix / 1000)))
@@ -828,9 +830,21 @@ def EMCCD(
     import scipy.special as sps
     import numpy as np
     from scipy.stats import poisson
+
+    try:
+        x, y, z = np.loadtxt("/tmp/xy.txt").T
+        # x, y =  np.array(x), np.array(y)
+        # print(np.log10(np.sum(10**y)))
+    except (OSError, ValueError) as e:
+        try:
+            x, y = np.loadtxt("/tmp/xy.txt").T
+
+        except (OSError, ValueError) as e:
+            x, y = np.array([0, 1]), np.array([0, 1])
+
     # recover number of pixels to generate distributions
     try:
-        y = globals()["y"]
+        # y = globals()["y"]
         n_pix = np.sum(10 ** y)
     except TypeError:
         n_pix = 10 ** 6.3
