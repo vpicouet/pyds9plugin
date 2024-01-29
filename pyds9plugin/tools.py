@@ -1378,3 +1378,8 @@ def SimulateFIREBallemCCDImage(
         imaADU_cube = imaADU_stack
     return imaADU, imaADU_stack, imaADU_cube, source_im, source_im_wo_atm#imaADU_wo_RN, imaADU_RN
 
+
+#%%
+
+
+
