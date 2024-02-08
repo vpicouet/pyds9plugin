@@ -841,154 +841,15 @@ def EMCCD(
     n_registers = 604  # number of amplification registers
     ConversionGain = 1 
     bin_size = np.median((x[1:] - x[:-1]))
-    bins = x - np.nanmin(x)
-    # distributions = []
-    pixs_sup_0 = 0  # fraction of pixels that have ADU higher than distribution limit
-    n = [0]
 
+    energy_fraction_kept = (1-np.exp(-flux/smearing)*(np.exp(-1/smearing)+np.exp(-2/smearing)+np.exp(-3/smearing))) if smearing>0 else 1
+    gamma_distribution = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*energy_fraction_kept, flux=flux,sCIC=sCIC)
 
-
-    fluxes = flux 
-    energy_fraction_kept = 1-np.exp(-1/smearing) if smearing>0 else 1
-    # energy_fraction_kept = 1-np.exp(-1/smearing)-np.exp(-2/smearing)-np.exp(-3/smearing)-np.exp(-4/smearing) if smearing>0 else 1
-       
-        #] + [EmGain / (1.7 * i) for i in n[1:]]
-    # for smearing we consider each pixel recieve x% of their flux and Then
-    # they receive the rest with a lower gain. This approximation is not
-    # true and need to be revised. The interest is that it is then independant
-    # draws and that distributions can be convoluted.
-    # for i, (flux_, EmGain) in enumerate(zip(fluxes, emgains)):
-    gamma_distribution = 0
-    # We sum up distributions from from the different poisson output
-    for f in np.arange(1, 8):  # careful about the 8 limit which needs to be enough at high flux
-        # when going above 8, then between flux 0.2 and 1 the histogram diverges at high values
-        v = poisson.pmf(k=f, mu=np.nanmax([flux, 0]))
-        # gamma distribution : https://numpy.org/doc/stable/reference/random/generated/numpy.random.gamma.html
-        denominator = sps.gamma(f) * (EmGain  *  energy_fraction_kept * ConversionGain) ** f
-        distribution = (bin_size* bins ** (f - 1)* (np.exp(-bins / (EmGain  *  energy_fraction_kept * ConversionGain)) / denominator))
-        distribution_up = (
-            3
-            * bin_size
-            * (3 * bins + bins.ptp()) ** (f - 1)
-            * (
-                np.exp(-(3 * bins + bins.ptp()) / (EmGain  *  energy_fraction_kept * ConversionGain))
-                / denominator
-            )
-        )
-        # disminush the number of pixels by the fraction above distribution range
-        factor = np.sum(distribution[np.isfinite(distribution_up)]) / (
-            np.sum(distribution_up[np.isfinite(distribution_up)])
-            + np.sum(distribution[np.isfinite(distribution)])
-        )
-        gamma_distribution += distribution * v
-        pixs_sup_0 += (1 - factor) * v
-    
-    
-
-
-    gamma_distribution[0] = (
-        1
-        - np.nansum(gamma_distribution[1:][np.isfinite(gamma_distribution[1:])])
-        - pixs_sup_0
-    )
-
-    
-    if smearing>0.102 :
-        smeared_distri = 10**EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*(1-energy_fraction_kept), flux=(2-energy_fraction_kept)*flux*np.exp(-flux),sCIC=0)   
-        gamma_distribution[1:] +=  smeared_distri[1:]
-        gamma_distribution[0] -= np.sum(smeared_distri[1:]) #*(1+np.exp(-1/smearing)) ## gamma_distribution[0] = 10**smeared_distri[0] - np.sum(gamma_distribution[1:])
-
-
-
-    # def combined_pdf(x, p_sCIC, n_registers, EmGain):
-    #     def integrand(register, x, p_sCIC, n_registers, EmGain):
-    #         if p_sCIC == 0:
-    #             return 0
-    #         poisson_mean = 1
-    #         scale = EmGain ** (register / n_registers)
-    #         # We integrate over the density of the gamma distribution, scaled appropriately
-        
-    #     # Integrate over all possible registers
-    #     integral, _ = quad(integrand, 1, n_registers, args=(x, p_sCIC, n_registers, EmGain))
-    #     # Normalize by the number of registers
-    #     return integral / (n_registers - 1) * p_sCIC
-#     def combined_pdf(x, p_sCIC, n_registers, EmGain):
-#         def integrand(register, x, p_sCIC, n_registers, EmGain):
-#             if p_sCIC == 0:
-#                 return 0
-#             poisson_mean = 1
-#             scale = EmGain ** (register / n_registers)
-#             # We integrate over the density of the gamma distribution, scaled appropriately
-#             return poisson.pmf(1, poisson_mean) * gamma.pdf(x, a=1, scale=scale)
-        
-#         # Integrate over all possible registers
-#         integral, _ = quad(integrand, 1, n_registers, args=(x, p_sCIC, n_registers, EmGain))
-#         # Normalize by the number of registers
-#         return integral / (n_registers - 1) * p_sCIC
-
-# # Example usage
-#     if (sCIC > 0) :
-#         cic_disdribution = np.array([combined_pdf(x, p_sCIC=sCIC, n_registers=n_registers, EmGain=EmGain) for x in bins])
-#         gamma_distribution[1:]  += cic_disdribution[1:]
-#         gamma_distribution[0] -= np.sum(cic_disdribution[1:]) 
-
-#  np.power(EmGain, r/n_registers)
-    # if (sCIC > 0) :
-    #     # gain_scic = np.mean(    np.power(EmGain  *  2*energy_fraction_kept * ConversionGain, np.linspace(1, n_registers, 100) / n_registers)    )
-    #     f=1
-    #     cic_disdribution =  np.mean([poisson.pmf(k=f, mu=np.nanmax([sCIC, 0]))   *  (bin_size* bins ** (2 - 1)* (np.exp(-bins / ( np.power(EmGain, r/n_registers)  *  energy_fraction_kept )) / sps.gamma(f) * ( np.power(EmGain, r/n_registers)  *  energy_fraction_kept ) ** f ))    for r in np.linspace(1, n_registers, 100)   ],axis=0)
-    #     gamma_distribution[1:]  += cic_disdribution[1:]#*sCIC / cic_disdribution.sum()  #*3
-    #     gamma_distribution[0] -= np.sum(cic_disdribution[1:]) 
-
-
-    if (sCIC > 0) :
-        # cic_disdribution = np.array([poisson.pmf(1, sCIC) * gamma.pdf(bins, a=1, scale=np.power(EmGain, reg/n_registers)) for reg in  np.linspace(1, n_registers, n_registers) ])
-        # # integral, _ = quad(integrand, 1, n_registers, args=(x, p_sCIC, n_registers, EmGain))
-        # cic_disdribution *= sCIC * np.log10(n_pix) / cic_disdribution.sum()
-        # gamma_distribution[1:]  += cic_disdribution.sum(axis=0)[1:]
-        # gamma_distribution[0] -= np.sum(cic_disdribution[1:]) 
-
-        gain_ = np.power(EmGain  *  2*energy_fraction_kept , np.linspace(1, n_registers, 100) / n_registers)
-        cic_disdribution = np.sum([(1 / gaini) * np.exp(-bins / gaini) for gaini in gain_], axis=0)  # *n_pix/len(gain_)
-        cic_disdribution /= cic_disdribution.sum()#*2
-        cic_disdribution *= 1.41*(1-np.exp(-sCIC))#* poisson.pmf(k=1, mu=np.nanmax([sCIC, 0]))
-        #TODO should add some flux dependancy here, but not sure why. I thought variables were independant.
-        gamma_distribution[1:]  += cic_disdribution[1:]#*sCIC / cic_disdribution.sum()  #*3
-        gamma_distribution[0] -= np.sum(cic_disdribution[1:]) 
-        # print(gamma_distribution[0],cic_disdribution[0],np.sum(cic_disdribution[1:]) )
-    # TODO model work well if smearing<=0.8  and if 
-
-
-
-    # if smearing >=0.102:
-    #     smeared_distri = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-1/smearing), flux=energy_fraction_kept*flux,sCIC=sCIC)   
-    #     # gamma_distribution[0] =0#(1-energy_fraction_kept)
-    #     gamma_distribution +=  10**smeared_distri
-    #     gamma_distribution[0] = 10**smeared_distri[0]- np.sum(10**smeared_distri[1:])
-    #     smeared_distri2 = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-2/smearing), flux=energy_fraction_kept*flux,sCIC=sCIC)   
-    #     # gamma_distribution[0] =0#(1-energy_fraction_kept)
-    #     gamma_distribution +=  10**smeared_distri2
-    #     # gamma_distribution[0] = 10**smeared_distri2[0]- np.sum(10**smeared_distri2[1:])
-    # # adding sCIC and convolving distributions as independant draws.
-    # if (sCIC > 0) & (1==0):
-    #     # changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
-    #     p_sCIC = sCIC  # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
-    #     # Estimation of average gain for semi-amplified CIC
-    #     gain_ = np.power(EmGain  *  energy_fraction_kept * ConversionGain, np.linspace(1, n_registers, 100) / n_registers)
-    #     cic_disdribution = np.sum([(1 / gaini) * np.exp(-bins / gaini) for gaini in gain_], axis=0)  # *n_pix/len(gain_)
-    #     cic_disdribution /= cic_disdribution.sum()
-    #     cic_disdribution *= p_sCIC
-    #     cic_disdribution[0] = 1 - np.sum(cic_disdribution[1:])
-    #     cic_disdribution = np.hstack(
-    #         (np.zeros(len(cic_disdribution) - 1), cic_disdribution)
-    #     )
-    #     gamma_distribution = np.convolve(
-    #         gamma_distribution, cic_disdribution, mode="valid"
-    #     )
-
-
-
-    # distributions.append(gamma_distribution)
+    if smearing>0. :
+        for i in range(1,4):
+            smeared_distri = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-i/smearing), flux=(1+np.exp(-i/smearing))*flux,sCIC=0)   * np.exp(-i*flux) #/smearing
+            gamma_distribution[1:] +=  smeared_distri[1:]
+            gamma_distribution[0] -= np.sum(smeared_distri[1:])
 
 
     # Addition of the bias
@@ -1038,106 +899,18 @@ def EMCCD_dev(
         n_pix = np.sum(10 ** y)
     except TypeError:
         n_pix = 10 ** 6.3
-    n_registers = 604  # number of amplification registers
     ConversionGain = 1 
     bin_size = np.median((x[1:] - x[:-1]))
-    bins = x - np.nanmin(x)
-    # distributions = []
-    pixs_sup_0 = 0  # fraction of pixels that have ADU higher than distribution limit
-    n = [0]
 
+    energy_fraction_kept = (1-np.exp(-flux/smearing)*(np.exp(-1/smearing)+np.exp(-2/smearing)+np.exp(-3/smearing))) if smearing>0 else 1
+   
+    gamma_distribution =  EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*energy_fraction_kept, flux=flux,sCIC=sCIC)
 
-
-    fluxes = flux 
-    energy_fraction_kept = (1-np.exp(-1/smearing)-0*np.exp(-2/smearing)) if smearing>0 else 1
-    # energy_fraction_kept = 1-np.exp(-1/smearing)-np.exp(-2/smearing)-np.exp(-3/smearing)-np.exp(-4/smearing) if smearing>0 else 1
-       
-        #] + [EmGain / (1.7 * i) for i in n[1:]]
-    # for smearing we consider each pixel recieve x% of their flux and Then
-    # they receive the rest with a lower gain. This approximation is not
-    # true and need to be revised. The interest is that it is then independant
-    # draws and that distributions can be convoluted.
-    # for i, (flux_, EmGain) in enumerate(zip(fluxes, emgains)):
-    gamma_distribution = 0
-    # We sum up distributions from from the different poisson output
-    for f in np.arange(1, 8):  # careful about the 8 limit which needs to be enough at high flux
-        # when going above 8, then between flux 0.2 and 1 the histogram diverges at high values
-        v = poisson.pmf(k=f, mu=np.nanmax([flux, 0]))
-        # gamma distribution : https://numpy.org/doc/stable/reference/random/generated/numpy.random.gamma.html
-        denominator = sps.gamma(f) * (EmGain  *  energy_fraction_kept * ConversionGain) ** f
-        distribution = (
-            bin_size
-            * bins ** (f - 1)
-            * (np.exp(-bins / (EmGain  *  energy_fraction_kept * ConversionGain)) / denominator)
-        )
-        distribution_up = (
-            3
-            * bin_size
-            * (3 * bins + bins.ptp()) ** (f - 1)
-            * (
-                np.exp(-(3 * bins + bins.ptp()) / (EmGain  *  energy_fraction_kept * ConversionGain))
-                / denominator
-            )
-        )
-        # disminush the number of pixels by the fraction above distribution range
-        factor = np.sum(distribution[np.isfinite(distribution_up)]) / (
-            np.sum(distribution_up[np.isfinite(distribution_up)])
-            + np.sum(distribution[np.isfinite(distribution)])
-        )
-        gamma_distribution += distribution * v
-        pixs_sup_0 += (1 - factor) * v
-    
-    
-    
-    
-    gamma_distribution[0] = (
-        1
-        - np.nansum(gamma_distribution[1:][np.isfinite(gamma_distribution[1:])])
-        - pixs_sup_0
-    )
-
-    
-    # gamma_distribution /= np.exp(-flux)#/energy_fraction_kept
-    if (smearing>0.102)  :
-        smeared_distri = 10**EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-1/smearing), flux=np.exp(-1/smearing)*flux*np.exp(-flux),sCIC=sCIC)   
-        gamma_distribution[1:] +=  smeared_distri[1:]
-        gamma_distribution[0] -= np.sum(smeared_distri[1:]) * (1+np.exp(-1/smearing))  ## gamma_distribution[0] = 10**smeared_distri[0] - np.sum(gamma_distribution[1:])
-
-        smeared_distri2 = 10**EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-2/smearing), flux=np.exp(-2/smearing)*flux*np.exp(-2*flux),sCIC=sCIC)   
-        gamma_distribution[1:] +=  smeared_distri2[1:]
-        gamma_distribution[1:] *=  (1+(1-energy_fraction_kept))
-        gamma_distribution[0] -= np.sum(smeared_distri2[1:])    * (1+np.exp(-1/smearing))           ## gamma_distribution[0] = 10**smeared_distri[0] - np.sum(gamma_distribution[1:])
-        # smeared_distri3 = 10**EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-3/smearing), flux=(1-energy_fraction_kept)*flux*np.exp(-3*flux),sCIC=sCIC)   
-        # gamma_distribution[1:] +=  smeared_distri3[1:]
-        # # gamma_distribution[1:] *=  (1+(1-energy_fraction_kept))
-        # gamma_distribution[0] -= np.sum(smeared_distri3[1:]) ## gamma_distribution[0] = 10**smeared_distri[0] - np.sum(gamma_distribution[1:])
-        # gamma_distribution[0] *=np.exp(-flux)
-    if test:
-
-        if sCIC>0:
-            gain_ = np.power(EmGain  * 1.41* energy_fraction_kept * ConversionGain, np.linspace(1, n_registers, 100) / n_registers)
-            cic_disdribution = np.sum([(1 / gaini) * np.exp(-bins / gaini) for gaini in gain_], axis=0)  # *n_pix/len(gain_)
-            cic_disdribution *= 2*(1-np.exp(-sCIC)) / cic_disdribution.sum()
-            gamma_distribution[1:]  += cic_disdribution[1:]
-            gamma_distribution[0] -= np.sum(cic_disdribution[1:]) 
-            
-            
-            #*sCIC / cic_disdribution.sum()  #*3
-            # print(gamma_distribution[0],cic_disdribution[0],np.sum(cic_disdribution[1:]) )
-            # gamma_distribution[0] -= np.sum(cic_disdribution[1:]) 
-        # TODO model work well if smearing<=0.8  and if 
-
-
-
-    # if smearing >=0.102:
-    #     smeared_distri = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-1/smearing), flux=energy_fraction_kept*flux,sCIC=sCIC)   
-    #     # gamma_distribution[0] =0#(1-energy_fraction_kept)
-    #     gamma_distribution +=  10**smeared_distri
-    #     gamma_distribution[0] = 10**smeared_distri[0]- np.sum(10**smeared_distri[1:])
-    #     smeared_distri2 = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-2/smearing), flux=energy_fraction_kept*flux,sCIC=sCIC)   
-    #     # gamma_distribution[0] =0#(1-energy_fraction_kept)
-    #     gamma_distribution +=  10**smeared_distri2
-    #     # gamma_distribution[0] = 10**smeared_distri2[0]- np.sum(10**smeared_distri2[1:])
+    if (smearing>0.0)  :
+        for i in range(1,4):
+            smeared_distri = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-i/smearing), flux=flux,sCIC=0)   * np.exp(-i*flux) #/smearing
+            gamma_distribution[1:] +=  smeared_distri[1:]
+            gamma_distribution[0] -= np.sum(smeared_distri[1:])
 
 
 
@@ -1150,9 +923,8 @@ def EMCCD_dev(
     )
     # Convolution with read noise
     y = convolve(gamma_distribution, read_noise) * n_pix  #
-    # y /= x[1] - x[0]
+    y[y<=0] = np.nan
     return np.log10(y)
-
 
 
 
