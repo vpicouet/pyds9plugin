@@ -737,25 +737,15 @@ def EMCCD_no_smearing(
         v = poisson.pmf(k=f, mu=np.nanmax([flux, 0]))
         # gamma distribution : https://numpy.org/doc/stable/reference/random/generated/numpy.random.gamma.html
         denominator = sps.gamma(f) * (EmGain * ConversionGain) ** f
-        distribution = (
-            bin_size
-            * bins ** (f - 1)
-            * (np.exp(-bins / (EmGain * ConversionGain)) / denominator)
-        )
-        distribution_up = (
-            3
-            * bin_size
-            * (3 * bins + bins.ptp()) ** (f - 1)
-            * (
-                np.exp(-(3 * bins + bins.ptp()) / (EmGain * ConversionGain))
-                / denominator
-            )
-        )
+        # print("denominator",denominator)
+        distribution = (bin_size* bins ** (f - 1)* (np.exp(-bins / (EmGain * ConversionGain)) / denominator))
+        # print("distribution",distribution)
+        distribution_up = (3* bin_size* (3 * bins + bins.ptp()) ** (f - 1)* (    np.exp(-(3 * bins + bins.ptp()) / (EmGain * ConversionGain))    / denominator))
         # disminush the number of pixels by the fraction above distribution range
-        factor = np.sum(distribution[np.isfinite(distribution_up)]) / (
-            np.sum(distribution_up[np.isfinite(distribution_up)])
-            + np.sum(distribution[np.isfinite(distribution)])
-        )
+        if  (np.sum(distribution_up[np.isfinite(distribution_up)])  + np.sum(distribution[np.isfinite(distribution)])  )>0:
+            factor = np.sum(distribution[np.isfinite(distribution_up)]) / (np.sum(distribution_up[np.isfinite(distribution_up)])  + np.sum(distribution[np.isfinite(distribution)])  )
+        else:
+            facor=0
         gamma_distribution += distribution * v
         pixs_sup_0 += (1 - factor) * v
     gamma_distribution[0] = (
@@ -764,22 +754,25 @@ def EMCCD_no_smearing(
         - pixs_sup_0
     )
     # adding sCIC and comvolving distributions as independant draws.
-    if sCIC > 0:
-        # changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
-        p_sCIC = sCIC  # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
-        # Estimation of average gain for semi-amplified CIC
-        gain_ = np.power(EmGain * ConversionGain, np.linspace(1, n_registers, 100) / n_registers)
-        cic_disdribution = np.sum([(1 / gaini) * np.exp(-bins / gaini) for gaini in gain_], axis=0)  # *n_pix/len(gain_)
-        cic_disdribution /= cic_disdribution.sum()
-        cic_disdribution *= p_sCIC
-        cic_disdribution[0] = 1 - np.sum(cic_disdribution[1:])
-        cic_disdribution = np.hstack(
-            (np.zeros(len(cic_disdribution) - 1), cic_disdribution)
-        )
-        gamma_distribution = np.convolve(
-            gamma_distribution, cic_disdribution, mode="valid"
-        )
+    # if sCIC > 0:
+    #     # changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
+    #     p_sCIC = sCIC  # / np.mean(1 / np.power(EmGain * ConversionGain, np.arange(604) / 604))
+    #     # Estimation of average gain for semi-amplified CIC
+    #     gain_ = np.power(EmGain * ConversionGain, np.linspace(1, n_registers, 100) / n_registers)
+    #     cic_disdribution = np.sum([(1 / gaini) * np.exp(-bins / gaini) for gaini in gain_], axis=0)  # *n_pix/len(gain_)
+    #     cic_disdribution /= cic_disdribution.sum()
+    #     cic_disdribution *= p_sCIC
+    #     cic_disdribution[0] = 1 - np.sum(cic_disdribution[1:])
+    #     cic_disdribution = np.hstack((np.zeros(len(cic_disdribution) - 1), cic_disdribution))
+    #     gamma_distribution = np.convolve(gamma_distribution, cic_disdribution, mode="valid")
     # distributions.append(gamma_distribution)
+
+    if sCIC>0:
+        gain_ = np.power(EmGain  * 1.41 , np.linspace(1, n_registers, 100) / n_registers)
+        cic_disdribution = np.sum([(1 / gaini) * np.exp(-bins / gaini) for gaini in gain_], axis=0)  # *n_pix/len(gain_)
+        cic_disdribution *= 1.3*np.exp(-flux)*(1-np.exp(-sCIC)) / cic_disdribution.sum()
+        gamma_distribution[1:]  += cic_disdribution[1:]
+        gamma_distribution[0] -= np.sum(cic_disdribution[1:]) 
 
 
     # Addition of the bias
@@ -795,7 +788,9 @@ def EMCCD_no_smearing(
     else:
         y = gamma_distribution
     # y /= x[1] - x[0]
-    return np.log10(y)
+    # y[y<=0] =np.nan
+    return y
+
 
     
 
