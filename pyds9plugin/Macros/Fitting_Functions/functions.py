@@ -719,6 +719,7 @@ def EMCCD_no_smearing(
         n_pix = np.sum(10 ** y)
     except TypeError:
         n_pix = 10 ** 6.3
+    print(np.log10(n_pix))
     n_registers = 604  # number of amplification registers
     ConversionGain = 1 
     bin_size = np.median((x[1:] - x[:-1]))
@@ -833,6 +834,8 @@ def EMCCD(
         n_pix = np.sum(10 ** y)
     except TypeError:
         n_pix = 10 ** 6.3
+    print(np.log10(n_pix))
+
     n_registers = 604  # number of amplification registers
     ConversionGain = 1 
     bin_size = np.median((x[1:] - x[:-1]))

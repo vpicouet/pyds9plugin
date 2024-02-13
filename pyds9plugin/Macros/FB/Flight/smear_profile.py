@@ -417,7 +417,8 @@ intens = []
 pcovs=[]
 # for T1 in np.linspace((np.median(region)+T1)/7 ,T1,12):
 #     T2 = T1+500#np.nanmax(region) - 50
-for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetThreshold(region, nb=200),GetThreshold(region, nb=400),GetThreshold(region, nb=800)],[7e4,7e4,7e4,7e4,7e4,7e4,7e4,7e4]):
+for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetThreshold(region, nb=200),GetThreshold(region, nb=400),GetThreshold(region, nb=800)][-1:],[7e4,7e4,7e4,7e4,7e4,7e4,7e4,7e4]):
+# for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetThreshold(region, nb=200),GetThreshold(region, nb=400),GetThreshold(region, nb=800)],[7e4,7e4,7e4,7e4,7e4,7e4,7e4,7e4]):
     x, y = np.where((region[:,:] > T1) & (region[:,:] < T2)           )  # & (region[:,1:-1]>region[:,:-2])     & (region[:,1:-1]>region[:,2:])  
     # x, y = np.where((region[:,n_test:-n_test] > T1) & (region[:,n_test:-n_test] < np.nanmax(region) - 50)           )  # & (region[:,1:-1]>region[:,:-2])     & (region[:,1:-1]>region[:,2:])  
     # x, y = np.where((region[1:-1,:] > T1) & (region[1:-1,:] < np.nanmax(region) - 50)      & (region[1:-1,:]>region[2:,:])   & (region[1:-1,:]>region[:-2,:])        )  # & (region[:,:-1]>region[:,1:])
@@ -444,7 +445,8 @@ for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetTh
 
         lines=[]
         first_pix = []
-        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 5 ))#, sharex=True
+        # fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 5 ))#, sharex=True
         for i in range(len(x)):
             xi, yi = x[i], y[i]
             line = (
@@ -452,72 +454,81 @@ for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetTh
                 - region[xi : xi + 1, yi - n0 : yi + n].min()
             )
             if line[n0] >= np.nanmax(line) :
-                ax1.plot(xx, line / line.ptp(), alpha=0.1)
+                ax1.plot(xx, line / line.ptp(), alpha=0.1,c="grey")
                 ax2.semilogy(xx, line / line.ptp(), alpha=0.1)
                 lines.append(line)
                 first_pix.append(line[n0])
         stack = np.hstack([line/line.ptp() for line in lines])
-        ax1.plot(xx, np.nanmedian(stack, axis=1), "r:", lw=3)
+        # ax1.plot(xx, np.nanmedian(stack, axis=1), "r:", lw=3)
         popt = PlotFit1D(
             xx[xx >= 0],
-            np.nanmean(stack, axis=1)[xx >= 0],
+            np.nanmedian(stack, axis=1)[xx >= 0],
             ax=ax1,
             color="k",
-            deg="exp",
+            deg=lambda x, a,b: b+ np.exp(-x/a),#"exp",
+            P0=[1,0],
             lw=0.5,
         )["popt"]
         pcov = PlotFit1D(
             xx[xx >= 0],
-            np.nanmean(stack, axis=1)[xx >= 0],
+            np.nanmedian(stack, axis=1)[xx >= 0],
             ax=ax1,
             color="k",
-            deg="exp",
+            deg=lambda x, a,b: b+ np.exp(-x/a),#"exp",
+            P0=[1,0],
             lw=0.5,
         )["pcov"]
         ax1.errorbar(
             xx[xx >= 0],
-            np.nanmean(stack, axis=1).T[xx >= 0],
+            np.nanmedian(stack, axis=1).T[xx >= 0],
             fmt=":o",
             yerr=np.nanstd(stack, axis=1).T[xx >= 0],
             c="k",
-            label="Exp length =%0.2fpix\nFirst pixel keep %i%% energy\n Min,Max,mean (first pix)=%i, %i, %i"
+            label="Exp length =%0.2fpix"#\nFirst pixel keep %i%% energy"
+            # label="Exp length =%spix\nFirst pixel keep %i%% energy\nMin,Max,mean (first pix)=%i, %i, %i"
             % (
-                popt[1],
+                popt[0],
+                ), lw=3)
+                #100 * np.nanmean(stack, axis=1)[n0] / (np.nanmean(stack, axis=1)[n0:].sum())
+        # ,yerr=np.std(stack,axis=0).T[0]
+        # ax2.semilogy(xx, np.nanmean(stack, axis=1), "k")
+        ax2.semilogy(xx, np.nanmedian(stack, axis=1), "r:",label="Exp length =%0.2fpix\nFirst pixel keep %i%% energy\nMin,Max,mean (first pix)=%i, %i, %i"
+            # label="Exp length =%spix\nFirst pixel keep %i%% energy\nMin,Max,mean (first pix)=%i, %i, %i"
+            % (
+                popt[0],
                 100 * np.nanmean(stack, axis=1)[n0] / (np.nanmean(stack, axis=1)[n0:].sum()),
                 np.nanmin(first_pix),
                 np.nanmax(first_pix),
-                np.nanmean(first_pix)), lw=3)
-        # ,yerr=np.std(stack,axis=0).T[0]
-        ax2.semilogy(xx, np.nanmean(stack, axis=1), "k")
-        ax2.semilogy(xx, np.nanmedian(stack, axis=1), "r:")
+                np.nanmean(first_pix)))
         ax1.set_xlim((-2.5, n - 1))
+        ax1.set_xlim((-0, n - 3))
         ax1.set_ylim((-0.1, 1.1))
         ax2.set_ylim(ymin=1e-2)
-        ax1.legend()
+        ax1.legend(fontsize=12)
         ax1.grid()
         ax2.set_xlabel("pixels")
         ax1.set_ylabel("ADU decay")
         ax2.set_ylabel("ADU decay (log)")
         
         fig.tight_layout()
-        fig.savefig(filename.replace(".fits","") + "smearing_profile_%i_%i_%i_%0.2f.png"%(np.nanmin(first_pix),np.nanmax(first_pix),np.nanmean(first_pix),popt[1]))
+        fig.savefig(filename.replace(".fits","") + "smearing_profile_%i_%i_%i_%0.2f.png"%(np.nanmin(first_pix),np.nanmax(first_pix),np.nanmean(first_pix),popt[0]))
         # plt.show()
-        smearings.append(popt[1])
+        smearings.append(popt[0])
         intens.append(np.nanmean(first_pix))
-        pcovs.append(pcov[1,1])
+        pcovs.append(pcov[0])
 
 
-plt.figure()
-plt.errorbar(intens,smearings,yerr=pcovs,fmt="o")
-for exp_decr in [1e3,5e3, 1e4, 5e4,1e5,5e5]:
-    plt.plot(np.linspace(0,10000), np.max(smearings) * np.exp(-np.linspace(0,10000) / exp_decr),label="exp decrease = %i"%(int(exp_decr)))
-# plt.axvline([1400],c="k",ls=":",label="Gain")
-plt.fill_between([0,np.max(intens)],[0.2,0.2],[np.max(smearings),np.max(smearings)],alpha=0.1)
-plt.xlabel("Pixel value")
-plt.ylabel("Smearing length")
-plt.legend()
-plt.grid()
-plt.savefig(filename.replace(".fits","") + "smearing_profile.png")
+# plt.figure()
+# plt.errorbar(intens,smearings,yerr=pcovs,fmt="o")
+# for exp_decr in [1e3,5e3, 1e4, 5e4,1e5,5e5]:
+#     plt.plot(np.linspace(0,10000), np.max(smearings) * np.exp(-np.linspace(0,10000) / exp_decr),label="exp decrease = %i"%(int(exp_decr)))
+# # plt.axvline([1400],c="k",ls=":",label="Gain")
+# plt.fill_between([0,np.max(intens)],[0.2,0.2],[np.max(smearings),np.max(smearings)],alpha=0.1)
+# plt.xlabel("Pixel value")
+# plt.ylabel("Smearing length")
+# plt.legend()
+# plt.grid()
+# plt.savefig(filename.replace(".fits","") + "smearing_profile.png")
 # %%
 
 # files = glob.glob("/Volumes/ExtremePro/LAM/FIREBALL/2022/DetectorData/220609/diffusefocus/*14?.fits")
