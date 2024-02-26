@@ -26,23 +26,29 @@ def emccd_model(
     import os
     print("path = ", path)
     if ".fit" not in path:
-        tab = Table.read(path)
+        n_conv=1
+        try:
+            tab = Table.read(path)
+        except Exception:
+            tab = Table.read(path,format="csv")
+
         print("openning table ", path)
         name = path
+        cols = tab.colnames
         bins, val, val_os = (
-            tab["col0"][tab["col0"] < 10000],
-            tab["col1"][tab["col0"] < 10000],
-            tab["col2"][tab["col0"] < 10000],
+            tab[cols[0]][tab[cols[0]] < 10000],
+            tab[cols[1]][tab[cols[0]] < 10000],
+            tab[cols[2]][tab[cols[0]] < 10000],
         )
         bins_os = bins
         os_v = np.log10(np.array(val_os, dtype=float))
         median_im = np.average(bins, weights=val)
         header = None
-        # header_exptime, header_gain = -99, -99
-        header_exptime, header_gain = (
-            float(path.split("_")[-1].split(".csv")[0][:-1]),
-            float(path.split("_")[-2][:-1]),
-        )
+        header_exptime, header_gain = -99, -99
+        # header_exptime, header_gain = (
+        #     float(path.split("_")[-1].split(".csv")[0][:-1]),
+        #     float(path.split("_")[-2][:-1]),
+        # )
 
     else:
         if path is None:
@@ -137,14 +143,14 @@ def emccd_model(
         # conversion_gain=1
         im_nan_fraction = np.isfinite(im).mean()
         os_nan_fraction = np.isfinite(osv).mean()
-        print(osv.shape, im.shape)
+        # print(osv.shape, im.shape)
         median_im = np.nanmedian(im)
         min_, max_ = (int(np.nanpercentile(osv, 0.4)-5), int(np.nanpercentile(im, 99.8)))
         # print(im.shape,os.shape)
         # print(min_, max_,np.nanpercentile(im[np.isfinite(im)], 99.8),np.nanpercentile(im[np.isfinite(im)], 0.4),np.nanpercentile(im[np.isfinite(im)], 40))
         val, bins = np.histogram(im.flatten(), bins=0.5+np.arange(min_, max_, 1*conversion_gain))
         val_os, bins_os = np.histogram(osv.flatten(), bins=0.5+np.arange(min_, max_, 1*conversion_gain))
-        print(val_os,min_, max_,osv)
+        # print(val_os,min_, max_,osv)
         bins = (bins[1:] + bins[:-1]) / 2
         t=1#0#1#2.5
         val = np.array(val, dtype=float) *t/ im_nan_fraction 
@@ -448,9 +454,9 @@ def emccd_model(
         x = dict_values["x"]
         v1 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[0] for v in vals1]
         v2 = [v if ((type(v) != np.ndarray)&(type(v) != tuple)) else v[1] for v in vals1]
-        print(vals1)
+        # print(vals1)
 
-        print("xdata[0]: ", xdata[0])
+        # print("xdata[0]: ", xdata[0])
         # if xdata[0]%1<0.5:
         #     xdata_ = xdata #+ 1
         # else:
@@ -532,7 +538,7 @@ def emccd_model(
             else:
                 bounds1.append(-np.inf)
                 bounds2.append(np.inf)
-        print("bounds = ",bounds1,bounds2)
+        # print("bounds = ",bounds1,bounds2)
         try:
             popt, pcov = curve_fit(
                 function, x, y, p0, bounds=[bounds1, bounds2]
@@ -541,14 +547,22 @@ def emccd_model(
             for i in range(len(p0)-len(bounds1)):
                 bounds1.append(-np.inf)
                 bounds2.append(np.inf)
-            print("bounds = ",bounds1,bounds2)
+            # print("bounds = ",bounds1,bounds2)
             popt, pcov = curve_fit(
                 function, x, y, p0, bounds=[bounds1, bounds2],
             # epsfcn=epsfcn
             )
-
-        # else:
-        #     popt, pcov = curve_fit(function, x, y, p0)
+        with open('/tmp/test.csv', 'a') as file:
+          file.write("\n%s, %s, %s, %s, %s, %s"%(popt[0],popt[1],popt[2],popt[3],popt[4],popt[5],))   
+        
+        corr_matrix = pcov / np.outer(np.sqrt(np.diag(pcov)), np.sqrt(np.diag(pcov)))
+        # # Exemple de sélection de deux paramètres à analyser
+        # param_index_1 = 0
+        # param_index_2 = 1
+        # correlation = corr_matrix[param_index_1, param_index_2]
+        print("correlation matrix =  ", corr_matrix)
+        print("corr gain-flux = ",corr_matrix[2,3])
+        print("corr gain-smearing = ",corr_matrix[3,4])
         return popt, pcov
     
     def generate_image(event):
@@ -587,7 +601,7 @@ def emccd_model(
         vals1 = [v if type(v) != tuple else v[0] for v in vals_tot]
         vals2 = [v if type(v) != tuple else v[1] for v in vals_tot]
         p0 = vals2#[vals2[1], vals2[2], vals2[3]]  # , vals[4]
-        print("p0=",p0)
+        # print("p0=",p0)
         xmin,xmax = ax.get_xlim()
         popt, pcov = curve_fit_with_bounds(
             function,
@@ -599,8 +613,8 @@ def emccd_model(
             # bounds=[[p -10 for p in p0],[p +10 for p in p0]]
             # epsfcn=1#,optimizer=curve_fit_with_bounds
         )
-        print("popt=",popt)
-        print("p0 - popt=",np.array(p0) - np.array(popt))
+        # print("popt=",popt)
+        # print("p0 - popt=",np.array(p0) - np.array(popt))
         vals2 = popt  # , vals[4]
         vals1[:3]= popt[:3]
         vals1[-2:]= popt[-2:]

@@ -523,8 +523,8 @@ def EMCCDhist(
     RN=[0, 350, 53],
     EmGain=[100, 10000, 5000],
     flux=[0.0001, 1, 0.04],
-    smearing=[0, 1.8, 0.01],
     sCIC=[0, 1, 0],
+    smearing=[0, 1.8, 0.01],
 ):
     """
     Stochastic model for EMCCD histogram.
@@ -719,7 +719,7 @@ def EMCCD_no_smearing(
         n_pix = np.sum(10 ** y)
     except TypeError:
         n_pix = 10 ** 6.3
-    print(np.log10(n_pix))
+    # print(np.log10(n_pix))
     n_registers = 604  # number of amplification registers
     ConversionGain = 1 
     bin_size = np.median((x[1:] - x[:-1]))
@@ -735,25 +735,27 @@ def EMCCD_no_smearing(
     # We sum up distributions from from the different poisson output
     for f in np.arange(1, 20):  
         # careful about the 20 limit which needs to be enough at high flux
-        v = poisson.pmf(k=f, mu=np.nanmax([flux, 0]))
+        v = poisson.pmf(k=f, mu=np.nanmax([flux, 0])) #TODO maybe here I miss a binomial law?? At least gamma distribution seems ok!
         # gamma distribution : https://numpy.org/doc/stable/reference/random/generated/numpy.random.gamma.html
         denominator = sps.gamma(f) * (EmGain * ConversionGain) ** f
         # print("denominator",denominator)
         distribution = (bin_size* bins ** (f - 1)* (np.exp(-bins / (EmGain * ConversionGain)) / denominator))
         # print("distribution",distribution)
-        distribution_up = (3* bin_size* (3 * bins + bins.ptp()) ** (f - 1)* (    np.exp(-(3 * bins + bins.ptp()) / (EmGain * ConversionGain))    / denominator))
+        n=3
+        distribution_up = (n* bin_size* (n * bins + bins.ptp()) ** (f - 1)* (    np.exp(-(n * bins + bins.ptp()) / (EmGain * ConversionGain))    / denominator))
         # disminush the number of pixels by the fraction above distribution range
         if  (np.sum(distribution_up[np.isfinite(distribution_up)])  + np.sum(distribution[np.isfinite(distribution)])  )>0:
             factor = np.sum(distribution[np.isfinite(distribution_up)]) / (np.sum(distribution_up[np.isfinite(distribution_up)])  + np.sum(distribution[np.isfinite(distribution)])  )
         else:
-            facor=0
+            factor=0
         gamma_distribution += distribution * v
         pixs_sup_0 += (1 - factor) * v
-    gamma_distribution[0] = (
-        1
-        - np.nansum(gamma_distribution[1:][np.isfinite(gamma_distribution[1:])])
-        - pixs_sup_0
-    )
+
+    # flux *= 2
+
+    # gamma_distribution = flux*np.exp(-flux)/EmGain * np.exp(- bins/EmGain)  *hyp0f1(2,bins*flux/EmGain) 
+    gamma_distribution[0] = np.exp(-flux)
+
     # adding sCIC and comvolving distributions as independant draws.
     # if sCIC > 0:
     #     # changing total sCIC (e-) into the percentage of pixels experiencing spurious electrons
@@ -790,7 +792,7 @@ def EMCCD_no_smearing(
         y = gamma_distribution
     # y /= x[1] - x[0]
     # y[y<=0] =np.nan
-    return y
+    return np.log10(y)
 
 
     
@@ -834,22 +836,43 @@ def EMCCD(
         n_pix = np.sum(10 ** y)
     except TypeError:
         n_pix = 10 ** 6.3
-    print(np.log10(n_pix))
+    # print(np.log10(n_pix))
 
     n_registers = 604  # number of amplification registers
     ConversionGain = 1 
     bin_size = np.median((x[1:] - x[:-1]))
 
+    # energy_fraction_kept = (1-np.exp(-flux/smearing)*(np.exp(-1/smearing)+np.exp(-2/smearing)+np.exp(-3/smearing))) if smearing>0 else 1
+    # gamma_distribution = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*energy_fraction_kept, flux=flux,sCIC=sCIC)
+
+    # if smearing>0. :
+    #     for i in range(1,4):
+    #         smeared_distri = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-i/smearing), flux=(1+np.exp(-i/smearing))*flux,sCIC=0)   * np.exp(-i*flux) #/smearing
+    #         gamma_distribution[1:] +=  smeared_distri[1:]
+    #         gamma_distribution[0] -= np.sum(smeared_distri[1:])
+
+
+    # # Addition of the bias
+    # if bias > x[0]:
+    #     gamma_distribution[(x > bias)] = gamma_distribution[: -np.sum(x <= bias)]
+    #     gamma_distribution[x < bias] = 0
+    # read_noise = Gaussian1DKernel(
+    #     stddev=RN * ConversionGain / bin_size, x_size=int(301.1 * 10)
+    # )
+    # # Convolution with read noise
+    # y = convolve(gamma_distribution, read_noise) * n_pix  #
+    # # y /= x[1] - x[0]
+    # y[y<1]=1
+    # return np.log10(y)
+
     energy_fraction_kept = (1-np.exp(-flux/smearing)*(np.exp(-1/smearing)+np.exp(-2/smearing)+np.exp(-3/smearing))) if smearing>0 else 1
-    gamma_distribution = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*energy_fraction_kept, flux=flux,sCIC=sCIC)
+    gamma_distribution = 10**EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*energy_fraction_kept, flux=flux,sCIC=sCIC)
 
     if smearing>0. :
         for i in range(1,4):
-            smeared_distri = EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-i/smearing), flux=(1+np.exp(-i/smearing))*flux,sCIC=0)   * np.exp(-i*flux) #/smearing
-            gamma_distribution[1:] +=  smeared_distri[1:]
-            gamma_distribution[0] -= np.sum(smeared_distri[1:])
-
-
+            smeared_distri = 10**EMCCD_no_smearing(x=x,bias=0,RN=0,EmGain=EmGain*np.exp(-i/smearing), flux=flux,sCIC=0)   * np.exp(-i*flux) #/smearing
+            gamma_distribution[1:] = np.nansum([gamma_distribution[1:],smeared_distri[1:]],axis=0)
+            gamma_distribution[0] -= np.nansum(smeared_distri[1:])
     # Addition of the bias
     if bias > x[0]:
         gamma_distribution[(x > bias)] = gamma_distribution[: -np.sum(x <= bias)]
@@ -862,8 +885,6 @@ def EMCCD(
     # y /= x[1] - x[0]
     y[y<1]=1
     return np.log10(y)
-
-
 
 
 
