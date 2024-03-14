@@ -13,9 +13,10 @@ from pyds9plugin.Macros.FB.FB_functions import emccd_model
 #     pass
 # emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCD", argv=[])
 conv_gain = float(argument.split(":")[-1].split("ADU")[0])
-RN = float(argument.split("RN=")[-1])
-# emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", conversion_gain=conv_gain,argv=[],RN=RN,sCIC=0.0001)#sCIC=0.0001
-emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCD", conversion_gain=conv_gain,argv=[],RN=RN,sCIC=0)#sCIC=0.0001
+RN = float(argument.split("RN=")[-1].split(",")[0])
+smearing = float(argument.split("smearing=")[-1])
+# emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", conversion_gain=conv_gain,argv=[],RN=RN,sCIC=0.000)#sCIC=0.0001
+emccd_model(xpapoint=None, path=filename, smearing=smearing,fit="EMCCD", conversion_gain=conv_gain,argv=[],RN=RN,sCIC=0,mCIC=0.03,gain=1300)#sCIC=0.0001
 
 # try:
 #     emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", conversion_gain=float(argument.split(":")[-1].split("ADU")[0]),argv=[])

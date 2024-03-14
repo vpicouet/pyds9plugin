@@ -173,4 +173,5 @@ if __name__ == "__main__":
         except FileExistsError:
             pass
     new_path = os.path.dirname(filename) + "/CosmicRayFree/" +     os.path.basename(filename).replace(".fits",  "_CR.fits")
-    ds9 = CR_masking(filename,ds9, n=3, area=[0,-1,0,-1],threshold = 40000)    
+    # ds9 = CR_masking(filename,ds9, n=3, area=[0,-1,0,-1],threshold = 40000)    
+    ds9 = CR_masking(filename,ds9[:,::-1], n=3, area=[0,-1,0,-1],threshold = 40000)[:,::-1]

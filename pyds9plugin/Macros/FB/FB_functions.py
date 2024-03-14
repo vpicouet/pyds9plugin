@@ -190,8 +190,10 @@ def emccd_model(
     sys.path.append("../../../../pyds9plugin")
     if fit=="EMCCDhist":
         from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist as EMCCD
+        from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD as EMCCD2
     else:
         from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD
+        from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist as EMCCD2
 
     n = np.log10(np.sum([10 ** yi for yi in ydata]))
     lims = np.array([0, 2])
@@ -253,7 +255,16 @@ def emccd_model(
         flux=flux,
         smearing=smearing,
         sCIC=sCIC,
-    ) #+np.log10(1/conv) 
+    )
+    function2 = lambda x, Bias, RN, EmGain, flux, smearing, sCIC: EMCCD2(
+        x,
+        bias=Bias,
+        RN=RN * conversion_gain,
+        EmGain=EmGain * conversion_gain,
+        flux=flux,
+        smearing=smearing,
+        sCIC=sCIC,
+    )
     args_number = len(inspect.getargspec(function).args) - 1
 
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -401,8 +412,15 @@ def emccd_model(
     # centers_[-3] = flux
     f2 = np.convolve(function(x, *centers_), np.ones(n_conv) / n_conv, mode="same")
     fraction_thresholded = 100*np.sum(10**y_conv[xdata>bias-0.5 + 5.5 *RON ])/np.sum(10**y_conv)
-    (l1,) = ax.plot(x, f1, "-", lw=1, alpha=0.7, label="EMCCD OS model")#\nFraction>5.5σ (RN=%0.1f)=%0.1f%%"%(RON,fraction_thresholded))
+    # (l1,) = ax.plot(x, f1, "-", lw=1, alpha=0.7, label="EMCCD OS model")     #\nFraction>5.5σ (RN=%0.1f)=%0.1f%%"%(RON,fraction_thresholded))
+    (l1,) = ax.plot(x, f1, "-", lw=1, alpha=0.7, label="EMCCD OS model\nFraction>5.5σ (RN=%0.1f)=%0.1f%%"%(RON,fraction_thresholded))
     (l2,) = ax.plot(x, f2, "-", c=l1.get_color(), lw=1)
+
+    
+    (l3,) = ax.plot(x, np.convolve(function2(x, *centers), np.ones(n_conv) / n_conv, mode="same"), "-", c=l1.get_color(), lw=1, alpha=0.7)
+    (l4,) = ax.plot(x, np.convolve(function2(x, *centers_), np.ones(n_conv) / n_conv, mode="same"), "-", c=l1.get_color(), lw=1)
+
+
       # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
     ax.set_ylim((0.9 * np.nanmin(ydata), 1.1 * np.nanmax(os_v)))
     ax.set_ylabel("Log (Frequency of occurence)", fontsize=15)
@@ -475,6 +493,22 @@ def emccd_model(
                 mode="same",
             )
         )
+
+        l3.set_ydata(
+            np.convolve(
+                function2(xdata, *v2), #+1 else bias is shifted by 1 ADU
+                np.ones(n_conv) / n_conv,
+                mode="same",
+            )
+        )
+        l4.set_ydata(
+            np.convolve(
+                function2(xdata, *v1),
+                np.ones(n_conv) / n_conv,
+                mode="same",
+            )
+        )
+
         # l1.set_ydata(
         #     np.convolve(function(x, *v1), np.ones(n_conv) / n_conv, mode="same")
         # )
@@ -521,6 +555,7 @@ def emccd_model(
     for edge in "left", "right", "top", "bottom":
         rax.spines[edge].set_visible(False)
     check = CheckButtons(rax, ["Bias","RN","Gain","Flux","Smearing","mCIC" ],actives=[True,True,False,False,True,True]) # ,"sCIC"
+    check = CheckButtons(rax, ["Bias","RN","Gain","Flux","Smearing","mCIC" ],actives=[True,True,True,True,True,True]) # ,"sCIC"
     def func(label):
         fig.canvas.draw_idle()
     check.on_clicked(func)
@@ -596,7 +631,7 @@ def emccd_model(
         return
 
 
-    def simplified_least_square_fit(event):
+    def simplified_least_square_fit_function():
         vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
         vals1 = [v if type(v) != tuple else v[0] for v in vals_tot]
         vals2 = [v if type(v) != tuple else v[1] for v in vals_tot]
@@ -627,8 +662,20 @@ def emccd_model(
                 # print(e)
                 slid.set_val([val1i, val2i])
             dict_values[slid.label.get_text()] = slid.val
+        print(os.path.basename(path), n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,sliders[3].val[1]*3600/header_exptime,fraction_thresholded/100)
+        print("file","number","bias","RN","emgain","sCIC","flux","smearing","mCIC","exptime","header_gain","flux_e-/hour","fraction_threshold")
+        a = Table(names=["file","number","bias","RN","emgain","sCIC","flux","smearing","mCIC","exptime","header_gain","flux_e-/hour","fraction_threshold"],dtype=["S20"]+[float]*12)
+        a.add_row((os.path.basename(path), n,sliders[0].val,sliders[1].val,sliders[2].val,sliders[3].val[0],sliders[3].val[1],sliders[-2].val,sliders[-1].val,header_exptime, header_gain,sliders[3].val[1]*3600/header_exptime,fraction_thresholded/100))
+        a.write(os.path.dirname(os.path.dirname(path))+"/"+os.path.basename(path).replace(".fits",".csv"),overwrite=True)
+        fig.savefig(path.replace(".fits",".png"))
+        return
+
+
+    def simplified_least_square_fit(event):
+        simplified_least_square_fit_function()
         return
    
+    simplified_least_square_fit_function()
 
     button0.on_clicked(save_values)
     write_model.on_clicked(generate_image)

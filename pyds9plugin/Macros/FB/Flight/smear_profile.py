@@ -382,12 +382,14 @@ def DetectHotPixels(image, T1=None, T2=None, nb=None):
 
 #%%
 n = 8
-filename = get_filename(d)
+# filename = get_filename(d)
 
-fitsimage = fits.open(filename)[0]
-image = fitsimage.data
+# fitsimage = fits.open(filename)[0]
+# image = fitsimage.data
 
-header = fitsimage.header
+# header = fitsimage.header
+
+image=ds9
 
 try:
     date = float(header["DATE"][:4])
