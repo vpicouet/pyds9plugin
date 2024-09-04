@@ -1,13 +1,14 @@
 import sys, os
 FBPIPE_path = "/Users/Vincent/Nextcloud/LAM/FIREBALL/FireBallPipe"
+FBPIPE_path = "/Users/Vincent/GitHub/FireBallPipe"
 os.chdir(FBPIPE_path)
-# sys.path.insert(1, './Calibration')
+sys.path.insert(1, './Calibration')
 sys.path.insert(1, FBPIPE_path)
 
-from guider2UV.guider2UV import Guider2UV, diff_skycoord, fit_model#, plot_fit
-from guider2UV.MaskAstrometry import LocalScienceMaskProjector
-from Calibration.mapping import Mapping
-from mapping_mask_det_2022 import create_mapping
+# from guider2UV.guider2UV import Guider2UV, diff_skycoord, fit_model#, plot_fit
+# from guider2UV.MaskAstrometry import LocalScienceMaskProjector
+# from Calibration.mapping import Mapping
+# from mapping_mask_det_2022 import create_mapping
 
 from astropy.io import fits
 import matplotlib.pyplot as plt
@@ -403,7 +404,7 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
 
 
 
-
+plot_=False
 d = DS9n()
 
 if 1==0:
@@ -411,13 +412,13 @@ if 1==0:
     regs = getregion(d, selected=True)
     image = d.get_pyfits()[0].data
     filename = get_filename(d)
-    cat, filename = Measure_PSF_slits(image, regs, filename=filename)
+    cat, filename = Measure_PSF_slits(image, regs, filename=filename,plot_=plot_)
 
 else:
     image = fits.open(filename)[0].data
     regs = getregion(d,file=filename.replace(".fits",".reg"),message=False)
     print(filename.replace(".fits",".reg"))
-    cat, filename = Measure_PSF_slits(image, regs, filename=filename)
+    cat, filename = Measure_PSF_slits(image, regs, filename=filename,plot_=plot_)
 
 
 
@@ -467,7 +468,7 @@ for offset, ftype in zip([0,1088],["OS","noOS"]):
                                 savename="/Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/2023_flight/fields/"+ os.path.basename(filename).replace(".fits","_%s_%i.reg"%(w)), color = colors, ID=[ID]*3)
         xdetpix.append(xydetpix[0]-offset)
         ydetpix.append(xydetpix[1])
-    size_slit = 20 if Field in ["F1","F4"] else 32:
+    size_slit = 20 if Field in ["F1","F4"] else 32
 
     create_ds9_regions(xdetpix, ydetpix, form=['box']*3, radius=[10,size_slit], save=True, 
                             savename=filename.replace(".fits","_%s_Zn.reg"%(ftype)), color = colors, ID=[ID]*3)

@@ -137,7 +137,7 @@ DS9Utils python_command -x $xpa_method  $param(Python-Command-P); -e $dir/Macros
 
 
 param conversion_gain
-gain combobox {Conversion gain} Aafaque2:1.3ADU/e-,RN=17,smearing=1.2|S2_hdr:0.98ADU/e-,RN=43,smearing=1.2|S2:0.053ADU/e-,RN=2.2,smearing=1.2|NoOSsequence:0.4ADU/e-|CaltechIntegration:0.43ADU/e-|Aafaque:0.72ADU/e-,RN=17,smearing=1.2|2022:0.22ADU/e-,RN=10,smearing=1.2|2018:0.53ADU/e-,RN=53,smearing=1.2, {Conversion gain in ADU/e-}
+gain combobox {Conversion gain} Seq2024:0.077101ADU/e-,RN=26.29,smearing=0|Aafaque2:1.3ADU/e-,RN=17,smearing=1.2|S2_hdr:0.98ADU/e-,RN=43,smearing=1.2|S2:0.053ADU/e-,RN=2.2,smearing=1.2|NoOSsequence:0.4ADU/e-|CaltechIntegration:0.43ADU/e-|Aafaque:0.72ADU/e-,RN=17,smearing=1.2|2022:0.22ADU/e-,RN=10,smearing=1.2|2018:0.53ADU/e-,RN=53,smearing=1.2, {Conversion gain in ADU/e-}
 endparam
 
 
@@ -384,7 +384,7 @@ hmenu 1. Generic Functions
 	Open region
 	*
 	bind R
-	DS9Utils open_file -x $xpa_method  $param(openR); -p $dir/regions/2023_flight/fields/$path_$OS_$type.reg  | $text
+	DS9Utils open_file -x $xpa_method  $param(openR); -p $dir/regions/FB/2023_flight/fields/$path_$OS_$type.reg  | $text
 
 
 # ds9=np.array([fits.open(f)[0].data for f in glob.glob('/tmp/?.fits')])
@@ -1806,7 +1806,7 @@ tab {STAR/GALAXY &  CHECK.}
 
 SEEING_FWHM entry {SEEING_FWHM} 0.8 {stellar FWHM in arcsec}
 STARNNW_NAME entry {STARNNW_NAME} default.nnw {File name in ds9_package/Calibration/Sextractor/}
-CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|-BACKGROUND|FILTERED|OBJECTS|-OBJECTS|SEGMENTATION|APERTURES {}
+CHECKIMAGE_TYPE menu {CHECKIMAGE_TYPE} NONE|BACKGROUND|BACKGROUND_RMSMINIBACKGROUND|MINIBACK_RMS|mBACKGROUND|FILTERED|OBJECTS|mOBJECTS|SEGMENTATION|APERTURES {}
 REGION_NAME menu {REGION_NAME} NUMBER|FWHM_IMAGE|MAG_AUTO|MAG_ISO|MAG_APER|MU_MAX|ELLIPTICITY|CLASS_STAR|THETA_IMAGE|ELONGATION {The name you want to display above each source on DS9}
 
 

@@ -697,7 +697,7 @@ def smeared_slit_astigm(
 def EMCCD_no_smearing(
     x,
     bias=[x.min(), x.max(), x[np.argmax(y)]],
-    RN=[5, 350, 12],
+    RN=[1, 350, 12],
     EmGain=[10, 2000, 1900],
     flux=[0, 1, 0.01],
     # smearing=[0, 3, 0.01],
@@ -766,7 +766,7 @@ def EMCCD_no_smearing(
 def EMCCD(
     x,
     bias=[x.min(), x.max(), x[np.argmax(y)]],
-    RN=[5, 350, 12],
+    RN=[1, 350, 12],
     EmGain=[10, 2000, 1900],
     flux=[0, 1, 0.01],
     smearing=[0, 3, 0.01],
@@ -806,6 +806,7 @@ def EMCCD(
     # print(np.log10(n_pix))
     minx = np.nanmin(x) 
     x -=  minx
+
 
     n_registers = 604  # number of amplification registers
     ConversionGain = 1 

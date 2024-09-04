@@ -1,0 +1,29 @@
+# Region file format: DS9 version 4.1
+    global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+    image
+    box(1904.063265,1323.212633,10.0000,32.0000) # color=green text={6}
+box(1644.303619,1979.763644,10.0000,32.0000) # color=green text={16}
+box(2079.600240,1705.685245,10.0000,32.0000) # color=green text={11}
+box(1650.488660,1025.369980,10.0000,32.0000) # color=green text={-410}
+box(1427.181949,429.206358,10.0000,32.0000) # color=green text={311}
+box(1424.199439,523.638360,10.0000,32.0000) # color=green text={-330}
+box(1414.198812,786.331769,10.0000,32.0000) # color=green text={320}
+box(1898.774586,1369.855406,10.0000,32.0000) # color=green text={7}
+box(1427.181949,429.206358,10.0000,32.0000) # color=green text={-340}
+box(1215.309295,1757.088736,10.0000,32.0000) # color=green text={12}
+box(1208.375318,1864.188317,10.0000,32.0000) # color=green text={14}
+box(1537.836819,69.569818,10.0000,32.0000) # color=green text={0}
+box(1647.720636,1025.279537,10.0000,32.0000) # color=green text={-420}
+box(2029.913372,1519.486322,10.0000,32.0000) # color=green text={8}
+box(1861.346655,1610.106991,10.0000,32.0000) # color=green text={9}
+box(1558.323395,59.532190,10.0000,32.0000) # color=green text={-1}
+box(1552.836240,171.240145,10.0000,32.0000) # color=green text={1}
+box(1706.882683,358.969149,10.0000,32.0000) # color=green text={2}
+box(1652.547722,969.957381,10.0000,32.0000) # color=green text={4}
+box(1651.691336,1179.497938,10.0000,32.0000) # color=green text={-55}
+box(2069.017294,1666.711159,10.0000,32.0000) # color=green text={10}
+box(2061.668113,1831.421503,10.0000,32.0000) # color=green text={13}
+box(1944.235117,1922.457554,10.0000,32.0000) # color=green text={15}
+box(1648.839997,1046.612331,10.0000,32.0000) # color=green text={-440}
+box(1649.778602,1031.834844,10.0000,32.0000) # color=green text={5}
+box(1420.400421,605.702337,10.0000,32.0000) # color=green text={3}

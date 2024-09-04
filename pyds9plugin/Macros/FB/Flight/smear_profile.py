@@ -419,7 +419,7 @@ intens = []
 pcovs=[]
 # for T1 in np.linspace((np.median(region)+T1)/7 ,T1,12):
 #     T2 = T1+500#np.nanmax(region) - 50
-for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetThreshold(region, nb=200),GetThreshold(region, nb=400),GetThreshold(region, nb=800)][-1:],[7e4,7e4,7e4,7e4,7e4,7e4,7e4,7e4]):
+for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetThreshold(region, nb=200),GetThreshold(region, nb=400),GetThreshold(region, nb=800)],[7e4,7e4,7e4,7e4,7e4,7e4,7e4,7e4]):
 # for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetThreshold(region, nb=200),GetThreshold(region, nb=400),GetThreshold(region, nb=800)],[7e4,7e4,7e4,7e4,7e4,7e4,7e4,7e4]):
     x, y = np.where((region[:,:] > T1) & (region[:,:] < T2)           )  # & (region[:,1:-1]>region[:,:-2])     & (region[:,1:-1]>region[:,2:])  
     # x, y = np.where((region[:,n_test:-n_test] > T1) & (region[:,n_test:-n_test] < np.nanmax(region) - 50)           )  # & (region[:,1:-1]>region[:,:-2])     & (region[:,1:-1]>region[:,2:])  
@@ -447,7 +447,7 @@ for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetTh
 
         lines=[]
         first_pix = []
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 5 ))#, sharex=True
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 5 ), sharex=True)
         # fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 5 ))#, sharex=True
         for i in range(len(x)):
             xi, yi = x[i], y[i]
@@ -503,7 +503,7 @@ for T1,T2 in zip([GetThreshold(region, nb=50),GetThreshold(region, nb=100),GetTh
                 np.nanmax(first_pix),
                 np.nanmean(first_pix)))
         ax1.set_xlim((-2.5, n - 1))
-        ax1.set_xlim((-0, n - 3))
+        ax1.set_xlim((-1, n - 3))
         ax1.set_ylim((-0.1, 1.1))
         ax2.set_ylim(ymin=1e-2)
         ax1.legend(fontsize=12)

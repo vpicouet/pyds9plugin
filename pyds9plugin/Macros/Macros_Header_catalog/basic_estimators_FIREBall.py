@@ -271,6 +271,10 @@ table["flat"] = (np.nanmedian(physical_region) - table["median_pre_scan"]) / np.
     physical_region
 )
 
+
+
+
+
 from pyds9plugin.Macros.FB.FB_functions import emccd_model
 #2018
 # if header["EMGAIN"]==9200:
@@ -279,58 +283,55 @@ from pyds9plugin.Macros.FB.FB_functions import emccd_model
 #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=1.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.53,RN=40,mCIC=0.15,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
 table["percentile_04"] = float(np.nanpercentile(pre_scan, 0.4))
 table["percentile_998"] =  float(np.nanpercentile(physical_region, 99.8))
-# if 
+if 1==0:
 
-# else:
-    # if  (table["percentile_998"]-table["percentile_04"])>1000:
-#UA
-try:
-    fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.053,RON=2.6)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-    #2018??
-    # fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.2,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.72,RON=17)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-    # if  header["ROS"]==2:
-    #     #2023 s2_hdr
-    #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.97,RON=42)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-    # # else:
-    # elif  header["ROS"]==1:
-    #     #2023 s2
-    #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.053,RON=2.6)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-    # elif  header["ROS"]==5:
-    #     #2022
-    #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.22,RON=10)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
-except IndexError as e:
-    print(e)
-else:
-    table["hist_bias"] = fit_param["BIAS"]
-    table["hist_ron"] = fit_param["RON"]
-    table["hist_gain"] = fit_param["GAIN"]
-    table["hist_flux"] = fit_param["FLUX"]
-    if "EXPTIME" in table.colnames:
-        table["e_per_hour"] = fit_param["FLUX"] * 3600 / float(table["EXPTIME"])
-    # if "R_EXP" in table.colnames:
-    #     table["e_per_hour"] = fit_param["FLUX"] * 3600 / float(table["R_EXP"]/1000)
-    table["FRAC5SIG"] = fit_param["FRAC5SIG"]  #/ float(table["EXPTIME"])
+    try:
+        fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.053,RON=2.6)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+        #2018??
+        # fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.2,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.72,RON=17)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+        # if  header["ROS"]==2:
+        #     #2023 s2_hdr
+        #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.97,RON=42)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+        # # else:
+        # elif  header["ROS"]==1:
+        #     #2023 s2
+        #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.053,RON=2.6)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+        # elif  header["ROS"]==5:
+        #     #2022
+        #     fit_param = emccd_model(xpapoint=None, path=filename, smearing=0.5,fit="EMCCDhist", argv=[],gui=False,conversion_gain=0.22,RON=10)#,mCIC=0.,sCIC=0.02,RON=105*0.53)#,mCIC=0.005
+    except IndexError as e:
+        print(e)
+    else:
+        table["hist_bias"] = fit_param["BIAS"]
+        table["hist_ron"] = fit_param["RON"]
+        table["hist_gain"] = fit_param["GAIN"]
+        table["hist_flux"] = fit_param["FLUX"]
+        if "EXPTIME" in table.colnames:
+            table["e_per_hour"] = fit_param["FLUX"] * 3600 / float(table["EXPTIME"])
+        # if "R_EXP" in table.colnames:
+        #     table["e_per_hour"] = fit_param["FLUX"] * 3600 / float(table["R_EXP"]/1000)
+        table["FRAC5SIG"] = fit_param["FRAC5SIG"]  #/ float(table["EXPTIME"])
 
 
-table = create_cubsets(table, header)
+    table = create_cubsets(table, header)
 
 
-# print(region)
-# print(type(region))
-if type(region) == tuple:
-    Yinf, Ysup, Xinf, Xsup = region
-    reg = data[Xinf:Xsup, Yinf:Ysup]
-    reg_prescan = data[Xinf-1000:Xsup-1000, Yinf:Ysup]
-    n = 20
-    big_reg = data[Xinf - n : Xsup + n, Yinf - n : Ysup + n]
-    column = np.mean(data[Xinf - n : Xsup + n, Yinf:Ysup], axis=1)
-    line = np.mean(data[Xinf:Xsup, Yinf - n : Ysup + n], axis=0)
-    table["mean_region"] = np.mean(reg.flatten()) - np.mean(reg_prescan.flatten())
-    table["median_region"] = np.median(reg.flatten() + np.random.rand(reg.size)) - np.mean(reg_prescan.flatten() + np.random.rand(reg_prescan.size))
-    table["min_region"] = np.min(reg) - table["median_pre_scan"]
-    table["region"] = Column([big_reg - table["median_pre_scan"]])
-    table["column"] = Column([column - table["median_pre_scan"]])
-    table["line"] = Column([line - table["median_pre_scan"]])
+    # print(region)
+    # print(type(region))
+    if type(region) == tuple:
+        Yinf, Ysup, Xinf, Xsup = region
+        reg = data[Xinf:Xsup, Yinf:Ysup]
+        reg_prescan = data[Xinf-1000:Xsup-1000, Yinf:Ysup]
+        n = 20
+        big_reg = data[Xinf - n : Xsup + n, Yinf - n : Ysup + n]
+        column = np.mean(data[Xinf - n : Xsup + n, Yinf:Ysup], axis=1)
+        line = np.mean(data[Xinf:Xsup, Yinf - n : Ysup + n], axis=0)
+        table["mean_region"] = np.mean(reg.flatten()) - np.mean(reg_prescan.flatten())
+        table["median_region"] = np.median(reg.flatten() + np.random.rand(reg.size)) - np.mean(reg_prescan.flatten() + np.random.rand(reg_prescan.size))
+        table["min_region"] = np.min(reg) - table["median_pre_scan"]
+        table["region"] = Column([big_reg - table["median_pre_scan"]])
+        table["column"] = Column([column - table["median_pre_scan"]])
+        table["line"] = Column([line - table["median_pre_scan"]])
 
 # # table["flux"] = table["median_physical"] - table["median_pre_scan"]
 # # table["tilted_slit_214"] = np.mean(

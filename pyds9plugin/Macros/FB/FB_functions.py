@@ -188,7 +188,7 @@ def emccd_model(
     import sys
 
     sys.path.append("../../../../pyds9plugin")
-    if fit=="EMCCDhist":
+    if fit!="EMCCDhist":
         from pyds9plugin.Macros.Fitting_Functions.functions import EMCCDhist as EMCCD
         from pyds9plugin.Macros.Fitting_Functions.functions import EMCCD as EMCCD2
     else:
@@ -268,6 +268,7 @@ def emccd_model(
     args_number = len(inspect.getargspec(function).args) - 1
 
     fig, ax = plt.subplots(figsize=(10, 7))
+    ax.set_xlim((min_, max_))
     plt.subplots_adjust(bottom=0.05 + 0.08 + args_number * 0.03)
     try:
         upper_limit = bins[
@@ -388,10 +389,10 @@ def emccd_model(
         y_conv[xdata < upper_limit],
         "-",
         c=color,
-        # label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\nG=%sDAQ"
-        # % (conversion_gain, header_exptime, header_gain),
-        label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\n"#G=%sDAQ\nF=%0.1fe-/h"
-        % (conversion_gain, header_exptime)#, header_gain,flux*3600/header_exptime),
+        label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\nG=%sDAQ"
+        % (conversion_gain, header_exptime, header_gain),
+        # label="Data: Gconv=%0.2fADU/e-\ntexp=%ss\n"#G=%sDAQ\nF=%0.1fe-/h"
+        # % (conversion_gain, header_exptime)#, header_gain,flux*3600/header_exptime),
 
 
     )
@@ -416,9 +417,9 @@ def emccd_model(
     (l1,) = ax.plot(x, f1, "-", lw=1, alpha=0.7, label="EMCCD OS model\nFraction>5.5σ (RN=%0.1f)=%0.1f%%"%(RON,fraction_thresholded))
     (l2,) = ax.plot(x, f2, "-", c=l1.get_color(), lw=1)
 
-    
-    (l3,) = ax.plot(x, np.convolve(function2(x, *centers), np.ones(n_conv) / n_conv, mode="same"), "-", c=l1.get_color(), lw=1, alpha=0.7)
-    (l4,) = ax.plot(x, np.convolve(function2(x, *centers_), np.ones(n_conv) / n_conv, mode="same"), "-", c=l1.get_color(), lw=1)
+    if 1==0:
+        (l3,) = ax.plot(x, np.convolve(function2(x, *centers), np.ones(n_conv) / n_conv, mode="same"), "-", c=l1.get_color(), lw=1, alpha=0.7)
+        (l4,) = ax.plot(x, np.convolve(function2(x, *centers_), np.ones(n_conv) / n_conv, mode="same"), "-", c=l1.get_color(), lw=1)
 
 
       # , label="EMCCD model (Gconv=%0.2f)"%(conversion_gain))
@@ -493,21 +494,22 @@ def emccd_model(
                 mode="same",
             )
         )
+        if 1==0:
 
-        l3.set_ydata(
-            np.convolve(
-                function2(xdata, *v2), #+1 else bias is shifted by 1 ADU
-                np.ones(n_conv) / n_conv,
-                mode="same",
+            l3.set_ydata(
+                np.convolve(
+                    function2(xdata, *v2), #+1 else bias is shifted by 1 ADU
+                    np.ones(n_conv) / n_conv,
+                    mode="same",
+                )
             )
-        )
-        l4.set_ydata(
-            np.convolve(
-                function2(xdata, *v1),
-                np.ones(n_conv) / n_conv,
-                mode="same",
+            l4.set_ydata(
+                np.convolve(
+                    function2(xdata, *v1),
+                    np.ones(n_conv) / n_conv,
+                    mode="same",
+                )
             )
-        )
 
         # l1.set_ydata(
         #     np.convolve(function(x, *v1), np.ones(n_conv) / n_conv, mode="same")
@@ -583,10 +585,13 @@ def emccd_model(
                 bounds1.append(-np.inf)
                 bounds2.append(np.inf)
             # print("bounds = ",bounds1,bounds2)
+            # print("x = ",x,y)
+
             popt, pcov = curve_fit(
-                function, x, y, p0, bounds=[bounds1, bounds2],
+                function, x[np.isfinite(x) & np.isfinite(y)], y[np.isfinite(x) & np.isfinite(y)], p0, bounds=[bounds1, bounds2],
             # epsfcn=epsfcn
             )
+            # popt, pcov = p0, np.zeros((len(p0),len(p0)))
         with open('/tmp/test.csv', 'a') as file:
           file.write("\n%s, %s, %s, %s, %s, %s"%(popt[0],popt[1],popt[2],popt[3],popt[4],popt[5],))   
         

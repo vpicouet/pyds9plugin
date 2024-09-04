@@ -1,0 +1,228 @@
+# Region file format: DS9 version 4.1
+global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+image
+box(1246.5399,2044.5322,10,20,0) # color=blue font="helvetica 16 normal roman" text={1}
+box(1154.9511,2007.9455,10,20,0) # color=blue font="helvetica 16 normal roman" text={2}
+box(1154.6521,1909.9633,10,20,0) # color=blue font="helvetica 16 normal roman" text={3}
+box(1591.1666,1858.4456,10,20,0) # color=blue font="helvetica 16 normal roman" text={4}
+box(1769.0533,1776.2155,10,20,0) # color=blue font="helvetica 16 normal roman" text={5}
+box(1841.3078,1759.6444,10,20,0) # color=blue font="helvetica 16 normal roman" text={6}
+box(1392.1432,1733.4733,10,20,0) # color=blue font="helvetica 16 normal roman" text={7}
+box(1668.2432,1686.3089,10,20,0) # color=blue font="helvetica 16 normal roman" text={8}
+box(1631.5632,1628.3089,10,20,0) # color=blue font="helvetica 16 normal roman" text={9}
+box(1265.6032,1600.1166,10,20,0) # color=blue font="helvetica 16 normal roman" text={10}
+box(1216.8888,1567.2233,10,20,0) # color=blue font="helvetica 16 normal roman" text={11}
+box(1729.7367,1537.76,10,20,0) # color=blue font="helvetica 16 normal roman" text={12}
+box(1527.0399,1508.7533,10,20,0) # color=blue font="helvetica 16 normal roman" text={13}
+box(1923.3522,1458.8189,10,20,0) # color=blue font="helvetica 16 normal roman" text={14}
+box(1137.7867,1364.7977,10,20,0) # color=blue font="helvetica 16 normal roman" text={15}
+box(1368.5978,1291.7089,10,20,0) # color=blue font="helvetica 16 normal roman" text={16}
+box(1347.3878,1276.5289,10,20,0) # color=blue font="helvetica 16 normal roman" text={17}
+box(1760.5522,1255.4666,10,20,0) # color=blue font="helvetica 16 normal roman" text={18}
+box(1733.0111,1214.8077,10,20,0) # color=blue font="helvetica 16 normal roman" text={19}
+box(1452.2044,1175.5533,10,20,0) # color=blue font="helvetica 16 normal roman" text={20}
+box(1929.0667,1123.8289,10,20,0) # color=blue font="helvetica 16 normal roman" text={21}
+box(1812.3244,1045.2266,10,20,0) # color=blue font="helvetica 16 normal roman" text={22}
+box(1511.9278,1011.5733,10,20,0) # color=blue font="helvetica 16 normal roman" text={23}
+box(1967.7967,984.1388,10,20,0) # color=blue font="helvetica 16 normal roman" text={24}
+box(1431.9278,952.14328,10,20,0) # color=blue font="helvetica 16 normal roman" text={25}
+box(1741.7733,890.0955,10,20,0) # color=blue font="helvetica 16 normal roman" text={26}
+box(1846.54,862.11661,10,20,0) # color=blue font="helvetica 16 normal roman" text={27}
+box(1492.4078,841.79328,10,20,0) # color=blue font="helvetica 16 normal roman" text={28}
+box(1769.8544,833.2455,10,20,0) # color=blue font="helvetica 16 normal roman" text={29}
+box(1606.6422,793.64328,10,20,0) # color=blue font="helvetica 16 normal roman" text={30}
+box(1290.3422,722.71328,10,20,0) # color=blue font="helvetica 16 normal roman" text={31}
+box(1564.7767,703.86328,10,20,0) # color=blue font="helvetica 16 normal roman" text={32}
+box(1847.7144,693.76439,10,20,0) # color=blue font="helvetica 16 normal roman" text={33}
+box(1601.4767,648.92884,10,20,0) # color=blue font="helvetica 16 normal roman" text={34}
+box(1723.19,571.36328,10,20,0) # color=blue font="helvetica 16 normal roman" text={35}
+box(1468.5189,550.32328,10,20,0) # color=blue font="helvetica 16 normal roman" text={36}
+box(1421.4122,510.46328,10,20,0) # color=blue font="helvetica 16 normal roman" text={37}
+box(1540.98,465.30328,10,20,0) # color=blue font="helvetica 16 normal roman" text={38}
+box(1588.5367,442.51439,10,20,0) # color=blue font="helvetica 16 normal roman" text={39}
+box(1351.1422,419.94328,10,20,0) # color=blue font="helvetica 16 normal roman" text={40}
+box(1200.2933,373.78328,10,20,0) # color=blue font="helvetica 16 normal roman" text={41}
+box(1147.3033,351.30995,10,20,0) # color=blue font="helvetica 16 normal roman" text={42}
+box(1507.87,353.70328,10,20,0) # color=blue font="helvetica 16 normal roman" text={43}
+box(1703.6756,291.05884,10,20,0) # color=blue font="helvetica 16 normal roman" text={44}
+box(1677.7122,174.8955,10,20,0) # color=blue font="helvetica 16 normal roman" text={45}
+box(1536.9733,2034.88,10,20,0) # color=blue font="helvetica 16 normal roman" text={LyC 1}
+box(1501.7711,1960.8,10,20,0) # color=blue font="helvetica 16 normal roman" text={LyC 2}
+box(1459.0411,1871.03,10,20,0) # color=blue font="helvetica 16 normal roman" text={LyC 3}
+box(1448.0911,1838.71,10,20,0) # color=blue font="helvetica 16 normal roman" text={LyC 4}
+box(1629.7632,1799.7289,10,20,0) # color=blue font="helvetica 16 normal roman" text={LyC 5}
+box(1842.6433,1163.85,10,20,0) # color=blue font="helvetica 16 normal roman" text={LyC 6}
+box(1989.0411,415.16106,10,20,0) # color=blue font="helvetica 16 normal roman" text={LyC 7}
+box(1926.4578,315.99995,10,20,0) # color=blue font="helvetica 16 normal roman" text={LyC 8}
+box(1775.91,1714.0322,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 1}
+box(1527.2899,1421.5833,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 2}
+box(1409.9178,1341.6189,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 3}
+box(1673.9122,1329.6144,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 4}
+box(1327.6678,1305.4489,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 5}
+box(1512.5711,1195.5633,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 6}
+box(1422.0178,1075.4233,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 7}
+box(1566.2678,1055.1933,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 8}
+box(1734.9978,999.4255,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 9}
+box(1949.6844,642.98439,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 10}
+box(1360.9822,493.45328,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 11}
+box(1812.4744,485.78995,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 12}
+box(1348.9522,321.40328,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 13}
+box(1632.0011,256.44995,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 14}
+box(1461.99,127.27328,10,20,0) # color=blue font="helvetica 16 normal roman" text={OVI 15}
+box(1973.7717,1107.6755,8.7055556,50.148922,0) # color=blue font="helvetica 16 normal roman" text={QSO 1}
+box(1353.6922,604.45328,10,20,0) # color=blue font="helvetica 16 normal roman" text={QSO 2}
+box(1169.0283,221.80497,10.836667,43.390053,0) # color=blue font="helvetica 16 normal roman" text={QSO 3}
+box(1327.1622,676.22328,10,20,0) # color=blue font="helvetica 16 normal roman" text={QSOgal 2}
+box(1262.19,220.22661,10,20,0) # color=blue font="helvetica 16 normal roman" text={QSOgal 4}
+box(1240.3833,201.76995,10,20,0) # color=blue font="helvetica 16 normal roman" text={QSOgal 5}
+box(1271.74,162.42328,10,20,0) # color=blue font="helvetica 16 normal roman" text={QSOgal 6}
+box(1416.4599,2044.5322,10,20,0) # color=yellow font="helvetica 16 normal roman" text={1}
+box(1324.8711,2007.9455,10,20,0) # color=yellow font="helvetica 16 normal roman" text={2}
+box(1324.5721,1909.9633,10,20,0) # color=yellow font="helvetica 16 normal roman" text={3}
+box(1761.0866,1858.4456,10,20,0) # color=yellow font="helvetica 16 normal roman" text={4}
+box(1938.9733,1776.2155,10,20,0) # color=yellow font="helvetica 16 normal roman" text={5}
+box(2013.7278,1758.8111,10,20,0) # color=yellow font="helvetica 16 normal roman" text={6}
+box(1562.0632,1733.4733,10,20,0) # color=yellow font="helvetica 16 normal roman" text={7}
+box(1838.1632,1686.3089,10,20,0) # color=yellow font="helvetica 16 normal roman" text={8}
+box(1801.4832,1628.3089,10,20,0) # color=yellow font="helvetica 16 normal roman" text={9}
+box(1435.5232,1600.1166,10,20,0) # color=yellow font="helvetica 16 normal roman" text={10}
+box(1386.8088,1567.2233,10,20,0) # color=yellow font="helvetica 16 normal roman" text={11}
+box(1899.6567,1537.76,10,20,0) # color=yellow font="helvetica 16 normal roman" text={12}
+box(1696.9599,1508.7533,10,20,0) # color=yellow font="helvetica 16 normal roman" text={13}
+box(2093.2722,1458.8189,10,20,0) # color=yellow font="helvetica 16 normal roman" text={14}
+box(1307.7067,1364.7977,10,20,0) # color=yellow font="helvetica 16 normal roman" text={15}
+box(1538.5178,1291.7089,10,20,0) # color=yellow font="helvetica 16 normal roman" text={16}
+box(1517.3078,1276.5289,10,20,0) # color=yellow font="helvetica 16 normal roman" text={17}
+box(1930.4722,1255.4666,10,20,0) # color=yellow font="helvetica 16 normal roman" text={18}
+box(1902.9311,1214.8077,10,20,0) # color=yellow font="helvetica 16 normal roman" text={19}
+box(1622.1244,1175.5533,10,20,0) # color=yellow font="helvetica 16 normal roman" text={20}
+box(2098.9867,1123.8289,10,20,0) # color=yellow font="helvetica 16 normal roman" text={21}
+box(1982.2444,1045.2266,10,20,0) # color=yellow font="helvetica 16 normal roman" text={22}
+box(1681.8478,1011.5733,10,20,0) # color=yellow font="helvetica 16 normal roman" text={23}
+box(2137.7167,984.1388,10,20,0) # color=yellow font="helvetica 16 normal roman" text={24}
+box(1601.8478,952.14328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={25}
+box(1911.6933,890.0955,10,20,0) # color=yellow font="helvetica 16 normal roman" text={26}
+box(2001.46,866.28328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={27}
+box(1662.3278,841.79328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={28}
+box(1939.7744,833.2455,10,20,0) # color=yellow font="helvetica 16 normal roman" text={29}
+box(1776.5622,793.64328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={30}
+box(1460.2622,722.71328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={31}
+box(1734.6967,703.86328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={32}
+box(2017.6344,693.76439,10,20,0) # color=yellow font="helvetica 16 normal roman" text={33}
+box(1771.3967,648.92884,10,20,0) # color=yellow font="helvetica 16 normal roman" text={34}
+box(1877.51,574.96328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={35}
+box(1638.4389,550.32328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={36}
+box(1591.3322,510.46328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={37}
+box(1710.9,465.30328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={38}
+box(1758.4567,442.51439,10,20,0) # color=yellow font="helvetica 16 normal roman" text={39}
+box(1521.0622,419.94328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={40}
+box(1370.2133,373.78328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={41}
+box(1317.2233,351.30995,10,20,0) # color=yellow font="helvetica 16 normal roman" text={42}
+box(1677.79,353.70328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={43}
+box(1873.5956,291.05884,10,20,0) # color=yellow font="helvetica 16 normal roman" text={44}
+box(1847.6322,174.8955,10,20,0) # color=yellow font="helvetica 16 normal roman" text={45}
+box(1706.8933,2034.88,10,20,0) # color=yellow font="helvetica 16 normal roman" text={LyC 1}
+box(1671.6911,1960.8,10,20,0) # color=yellow font="helvetica 16 normal roman" text={LyC 2}
+box(1628.9611,1871.03,10,20,0) # color=yellow font="helvetica 16 normal roman" text={LyC 3}
+box(1618.0111,1838.71,10,20,0) # color=yellow font="helvetica 16 normal roman" text={LyC 4}
+box(1799.6832,1799.7289,10,20,0) # color=yellow font="helvetica 16 normal roman" text={LyC 5}
+box(2004.23,1169.6833,10,20,0) # color=yellow font="helvetica 16 normal roman" text={LyC 6}
+box(2166.4611,419.32772,10,20,0) # color=yellow font="helvetica 16 normal roman" text={LyC 7}
+box(2099.7111,311.83328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={LyC 8}
+box(1945.83,1714.0322,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 1}
+box(1697.2099,1421.5833,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 2}
+box(1579.8378,1341.6189,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 3}
+box(1843.8322,1329.6144,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 4}
+box(1497.5878,1305.4489,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 5}
+box(1682.4911,1195.5633,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 6}
+box(1591.9378,1075.4233,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 7}
+box(1736.1878,1055.1933,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 8}
+box(1904.9178,999.4255,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 9}
+box(2112.9378,639.65106,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 10}
+box(1530.9022,493.45328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 11}
+box(1982.3944,485.78995,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 12}
+box(1518.8722,321.40328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 13}
+box(1801.9211,256.44995,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 14}
+box(1631.91,127.27328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={OVI 15}
+box(2143.6917,1107.6755,8.7055556,50.148922,0) # color=yellow font="helvetica 16 normal roman" text={QSO 1}
+box(1523.6122,604.45328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={QSO 2}
+box(1338.9483,221.80497,10.836667,43.390053,0) # color=yellow font="helvetica 16 normal roman" text={QSO 3}
+box(1497.0822,676.22328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={QSOgal 2}
+box(1432.11,220.22661,10,20,0) # color=yellow font="helvetica 16 normal roman" text={QSOgal 4}
+box(1410.3033,201.76995,10,20,0) # color=yellow font="helvetica 16 normal roman" text={QSOgal 5}
+box(1441.66,162.42328,10,20,0) # color=yellow font="helvetica 16 normal roman" text={QSOgal 6}
+box(1781.2599,2044.5322,10,20,0) # color=red font="helvetica 16 normal roman" text={1}
+box(1689.6711,2007.9455,10,20,0) # color=red font="helvetica 16 normal roman" text={2}
+box(1685.8999,1909.9633,10,20,0) # color=red font="helvetica 16 normal roman" text={3}
+box(2123.8033,1859.14,10,20,0) # color=red font="helvetica 16 normal roman" text={4}
+box(2295.44,1778.9933,10,20,0) # color=red font="helvetica 16 normal roman" text={5}
+box(2369.5,1762.2833,10,20,0) # color=red font="helvetica 16 normal roman" text={6}
+box(1918.5299,1733.4733,10,20,0) # color=red font="helvetica 16 normal roman" text={7}
+box(2200.8799,1687.0033,10,20,0) # color=red font="helvetica 16 normal roman" text={8}
+box(2164.1999,1629.0033,10,20,0) # color=red font="helvetica 16 normal roman" text={9}
+box(1791.9899,1598.0333,10,20,0) # color=red font="helvetica 16 normal roman" text={10}
+box(1743.9699,1567.2233,10,20,0) # color=red font="helvetica 16 normal roman" text={11}
+box(2260.29,1539.8433,10,20,0) # color=red font="helvetica 16 normal roman" text={12}
+box(2061.7599,1508.7533,10,20,0) # color=red font="helvetica 16 normal roman" text={13}
+box(2454.6,1465.7633,10,20,0) # color=red font="helvetica 16 normal roman" text={14}
+box(1662.09,1364.1033,10,20,0) # color=red font="helvetica 16 normal roman" text={15}
+box(1896.3734,1291.7089,10,20,0) # color=red font="helvetica 16 normal roman" text={16}
+box(1875.1634,1276.5289,10,20,0) # color=red font="helvetica 16 normal roman" text={17}
+box(2285.55,1259.6333,10,20,0) # color=red font="helvetica 16 normal roman" text={18}
+box(2256.62,1220.3633,10,20,0) # color=red font="helvetica 16 normal roman" text={19}
+box(1979.98,1175.5533,10,20,0) # color=red font="helvetica 16 normal roman" text={20}
+box(2447.12,1130.7733,10,20,0) # color=red font="helvetica 16 normal roman" text={21}
+box(2340.1,1049.3933,10,20,0) # color=red font="helvetica 16 normal roman" text={22}
+box(2037.62,1011.5733,10,20,0) # color=red font="helvetica 16 normal roman" text={23}
+box(2485.85,991.0833,10,20,0) # color=red font="helvetica 16 normal roman" text={24}
+box(1957.62,952.14328,10,20,0) # color=red font="helvetica 16 normal roman" text={25}
+box(2261.91,892.87328,10,20,0) # color=red font="helvetica 16 normal roman" text={26}
+box(2366.26,866.28328,10,20,0) # color=red font="helvetica 16 normal roman" text={27}
+box(2018.1,841.79328,10,20,0) # color=red font="helvetica 16 normal roman" text={28}
+box(2291.38,836.02328,10,20,0) # color=red font="helvetica 16 normal roman" text={29}
+box(2131.64,793.64328,10,20,0) # color=red font="helvetica 16 normal roman" text={30}
+box(1815.34,722.71328,10,20,0) # color=red font="helvetica 16 normal roman" text={31}
+box(2089.08,703.86328,10,20,0) # color=red font="helvetica 16 normal roman" text={32}
+box(2369.24,695.15328,10,20,0) # color=red font="helvetica 16 normal roman" text={33}
+box(2125.78,649.62328,10,20,0) # color=red font="helvetica 16 normal roman" text={34}
+box(2242.31,574.96328,10,20,0) # color=red font="helvetica 16 normal roman" text={35}
+box(1989.35,550.32328,10,20,0) # color=red font="helvetica 16 normal roman" text={36}
+box(1946.41,510.46328,10,20,0) # color=red font="helvetica 16 normal roman" text={37}
+box(2066.1,464.10328,10,20,0) # color=red font="helvetica 16 normal roman" text={38}
+box(2112.84,443.90328,10,20,0) # color=red font="helvetica 16 normal roman" text={39}
+box(1876.14,419.94328,10,20,0) # color=red font="helvetica 16 normal roman" text={40}
+box(1726.68,373.78328,10,20,0) # color=red font="helvetica 16 normal roman" text={41}
+box(1671.19,347.14328,10,20,0) # color=red font="helvetica 16 normal roman" text={42}
+box(2026.99,341.70328,10,20,0) # color=red font="helvetica 16 normal roman" text={43}
+box(2226.59,291.75328,10,20,0) # color=red font="helvetica 16 normal roman" text={44}
+box(2202.71,177.67328,10,20,0) # color=red font="helvetica 16 normal roman" text={45}
+box(2071.6933,2034.88,10,20,0) # color=red font="helvetica 16 normal roman" text={LyC 1}
+box(2027.4633,1960.8,10,20,0) # color=red font="helvetica 16 normal roman" text={LyC 2}
+box(1984.7333,1871.03,10,20,0) # color=red font="helvetica 16 normal roman" text={LyC 3}
+box(1973.7833,1838.71,10,20,0) # color=red font="helvetica 16 normal roman" text={LyC 4}
+box(2162.3999,1800.4233,10,20,0) # color=red font="helvetica 16 normal roman" text={LyC 5}
+box(2369.03,1169.6833,10,20,0) # color=red font="helvetica 16 normal roman" text={LyC 6}
+box(2513.9,418.63328,10,20,0) # color=red font="helvetica 16 normal roman" text={LyC 7}
+box(2453.4,318.08328,10,20,0) # color=red font="helvetica 16 normal roman" text={LyC 8}
+box(2304.38,1718.8933,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 1}
+box(2062.0099,1421.5833,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 2}
+box(1937.6934,1341.6189,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 3}
+box(2198.91,1331.0033,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 4}
+box(1855.4434,1305.4489,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 5}
+box(2036.18,1195.5633,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 6}
+box(1947.71,1075.4233,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 7}
+box(2091.96,1055.1933,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 8}
+box(2254.44,1002.2033,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 9}
+box(2468.71,643.12328,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 10}
+box(1885.98,493.45328,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 11}
+box(2334,487.87328,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 12}
+box(1873.95,321.40328,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 13}
+box(2155.61,258.53328,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 14}
+box(1987.11,124.87328,10,20,0) # color=red font="helvetica 16 normal roman" text={OVI 15}
+box(2488.4,1114.8233,10,20,0) # color=red font="helvetica 16 normal roman" text={QSO 1}
+box(1878.69,604.45328,10,20,0) # color=red font="helvetica 16 normal roman" text={QSO 2}
+box(1695.83,220.94328,10,20,0) # color=red font="helvetica 16 normal roman" text={QSO 3}
+box(1852.16,676.22328,10,20,0) # color=red font="helvetica 16 normal roman" text={QSOgal 2}
+box(1786.91,219.39328,10,20,0) # color=red font="helvetica 16 normal roman" text={QSOgal 4}
+box(1764.27,200.10328,10,20,0) # color=red font="helvetica 16 normal roman" text={QSOgal 5}
+box(1798.06,161.22328,10,20,0) # color=red font="helvetica 16 normal roman" text={QSOgal 6}

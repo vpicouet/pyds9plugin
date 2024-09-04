@@ -21,8 +21,7 @@ requires = [
     "datetime",
     "pandas",
     "argparse",
-
-    "pyvista",  # ==0.25.3
+    # "pyvista",  # ==0.25.3
     "PyQt5",
     "dataphile",
     "sep",

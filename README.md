@@ -26,9 +26,10 @@ The goal is the pyds9plugin is then three-fold:
 
 
 
-Installation
+Installing pyds9plugin
 ------------
 
+Pyds9 currently requires python 3.8.
 To install pyds9plugin for general purposes use Pip:
 
 ```

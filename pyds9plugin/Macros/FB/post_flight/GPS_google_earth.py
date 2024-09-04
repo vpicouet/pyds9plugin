@@ -1,7 +1,8 @@
 
 from astropy.table import Table 
 # data = Table.read("/Users/Vincent/Github/FB-dashboard/FlightPrincipalCatalog_v5_tronc.csv")
-data = Table.read("/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/Flight/CNES/Fichiers_Pour_La_Science_FLIGHT_2023_tronc10.csv")
+# data = Table.read("/Users/Vincent/Library/CloudStorage/GoogleDrive-vp2376@columbia.edu/.shortcut-targets-by-id/1ZgB7kY-wf7meXrq8v-1vIzor75aRdLDn/FIREBall-2/FB2_2023/Flight/CNES/Fichiers_Pour_La_Science_FLIGHT_2023_tronc10.csv")
+data = Table.read("/Users/Vincent/Library/CloudStorage/OneDrive-CaliforniaInstituteofTechnology/Safari/Fichiers_Pour_La_Science_FLIGHT_2023.csv")
 f = open('/tmp/flight.kml', 'w')
 
 #Writing the kml file.

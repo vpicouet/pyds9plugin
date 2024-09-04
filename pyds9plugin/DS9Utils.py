@@ -2358,6 +2358,7 @@ def process_region(regions, win, quick=False, message=True, dtype=int):
             else:
                 processed_regions.append(np.array(coords, dtype=int))
         else:
+            print(name)
             if name == "box":
                 # print(coords)
                 xc, yc, w, h, angle = coords
@@ -5377,6 +5378,7 @@ def execute_command(
         from tqdm import trange, tqdm
 
     from matplotlib import pyplot as plt
+    import traceback
 
     if ".fit" in filename:
         try:
@@ -5485,13 +5487,18 @@ def execute_command(
             exec(exp, new_dict)  # globals(), ldict)  # , locals(),locals())
     except (TabError) as e:  # NameError,IndexError
         import traceback
+        print(f"Error in file {exp}: {e}")
 
         verboseprint(e)
-        verboseprint(traceback.format_exc())
+        traceback.print_exc()
+        # verboseprint(traceback.format_exc())
 
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
         d = DS9n(xpapoint)
         sys.exit()
 
@@ -6015,9 +6022,14 @@ def stack_images_path(
         elif Type == "hstack":
             # from astropy.table import hstack
             stack =  np.concatenate(array3d,axis=1)
+        elif Type == "remove_dark":
+            # from astropy.table import dstack
+            im1 = array3d[0]
+            im0 = array3d[1]
+            stack = 1000+im1-im0 if np.mean(im1-im0)>0 else 1000+im0-im1
         else:
             stack = np.array(
-                getattr(np, Type)(np.array(array3d), axis=0,), dtype=dtype,
+                getattr(np, Type)(np.array(array3d), axis=0,), dtype=type,
             )
 
     try:
@@ -9182,6 +9194,8 @@ def background_estimation(
     )
     if len(path) < 2:
         d.set("frame new ; tile yes ; file " + name)
+        # d.set("frame clear ; file " + "/tmp/test.fits")
+
     return name
 
 
@@ -11509,12 +11523,14 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
         choices=[
             "NONE",
             "BACKGROUND",
+            "mBACKGROUND",
             "BACKGROUND_RMSMINIBACKGROUND",
             "MINIBACK_RMS",
             "-BACKGROUND",
             "FILTERED",
             "OBJECTS",
             "-OBJECTS",
+            "mOBJECTS",
             "SEGMENTATION",
             "APERTURES",
         ],
@@ -11683,6 +11699,10 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
     param_dict["CLEAN"] = "Y" if param_dict["CLEAN"] == "1" else "N"
     param_dict["RESCALE_WEIGHTS"] = "Y" if param_dict["RESCALE_WEIGHTS"] == "1" else "N"
     param_dict["WEIGHT_GAIN"] = "Y" if param_dict["WEIGHT_GAIN"] == "1" else "N"
+
+    param_dict["CHECKIMAGE_TYPE"] = "-BACKGROUND" if param_dict["CHECKIMAGE_TYPE"]=="mBACKGROUND" else param_dict["CHECKIMAGE_TYPE"]
+    param_dict["CHECKIMAGE_TYPE"] = "-mOBJECTS" if param_dict["CHECKIMAGE_TYPE"]=="mOBJECTS" else param_dict["CHECKIMAGE_TYPE"]
+
     verboseprint("DETECTION_IMAGE =", DETECTION_IMAGE)
 
     if (len(filename) == 1) & (param_dict["CATALOG_NAME"] == ""):
@@ -14380,7 +14400,7 @@ def fb_tutorial(xpapoint=None, i=0, n=1):
     wait_for_n(xpapoint)
     d.set("frame new")
     d.set("file /Users/Vincent/Nextcloud/LAM/Work/FIREBall/Images/Calib_box/image000026_ZN_9900.fits")   
-    d.set("regions /Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/F3_2022_6_-106.reg")   
+    d.set("regions /Users/Vincent/Github/pyds9plugin/pyds9plugin/regions/FB/F3_2022_6_-106.reg")   
     message(d, """Delete the regions you won't use, copy paste the rest and displace it to center it on the slits. Then click next""")
     wait_for_n(xpapoint)
     python_command(xpapoint=xpapoint, argv="--xpapoint %s --exp %s/Macros/FB/Flight/stack_fit_slit.py"%(xpapoint, path))
