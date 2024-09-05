@@ -200,6 +200,7 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
             except ValueError as e:
                 print("error: ", region.id, e)
                 popt_spatial, popt_spectral = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
+            
             if region.color == "red":
                 line = 214
             elif region.color == "blue":
