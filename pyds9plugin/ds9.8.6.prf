@@ -1,0 +1,126 @@
+global ds9
+global prefs
+set prefs(version) 8.6
+# this is a check for to ensure a match between the
+# current ds9 version matches the prefs version
+if {[string compare $prefs(version) [lindex $ds9(version) 0]] == 1} {
+    return
+}
+global pds9
+array set pds9 { dialog native text,font courier prec,linear 8 samp 1 iraf 1 prec,len,arcsec 3 samp,webhub 1 font,weight normal automarker 1 infobox,filenametype {root base} language en text,font,weight normal samp,hub 1 dialog,all 0 nan black prec,angle 8 font,slant roman confirm 1 prec,deg 7 backup 1 language,dir {} font helvetica language,name English bg grey prec,len,deg 7 xpa 1 bg,use 1 prec,dms 3 theme default prec,len,arcmin 5 prec,len,linear 8 dialog,center 0 prec,hms 4 font,size 14 text,font,slant roman text,font,size 9 }
+global current
+global pcurrent
+array set pcurrent { orient none zoom {1 1} mode region display single align 0 rotate 0 }
+array set current [array get pcurrent]
+global view
+global pview
+array set pview { info,wcsc 0 info,wcsd 0 info,wcse 0 info,image 1 info,wcsf 0 info,wcsg 0 info,wcsh 0 info,keyword 0 info,wcsi 0 info,keyvalue {} info,wcsj 0 info,object 1 info,wcsk 0 info,wcsl 0 info,wcsm 0 info,detector 0 info,wcsn 0 info,wcso 0 info,wcsp 0 layout advanced info,wcsq 0 info,wcsr 0 info,wcss 0 info,wcst 0 magnifier 1 info,lowhigh 0 info,wcsu 0 info,frame 1 info,wcsv 0 info 1 info,wcsw 0 info,wcsx 0 info,physical 1 info,wcsy 0 info,wcsz 0 graph,vert 0 info,bunit 0 multi 0 colorbar 1 icons 1 info,filename 1 graph,horz 0 info,wcs 1 buttons 1 info,amplifier 0 info,minmax 0 panner 1 info,wcsa 0 info,wcsb 0 }
+array set view [array get pview]
+global phttp
+array set phttp { auth,passwd {} proxy,host {} auth,user {} auth 0 proxy 0 proxy,port {} }
+global pbuttons
+array set pbuttons { color,he 1 frame,lock,frame,physical 0 color,scm_buda 0 view,lowhigh 0 frame,single 1 analysis,bout 1 color,tpglarm 0 color,ch05p151010 0 major,color 1 illustrate,save 1 color,inferno 0 bin,in 1 view,wcs 0 frame,hls 0 view,buttons 1 file,import,gif 0 file,save,hsv,cube 0 color,scm_lajolla 0 file,export,envi 0 color,gist_stern 0 help,release 1 illustrate,show 0 illustrate,all 1 file,open 1 file,open,me,frames 0 color,scm_greyC 0 color,turbo 0 file,import,png 0 edit,crosshair 1 view,panner 1 frame,lock,scale 0 help,story 0 help,new 0 region,saveselect 1 file,save,slice 0 file,open,me,cube 0 frame,match,color 0 scale,params 1 file,saveimage,gif 0 view,amplifier 0 region,dissolve 0 major,zoom 1 edit,illustrate 1 frame,newrgb 1 major,file 1 bin,512x 0 file,saveimage,png 0 file,console 0 frame,lock,cube,none 0 color,h5_summer 0 illustrate,info 1 bin,8192x 0 color,scm_acton 0 edit,prefs 1 frame,match,smooth 0 region,deleteselect 0 bin,2048x 0 zoom,i2 1 color,scm_batlow 0 scale,minmax 1 zoom,i4 1 edit,colorbar 1 scale,asinh 1 file,open,rgb,cube 0 color,numerics 0 view,horizontal 0 major,wcs 1 zoom,i8 0 color,scm_romaO 0 view,colorbar 1 color,sls 0 file,import,envi 0 frame,match,crop,wcs 0 bin,1 1 frame,clear 1 color,ch05m151008 0 bin,2 1 color,ch05m151010 0 zoom,16 0 frame,newhls 1 frame,new3d 1 analysis,b16 0 zoom,none 0 bin,4 1 file,page 1 edit,rotate 1 color,ch05m151012 0 file,open,slice 0 color,gist_heat 0 region,list 1 file,pspage 0 frame,lock,crop,none 0 bin,8 1 file,import,rgbarray 0 frame,lock,frame,detector 0 scale,zscale 1 color,scm_vanimo 0 region,centroid 1 region,autocentroid 1 file,export,array 0 color,h5_spring 0 scale,pow 1 zoom,270 0 frame,size 0 file,export,hsvarray 0 color,h5_yellow 0 frame,match,crop,image 0 scale,90 0 wcs,fk4 1 zoom,32 0 analysis,b32 0 wcs,fk5 1 frame,blink 1 color,cool 1 bin,128x 0 bin,average 0 frame,match,frame,amplifier 0 frame,lock,crosshair,image 0 illustrate,text 0 color,staircase 0 scale,95 0 view,image 0 frame,reset 0 scale,96 0 file,save 1 file,saveimage,tiff 0 scale,97 0 major,scale 1 scale,98 0 file,save,rgb,cube 0 region,showtext 1 scale,99 0 file,exit 1 edit,region 1 frame,first 1 color,h5_winter 0 color,h5_copper 0 frame,hsv 0 frame,lock,crop,physical 0 help,ref 1 color,grey 1 illustrate,invert 1 color,gist_earth 0 color,viridis 1 frame,lock,crop,amplifier 0 frame,lock,scalelimits 0 frame,lock,crosshair,none 0 file,export,jpeg 0 view,filename 1 view,magnifier 1 color,h5_gray 0 file,backup 0 frame,match,scalelimits 0 region,vector 0 color,gist_rainbow 0 frame,lock,crosshair,wcs 0 color,vert 0 color,green 0 illustrate,line 0 color,ch20m151010 0 file,header 1 ianalysis,0,10 1 color,scm_vikO 0 edit,cut 0 edit,crop 1 ianalysis,0,11 1 scale,local 1 frame,lock,crop,image 0 ianalysis,0,12 1 frame,match,scale 0 ianalysis,0,13 1 region,all 1 color,scm_devon 0 ianalysis,0,14 1 color,scm_brocO 0 ianalysis,0,15 1 scale,user 0 ianalysis,0,16 1 file,open,hls,cube 0 file,samp,image 0 color,params 0 color,scm_managua 0 color,tpglhwf 0 edit,footprint 1 zoom,in 1 file,open,hls,image 0 analysis,bin 1 illustrate,listselect 0 file,import,array 0 frame,movelast 0 color,scm_fes 0 color,cubehelix0 0 color,standard 0 frame,match,frame,physical 0 help,faq 1 illustrate,polygon 0 color,cubehelix1 0 scale,global 1 file,save,hls,image 0 color,tpglhwm 0 frame,lock,frame,image 0 region,load 1 file,import,hlsarray 0 analysis,smooth 1 frame,match,frame,image 0 region,savetemplate 0 region,loadtemplate 0 color,h5_cool 0 scale,925 0 color,rainbow 1 zoom,params 0 file,samphub,stop 0 frame,refresh 0 zoom,i16 0 file,import,jpeg 0 view,basic 0 zoom,90 0 frame,newhsv 1 illustrate,ellipse 0 region,delete 0 color,scm_broc 0 color,ch05m151410 0 file,export,rgbarray 0 ianalysis,0,0 1 edit,copy 0 ianalysis,0,1 1 region,annulus 0 ianalysis,0,2 1 frame,lock,crosshair,amplifier 0 ianalysis,0,3 1 bin,fit 1 ianalysis,0,4 1 file,save,hls,cube 0 ianalysis,0,5 1 region,ruler 1 region,circle 1 color,h5_bluered 0 ianalysis,0,6 1 frame,match,crosshair,amplifier 0 ianalysis,0,7 1 color,scm_cork 0 color,gist_gray 0 color,a 1 view,physical 0 ianalysis,0,8 1 color,b 1 ianalysis,0,9 1 scale,sqrt 1 frame,match,cube,image 0 frame,lock,crop,detector 0 zoom,i32 0 major,view 1 frame,match,cube,wcs 0 color,plasma 0 color,h5_pink 0 view,vertical 0 region,point 0 file,open,hsv,image 0 view,multi 1 color,h5_bone 0 view,icons 1 illustrate,moveback 1 region,group 0 frame,lock,axes 0 frame,movenext 0 illustrate,box 0 file,save,hsv,image 0 frame,match,crosshair,physical 0 bin,128 0 file,print 1 frame,lock,crop,wcs 0 frame,delete 1 frame,lock,frame,none 0 file,save,me,cube 0 file,open,rgb,image 0 file,open,url 0 frame,match,crop,physical 0 color,magma 0 color,red 0 frame,movefirst 0 color,scm_vik 0 color,twilight 0 region,none 1 region,polygon 0 color,scm_bamako 0 illustrate,list 1 bin,params 0 file,save,rgb,image 0 edit,3d 1 frame,last 1 scale,zmax 0 edit,catalog 1 frame,tile 1 major,help 1 region,compass 0 edit,paste 0 frame,match,crosshair,wcs 0 help,about 1 color,scm_turku 0 region,back 1 scale,datasec 0 scale,squared 1 file,samp,table 0 frame,match,frame,detector 0 color,h5_hot 0 frame,lock,cube,image 0 file,export,tiff 0 help,desk 1 file,import,slice,gif 0 region,ellipse 0 frame,cube 0 color,tpglpof 0 color,scm_batlowK 0 color,h5_dkbluered 0 edit,none 1 view,graphvert 1 major,edit 1 color,blue 0 frame,lock,crosshair,physical 0 illustrate,saveselect 0 file,import,slice,png 0 file,open,mosaic,wfpc2 0 file,psprint 0 color,scm_lapaz 0 color,gist_ncar 0 file,import,slice,jpeg 0 major,illustrate 1 wcs,ecliptic 1 color,horz 0 color,tpglpom 0 region,save 1 region,newgroup 0 color,aips0 1 file,export,hlsarray 0 wcs,galactic 1 region,front 1 zoom,0 0 frame,match,axes 0 zoom,1 1 color,scm_corkO 0 color,tpglhcf 0 scale,995 1 zoom,2 1 frame,moveprev 0 scale,hist 1 frame,match,frame,wcs 0 analysis,contours 1 color,scm_batlowW 0 zoom,4 1 view,advanced 0 color,reset 0 color,numspace 0 file,open,mosaic,wcs 0 file,export,gif 0 region,show 0 zoom,8 0 view,minmax 0 view,detector 0 frame,new 1 frame,match,crop,amplifier 0 color,tpglhcm 0 zoom,center 0 file,open,mosaic,wcs,seg 0 region,ellipseannulus 0 zoom,fit 1 major,bin 1 analysis,grid 1 color,scm_bilbao 0 frame,next 1 file,export,png 0 color,scm_berlin 0 edit,pan 1 color,scm_oslo 0 color,h5_yarg 0 view,info 1 color,scm_lisbon 0 bin,1024x 0 file,import,tiff 0 file,samphub,info 0 frame,match,crosshair,detector 0 frame,lock,frame,amplifier 0 analysis,bfit 1 bin,out 1 file,xpa,info 0 view,object 0 frame,lock,smooth 0 illustrate,deleteselect 0 color,h5_hsv 0 file,saveimage,eps 0 frame,match,crop,detector 0 color,invert 0 color,scm_tokyo 0 region,create 0 region,info 1 illustrate,load 1 frame,match,crosshair,image 0 scale,sinh 1 color,bb 1 file,tcl 0 file,export,nrrd 0 region,deleteload 0 wcs,sexagesimal 1 region,panda 0 color,scm_oleron 0 file,open,mosaic,iraf 0 region,boxannulus 0 wcs,degrees 1 color,scm_nuuk 0 major,analysis 1 region,box 1 wcs,icrs 1 view,frame 0 region,segment 0 file,samp,connect 0 frame,lock,color 0 region,listselect 1 bin,16 1 frame,lock,bin 0 frame,3d 0 major,frame 1 file,restore 0 frame,lock,crosshair,detector 0 frame,match,bin 0 color,color 0 color,scm_bukavu 0 help,ack 1 color,i8 1 file,save,mosaic,wcs 0 frame,lock,cube,wcs 0 frame,prev 1 color,heat 1 edit,zoom 1 illustrate,delete 1 region,invert 0 color,h5_green 0 edit,examine 1 view,bunit 0 color,h5_jet 0 bin,32 1 analysis,b1 1 frame,deleteall 1 analysis,b2 1 color,gist_yarg 0 region,text 0 region,projection 1 zoom,crop 0 file,notes 1 analysis,b4 1 scale,log 1 illustrate,circle 0 color,scm_imola 0 frame,fade 1 color,scm_hawaii 0 bin,4096x 0 frame,lock,frame,wcs 0 file,import,nrrd 0 analysis,b8 0 color,scm_bamO 0 zoom,align 0 illustrate,none 1 illustrate,front 1 file,open,hsv,cube 0 scale,linear 1 file,open,mosaic,iraf,seg 0 file,import,slice,tiff 0 file,saveimage,fits 0 edit,undo 0 major,region 1 color,scm_glasgow 0 zoom,x 0 zoom,180 0 zoom,xy 0 zoom,y 0 bin,256 0 frame,rgb 0 file,samp,disconnect 0 color,scm_tofino 0 color,hsv 0 view,graphhorz 1 illustrate,movefront 1 color,scm_bam 0 illustrate,back 1 color,scm_lipari 0 file,samphub,start 0 region,line 0 color,numvalue 0 file,saveimage,jpeg 0 region,epanda 0 color,h5_autumn 0 zoom,out 1 color,scm_davos 0 bin,256x 0 bin,sum 0 color,tpglarf 0 file,import,hsvarray 0 help,user 1 color,scm_roma 0 color,scm_navia 0 file,movie 0 region,bpanda 0 bin,64 1 file,save,mosaic,wcs,seg 0 }
+global ppanner
+array set ppanner { compass 1 }
+global pmagnifier
+array set pmagnifier { region 1 zoom 4 cursor 1 color white }
+global ps
+global pps
+array set pps { scale 100 orient portrait height 11 size tabloid resolution 150 filename,txt ds9.txt dest printer level 2 width 8.5 filename ds9.ps cmd lp color rgb }
+array set ps [array get pps]
+global pr
+global ppr
+array set ppr {  }
+array set pr [array get ppr]
+global blink
+global pblink
+array set pblink { interval 500 }
+array set blink [array get pblink]
+global fade
+global pfade
+array set pfade { step 25 blend screen interval 2000 }
+array set fade [array get pfade]
+global tile
+global ptile
+array set ptile { grid,col 10 mode grid grid,dir x grid,row 10 grid,gap 4 grid,mode automatic }
+array set tile [array get ptile]
+global threed
+global pthreed
+array set pthreed { scale 1 background none lock 0 method mip highlite,color cyan border,color blue compass,color green highlite 1 border 1 compass 0 }
+array set threed [array get pthreed]
+global bin
+global pbin
+array set pbin { wheel,factor 1.2 wheel 0 lock 0 depth 1 buffersize 1024 function sum factor {1 1} }
+array set bin [array get pbin]
+global panzoom
+global ppanzoom
+array set ppanzoom { wheel,factor 1.2 preserve 0 wheel 1 mode click }
+array set panzoom [array get ppanzoom]
+global scale
+global pscale
+array set pscale { datasec 1 mode zscale scope local log 1000 type histequ }
+array set scale [array get pscale]
+global minmax
+global pminmax
+array set pminmax { mode scan sample 25 }
+array set minmax [array get pminmax]
+global zscale
+global pzscale
+array set pzscale { line 120 contrast .25 sample 600 }
+array set zscale [array get pzscale]
+global marker
+global pmarker
+array set pmarker { panda,ang2 360 bpanda,ang1 0 shape circle show 1 bpanda,ang2 360 boxannulus,annuli 1 delete 1 centroid,radius 10 dformat degrees annulus,inner 15 panda,angnum 4 show,text 1 epanda,angnum 4 centroid,iteration 30 plot2d 0 font,size 10 rotate 1 move 1 default,color green fixed 0 ellipseannulus,radius1 40 ellipseannulus,radius2 20 ellipseannulus,radius3 60 default,use 0 plot3d 0 epanda,radius1 40 panda,outer 30 panda,annuli 1 epanda,radius2 20 epanda,radius3 60 segment,length 20 source 1 epsilon 3 bpanda,radius1 80 bpanda,radius2 40 epanda,annuli 1 bpanda,radius3 120 stats 0 color green color,default 0 format ds9 annulus,outer 30 font,weight normal polygon,width 20 font,slant roman edit 1 font helvetica fill 0 bpanda,angnum 4 dash 0 dashlist {8 3} projection,thick 0 boxannulus,radius1 80 polygon,height 20 boxannulus,radius2 40 boxannulus,radius3 120 box,radius1 80 box,radius2 40 point,size 11 annulus,annuli 1 compass,radius 40 epanda,ang1 0 include 1 epanda,ang2 360 centroid,auto 0 circle,radius 20 width 2 bpanda,annuli 1 ellipse,radius1 40 preserve 0 panda,inner 15 ellipse,radius2 20 panda,ang1 0 ellipseannulus,annuli 1 }
+array set marker [array get pmarker]
+global wcs
+global pwcs
+array set pwcs { skyformat sexagesimal load,sock {} load,fn {} system wcs sky fk5 }
+array set wcs [array get pwcs]
+global graph
+global pgraph
+array set pgraph { method average size 150 font,weight normal font,slant roman grid 1 vert,method average font helvetica vert,log false vert,thick 1 horz,method average horz,log false horz,thick 1 log 1 vert,grid 1 thick 1 horz,grid 1 font,size 9 }
+array set graph [array get pgraph]
+global pcoord
+array set pcoord { wcss 0 wcsc 0 wcst 0 wcsd 0 wcsu 0 wcse 0 wcsv 0 wcsf 0 image 1 wcsw 0 wcsg 0 wcsx 0 wcsh 0 physical 0 wcs 1 wcsy 0 wcsi 0 wcsz 0 wcsj 0 wcsk 0 wcsl 0 filename 0 amplifier 0 wcsm 0 detector 0 wcsn 0 wcso 0 wcsp 0 value 1 wcsq 0 wcsa 0 wcsr 0 wcsb 0 }
+global pexamine
+array set pexamine { zoom 4 mode new }
+global pixel
+global ppixel
+array set ppixel { size 5 }
+array set pixel [array get ppixel]
+global mask
+global pmask
+array set pmask { high 0 system physical blend screen transparency 0 low 0 color red mark 1 }
+array set mask [array get pmask]
+global contour
+global pcontour
+array set pcontour { numlevel 5 dash 0 width 1 method block smooth 4 color green view 0 }
+array set contour [array get pcontour]
+global grid
+global pgrid
+array set pgrid { view 0 }
+array set grid [array get pgrid]
+global block
+global pblock
+array set pblock { lock 0 factor {1 1} }
+array set block [array get pblock]
+global smooth
+global psmooth
+array set psmooth { radius 3 lock 0 radius,minor 3 sigma 1.5 function gaussian sigma,minor 1.5 view 0 angle 0 }
+array set smooth [array get psmooth]
+global pnres
+array set pnres { server simbad-cds }
+global pcat
+array set pcat { sym,units physical sym,font,weight normal vot 1 sym,width 1 loc 500 server cds sym,font,slant roman sym,font,size 10 sym,font,weight, {} sym,color green sym,font helvetica sym,dash 0 sym,shape {circle point} }
+global pvo
+array set pvo { method mime hv 1 delay 15 server http://cxc.harvard.edu/chandraed/list.txt }
+global pap
+array set pap { axis,x,flip 0 legend,position right {} 0 canvas,title,slant roman canvas,background white graph,ds,line,shape,fill 1 canvas,axis,title,slant roman graph,axis,x,max {} graph,ds,scatter,shape,size 5 canvas,legend,title,slant roman graph,axis,y,format {} graph,title,size 12 graph,ds,scatter,shape,fill 1 canvas,title,family helvetica graph,ds,line,shape,color red error,cap 0 canvas,axis,title,size 9 graph,axis,x,format {} layout,axis,x,grid 0 legend,title Legend graph,ds,error,color red axis,x,log 0 graph,ds,line,smooth linear graph,ds,bar,fill 1 canvas,title,size 12 canvas,axis,title,family helvetica axis,y,min {} graph,ds,error 1 axis,y,max {} graph,ds,bar,border,width 1 canvas,title,weight normal legend 0 canvas,axis,font,size 9 graph,name {} canvas,layout,strip,scale 50 layout,axis,x,log 0 bg systemTextBackgroundColor graph,ds,bar,color black canvas,grid,color gray64 layout,axis,x,flip 0 graph,axis,y,grid 1 axis,y,grid 1 graph,ds,line,color black graph,axis,x,log 0 graph,title,family helvetica graph,ds,scatter,shape,symbol circle graph,axis,y,title {} graph,ds,error,dash 0 canvas,axis,title,weight normal bar,relief raised graph,axis,y,min {} graph,ds,scatter,fill 1 graph,ds,name {} graph,axis,y,max {} canvas,legend,title,family helvetica canvas,foreground black canvas,theme 1 graph,legend 0 graph,axis,y,auto 1 graph,title,slant roman canvas,layout grid axis,y,format {} axis,y,auto 1 graph,ds,error,width 1 graph,ds,line,fill,color black graph,axis,y,flip 0 canvas,legend,font,slant roman layout,axis,x,title {} axis,y,flip 0 graph,ds,scatter,symbol circle graph,ds,error,cap 0 graph,title,weight normal graph,axis,x,title {} axis,x,format {} canvas,axis,font,family helvetica graph,format 1 axis,y,log 0 axis,y,title {} canvas,legend,font,family helvetica axis,x,min {} canvas,legend,title,weight normal graph,axis,x,grid 1 graph,ds,scatter,color black graph,ds,bar,width 1 axis,x,max {} axis,x,grid 1 graph,ds,line,width 1 canvas,axis,font,slant roman graph,ds,line,shape,symbol none graph,title {} canvas,legend,font,size 9 graph,ds,show 1 layout,axis,x,min 0 graph,ds,bar,border,color black graph,legend,title Legend graph,ds,line,fill 0 canvas,legend,title,size 10 canvas,axis,font,weight normal graph,axis,x,auto 1 layout,axis,x,max 0 fg systemTextColor graph,ds,line,shape,size 5 graph,ds,line,dash 0 bar,mode normal axis,x,auto 1 canvas,legend,font,weight normal graph,legend,position right graph,axis,x,flip 0 graph,axis,y,log 0 axis,x,title {} graph,ds,scatter,shape,color black graph,axis,x,min {} }
+global panalysis
+array set panalysis { user2 {} autoload 1 user3 /Users/Vincent/Github/pyds9plugin/pyds9plugin/QuickLookPlugIn.ds9.ans log 1 user4 /Users/Vincent/Github/pyds9fb/pyds9fb/fb.ds9.ans user {} }
+
+# Colorbar prefs
+global colorbar
+global pcolorbar
+array set pcolorbar { invert 0 lock 0 size 20 font,weight normal tag red space 0 font,slant roman map blue numerics 1 font helvetica orientation 0 font,size 9 ticks 11 }
+array set colorbar [array get pcolorbar]
