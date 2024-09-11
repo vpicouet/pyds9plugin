@@ -11735,7 +11735,8 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
                         command in a terminal:\n""",
             verbose="1",
         )
-        sys.exit()
+        #TODO possible solve, check that with yasmine
+        # sys.exit()
     if len(filename) > 1:
         verboseprint("Analysis ended on all images.")
         sys.exit()

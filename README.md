@@ -33,7 +33,12 @@ Pyds9 currently requires python 3.8.
 To install pyds9plugin for general purposes use Pip:
 
 ```
-pip install pyds9plugin
+conda create --name py38 python=3.8
+conda activate py38
+
+git clone https://github.com/vpicouet/pyds9plugin.git
+cd pyds9plugin
+pip install -e .
 ```
 or 
 
