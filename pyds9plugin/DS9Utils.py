@@ -11622,21 +11622,20 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
 
     d = DS9n(args.xpapoint)
     filename = globglob(args.path, xpapoint=args.xpapoint)
-    if which("sex") is None:
-        message(
-            d,
-            """Sextractor do not seem to be installed on your machine.
-                      If you know it is, please add the sextractor executable
-                      path to your $PATH variable in .bash_profile. Depending
-                      on your image, the analysis might take a few minutes""",
-        )
-        verboseprint(
-            "On mac run in terminal: >brew install brewsci/science/sextractor",
-            verbose="1",
-        )
-        verboseprint(
-            "or visit: https://github.com/astromatic/sextractor", verbose="1",
-        )
+    message(
+        d,
+        """Sextractor do not seem to be installed on your machine.
+                    If you know it is, please add the sextractor executable
+                    path to your $PATH variable in .bash_profile. Depending
+                    on your image, the analysis might take a few minutes""",
+    )
+    verboseprint(
+        "On mac run in terminal: >brew install brewsci/science/sextractor",
+        verbose="1",
+    )
+    verboseprint(
+        "or visit: https://github.com/astromatic/sextractor", verbose="1",
+    )
     param_names = [
         "CATALOG_NAME",
         "CATALOG_TYPE",
