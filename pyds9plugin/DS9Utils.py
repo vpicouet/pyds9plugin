@@ -12088,7 +12088,8 @@ def run_sex(path, DETECTION_IMAGE, param_dict):
     )
     # run_sep(path, DETECTION_IMAGE, param_dict)
 
-    if (which("sex") is None) | (".fits" not in os.path.basename(DETECTION_IMAGE)):  # None
+    # if (which("sex") is None) | (".fits" not in os.path.basename(DETECTION_IMAGE)):  # None
+    if  (".fits" not in os.path.basename(DETECTION_IMAGE)):  # None
         command = "Running sep"
         run_sep(path, DETECTION_IMAGE, param_dict)
         return 0
