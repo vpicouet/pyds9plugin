@@ -405,7 +405,7 @@ def Measure_PSF_slits(image, regs, plot_=True, filename=None,slit_width=None,ds=
 
 
 
-plot_=False
+plot_=True
 d = DS9n()
 
 if 1==0:

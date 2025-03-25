@@ -13,7 +13,8 @@ def cropCLAUDS(
 
     a = fits.open(path)
     b = a.copy()
-    for i in range(1):
+    for i in [1,0]:
+        # print(i)
         try:
             di = Cutout2D(a[i].data, position=position, size=size, wcs=WCS(a[i].header))
             if i == 0:
@@ -23,7 +24,7 @@ def cropCLAUDS(
             # a[i].header["CD1_1"] = b[i].header["CD1_1"]
             # a[i].header["CD2_2"] = b[i].header["CD2_2"]
         except (ValueError, IndexError) as e:
-            verboseprint(i, e)
+            print(i, e)
             pass
     a.writeto(path[:-5] + "_trim.fits", overwrite=True)
     return a, path[:-5] + "_trim.fits"
@@ -45,4 +46,6 @@ else:
         size=np.array([region[0][3], region[0][2]], dtype=int),
         all_ext=False,
     )
+print(name)
 d.set("frame new ; tile yes ; file %s" % (name))
+print(ds9_2[1].data.shape)

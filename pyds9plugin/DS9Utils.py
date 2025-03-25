@@ -4447,19 +4447,19 @@ def ds9_plot_radial_profile(
             "Platescale": platescale,
             "Center": NewCenter,
         }
-        verboseprint(d_)
-        csvwrite(
-            np.vstack(
-                (rmean[:size], profile, convolve_diskgaus_2d(rmean[:size], *popt),)
-            ).T,
-            DS9backUp
-            + "CSVs/%s_RadialProfile.csv"
-            % (datetime.datetime.now().strftime("%y%m%d-%HH%M")),
-        )
+    verboseprint(d_)
+    csvwrite(
+        np.vstack(
+            (rmean[:size], profile, convolve_diskgaus_2d(rmean[:size], *popt),)
+        ).T,
+        DS9backUp
+        + "/CSVs/%s_RadialProfile.csv"
+        % (datetime.datetime.now().strftime("%y%m%d-%HH%M")),
+    )
     csvwrite(
         np.vstack((rsurf, EE)).T,
         DS9backUp
-        + "CSVs/%s_EnergyProfile.csv"
+        + "/CSVs/%s_EnergyProfile.csv"
         % (datetime.datetime.now().strftime("%y%m%d-%HH%M")),
     )
     d = []
@@ -5407,15 +5407,20 @@ def execute_command(
         header = fitsimage.header
 
     region = 0
+    mask = np.ones(ds9.shape,dtype=bool) * False
     try:
         region = getregion(d, selected=True, message=False)
         x_inf, x_sup, y_inf, y_sup = lims_from_region(region)
         if np.ndim(ds9) == 2:
             region = ds9[y_inf:y_sup, x_inf:x_sup]
+            mask[y_inf:y_sup, x_inf:x_sup] = True
         else:
             region = ds9[:, y_inf:y_sup, x_inf:x_sup]
+            mask[:, y_inf:y_sup, x_inf:x_sup] = True
+    
     except Exception:
         region = None
+    print("mask=",mask)
     # if os.path.isfile(path2remove) is False:
     #     if "image" in exp:
     #         d = DS9n()
@@ -5438,6 +5443,7 @@ def execute_command(
         "argument": argument,
         "fits": fits,
         "region": region,
+        "mask": mask,
         # "image": image,
         "sigma_clip": sigma_clip,
         "convolve": convolve,
@@ -11701,7 +11707,7 @@ def run_sextractor(xpapoint=None, detector=None, path=None, argv=[]):
     param_dict["WEIGHT_GAIN"] = "Y" if param_dict["WEIGHT_GAIN"] == "1" else "N"
 
     param_dict["CHECKIMAGE_TYPE"] = "-BACKGROUND" if param_dict["CHECKIMAGE_TYPE"]=="mBACKGROUND" else param_dict["CHECKIMAGE_TYPE"]
-    param_dict["CHECKIMAGE_TYPE"] = "-mOBJECTS" if param_dict["CHECKIMAGE_TYPE"]=="mOBJECTS" else param_dict["CHECKIMAGE_TYPE"]
+    param_dict["CHECKIMAGE_TYPE"] = "-OBJECTS" if param_dict["CHECKIMAGE_TYPE"]=="mOBJECTS" else param_dict["CHECKIMAGE_TYPE"]
 
     verboseprint("DETECTION_IMAGE =", DETECTION_IMAGE)
 

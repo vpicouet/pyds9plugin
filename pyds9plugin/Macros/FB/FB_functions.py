@@ -117,10 +117,10 @@ def emccd_model(
             date = 2023
             print("No date keeping 2022 conversion gain")
 
-        if conversion_gain<0.5:
+        if conversion_gain<0.3:
             n_conv = 1#21
         else:
-            n_conv = 21
+            n_conv = 11
             if RON is None:
                 RON=35
         
@@ -620,12 +620,26 @@ def emccd_model(
 
 
     def save_values(event):
+        # print(1)
+        # import pickle
+        # pickle.dump(fig, open("/tmp/test.pkl", 'wb'))  
+        # print(2)
         vals_tot = [dict_values[slid.label.get_text()] for slid in sliders]
         vals2 = [v if type(v) != tuple else v[0] for v in vals_tot]
         for val, n in zip(vals2, ["BIAS_ADU","RN_e-","GAINEM","sCIC","SMEARING","mCIC"]):
             fits.setval(name, n, value=str(val)[:7], comment="Histogram fitting")
             print(name, "  OK")
         fits.setval(name, "FLUX", value=str(vals_tot[3][1])[:7], comment="Histogram fitting")
+        import pickle
+        pickle.dump(fig, file(os.path.dirname(os.path.dirname(path)) + "/histogram_fitting/" + os.path.basename(path).replace(".fits", ".pkl"), 'wb'))  
+        if (".fit" not in path) & (".csv" in path):
+            plt.savefig(path.replace(".csv", ".svg"))
+        if gui is False:
+
+            # plt.savefig(path.replace(".fits", ".png"))
+            if os.path.exists(os.path.dirname(os.path.dirname(path)) + "/histogram_fitting") is False:
+                os.mkdir(os.path.dirname(os.path.dirname(path)) + "/histogram_fitting")
+            plt.savefig(os.path.dirname(os.path.dirname(path)) + "/histogram_fitting/" + os.path.basename(path).replace(".fits", ".svg"))
 
         # print("vals2", vals2)
         # np.savetxt("/tmp/emccd_fit_values.npy", vals2, fmt='%s')
