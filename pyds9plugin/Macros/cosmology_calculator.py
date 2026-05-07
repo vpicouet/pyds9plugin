@@ -407,7 +407,7 @@ def cosmology_calculator(xpapoint=None, argv=[]):
         ),
     )
     ax3[2].legend(loc="upper left")
-    ax3[2].set_ylabel("'/kpc")
+    ax3[2].set_ylabel('kpc/"')
     for redshift in redshifts:
         a32_ = ax3[2].plot(
             redshift * np.ones(2),

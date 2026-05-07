@@ -1490,8 +1490,7 @@ def aperture_photometry(xpapoint=None, argv=[]):
     from astropy.table import Table
     import numpy as np
     from astropy.stats import sigma_clipped_stats
-    from photutils import aperture_photometry
-    from photutils import CircularAperture, CircularAnnulus
+    from photutils.aperture import aperture_photometry, CircularAperture, CircularAnnulus
 
     parser = create_parser(get_name_doc())
     parser.add_argument(
@@ -2028,7 +2027,7 @@ def fit_gaussian_2d(xpapoint=None, n=300, cmap="twilight_shifted", argv=[]):
             title="Transparency ratio",
             color=None,
             pass_widget=False,
-            event_type="always",
+            interaction_event="always",
             style=None,
         )
         p.clear_box_widgets()
@@ -4090,7 +4089,7 @@ def pyvista_throughfocus(a, names=None):
         throughfocus_callback,
         data=["%i" % (i) for i in np.arange(len(a))],
         value=0,
-        event_type="always",
+        interaction_event="always",
     )
     p.add_checkbox_button_widget(change_field, position=(10, 150))
     p.add_text("Change field", name="fieldbutton", position=(70, 150))
@@ -4233,7 +4232,7 @@ def radial_profile_normalized(
 
     r = np.sqrt((x - new_center[0]) ** 2 + (y - new_center[1]) ** 2)
     #    r = np.around(r)-1
-    rint = r.astype(np.int)
+    rint = r.astype(int)
 
     image_normalized = image
     # / np.nansum(image[r<radius])
@@ -4295,7 +4294,7 @@ def estimate_background(data, center, radius=30, n=1.8):
 
     y, x = np.indices((data.shape))
     r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-    r = r.astype(np.int)
+    r = r.astype(int)
     mask = (r >= radius) & (r <= n * radius)
     fond = np.nanmean(data[mask])
     return fond
@@ -4918,7 +4917,7 @@ def plot_3d(xpapoint=None, color=False, argv=[]):
                 title="Stretching",
                 color=None,
                 pass_widget=False,
-                event_type="always",
+                interaction_event="always",
                 style=None,
             )
             p.add_checkbox_button_widget(log_callback)
@@ -5098,7 +5097,7 @@ def create_cube(d, data):
         title="Opacity",
         pointa=(0.35, mmax),
         pointb=(0.64, mmax),
-        event_type="always",
+        interaction_event="always",
     )
     p.add_axes()
     p.show()
@@ -6346,7 +6345,7 @@ def guidance(xpapoint=None, plot_=True, reg=True, style="o", lw=0.5, argv=[]):
 def center_flux_std(image, bck=0, method="Gaussian-Picouet"):
     """Fit a gaussian and give, center flux and std
     """
-    from photutils import centroid_com, centroid_1dg, centroid_2dg
+    from photutils.centroids import centroid_com, centroid_1dg, centroid_2dg
     from scipy.optimize import curve_fit
     import numpy as np
 
@@ -6513,7 +6512,7 @@ def give_value(x):
 def center_region(xpapoint=None, plot_=True, argv=[]):
     """Centers DS9 region on spot [DS9 required]"""
     import numpy as np
-    from photutils import centroid_com, centroid_1dg, centroid_2dg
+    from photutils.centroids import centroid_com, centroid_1dg, centroid_2dg
     from scipy.optimize import curve_fit
 
     parser = create_parser(get_name_doc(), path=False)
@@ -8889,7 +8888,7 @@ def extract_sources_photutils(
     from scipy import ndimage
     from astropy.table import Table
     from astropy.stats import sigma_clipped_stats
-    from photutils import DAOStarFinder
+    from photutils.detection import DAOStarFinder
     import numpy as np
 
     fitsfile = fits.open(filename)
@@ -9224,23 +9223,19 @@ def background_estimation_phot(
     """Estimate backgound in a fits image
     """
     from astropy.io import fits
-    from photutils import (
-        make_source_mask,
+    from photutils.background import (
         Background2D,
         MeanBackground,
         MedianBackground,
-    )
-    from photutils import (
         ModeEstimatorBackground,
         MMMBackground,
         SExtractorBackground,
         BiweightLocationBackground,
-    )
-    from photutils import (
         StdBackgroundRMS,
         MADStdBackgroundRMS,
         BiweightScaleBackgroundRMS,
     )
+    from photutils.segmentation import detect_threshold, detect_sources
     from astropy.stats import SigmaClip  # , sigma_clipped_stats
     import numpy as np
 
@@ -9261,9 +9256,9 @@ def background_estimation_phot(
     }
 
     if mask:
-        mask_source = make_source_mask(
-            data, nsigma=snr, npixels=npixels, dilate_size=dilate_size
-        )
+        threshold = detect_threshold(data, nsigma=snr)
+        segm = detect_sources(data, threshold, npixels=npixels)
+        mask_source = segm.make_source_mask() if segm is not None else np.zeros(data.shape, dtype=bool)
     else:
         mask_source = np.ones(data.shape, dtype=bool)
     bkg_estimator = functions[bckd]()
@@ -9442,7 +9437,6 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
         ):
             """Create synthetic dataset, plots, and AutoGUI."""
             from matplotlib.widgets import CheckButtons
-
             from dataphile.statistics.regression.modeling import (
                 Parameter,
                 Model,
@@ -9457,6 +9451,56 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 sinusoid1D,
                 uniform,
             )
+            from inspect import signature
+            Models = []
+
+            # print("function input:", function)
+            # print("type:", type(function))
+
+            # from inspect import signature
+            # from pyds9plugin.Macros.Fitting_Functions import functions
+
+            # function_ = None
+            # if function not in [None, "None", "none"]:
+            #     if isinstance(function, str):
+            #         function_ = getattr(functions, function)
+            #         names = list(signature(function_).parameters.keys())[1:]
+            #         p_ = signature(function_).parameters
+            #         values = [
+            #             np.mean(p_[p].default)
+            #             if len(p_[p].default) < 3
+            #             else p_[p].default[2]
+            #             for p in names
+            #         ]
+            #     else:
+            #         function_ = function
+            #         function = function_.__name__  # set string name if it's callable
+
+            # print("function after normalization:", function)
+
+            # # Handle default x from function if x is None or nan
+            # if x is None or np.all(np.isnan(x)):
+            #     if function_ is not None:
+            #         try:
+            #             default_x = signature(function_).parameters["x"].default
+            #             if isinstance(default_x, (list, tuple, np.ndarray)):
+            #                 x = np.array(default_x)
+            #             else:
+            #                 x = np.array([default_x])
+            #         except (KeyError, AttributeError, ValueError):
+            #             raise ValueError("Function must have a default value for parameter 'x' if x is not provided.")
+            #     else:
+            #         raise ValueError("x is None or NaN and no valid function was provided.")
+
+            # # Handle default y
+            # if y is None or np.all(np.isnan(y)):
+            #     if function_ is not None:
+            #         y = function_(x,*values)
+            #     else:
+            #         raise ValueError("y is None or NaN and no valid function was provided to compute y.")
+
+            # print("x final:", x)
+            # print("y final:", y)
 
             # from dataphile.statistics.distributions import uniform
             from scipy.optimize import curve_fit
@@ -9521,17 +9565,18 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             x_inf, x_sup = self.ax.get_xlim()
             y_inf, y_sup = self.ax.get_ylim()
             self.ax.set_ylabel("y", labelpad=15)
+            # HACK
             z = np.polyfit(x, y, deg=1)
             popt = np.poly1d(z)
             a = popt.coef[::-1][0]
             b = popt.coef[::-1][1]
-            if self.background > 1 :
+            if self.background > 0 :
+                z = np.polyfit(x, y, deg=1)
+                popt = np.poly1d(z)
+                a = popt.coef[::-1][0]
+                b = popt.coef[::-1][1]
                 c, _, a = np.poly1d(np.polyfit(x, y, deg=2))
                 fb, fa, fc = 10, 10, 5
-                # if b > 0:
-                #     boundsb =  (2 * (b / fb - 1), 2 * (fb * b + 1))
-                # else:
-                #     boundsb =  (2 * (fb * b - 1), 2 * (b / fb + 1))
                 if b > 0:
                     boundsb = (- b * fb, fb * b )
                 else:
@@ -9546,25 +9591,19 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 else:
                     boundsc =  (2 * fc * c, -2 * fc * c)
                 if self.background == 3:
-                    # if np.array(boundsb).ptp() > np.array(boundsc).ptp():
-                    #     boundsc = boundsb
-                    #     boundsd = boundsb
-                    # else:
-                    #     boundsb = boundsc
                     boundsd = boundsc
 
-            else:
-                c = 0
-                fb, fa, fc = 10, 10, 2
-                if b > 0:
-                    boundsb = (b / fb, fb * b)
-                else:
-                    boundsb = (fb * b, b / fb)
-                boundsb = ((y.min() - a) / x.max(), (y.max() - a) / x.min())
-            boundsa = (np.nanmin(y) - y.ptp(), np.nanmax(y) + y.ptp())#, (a - (y.max() - y.min()), a + (y.max() - y.min()))
-            if boundsb[1] < boundsb[0]:
-                boundsb = boundsb[::-1]
-            Models = []
+                if self.background ==1 :
+                    c = 0
+                    fb, fa, fc = 10, 10, 2
+                    if b > 0:
+                        boundsb = (b / fb, fb * b)
+                    else:
+                        boundsb = (fb * b, b / fb)
+                    boundsb = ((y.min() - a) / x.max(), (y.max() - a) / x.min())
+                boundsa = (np.nanmin(y) - y.ptp(), np.nanmax(y) + y.ptp())#, (a - (y.max() - y.min()), a + (y.max() - y.min()))
+                if boundsb[1] < boundsb[0]:
+                    boundsb = boundsb[::-1]
             background = np.nanmean(
                 ydata_i[
                     (ydata_i < np.nanmean(ydata_i) + 1 * np.nanstd(ydata_i))
@@ -9581,7 +9620,10 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 xdata_i[np.argmin(ydata_i)],
             )
             centers = (10 * [x1, x2, (x1 + x2) / 2])[:nb_features]
-            xs, ys = find_maxima(x, y, conv=10, max_=True)
+            try:
+                xs, ys = find_maxima(x, y, conv=10, max_=True)
+            except IndexError:
+                xs, ys = [np.mean(x)], [np.mean(y)]
             xs, ys = (
                 np.concatenate((xs, xs, xs)),
                 np.concatenate((ys, ys, ys)),
@@ -9686,7 +9728,6 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
                 else:
                     function_ = function
                     function = function_.__name__
-
                 names = list(signature(function_).parameters.keys())[1:]
                 p_ = signature(function_).parameters
                 values = [
@@ -9866,7 +9907,7 @@ if bool(set(functions) & set(sys.argv)) | (len(sys.argv) <= 2):
             )
             curves = []
             for modeli in Models:
-                curves.append(a)
+                curves.append(1) # TEST
 
             (model_curve,) = self.ax.plot(
                 xsample, model(xsample), color="steelblue", label="model"
@@ -10184,8 +10225,10 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
     try:
         d.get("plot")
     except TypeError:
-        raise_create_plot(d)
-        sys.exit()
+        # raise_create_plot(d)
+        # sys.exit()
+        x= np.linspace(2020,2050,1000)#None#np.linspace(1000)*np.nan
+        y= np.linspace(0,1,1000)
     if os.path.exists(args.path):
         cat = read_v(args.path)
         x, y = cat[cat.colnames[0]], cat[cat.colnames[1]]
@@ -10218,8 +10261,13 @@ def fit_ds9_plot(xpapoint=None, argv=[]):
             index = (np.isfinite(y)) & (np.isfinite(x)) & (y != 0)
             x, y = x[index], y[index]
         else:
-            raise_create_plot(d)
-            sys.exit()
+            # raise_create_plot(d)
+            # sys.exit()
+            x= np.linspace(2020,2050,1000)#None#np.linspace(1000)*np.nan
+            y= np.linspace(0,1,1000)
+            # x= np.linspace(0,1000)*np.nan
+            # y= np.linspace(0,1000)*np.nan
+
     if (np.nanmean(y[-10:]) > np.nanmean(y[:10])) & (
         (args.background.lower() == "doubleexponential")
         | (args.background.lower() == "exponential")
@@ -10988,8 +11036,7 @@ def throw_apers(image, pix_scale, aper_size, n_aper, seg, type, sub_bkg):
     best way to proceed is to feed with segmantation map from
     sextractor and set all contiguous pixels above background as NaN
     """
-    from photutils import CircularAperture
-    from photutils import aperture_photometry
+    from photutils.aperture import CircularAperture, aperture_photometry
     import numpy as np
 
     if sub_bkg:
